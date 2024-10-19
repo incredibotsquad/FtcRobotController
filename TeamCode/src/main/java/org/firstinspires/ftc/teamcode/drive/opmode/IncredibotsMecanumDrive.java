@@ -113,9 +113,9 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
             double max;
 
             // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
-            double axial   = -gamepad1.left_stick_y;  // Note: pushing stick forward gives negative value
-            double lateral =  gamepad1.left_stick_x;
-            double yaw     =  gamepad1.right_stick_x;
+            double axial   = -gamepad1.left_stick_y  * 0.75;  // Note: pushing stick forward gives negative value
+            double lateral =  gamepad1.left_stick_x * 0.75;
+            double yaw     =  gamepad1.right_stick_x * 0.75;
 
             // Combine the joystick requests for each axis-motion to determine each wheel's power.
             // Set up a variable for each drive wheel to save the power level for telemetry.
@@ -159,7 +159,7 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
 //            rightFrontDrive.setPower(rightFrontPower);
 //            leftBackDrive.setPower(leftBackPower);
 //            rightBackDrive.setPower(rightBackPower);
-
+            // Sets the drive motor powers
             myHardware.setDriveMotorPowers(rightFrontPower, leftFrontPower, rightBackPower, leftBackPower);
 
             // Show the elapsed game time and wheel power.
@@ -167,8 +167,11 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
             telemetry.addData("Back  left/Right", "%4.2f, %4.2f", leftBackPower, rightBackPower);
             telemetry.addData("leftArmPos: ", myHardware.getLeftArmMotorPos());
             telemetry.addData("rightArmPos", myHardware.getRightArmMotorPos());
+
+            // calls the process inputs function from the arm control class
+            armControl.ProcessInputs(telemetry);
+            //updates telemetry
             telemetry.update();
 
-            armControl.ProcessInputs();
         }
     }}
