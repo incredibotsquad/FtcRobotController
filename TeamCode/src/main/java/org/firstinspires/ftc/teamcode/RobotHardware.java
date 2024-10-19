@@ -111,22 +111,16 @@ public class RobotHardware {
 
     // Decides if the intake servo should spin clockwise or counter clockwise
     public void operateIntakeServo(boolean clockwiseSpin, boolean counterClockwiseSpin) {
-        if (clockwiseSpin){
-            if (intakeServo.getPower() > 0) {
-                intakeServo.setPower(0);
-            } else {
-                intakeServo.setPower(1);
-            }
+        //if servo is running, stop it.
+        if (intakeServo.getPower() != 0) {
+            intakeServo.setPower(0);
         }
-        else if (counterClockwiseSpin){
-            if (intakeServo.getPower() < 0) {
-                intakeServo.setPower(0);
-            } else {
+        else { //start the servo if its not running
+            if (clockwiseSpin) {
+                intakeServo.setPower(1);
+            } else if (counterClockwiseSpin) {
                 intakeServo.setPower(-1);
             }
-        }
-        else {
-            intakeServo.setPower(0);
         }
     }
 

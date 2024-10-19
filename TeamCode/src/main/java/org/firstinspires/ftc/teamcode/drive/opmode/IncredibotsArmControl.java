@@ -1,10 +1,13 @@
 package org.firstinspires.ftc.teamcode.drive.opmode;
 
+import android.os.AsyncTask;
+
 import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.robotcore.hardware.Gamepad;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.RobotHardware;
+import java.lang.Math;
 
 @Config
 public class IncredibotsArmControl
@@ -46,12 +49,12 @@ public class IncredibotsArmControl
 
     //override...
     private boolean MANUAL_OVERRIDE = false;
+    private static int MANUAL_OVERRIDE_DELTA = 150;
 
     public IncredibotsArmControl(Gamepad gamepad, RobotHardware robotHardware) {
         gamepad2 = gamepad;
         this.robotHardware = robotHardware;
     }
-
 
     public void ProcessInputs(Telemetry telemetry) {
         //left trigger + buttons controls left arm (claw)
@@ -71,6 +74,17 @@ public class IncredibotsArmControl
         //toggle the arms to pick near samples or far samples
         if (gamepad2.back && gamepad2.start) {
             INTAKE_ARM_NEAR_SAMPLE_MODE = !INTAKE_ARM_NEAR_SAMPLE_MODE;
+
+            if (INTAKE_ARM_NEAR_SAMPLE_MODE) {
+                robotHardware.setSlidePositionAndVelocity(SLIDE_POSITION_TO_PICK_NEAR_SAMPLE, SLIDE_VELOCITY);
+                robotHardware.setRightArmPositionAndVelocity(INTAKE_ARM_PICK_NEAR_SAMPLE_A, INTAKE_ARM_VELOCITY);
+            } else {
+                robotHardware.setSlidePositionAndVelocity(SLIDE_POSITION_TO_PICK_FAR_SAMPLE, SLIDE_VELOCITY);
+                robotHardware.setRightArmPositionAndVelocity(INTAKE_ARM_PICK_FAR_SAMPLE_A, INTAKE_ARM_VELOCITY);
+            }
+
+            //start moving the intake servo for picking up samples
+            robotHardware.operateIntakeServo(true, false);
         }
 
         //process back button
@@ -103,6 +117,7 @@ public class IncredibotsArmControl
                     robotHardware.setRightArmPositionAndVelocity(INTAKE_ARM_PICK_FAR_SAMPLE_A, INTAKE_ARM_VELOCITY);
                     robotHardware.setSlidePositionAndVelocity(SLIDE_POSITION_TO_PICK_FAR_SAMPLE, SLIDE_VELOCITY);
                 }
+                robotHardware.operateIntakeServo(true, false);
             }
         }
 
@@ -122,6 +137,9 @@ public class IncredibotsArmControl
         if (gamepad2.b){
             if (gamepad2.left_trigger > 0) {
                 robotHardware.setLeftArmPositionAndVelocity(CLAW_ARM_SNAP_SPECIMEN_B, 500);
+
+
+
 //                try {
 //                    Thread.sleep(1500);
 //                } catch (InterruptedException e) {
@@ -152,11 +170,7 @@ public class IncredibotsArmControl
         if (gamepad2.start && gamepad2.left_trigger > 0 && gamepad2.right_trigger > 0){
             robotHardware.setLeftArmPositionAndVelocity(CLAW_ARM_HANG_START, CLAW_ARM_VELOCITY);
             robotHardware.setRightArmPositionAndVelocity(INTAKE_ARM_HANG_START, INTAKE_ARM_VELOCITY);
-        }
-
-        if (gamepad2.start && gamepad2.back){
-            robotHardware.setSlidePositionAndVelocity(SLIDE_POSITION_TO_PICK_FAR_SAMPLE, SLIDE_VELOCITY);
-            robotHardware.setRightArmPositionAndVelocity(INTAKE_ARM_PICK_FAR_SAMPLE_A, INTAKE_ARM_VELOCITY);
+            robotHardware.operateClawServo(true, CLAW_OPEN_POSITION, CLAW_CLOSE_POSITION); //open claw when hanging
         }
 
     }
@@ -199,33 +213,65 @@ public class IncredibotsArmControl
 
             // If the left joystick is greater than zero, it moves the left arm up
             if (leftYSignal > 0) {
-                robotHardware.setLeftArmPositionAndVelocity(robotHardware.getClawArmMotorPos() + 10, leftYSignal * CLAW_ARM_VELOCITY);
+                robotHardware.setLeftArmPositionAndVelocity(robotHardware.getClawArmMotorPos() + MANUAL_OVERRIDE_DELTA, leftYSignal * CLAW_ARM_VELOCITY);
 
             }
             // If the left joystick is less than zero, it moves the left arm down
             else if (leftYSignal < 0){
-                robotHardware.setLeftArmPositionAndVelocity(robotHardware.getClawArmMotorPos() - 10, leftYSignal * CLAW_ARM_VELOCITY);
+                robotHardware.setLeftArmPositionAndVelocity(robotHardware.getClawArmMotorPos() - MANUAL_OVERRIDE_DELTA, leftYSignal * CLAW_ARM_VELOCITY);
             }
 
             // If the right joystick is greater zero it moves the right arm up
             if (rightYSignal > 0) {
-                robotHardware.setRightArmPositionAndVelocity(robotHardware.getSlideArmMotorPos() + 10, rightYSignal * INTAKE_ARM_VELOCITY);
+                robotHardware.setRightArmPositionAndVelocity(robotHardware.getSlideArmMotorPos() + MANUAL_OVERRIDE_DELTA, rightYSignal * INTAKE_ARM_VELOCITY);
             }
             // If the right joystick is less than zero it moves the right arm down
             else if (rightYSignal < 0) {
-                robotHardware.setRightArmPositionAndVelocity(robotHardware.getSlideArmMotorPos() - 10, rightYSignal * INTAKE_ARM_VELOCITY);
+                robotHardware.setRightArmPositionAndVelocity(robotHardware.getSlideArmMotorPos() - MANUAL_OVERRIDE_DELTA, rightYSignal * INTAKE_ARM_VELOCITY);
             }
 
             //process Dpad up input to extend linear slide
             if (gamepad2.dpad_up){
-                robotHardware.setSlidePositionAndVelocity(robotHardware.getSlidePos() + 10, SLIDE_VELOCITY);
+                //SLIDE CANNOT EXPAND BEYOND THE FAR POSITION FOR IT TO BE UNDER LIMITS
+                robotHardware.setSlidePositionAndVelocity(Math.min(robotHardware.getSlidePos() + MANUAL_OVERRIDE_DELTA, SLIDE_POSITION_TO_PICK_FAR_SAMPLE), SLIDE_VELOCITY);
             }
 
             //process Dpad down input to retract linear slide
             if (gamepad2.dpad_down){
-                robotHardware.setSlidePositionAndVelocity(robotHardware.getSlidePos() - 10, SLIDE_VELOCITY);
+                //SLIDE POSITION CANNOT BE LESS THAN 0
+                robotHardware.setSlidePositionAndVelocity(Math.max(robotHardware.getSlidePos() - MANUAL_OVERRIDE_DELTA, 0), SLIDE_VELOCITY);
             }
         }
     }
+
+    interface RobotHardwareFunction {
+        void run(int position, int velocity);
+    }
+
+    private class myAsyncTask extends AsyncTask<Void, Void, Void>
+    {
+        RobotHardwareFunction function1;
+        RobotHardwareFunction function2;
+
+        public myAsyncTask(RobotHardwareFunction function1, RobotHardwareFunction function2) {
+            this.function1 = function1;
+            this.function2 = function2;
+        }
+
+        @Override
+        protected Void doInBackground(Void... params) {
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void result) {
+            try {
+
+            } catch (Exception e) {
+
+            }
+        }
+    }
+
 
 }
