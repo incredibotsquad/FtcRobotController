@@ -8,9 +8,7 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.hardware.ServoController;
 
-import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 public class RobotHardware {
@@ -85,7 +83,6 @@ public class RobotHardware {
 
      }
 
-     //functions
     // Sets the slide's position and velocity
      public void setSlidePositionAndVelocity(int pos, double velocity) {
          rightSlideMotor.setTargetPosition(pos);
@@ -96,7 +93,6 @@ public class RobotHardware {
     // Sets the left arm's position and velocity
     public void setLeftArmPositionAndVelocity(int pos, double velocity) {
         leftArmMotor.setTargetPosition(pos);
-        //leftArmMotor.setPower(power);
         leftArmMotor.setVelocity(velocity);
         leftArmMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
     }
@@ -106,6 +102,32 @@ public class RobotHardware {
         rightArmMotor.setTargetPosition(pos);
         rightArmMotor.setVelocity(velocity);
         rightArmMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+    }
+
+    //decides either to open or close the claw servo
+    public void operateClawServo(boolean open, double openPosition, double closePosition) {
+        clawServo.setPosition(open? openPosition: closePosition);
+    }
+
+    // Decides if the intake servo should spin clockwise or counter clockwise
+    public void operateIntakeServo(boolean clockwiseSpin, boolean counterClockwiseSpin) {
+        if (clockwiseSpin){
+            if (intakeServo.getPower() > 0) {
+                intakeServo.setPower(0);
+            } else {
+                intakeServo.setPower(1);
+            }
+        }
+        else if (counterClockwiseSpin){
+            if (intakeServo.getPower() < 0) {
+                intakeServo.setPower(0);
+            } else {
+                intakeServo.setPower(-1);
+            }
+        }
+        else {
+            intakeServo.setPower(0);
+        }
     }
 
     //returns the robots yaw as radians
@@ -146,32 +168,6 @@ public class RobotHardware {
         resetFrontOdo();
      }
 
-     //decides either to open or close the claw servo
-    public void operateClawServo(boolean open, double openPosition, double closePosition) {
-         clawServo.setPosition(open? openPosition: closePosition);
-    }
-
-    // Decides if the intake servo should spin clockwise or counter clockwise
-    public void operateIntakeServo(boolean clockwiseSpin, boolean counterClockwiseSpin) {
-        if (clockwiseSpin){
-            if (intakeServo.getPower() > 0) {
-                intakeServo.setPower(0);
-            } else {
-                intakeServo.setPower(1);
-            }
-        }
-        else if (counterClockwiseSpin){
-            if (intakeServo.getPower() < 0) {
-                intakeServo.setPower(0);
-            } else {
-                intakeServo.setPower(-1);
-            }
-        }
-        else {
-            intakeServo.setPower(0);
-        }
-    }
-
     // Returns the right odo wheel value
     public double getRightOdoMM() {
          return getMMTraveled(odoRight.getCurrentPosition());
@@ -193,16 +189,16 @@ public class RobotHardware {
     }
 
     // Returns the right arm motor position
-    public int getRightArmMotorPos(){
+    public int getSlideArmMotorPos() {
          return rightArmMotor.getCurrentPosition();
     }
 
     // Returns the left arm position
-    public int getLeftArmMotorPos(){
+    public int getClawArmMotorPos() {
         return leftArmMotor.getCurrentPosition();
     }
 
-    public int getRightSlidePos(){
+    public int getSlidePos() {
         return rightSlideMotor.getCurrentPosition();
     }
 
