@@ -165,8 +165,9 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
             // Show the elapsed game time and wheel power.
             telemetry.addData("Front left/Right", "%4.2f, %4.2f", leftFrontPower, rightFrontPower);
             telemetry.addData("Back  left/Right", "%4.2f, %4.2f", leftBackPower, rightBackPower);
-            telemetry.addData("leftArmPos: ", myHardware.getLeftArmMotorPos());
-            telemetry.addData("rightArmPos", myHardware.getRightArmMotorPos());
+            telemetry.addData("leftArmPos: ", myHardware.getClawArmMotorPos());
+            telemetry.addData("rightArmPos", myHardware.getSlideArmMotorPos());
+            telemetry.addData("slidePos", myHardware.getSlidePos());
 
             // calls the process inputs function from the arm control class
             armControl.ProcessInputs(telemetry);
