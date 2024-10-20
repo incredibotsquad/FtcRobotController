@@ -91,14 +91,14 @@ public class RobotHardware {
      }
 
     // Sets the left arm's position and velocity
-    public void setLeftArmPositionAndVelocity(int pos, double velocity) {
+    public void setClawArmPositionAndVelocity(int pos, double velocity) {
         leftArmMotor.setTargetPosition(pos);
         leftArmMotor.setVelocity(velocity);
         leftArmMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
     }
 
     //Sets the right arm's position and velocity
-    public void setRightArmPositionAndVelocity(int pos, double velocity) {
+    public void setSlideArmPositionAndVelocity(int pos, double velocity) {
         rightArmMotor.setTargetPosition(pos);
         rightArmMotor.setVelocity(velocity);
         rightArmMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
@@ -195,5 +195,7 @@ public class RobotHardware {
     public int getSlidePos() {
         return rightSlideMotor.getCurrentPosition();
     }
+
+    public double getIntakeServoPower() { return intakeServo.getPower(); }
 
 }
