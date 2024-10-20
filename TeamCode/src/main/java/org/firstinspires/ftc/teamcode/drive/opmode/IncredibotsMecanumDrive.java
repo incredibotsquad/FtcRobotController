@@ -65,6 +65,8 @@ import org.firstinspires.ftc.teamcode.RobotHardware;
 @TeleOp(name="IncredibotsMecanumDrive", group="Linear OpMode")
 public class IncredibotsMecanumDrive extends LinearOpMode {
 
+    private static double POWER_RATIO = 0.75;
+
     RobotHardware myHardware;
     IncredibotsArmControl armControl;
 
@@ -113,9 +115,9 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
             double max;
 
             // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
-            double axial   = -gamepad1.left_stick_y  * 0.75;  // Note: pushing stick forward gives negative value
-            double lateral =  gamepad1.left_stick_x * 0.75;
-            double yaw     =  gamepad1.right_stick_x * 0.75;
+            double axial   = -gamepad1.left_stick_y  * POWER_RATIO;  // Note: pushing stick forward gives negative value
+            double lateral =  gamepad1.left_stick_x * POWER_RATIO;
+            double yaw     =  gamepad1.right_stick_x * POWER_RATIO;
 
             // Combine the joystick requests for each axis-motion to determine each wheel's power.
             // Set up a variable for each drive wheel to save the power level for telemetry.
