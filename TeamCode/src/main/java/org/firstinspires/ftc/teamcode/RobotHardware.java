@@ -1,6 +1,8 @@
 package org.firstinspires.ftc.teamcode;
 //importing stuff
 
+import android.util.Log;
+
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
@@ -86,22 +88,58 @@ public class RobotHardware {
     // Sets the slide's position and velocity
      public void setSlidePositionAndVelocity(int pos, double velocity) {
          rightSlideMotor.setTargetPosition(pos);
-         rightSlideMotor.setVelocity(velocity);
          rightSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+         rightSlideMotor.setVelocity(velocity);
      }
+
+    // Sets the slide's position and velocity and wait for it to reach the position
+    public void setSlidePositionAndVelocityAndWait(int pos, double velocity) {
+        rightSlideMotor.setTargetPosition(pos);
+        rightSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        rightSlideMotor.setVelocity(velocity);
+
+        while(rightSlideMotor.isBusy()) {
+            // Let the drive team see that we're waiting on the motor
+            Log.i("Motor Status", "Waiting for the slide motor to reach its target");
+        }
+    }
 
     // Sets the left arm's position and velocity
     public void setClawArmPositionAndVelocity(int pos, double velocity) {
         leftArmMotor.setTargetPosition(pos);
-        leftArmMotor.setVelocity(velocity);
         leftArmMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        leftArmMotor.setVelocity(velocity);
+    }
+
+    // Sets the left arm's position and velocity and waits for the motor to reach its position
+    public void setClawArmPositionAndVelocityAndWait(int pos, double velocity) {
+        leftArmMotor.setTargetPosition(pos);
+        leftArmMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        leftArmMotor.setVelocity(velocity);
+
+        while(leftArmMotor.isBusy()) {
+            // Let the drive team see that we're waiting on the motor
+            Log.i("Motor Status", "Waiting for the claw arm motor to reach its target");
+        }
     }
 
     //Sets the right arm's position and velocity
     public void setSlideArmPositionAndVelocity(int pos, double velocity) {
         rightArmMotor.setTargetPosition(pos);
-        rightArmMotor.setVelocity(velocity);
         rightArmMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        rightArmMotor.setVelocity(velocity);
+    }
+
+    //Sets the right arm's position and velocity and wait for the arm to reach the position
+    public void setSlideArmPositionAndVelocityAndWait(int pos, double velocity) {
+        rightArmMotor.setTargetPosition(pos);
+        rightArmMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        rightArmMotor.setVelocity(velocity);
+
+        while(rightArmMotor.isBusy()) {
+            // Let the drive team see that we're waiting on the motor
+            Log.i("== Motor Status ==", "Waiting for the slide arm motor to reach its target");
+        }
     }
 
     //decides either to open or close the claw servo
@@ -109,18 +147,22 @@ public class RobotHardware {
         clawServo.setPosition(open? openPosition: closePosition);
     }
 
+    // function to stop the intake servo
+    public void stopIntakeServo() {
+        Log.i("== Servo Status ==", "Stopping Intake servo:");
+        intakeServo.setPower(0);
+    }
+
     // Decides if the intake servo should spin clockwise or counter clockwise
     public void operateIntakeServo(boolean clockwiseSpin, boolean counterClockwiseSpin) {
-        //if servo is running, stop it.
-        if (intakeServo.getPower() != 0) {
-            intakeServo.setPower(0);
-        }
-        else { //start the servo if its not running
-            if (clockwiseSpin) {
-                intakeServo.setPower(1);
-            } else if (counterClockwiseSpin) {
-                intakeServo.setPower(-1);
-            }
+        Log.i("== Servo Status ==", "RobotHardware::Operate Intake servo: clockwise:" + clockwiseSpin + "counterclockwise: " + counterClockwiseSpin);
+
+         if (clockwiseSpin) {
+             Log.i("== Servo Status ==", "RobotHardware::Operate Intake servo: setting power to 1:");
+            intakeServo.setPower(1);
+        } else if (counterClockwiseSpin) {
+             Log.i("== Servo Status ==", "RobotHardware::Operate Intake servo: setting power to -1:");
+            intakeServo.setPower(-1);
         }
     }
 
