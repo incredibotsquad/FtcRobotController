@@ -1,12 +1,13 @@
 package org.firstinspires.ftc.teamcode.drive.opmode;
 
-import android.icu.text.Transliterator;
+import android.util.Log;
 
 import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.robotcore.hardware.Gamepad;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.RobotHardware;
+
 import java.lang.Math;
 
 @Config
@@ -17,20 +18,20 @@ public class IncredibotsArmControl
 
     //Left (Claw) Arm constants
     public static int CLAW_ARM_RESTING_BACK = 0;
-    public static int CLAW_ARM_PICK_SPECIMEN_A = 4600;//4600;
+    public static int CLAW_ARM_PICK_SAMPLE_A = 5162;//4600;
     public static int CLAW_ARM_HANG_SPECIMEN_Y = 3550;
     public static int CLAW_ARM_SNAP_SPECIMEN_B = 4000;
-    public static int CLAW_ARM_HORIZONTAL_X = 4200;
+    public static int CLAW_ARM_PICK_SPECIMEN_ENTER_SUB_X = 4520;
     public static int CLAW_ARM_HANG_START = 500;
     public static int CLAW_ARM_VELOCITY = 1500;
 
     //Right (Intake) Arm constants
     public static int INTAKE_ARM_RESTING_BACK = 0;
     public static int INTAKE_ARM_PICK_NEAR_SAMPLE_A = 5000; //4700
-    public static int INTAKE_ARM_PICK_FAR_SAMPLE_A = 4605; //4700
+    public static int INTAKE_ARM_PICK_FAR_SAMPLE_A = 4650; //4700
     public static int INTAKE_ARM_DROP_SAMPLE_HIGH_Y = 2600;
     public static int INTAKE_ARM_DROP_SAMPLE_LOW_B = 2800; //4050
-    public static int INTAKE_ARM_HORIZONTAL_X = 4700;
+    public static int INTAKE_ARM_ENTER_SUB_X = 4700;
     public static int INTAKE_ARM_HANG_START = 300;
     public static int INTAKE_ARM_VELOCITY = 1500;
     private static boolean INTAKE_ARM_NEAR_SAMPLE_MODE = true;
@@ -62,20 +63,19 @@ public class IncredibotsArmControl
 
         ProcessButtons();
 
-        ProcessDPad(telemetry);
+        ProcessDPad();
 
-        ProcessBumpers(telemetry);
+        ProcessBumpers();
 
         HandleManualOverride();
     }
-//functions to take gamepad inputs and turn it into movements
+
+    //functions to take gamepad inputs and turn it into movements
     private void ProcessButtons() {
 
         //toggle the arms to pick near samples or far samples
         if (gamepad2.back && gamepad2.start) {
-            INTAKE_ARM_NEAR_SAMPLE_MODE = !INTAKE_ARM_NEAR_SAMPLE_MODE;
-
-            ProcessIntakeArm();
+            SwitchIntakeArmModes();
         }
 
         //process back button
@@ -86,7 +86,6 @@ public class IncredibotsArmControl
             }
 
             if (gamepad2.right_trigger > 0) {
-                //UpdateSlideArmAndSlidePositions(INTAKE_ARM_RESTING_BACK, INTAKE_ARM_VELOCITY, SLIDE_POSITION_RESTING, SLIDE_VELOCITY);
                 robotHardware.setSlidePositionAndVelocity(SLIDE_POSITION_RESTING, SLIDE_VELOCITY);
                 robotHardware.setSlideArmPositionAndVelocity(INTAKE_ARM_RESTING_BACK, INTAKE_ARM_VELOCITY-500);
             }
@@ -95,16 +94,22 @@ public class IncredibotsArmControl
         //process button A
         if (gamepad2.a){
             if (gamepad2.left_trigger > 0) {
-                robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_PICK_SPECIMEN_A, CLAW_ARM_VELOCITY);
-
-                //wait till the arm is close enough to target position so opening the claw doesnt interfere with the other arm
-                while (Math.abs(CLAW_ARM_PICK_SPECIMEN_A - robotHardware.getClawArmMotorPos()) > 500) {}
-
+                robotHardware.setClawArmPositionAndVelocityAndWait(CLAW_ARM_PICK_SAMPLE_A, CLAW_ARM_VELOCITY);
                 robotHardware.operateClawServo(true, CLAW_OPEN_POSITION, CLAW_CLOSE_POSITION);
             }
 
             if (gamepad2.right_trigger > 0) {
-                ProcessIntakeArm();
+                if (INTAKE_ARM_NEAR_SAMPLE_MODE) {
+
+                    robotHardware.setSlidePositionAndVelocity(SLIDE_POSITION_TO_PICK_NEAR_SAMPLE, SLIDE_VELOCITY);
+                    robotHardware.setSlideArmPositionAndVelocity(INTAKE_ARM_PICK_NEAR_SAMPLE_A, INTAKE_ARM_VELOCITY);
+                }
+                else {
+                    robotHardware.setSlideArmPositionAndVelocity(INTAKE_ARM_PICK_FAR_SAMPLE_A, INTAKE_ARM_VELOCITY);
+                    robotHardware.setSlidePositionAndVelocity(SLIDE_POSITION_TO_PICK_FAR_SAMPLE, SLIDE_VELOCITY);
+                }
+
+                robotHardware.operateIntakeServo(true, false);
             }
         }
 
@@ -115,7 +120,6 @@ public class IncredibotsArmControl
             }
 
             if (gamepad2.right_trigger > 0) {
-                //UpdateSlideArmAndSlidePositions(INTAKE_ARM_DROP_SAMPLE_HIGH_Y, INTAKE_ARM_VELOCITY, SLIDE_POSITION_TO_SCORE_HIGH, SLIDE_VELOCITY);
                 robotHardware.setSlideArmPositionAndVelocity(INTAKE_ARM_DROP_SAMPLE_HIGH_Y, INTAKE_ARM_VELOCITY);
                 robotHardware.setSlidePositionAndVelocity(SLIDE_POSITION_TO_SCORE_HIGH, SLIDE_VELOCITY);
             }
@@ -124,19 +128,11 @@ public class IncredibotsArmControl
         //process button B
         if (gamepad2.b){
             if (gamepad2.left_trigger > 0) {
-                robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_SNAP_SPECIMEN_B, 500);
-
-                try {
-                    Thread.sleep(1500);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-
+                robotHardware.setClawArmPositionAndVelocityAndWait(CLAW_ARM_SNAP_SPECIMEN_B, CLAW_ARM_VELOCITY);
                 robotHardware.operateClawServo(true, CLAW_OPEN_POSITION, CLAW_CLOSE_POSITION);
             }
 
             if (gamepad2.right_trigger > 0) {
-                //UpdateSlideArmAndSlidePositions(INTAKE_ARM_DROP_SAMPLE_LOW_B, INTAKE_ARM_VELOCITY, SLIDE_POSITION_TO_SCORE_LOW, SLIDE_VELOCITY);
                 robotHardware.setSlideArmPositionAndVelocity(INTAKE_ARM_DROP_SAMPLE_LOW_B, INTAKE_ARM_VELOCITY);
                 robotHardware.setSlidePositionAndVelocity(SLIDE_POSITION_TO_SCORE_LOW, SLIDE_VELOCITY);
             }
@@ -145,12 +141,11 @@ public class IncredibotsArmControl
         //process button x
         if (gamepad2.x){
             if (gamepad2.left_trigger > 0) {
-                robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_HORIZONTAL_X, CLAW_ARM_VELOCITY);
+                robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_PICK_SPECIMEN_ENTER_SUB_X, CLAW_ARM_VELOCITY);
             }
 
             if (gamepad2.right_trigger > 0) {
-                //UpdateSlideArmAndSlidePositions(INTAKE_ARM_HORIZONTAL_X, INTAKE_ARM_VELOCITY, SLIDE_POSITION_RESTING, SLIDE_VELOCITY);
-                robotHardware.setSlideArmPositionAndVelocity(INTAKE_ARM_HORIZONTAL_X, INTAKE_ARM_VELOCITY);
+                robotHardware.setSlideArmPositionAndVelocity(INTAKE_ARM_ENTER_SUB_X, INTAKE_ARM_VELOCITY);
                 robotHardware.setSlidePositionAndVelocity(SLIDE_POSITION_RESTING, SLIDE_VELOCITY);
             }
         }
@@ -159,42 +154,52 @@ public class IncredibotsArmControl
         if (gamepad2.start && gamepad2.left_trigger > 0 && gamepad2.right_trigger > 0){
             robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_HANG_START, CLAW_ARM_VELOCITY);
             robotHardware.setSlideArmPositionAndVelocity(INTAKE_ARM_HANG_START, INTAKE_ARM_VELOCITY);
-            robotHardware.operateClawServo(true, CLAW_OPEN_POSITION, CLAW_CLOSE_POSITION); //open claw when hanging
         }
 
     }
 
-    private void ProcessIntakeArm() {
+    private void SwitchIntakeArmModes() {
+        INTAKE_ARM_NEAR_SAMPLE_MODE = !INTAKE_ARM_NEAR_SAMPLE_MODE;
+
         if (INTAKE_ARM_NEAR_SAMPLE_MODE) {
 
-            //UpdateSlideArmAndSlidePositions(INTAKE_ARM_PICK_NEAR_SAMPLE_A, INTAKE_ARM_VELOCITY, SLIDE_POSITION_TO_PICK_NEAR_SAMPLE, SLIDE_VELOCITY);
+            robotHardware.setSlidePositionAndVelocityAndWait(SLIDE_POSITION_TO_PICK_NEAR_SAMPLE, SLIDE_VELOCITY);
             robotHardware.setSlideArmPositionAndVelocity(INTAKE_ARM_PICK_NEAR_SAMPLE_A, INTAKE_ARM_VELOCITY);
-            robotHardware.setSlidePositionAndVelocity(SLIDE_POSITION_TO_PICK_NEAR_SAMPLE, SLIDE_VELOCITY);
         }
         else {
-            //UpdateSlideArmAndSlidePositions(INTAKE_ARM_PICK_FAR_SAMPLE_A, INTAKE_ARM_VELOCITY, SLIDE_POSITION_TO_PICK_FAR_SAMPLE, SLIDE_VELOCITY);
-            robotHardware.setSlideArmPositionAndVelocity(INTAKE_ARM_PICK_FAR_SAMPLE_A, INTAKE_ARM_VELOCITY);
+            robotHardware.setSlideArmPositionAndVelocityAndWait(INTAKE_ARM_PICK_FAR_SAMPLE_A, INTAKE_ARM_VELOCITY);
             robotHardware.setSlidePositionAndVelocity(SLIDE_POSITION_TO_PICK_FAR_SAMPLE, SLIDE_VELOCITY);
         }
 
         //start moving the intake servo for picking up samples if not already running
-        if (robotHardware.getIntakeServoPower() != 0) {
-            robotHardware.operateIntakeServo(true, false);
+        robotHardware.operateIntakeServo(true, false);
+    }
+
+    private void ProcessDPad() {
+
+        //if the servo is running, and any dpad pressed, stop it.
+        if (robotHardware.getIntakeServoPower() != 0 && (gamepad2.dpad_left || gamepad2.dpad_right)) {
+            Log.i("== Servo Status ==", "Inside process DPAD - Stopping servo");
+            robotHardware.stopIntakeServo();
+        }
+        else {
+            //process Dpad left input to spin intake servo clockwise to pick up the piece
+            if (gamepad2.dpad_left) {
+                Log.i("== Servo Status ==", "Inside process DPAD - running clockwise");
+
+                robotHardware.operateIntakeServo(true, false);
+            }
+            //process Dpad right input to spin intake servo counter clockwise to throw the piece out
+            if (gamepad2.dpad_right) {
+
+                Log.i("== Servo Status ==", "Inside process DPAD - running clockwise");
+
+                robotHardware.operateIntakeServo(false, true);
+            }
         }
     }
 
-    private void ProcessDPad(Telemetry telemetry) {
-        //process Dpad left input to spin intake servo clockwise to pick up the peice
-        if (gamepad2.dpad_left){
-            robotHardware.operateIntakeServo(true, false);
-        }
-        //process Dpad right input to spin intake servo counter clockwise to throw the peice out
-        if (gamepad2.dpad_right) {
-            robotHardware.operateIntakeServo(false, true);
-        }
-    }
-
-    private void ProcessBumpers(Telemetry telemetry) {
+    private void ProcessBumpers() {
         // if the right bumper is pressed it opens the claw
         if (gamepad2.right_bumper) {
             //telemetry.addLine("right bumper pressed");
@@ -249,42 +254,6 @@ public class IncredibotsArmControl
                 //SLIDE POSITION CANNOT BE LESS THAN 0
                 robotHardware.setSlidePositionAndVelocity(Math.max(robotHardware.getSlidePos() - MANUAL_OVERRIDE_POSITION_DELTA, 0), SLIDE_VELOCITY);
             }
-        }
-    }
-
-    //method to update slide position - it waits until the slide is close to the target
-    private void UpdateSlideArmAndSlidePositions(int slideArmPos, int slideArmVelocity, int slidePos, int slideVelocity) {
-
-        //if the slide is expanding, the arm should go first
-        if (robotHardware.getSlidePos() < slidePos) {
-            robotHardware.setSlideArmPositionAndVelocity(slideArmPos, slideArmVelocity);
-
-            //the do nothing loop until the slide gets to the target position
-            while (Math.abs(robotHardware.getSlideArmMotorPos() - slideArmPos) > 1000) {
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-
-            robotHardware.setSlidePositionAndVelocity(slideArmPos, slideArmVelocity);
-        }
-        else {
-            //if the slight is contracting, the slide should go first
-
-            robotHardware.setSlidePositionAndVelocity(slidePos, slidePos);
-
-            //the do nothing loop until the slide gets to the target position
-            while (Math.abs(robotHardware.getSlidePos() - slidePos) > 1000) {
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-
-            robotHardware.setSlideArmPositionAndVelocity(slideArmPos, slideArmVelocity);
         }
     }
 }
