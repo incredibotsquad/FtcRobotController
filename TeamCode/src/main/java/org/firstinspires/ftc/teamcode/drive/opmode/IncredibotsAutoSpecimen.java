@@ -1,4 +1,6 @@
 package org.firstinspires.ftc.teamcode.drive.opmode;
+import android.util.Log;
+
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 
@@ -6,8 +8,6 @@ import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.SequentialAction;
-import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
-import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -23,44 +23,52 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
  */
 public class IncredibotsAutoSpecimen extends LinearOpMode {
 
-    //Observation starting position - 47.25 - inside edge of third tile from closest vertical wall
+    public static int CLAW_ARM_DIFFERENCE_FOR_SNAP = 250;
+    public static int CLAW_ARM_DIFFERENCE_FOR_PICK = 150;
 
-
-    public static double START_X = 8.504;
-    public static double START_Y = 56.1325;
-    public static double START_H = Math.toRadians(0);
+    public static double START_X = -15;
+    public static double START_Y = 65.75;
+    public static double START_H = Math.toRadians(-90);
     Pose2d startPose = new Pose2d(START_X, START_Y, START_H);
 
-    public static double STEP1_X = 25.754;
-    public static double STEP1_Y = 59.6325;
-    public static double STEP1_H = Math.toRadians(0);
+    public static double START2_X = -17.5;
+    public static double START2_Y = 62.75;
+    public static double START2_H = Math.toRadians(0);
+    Pose2d start2Pose = new Pose2d(START2_X, START2_Y, START2_H);
+
+
+    //position to snap the preloaded specimen
+//    public static double STEP1_X = 0;
+//    public static double STEP1_Y = 62.75; //52.5
+//    public static double STEP1_H = START_H;
+    public static double STEP1_X = -8;
+    public static double STEP1_Y = 52.5; //52.5
+    public static double STEP1_H = START_H;
     Pose2d step1Pose = new Pose2d(STEP1_X, STEP1_Y, STEP1_H);
-    //ADD ARM MOTIONS HERE
 
-    public static double STEP2_X = 8.504;
-    public static double STEP2_Y = 56.1325;
-    public static double STEP2_H = Math.toRadians(0);
+    //position to pick the second specimen
+    public static double STEP2_X = -60;
+    public static double STEP2_Y = 46;
+    public static double STEP2_H = Math.toRadians(90);
     Pose2d step2Pose = new Pose2d(STEP2_X, STEP2_Y, STEP2_H);
-    //ADD ARM MOTIONS HERE
 
-    public static double STEP3_X = 8.504;
-    public static double STEP3_Y = 56.1325;
-    public static double STEP3_H = Math.toRadians(0);
+    //position to pick the second specimen
+    public static double STEP3_X = STEP2_X;
+    public static double STEP3_Y = 52;
+    public static double STEP3_H = STEP2_H;
     Pose2d step3Pose = new Pose2d(STEP3_X, STEP3_Y, STEP3_H);
-    //ADD ARM MOTIONS HERE
 
-    public static double STEP4_X = 8.504;
-    public static double STEP4_Y = 56.1325;
-    public static double STEP4_H = Math.toRadians(0);
+    //position to snap the second specimen
+    public static double STEP4_X = 0;
+    public static double STEP4_Y = 60;
+    public static double STEP4_H = STEP1_H;
     Pose2d step4Pose = new Pose2d(STEP4_X, STEP4_Y, STEP4_H);
-    //ADD ARM MOTIONS HERE
 
-    public static double END_X = 8.504;
-    public static double END_Y = 56.1325;
-    public static double END_H = Math.toRadians(0);
+    //parking position
+    public static double END_X = -58;
+    public static double END_Y = 60;
+    public static double END_H = STEP4_H;
     Pose2d endPose = new Pose2d(END_X, END_Y, END_H);
-    //ADD ARM MOTIONS HERE
-
 
     RobotHardware myHardware;
     IncredibotsArmControl armControl;
@@ -73,42 +81,103 @@ public class IncredibotsAutoSpecimen extends LinearOpMode {
         drive = new MecanumDrive(this.hardwareMap, startPose);
 
         Action dropLoadedSpecimen = drive.actionBuilder(startPose)
-                .strafeTo(step1Pose.position).build();
+                .strafeToLinearHeading(step1Pose.position, STEP1_H)
+                .build();
 
-        Action moveToPickNextSpecimen;
-        Action dropSecondSpecimen;
-        Action park;
+//        Action dropLoadedSpecimen = drive.actionBuilder(start2Pose)
+//                .lineToX(step1Pose.position.x)
+//                .build();
 
+        Action positionToPickNextSpecimen = drive.actionBuilder(step1Pose)
+                .strafeToLinearHeading(step2Pose.position, STEP2_H)
+                .build();
 
-        //start position 2, right next to the net zone
-//        TrajectoryActionBuilder tr2 = drive.actionBuilder(initialPose2)
-//                .strafeTo(new Vector2d(35, 40))
-//                .turn(Math.toRadians(45))
-//                //EXTEND ARM
-//                .strafeTo(new Vector2d(55, 55));
+        Action moveForwardToPickNextSpecimen = drive.actionBuilder(step2Pose)
+                .lineToY(step3Pose.position.y)
+                .build();
 
-        //3rd trajectory, from dropping off sample to parking in net zone
-//        TrajectoryActionBuilder trcom = drive.actionBuilder(endOfActPose)
-//                .strafeTo(new Vector2d(45, 45))
-//                .strafeTo(new Vector2d(-55, 55))
-//                .turn(Math.toRadians(-135))
-//                .lineToY(62);
+        Action moveToSnapSecondSpecimen = drive.actionBuilder(step3Pose)
+                .strafeToLinearHeading(step4Pose.position, STEP4_H)
+                .build();
 
+        Action park = drive.actionBuilder(step4Pose)
+                .strafeToConstantHeading(endPose.position)
+                .build();
 
+        //make sure claw is closed.
+        myHardware.operateClawServo(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION);
 
         // Wait for the game to start (driver presses PLAY)
         telemetry.addData("Status", "Initialized");
-        telemetry.update();
 
         waitForStart();
 
         while (opModeIsActive()) {
+            Log.i("=== heading ===", "start: " + myHardware.getRobotYawRadians());
+
+            Actions.runBlocking(
+                new SequentialAction(
+                        dropLoadedSpecimen
+                )
+            );
+
+            myHardware.setClawArmPositionAndVelocityAndWait(IncredibotsArmControl.CLAW_ARM_SNAP_SPECIMEN_B - CLAW_ARM_DIFFERENCE_FOR_SNAP, IncredibotsArmControl.CLAW_ARM_VELOCITY);
+            myHardware.operateClawServo(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION);
+            myHardware.setClawArmPositionAndVelocityAndWait(IncredibotsArmControl.CLAW_ARM_VERTICAL, IncredibotsArmControl.CLAW_ARM_VELOCITY);
+            myHardware.operateClawServo(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION);
+            myHardware.setClawArmPositionAndVelocityAndWait(IncredibotsArmControl.CLAW_ARM_RESTING_BACK, IncredibotsArmControl.CLAW_ARM_VELOCITY);
+
+            Actions.runBlocking(
+                new SequentialAction(
+                        positionToPickNextSpecimen
+                )
+            );
+
+            myHardware.setClawArmPositionAndVelocityAndWait(IncredibotsArmControl.CLAW_ARM_PICK_SPECIMEN_ENTER_SUB_X - CLAW_ARM_DIFFERENCE_FOR_PICK, IncredibotsArmControl.CLAW_ARM_VELOCITY);
+            myHardware.operateClawServo(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION);
+
+            Actions.runBlocking(
+                new SequentialAction(
+                    moveForwardToPickNextSpecimen
+                )
+            );
+
+            myHardware.operateClawServo(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION);
+
+            //wait for the claw to close
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Log.i("Incredibots Auto Specimen", "Sleeping thread interrupted");
+            }
+
+            myHardware.setClawArmPositionAndVelocityAndWait(IncredibotsArmControl.CLAW_ARM_VERTICAL, IncredibotsArmControl.CLAW_ARM_VELOCITY);
+
             Actions.runBlocking(
                     new SequentialAction(
-                            dropLoadedSpecimen
+                            moveToSnapSecondSpecimen
                     )
             );
+
+            myHardware.setClawArmPositionAndVelocityAndWait(IncredibotsArmControl.CLAW_ARM_SNAP_SPECIMEN_B - CLAW_ARM_DIFFERENCE_FOR_SNAP, IncredibotsArmControl.CLAW_ARM_VELOCITY);
+            myHardware.operateClawServo(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION);
+            myHardware.setClawArmPositionAndVelocityAndWait(IncredibotsArmControl.CLAW_ARM_VERTICAL, IncredibotsArmControl.CLAW_ARM_VELOCITY);
+            myHardware.operateClawServo(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION);
+            myHardware.setClawArmPositionAndVelocityAndWait(IncredibotsArmControl.CLAW_ARM_RESTING_BACK, IncredibotsArmControl.CLAW_ARM_VELOCITY);
+
+            Log.i("=== heading ===", "after turning: " + myHardware.getRobotYawRadians());
+
+            Actions.runBlocking(
+                    new SequentialAction(
+                            park
+                    )
+            );
+
+            telemetry.update();
+
+            break;
         }
+
 
 
 //        TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)

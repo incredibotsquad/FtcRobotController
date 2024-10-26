@@ -23,7 +23,8 @@ public class IncredibotsArmControl
     public static int CLAW_ARM_SNAP_SPECIMEN_B = 4000;
     public static int CLAW_ARM_PICK_SPECIMEN_ENTER_SUB_X = 4520;
     public static int CLAW_ARM_HANG_START = 500;
-    public static int CLAW_ARM_VELOCITY = 1500;
+    public static int CLAW_ARM_VERTICAL = 2500;
+    public static int CLAW_ARM_VELOCITY = 2100;
 
     //Right (Intake) Arm constants
     public static int INTAKE_ARM_RESTING_BACK = 0;
@@ -33,7 +34,7 @@ public class IncredibotsArmControl
     public static int INTAKE_ARM_DROP_SAMPLE_LOW_B = 2800; //4050
     public static int INTAKE_ARM_ENTER_SUB_X = 4700;
     public static int INTAKE_ARM_HANG_START = 300;
-    public static int INTAKE_ARM_VELOCITY = 1500;
+    public static int INTAKE_ARM_VELOCITY = 2100;
     private static boolean INTAKE_ARM_NEAR_SAMPLE_MODE = true;
 
     //claw positions
