@@ -13,7 +13,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 @Config
-@Autonomous(name = "IncredibotsAutoSpecimen", group = "Autonomous")
+@Autonomous(name = "IncredibotsAutoSpecimenBlue", group = "Autonomous")
 /* This auto opmode will do the following steps:
  1) Robot will start from the inside edge of third tile from closest vertical wall
  2) The robot will hang the preloaded specimen on the top rung
@@ -21,52 +21,47 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
  4) The robot will hang the second specimen
  5) The robot will go park in the ascent zone.
  */
-public class IncredibotsAutoSpecimen extends LinearOpMode {
+public class IncredibotsAutoSpecimenBlue extends LinearOpMode {
 
+    public static int AUTO_CLAW_ARM_POSITION_TO_HANG_SPECIMEN = 1700;
+    public static int AUTO_CLAW_ARM_POSITION_TO_SNAP_SPECIMEN = 1250;
     public static int CLAW_ARM_DIFFERENCE_FOR_SNAP = 250;
-    public static int CLAW_ARM_DIFFERENCE_FOR_PICK = 150;
+    public static int CLAW_ARM_DIFFERENCE_FOR_PICK = 80;
+    public static int CLAW_ARM_VERTICAL = 2500;
+
 
     public static double START_X = -15;
-    public static double START_Y = 65.75;
-    public static double START_H = Math.toRadians(-90);
+    public static double START_Y = 60.75;
+    public static double START_H = Math.toRadians(90);
     Pose2d startPose = new Pose2d(START_X, START_Y, START_H);
 
-    public static double START2_X = -17.5;
-    public static double START2_Y = 62.75;
-    public static double START2_H = Math.toRadians(0);
-    Pose2d start2Pose = new Pose2d(START2_X, START2_Y, START2_H);
-
-
     //position to snap the preloaded specimen
-//    public static double STEP1_X = 0;
-//    public static double STEP1_Y = 62.75; //52.5
-//    public static double STEP1_H = START_H;
-    public static double STEP1_X = -8;
-    public static double STEP1_Y = 52.5; //52.5
+    public static double STEP1_X = 5;
+    public static double STEP1_Y = 32;
     public static double STEP1_H = START_H;
     Pose2d step1Pose = new Pose2d(STEP1_X, STEP1_Y, STEP1_H);
 
     //position to pick the second specimen
-    public static double STEP2_X = -60;
-    public static double STEP2_Y = 46;
-    public static double STEP2_H = Math.toRadians(90);
+    public static double STEP2_X = -54;
+    public static double STEP2_Y = 40;
+    public static double STEP2_H = STEP1_H;
     Pose2d step2Pose = new Pose2d(STEP2_X, STEP2_Y, STEP2_H);
 
-    //position to pick the second specimen
+    //position to pick the second specimen - just moving forward
     public static double STEP3_X = STEP2_X;
-    public static double STEP3_Y = 52;
+    public static double STEP3_Y = 44.75;
     public static double STEP3_H = STEP2_H;
     Pose2d step3Pose = new Pose2d(STEP3_X, STEP3_Y, STEP3_H);
 
     //position to snap the second specimen
-    public static double STEP4_X = 0;
-    public static double STEP4_Y = 60;
-    public static double STEP4_H = STEP1_H;
+    public static double STEP4_X = -2;
+    public static double STEP4_Y = 49.5;
+    public static double STEP4_H = Math.toRadians(-90);
     Pose2d step4Pose = new Pose2d(STEP4_X, STEP4_Y, STEP4_H);
 
     //parking position
-    public static double END_X = -58;
-    public static double END_Y = 60;
+    public static double END_X = -54;
+    public static double END_Y = 58;
     public static double END_H = STEP4_H;
     Pose2d endPose = new Pose2d(END_X, END_Y, END_H);
 
@@ -81,15 +76,13 @@ public class IncredibotsAutoSpecimen extends LinearOpMode {
         drive = new MecanumDrive(this.hardwareMap, startPose);
 
         Action dropLoadedSpecimen = drive.actionBuilder(startPose)
-                .strafeToLinearHeading(step1Pose.position, STEP1_H)
+                .strafeToConstantHeading(step1Pose.position)
                 .build();
 
-//        Action dropLoadedSpecimen = drive.actionBuilder(start2Pose)
-//                .lineToX(step1Pose.position.x)
-//                .build();
-
         Action positionToPickNextSpecimen = drive.actionBuilder(step1Pose)
-                .strafeToLinearHeading(step2Pose.position, STEP2_H)
+                .lineToY(STEP2_Y)
+                .strafeToConstantHeading(step2Pose.position)
+                .turn(Math.toRadians(-2)) //there seems to be a strafing error that we can account for
                 .build();
 
         Action moveForwardToPickNextSpecimen = drive.actionBuilder(step2Pose)
@@ -115,17 +108,17 @@ public class IncredibotsAutoSpecimen extends LinearOpMode {
         while (opModeIsActive()) {
             Log.i("=== heading ===", "start: " + myHardware.getRobotYawRadians());
 
+            myHardware.setClawArmPositionAndVelocity(AUTO_CLAW_ARM_POSITION_TO_HANG_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY);
+
             Actions.runBlocking(
                 new SequentialAction(
                         dropLoadedSpecimen
                 )
             );
 
-            myHardware.setClawArmPositionAndVelocityAndWait(IncredibotsArmControl.CLAW_ARM_SNAP_SPECIMEN_B - CLAW_ARM_DIFFERENCE_FOR_SNAP, IncredibotsArmControl.CLAW_ARM_VELOCITY);
+            myHardware.setClawArmPositionAndVelocityAndWait(AUTO_CLAW_ARM_POSITION_TO_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY);
             myHardware.operateClawServo(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION);
-            myHardware.setClawArmPositionAndVelocityAndWait(IncredibotsArmControl.CLAW_ARM_VERTICAL, IncredibotsArmControl.CLAW_ARM_VELOCITY);
-            myHardware.operateClawServo(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION);
-            myHardware.setClawArmPositionAndVelocityAndWait(IncredibotsArmControl.CLAW_ARM_RESTING_BACK, IncredibotsArmControl.CLAW_ARM_VELOCITY);
+            myHardware.setClawArmPositionAndVelocityAndWait(CLAW_ARM_VERTICAL, IncredibotsArmControl.CLAW_ARM_VELOCITY);
 
             Actions.runBlocking(
                 new SequentialAction(
@@ -151,7 +144,7 @@ public class IncredibotsAutoSpecimen extends LinearOpMode {
                 Log.i("Incredibots Auto Specimen", "Sleeping thread interrupted");
             }
 
-            myHardware.setClawArmPositionAndVelocityAndWait(IncredibotsArmControl.CLAW_ARM_VERTICAL, IncredibotsArmControl.CLAW_ARM_VELOCITY);
+            myHardware.setClawArmPositionAndVelocityAndWait(CLAW_ARM_VERTICAL, IncredibotsArmControl.CLAW_ARM_VELOCITY);//was CLAW_ARM_VERTICAL
 
             Actions.runBlocking(
                     new SequentialAction(
@@ -161,9 +154,10 @@ public class IncredibotsAutoSpecimen extends LinearOpMode {
 
             myHardware.setClawArmPositionAndVelocityAndWait(IncredibotsArmControl.CLAW_ARM_SNAP_SPECIMEN_B - CLAW_ARM_DIFFERENCE_FOR_SNAP, IncredibotsArmControl.CLAW_ARM_VELOCITY);
             myHardware.operateClawServo(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION);
-            myHardware.setClawArmPositionAndVelocityAndWait(IncredibotsArmControl.CLAW_ARM_VERTICAL, IncredibotsArmControl.CLAW_ARM_VELOCITY);
+            myHardware.setClawArmPositionAndVelocityAndWait(CLAW_ARM_VERTICAL, IncredibotsArmControl.CLAW_ARM_VELOCITY);
             myHardware.operateClawServo(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION);
             myHardware.setClawArmPositionAndVelocityAndWait(IncredibotsArmControl.CLAW_ARM_RESTING_BACK, IncredibotsArmControl.CLAW_ARM_VELOCITY);
+            myHardware.operateClawServo(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION);
 
             Log.i("=== heading ===", "after turning: " + myHardware.getRobotYawRadians());
 

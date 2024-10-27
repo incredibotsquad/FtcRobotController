@@ -23,7 +23,6 @@ public class IncredibotsArmControl
     public static int CLAW_ARM_SNAP_SPECIMEN_B = 4000;
     public static int CLAW_ARM_PICK_SPECIMEN_ENTER_SUB_X = 4520;
     public static int CLAW_ARM_HANG_START = 500;
-    public static int CLAW_ARM_VERTICAL = 2500;
     public static int CLAW_ARM_VELOCITY = 2100;
 
     //Right (Intake) Arm constants
@@ -33,6 +32,7 @@ public class IncredibotsArmControl
     public static int INTAKE_ARM_DROP_SAMPLE_HIGH_Y = 2600;
     public static int INTAKE_ARM_DROP_SAMPLE_LOW_B = 2800; //4050
     public static int INTAKE_ARM_ENTER_SUB_X = 4700;
+    public static int INTAKE_ARM_HANG_HORIZONTAL = 4520;
     public static int INTAKE_ARM_HANG_START = 300;
     public static int INTAKE_ARM_VELOCITY = 2100;
     private static boolean INTAKE_ARM_NEAR_SAMPLE_MODE = true;
@@ -44,6 +44,7 @@ public class IncredibotsArmControl
     //Slide movement position
     public static int SLIDE_POSITION_TO_PICK_NEAR_SAMPLE = 800;
     public static int SLIDE_POSITION_TO_PICK_FAR_SAMPLE = 2893;
+    public static int MAX_SLIDE_POSITION_IN_OVERRIDE = 2500;
     public static int SLIDE_POSITION_TO_SCORE_HIGH = 4500;
     public static int SLIDE_POSITION_TO_SCORE_LOW = 0;
     public static int SLIDE_POSITION_RESTING = 0;
@@ -76,6 +77,7 @@ public class IncredibotsArmControl
 
         //toggle the arms to pick near samples or far samples
         if (gamepad2.back && gamepad2.start) {
+            Log.i("=== INCREDIBOTS ===", "INSIDE PROCESS BUTTONS SWITCH INTAKE ARM MODES");
             SwitchIntakeArmModes();
         }
 
@@ -106,7 +108,7 @@ public class IncredibotsArmControl
                     robotHardware.setSlideArmPositionAndVelocity(INTAKE_ARM_PICK_NEAR_SAMPLE_A, INTAKE_ARM_VELOCITY);
                 }
                 else {
-                    robotHardware.setSlideArmPositionAndVelocity(INTAKE_ARM_PICK_FAR_SAMPLE_A, INTAKE_ARM_VELOCITY);
+                    robotHardware.setSlideArmPositionAndVelocityAndWait(INTAKE_ARM_PICK_FAR_SAMPLE_A, INTAKE_ARM_VELOCITY);
                     robotHardware.setSlidePositionAndVelocity(SLIDE_POSITION_TO_PICK_FAR_SAMPLE, SLIDE_VELOCITY);
                 }
 
@@ -121,7 +123,7 @@ public class IncredibotsArmControl
             }
 
             if (gamepad2.right_trigger > 0) {
-                robotHardware.setSlideArmPositionAndVelocity(INTAKE_ARM_DROP_SAMPLE_HIGH_Y, INTAKE_ARM_VELOCITY);
+                robotHardware.setSlideArmPositionAndVelocityAndWait(INTAKE_ARM_DROP_SAMPLE_HIGH_Y, INTAKE_ARM_VELOCITY);
                 robotHardware.setSlidePositionAndVelocity(SLIDE_POSITION_TO_SCORE_HIGH, SLIDE_VELOCITY);
             }
         }
@@ -153,6 +155,8 @@ public class IncredibotsArmControl
 
         //when the start button is pressed it sets the left & right arms into hanging position
         if (gamepad2.start && gamepad2.left_trigger > 0 && gamepad2.right_trigger > 0){
+            //make sure the claw arm is horizontal first
+            robotHardware.setSlideArmPositionAndVelocityAndWait(INTAKE_ARM_HANG_HORIZONTAL, INTAKE_ARM_VELOCITY);
             robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_HANG_START, CLAW_ARM_VELOCITY);
             robotHardware.setSlideArmPositionAndVelocity(INTAKE_ARM_HANG_START, INTAKE_ARM_VELOCITY);
         }
@@ -168,6 +172,8 @@ public class IncredibotsArmControl
             robotHardware.setSlideArmPositionAndVelocity(INTAKE_ARM_PICK_NEAR_SAMPLE_A, INTAKE_ARM_VELOCITY);
         }
         else {
+            Log.i("=== INCREDIBOTS ===", "INSIDE SWITCH INTAKE ARM MODES - GOING TO FAR MODE");
+
             robotHardware.setSlideArmPositionAndVelocityAndWait(INTAKE_ARM_PICK_FAR_SAMPLE_A, INTAKE_ARM_VELOCITY);
             robotHardware.setSlidePositionAndVelocity(SLIDE_POSITION_TO_PICK_FAR_SAMPLE, SLIDE_VELOCITY);
         }
@@ -247,7 +253,7 @@ public class IncredibotsArmControl
             //process Dpad up input to extend linear slide
             if (gamepad2.dpad_up){
                 //SLIDE CANNOT EXPAND BEYOND THE FAR POSITION FOR IT TO BE UNDER LIMITS
-                robotHardware.setSlidePositionAndVelocity(Math.min(robotHardware.getSlidePos() + MANUAL_OVERRIDE_POSITION_DELTA, SLIDE_POSITION_TO_PICK_FAR_SAMPLE), SLIDE_VELOCITY);
+                robotHardware.setSlidePositionAndVelocity(Math.min(robotHardware.getSlidePos() + MANUAL_OVERRIDE_POSITION_DELTA, MAX_SLIDE_POSITION_IN_OVERRIDE), SLIDE_VELOCITY);
             }
 
             //process Dpad down input to retract linear slide
