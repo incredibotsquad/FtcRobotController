@@ -36,26 +36,26 @@ public class IncredibotsAutoSpecimenRed extends LinearOpMode {
     Pose2d startPose = new Pose2d(START_X, START_Y, START_H);
 
     //position to snap the preloaded specimen
-    public static double STEP1_X = -5;
-    public static double STEP1_Y = -32;
+    public static double STEP1_X = -7;
+    public static double STEP1_Y = -30;
     public static double STEP1_H = START_H;
     Pose2d step1Pose = new Pose2d(STEP1_X, STEP1_Y, STEP1_H);
 
     //position to pick the second specimen
-    public static double STEP2_X = 54;
+    public static double STEP2_X = 56;
     public static double STEP2_Y = -40;
     public static double STEP2_H = STEP1_H;
     Pose2d step2Pose = new Pose2d(STEP2_X, STEP2_Y, STEP2_H);
 
     //position to pick the second specimen - just moving forward
     public static double STEP3_X = STEP2_X;
-    public static double STEP3_Y = -44.75;
+    public static double STEP3_Y = -44.1;
     public static double STEP3_H = STEP2_H;
     Pose2d step3Pose = new Pose2d(STEP3_X, STEP3_Y, STEP3_H);
 
     //position to snap the second specimen
     public static double STEP4_X = 2;
-    public static double STEP4_Y = -37.75;
+    public static double STEP4_Y = -39;
     public static double STEP4_H = Math.toRadians(90);
     Pose2d step4Pose = new Pose2d(STEP4_X, STEP4_Y, STEP4_H);
 
