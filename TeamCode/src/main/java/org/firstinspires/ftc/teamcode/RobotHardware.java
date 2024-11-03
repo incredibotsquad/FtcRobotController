@@ -178,6 +178,10 @@ public class RobotHardware {
 
     //sets the drive motor's powers
     public void setDriveMotorPowers(double rfPower, double lfPower, double rbPower, double lbPower) {
+         Log.i("=== INCREDIBOTS ===","===========================");
+        Log.i("=== INCREDIBOTS ===","INSIDE SET DRIVE MOTOR POWERS");
+        Log.i("=== INCREDIBOTS ===","=============================");
+
          rightFrontDriveMotor.setPower(rfPower);
          leftFrontDriveMotor.setPower(lfPower);
          rightBackDriveMotor.setPower(rbPower);

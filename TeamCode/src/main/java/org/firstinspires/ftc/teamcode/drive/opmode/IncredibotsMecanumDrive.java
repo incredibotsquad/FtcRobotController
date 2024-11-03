@@ -70,7 +70,7 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
     RobotHardware myHardware;
     IncredibotsArmControl armControl;
 
-    // Declare OpMode members for each of the 4 motors.
+// Declare OpMode members for each of the 4 motors.
 //    private DcMotor leftFrontDrive = null;
 //    private DcMotor leftBackDrive = null;
 //    private DcMotor rightFrontDrive = null;

@@ -29,7 +29,7 @@ public class IncredibotsArmControl
     public static int INTAKE_ARM_RESTING_BACK = 0;
     public static int INTAKE_ARM_PICK_NEAR_SAMPLE_A = 5000; //4700
     public static int INTAKE_ARM_PICK_FAR_SAMPLE_A = 4650; //4700
-    public static int INTAKE_ARM_DROP_SAMPLE_HIGH_Y = 2600;
+    public static int INTAKE_ARM_DROP_SAMPLE_HIGH_Y = 2700;
     public static int INTAKE_ARM_DROP_SAMPLE_LOW_B = 2800; //4050
     public static int INTAKE_ARM_ENTER_SUB_X = 4700;
     public static int INTAKE_ARM_HANG_HORIZONTAL = 4520;
@@ -45,7 +45,7 @@ public class IncredibotsArmControl
     public static int SLIDE_POSITION_TO_PICK_NEAR_SAMPLE = 800;
     public static int SLIDE_POSITION_TO_PICK_FAR_SAMPLE = 2893;
     public static int MAX_SLIDE_POSITION_IN_OVERRIDE = 2500;
-    public static int SLIDE_POSITION_TO_SCORE_HIGH = 4500;
+    public static int SLIDE_POSITION_TO_SCORE_HIGH = 5000;
     public static int SLIDE_POSITION_TO_SCORE_LOW = 0;
     public static int SLIDE_POSITION_RESTING = 0;
     public static int SLIDE_VELOCITY = 5000;
@@ -62,6 +62,9 @@ public class IncredibotsArmControl
     public void ProcessInputs(Telemetry telemetry) {
         //left trigger + buttons controls left arm (claw)
         //right trigger + buttons controls right arm (intake)
+        Log.i("=== INCREDIBOTS ===","===========================");
+        Log.i("=== INCREDIBOTS ===", "PROCESSING INPUTS FOR ARMS");
+        Log.i("=== INCREDIBOTS ===","===========================");
 
         ProcessButtons();
 
@@ -97,17 +100,19 @@ public class IncredibotsArmControl
         //process button A
         if (gamepad2.a){
             if (gamepad2.left_trigger > 0) {
+                robotHardware.setDriveMotorPowers(0,0,0,0);
                 robotHardware.setClawArmPositionAndVelocityAndWait(CLAW_ARM_PICK_SAMPLE_A, CLAW_ARM_VELOCITY);
                 robotHardware.operateClawServo(true, CLAW_OPEN_POSITION, CLAW_CLOSE_POSITION);
             }
 
             if (gamepad2.right_trigger > 0) {
                 if (INTAKE_ARM_NEAR_SAMPLE_MODE) {
-
-                    robotHardware.setSlidePositionAndVelocity(SLIDE_POSITION_TO_PICK_NEAR_SAMPLE, SLIDE_VELOCITY);
+                    robotHardware.setDriveMotorPowers(0,0,0,0);
+                    robotHardware.setSlidePositionAndVelocityAndWait(SLIDE_POSITION_TO_PICK_NEAR_SAMPLE, SLIDE_VELOCITY);
                     robotHardware.setSlideArmPositionAndVelocity(INTAKE_ARM_PICK_NEAR_SAMPLE_A, INTAKE_ARM_VELOCITY);
                 }
                 else {
+                    robotHardware.setDriveMotorPowers(0,0,0,0);
                     robotHardware.setSlideArmPositionAndVelocityAndWait(INTAKE_ARM_PICK_FAR_SAMPLE_A, INTAKE_ARM_VELOCITY);
                     robotHardware.setSlidePositionAndVelocity(SLIDE_POSITION_TO_PICK_FAR_SAMPLE, SLIDE_VELOCITY);
                 }
@@ -123,6 +128,7 @@ public class IncredibotsArmControl
             }
 
             if (gamepad2.right_trigger > 0) {
+                robotHardware.setDriveMotorPowers(0,0,0,0);
                 robotHardware.setSlideArmPositionAndVelocityAndWait(INTAKE_ARM_DROP_SAMPLE_HIGH_Y, INTAKE_ARM_VELOCITY);
                 robotHardware.setSlidePositionAndVelocity(SLIDE_POSITION_TO_SCORE_HIGH, SLIDE_VELOCITY);
             }
@@ -131,6 +137,7 @@ public class IncredibotsArmControl
         //process button B
         if (gamepad2.b){
             if (gamepad2.left_trigger > 0) {
+                robotHardware.setDriveMotorPowers(0,0,0,0);
                 robotHardware.setClawArmPositionAndVelocityAndWait(CLAW_ARM_SNAP_SPECIMEN_B, CLAW_ARM_VELOCITY);
                 robotHardware.operateClawServo(true, CLAW_OPEN_POSITION, CLAW_CLOSE_POSITION);
             }
@@ -160,20 +167,19 @@ public class IncredibotsArmControl
             robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_HANG_START, CLAW_ARM_VELOCITY);
             robotHardware.setSlideArmPositionAndVelocity(INTAKE_ARM_HANG_START, INTAKE_ARM_VELOCITY);
         }
-
     }
 
     private void SwitchIntakeArmModes() {
         INTAKE_ARM_NEAR_SAMPLE_MODE = !INTAKE_ARM_NEAR_SAMPLE_MODE;
 
         if (INTAKE_ARM_NEAR_SAMPLE_MODE) {
-
+            robotHardware.setDriveMotorPowers(0,0,0,0);
             robotHardware.setSlidePositionAndVelocityAndWait(SLIDE_POSITION_TO_PICK_NEAR_SAMPLE, SLIDE_VELOCITY);
             robotHardware.setSlideArmPositionAndVelocity(INTAKE_ARM_PICK_NEAR_SAMPLE_A, INTAKE_ARM_VELOCITY);
         }
         else {
             Log.i("=== INCREDIBOTS ===", "INSIDE SWITCH INTAKE ARM MODES - GOING TO FAR MODE");
-
+            robotHardware.setDriveMotorPowers(0,0,0,0);
             robotHardware.setSlideArmPositionAndVelocityAndWait(INTAKE_ARM_PICK_FAR_SAMPLE_A, INTAKE_ARM_VELOCITY);
             robotHardware.setSlidePositionAndVelocity(SLIDE_POSITION_TO_PICK_FAR_SAMPLE, SLIDE_VELOCITY);
         }
