@@ -29,6 +29,7 @@
 
 package org.firstinspires.ftc.teamcode.drive.opmode;
 
+import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
@@ -62,6 +63,7 @@ import org.firstinspires.ftc.teamcode.RobotHardware;
  * Remove or comment out the @Disabled line to add this OpMode to the Driver Station OpMode list
  */
 
+@Config
 @TeleOp(name="IncredibotsMecanumDrive", group="Linear OpMode")
 public class IncredibotsMecanumDrive extends LinearOpMode {
 
@@ -156,25 +158,18 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
             rightBackPower  = gamepad1.b ? 1.0 : 0.0;  // B gamepad
             */
 
-            // Send calculated power to wheels
-//            leftFrontDrive.setPower(leftFrontPower);
-//            rightFrontDrive.setPower(rightFrontPower);
-//            leftBackDrive.setPower(leftBackPower);
-//            rightBackDrive.setPower(rightBackPower);
             // Sets the drive motor powers
             myHardware.setDriveMotorPowers(rightFrontPower, leftFrontPower, rightBackPower, leftBackPower);
 
             // Show the elapsed game time and wheel power.
             telemetry.addData("Front left/Right", "%4.2f, %4.2f", leftFrontPower, rightFrontPower);
             telemetry.addData("Back  left/Right", "%4.2f, %4.2f", leftBackPower, rightBackPower);
-            telemetry.addData("leftArmPos: ", myHardware.getClawArmMotorPos());
-            telemetry.addData("rightArmPos", myHardware.getSlideArmMotorPos());
-            telemetry.addData("slidePos", myHardware.getSlidePos());
+            telemetry.addData("Arm Position: ", myHardware.getClawArmMotorPos());
+            telemetry.addData("Slide Position", myHardware.getSlidePos());
 
             // calls the process inputs function from the arm control class
             armControl.ProcessInputs(telemetry);
             //updates telemetry
             telemetry.update();
-
         }
     }}
