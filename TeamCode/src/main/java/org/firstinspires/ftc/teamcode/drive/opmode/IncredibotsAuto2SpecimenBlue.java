@@ -47,8 +47,8 @@ public class IncredibotsAuto2SpecimenBlue extends LinearOpMode {
         return new ArmMotionAsRRAction(myHardware, position, velocity, waitForAction);
     }
 
-    private Action GetSlideControlAction(int position, int velocity, boolean waitForAction) {
-        return new SlideMotionAsRRAction(myHardware, position, velocity, waitForAction);
+    private Action GetSlideControlAction(int position, boolean waitForAction) {
+        return new SlideMotionAsRRAction(myHardware, position, waitForAction);
     }
 
     private Action GetClawControlAction(boolean open, double openPosition, double closePosition, boolean waitForAction) {
@@ -99,14 +99,14 @@ public class IncredibotsAuto2SpecimenBlue extends LinearOpMode {
                 .strafeToConstantHeading(MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_ONE.position)
                 .setTangent(heading)
                 .lineToYConstantHeading(MOVE_TO_BRACE_SUB_SPECIMEN_ONE.position.y)
-                .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN_HIGH, IncredibotsArmControl.SLIDE_VELOCITY, true))
+                .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN_HIGH, true))
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_AUTO_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_AUTO_VELOCITY_SNAP_SAMPLE, true))
                 .waitSeconds(0.75)
                 .stopAndAdd(GetClawControlAction(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, false))
                 .build();
 
         Action pickSecondSpecimen = drive.actionBuilder(MOVE_TO_BRACE_SUB_SPECIMEN_ONE)
-                .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_RESTING, IncredibotsArmControl.SLIDE_VELOCITY, false))
+                .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_RESTING, false))
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
                 .lineToYConstantHeading(MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_ONE.position.y)
                 .strafeToConstantHeading(PICK_SPECIMEN.position)
@@ -117,7 +117,7 @@ public class IncredibotsAuto2SpecimenBlue extends LinearOpMode {
                 .strafeToConstantHeading(MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_TWO.position)
                 .setTangent(heading)
                 .lineToYConstantHeading(MOVE_TO_BRACE_SUB_SPECIMEN_TWO.position.y)
-                .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN_HIGH, IncredibotsArmControl.SLIDE_VELOCITY, true))
+                .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN_HIGH, true))
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_AUTO_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_AUTO_VELOCITY_SNAP_SAMPLE, true))
                 .waitSeconds(0.75)
                 .stopAndAdd(GetClawControlAction(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, false))
