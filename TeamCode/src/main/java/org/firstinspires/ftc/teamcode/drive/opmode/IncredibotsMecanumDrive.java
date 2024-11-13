@@ -113,7 +113,7 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
         waitForStart();
 
         // run until the end of the match (driver presses STOP)
-        while (opModeIsActive()) {
+        while (opModeIsActive() && !isStopRequested()) {
             double max;
 
             // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
@@ -171,5 +171,7 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
             armControl.ProcessInputs(telemetry);
             //updates telemetry
             telemetry.update();
+
+            idle();
         }
     }}
