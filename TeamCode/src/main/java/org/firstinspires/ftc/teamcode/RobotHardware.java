@@ -11,6 +11,7 @@ import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.teamcode.drive.opmode.IncredibotsArmControl;
 
 public class RobotHardware {
     //making variables
@@ -72,6 +73,15 @@ public class RobotHardware {
 
          imu = hwMap.get(IMU.class, "imu");
      }
+
+    private int GetSlideVelocity(int slidePos) {
+        //contract faster than expanding
+        return (slidePos < getSlidePos())? IncredibotsArmControl.SLIDE_VELOCITY_CONTRACTING : IncredibotsArmControl.SLIDE_VELOCITY_EXPANDING;
+    }
+
+    public void setSlidePosition(int pos) {
+        setSlidePositionAndVelocity(pos, GetSlideVelocity(pos));
+    }
 
     // Sets the slide's position and velocity
      public void setSlidePositionAndVelocity(int pos, double velocity) {

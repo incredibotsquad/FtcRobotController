@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.drive.opmode;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
@@ -34,8 +36,10 @@ public class ClawMotionAsRRAction implements Action {
         }
 
         if (waitForAction) {
+            boolean timerPending = timer.milliseconds() < 500;
+            Log.i("=== INCREDIBOTS ===", "INSIDE CLAWMOTIONASRRACTION - WAITING FOR CLAW: " + timerPending);
             //tell RR we need to keep running if 500 ms has not elapsed
-            return (timer.milliseconds() < 500);
+            return (timerPending);
         }
 
         return false;
