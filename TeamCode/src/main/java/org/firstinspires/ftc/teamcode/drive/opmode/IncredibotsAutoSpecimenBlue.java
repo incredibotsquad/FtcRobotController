@@ -1,13 +1,11 @@
 package org.firstinspires.ftc.teamcode.drive.opmode;
-import android.util.Log;
 
-import androidx.annotation.NonNull;
+import android.util.Log;
 
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 
 import com.acmerobotics.dashboard.config.Config;
-import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.SequentialAction;
@@ -69,59 +67,37 @@ public class IncredibotsAutoSpecimenBlue extends LinearOpMode {
 //    Pose2d endPose = new Pose2d(END_X, END_Y, END_H);
 //
 
-
     RobotHardware myHardware;
     IncredibotsArmControl armControl;
     MecanumDrive drive;
 
-    // round 1 - drop preloaded specimen and move on sample 1 to observation zone
-    public static Pose2d INIT_POS = new Pose2d(-15, 60.75, Math.toRadians(90));
 
-    public static Pose2d HANG_SPEC_1 = new Pose2d(-5, 33, Math.toRadians(90));
+    //start with a robot centric position
+    public static Pose2d INIT_POS = new Pose2d(-27, 63, Math.toRadians(-90));
+    public static Pose2d GET_CLOSE_TO_FIRST_SAMPLE = new Pose2d(-37, 27, Math.toRadians(-90));
+    public static Pose2d MOVE_BEYOND_FIRST_SAMPLE = new Pose2d(GET_CLOSE_TO_FIRST_SAMPLE.position.x, 15, Math.toRadians(-90));
+    public static Pose2d STRAFE_BEHIND_FIRST_SAMPLE = new Pose2d(-45, MOVE_BEYOND_FIRST_SAMPLE.position.y, Math.toRadians(-90));
+    public static Pose2d PUSH_FIRST_SAMPLE = new Pose2d(STRAFE_BEHIND_FIRST_SAMPLE.position.x, 56, Math.toRadians(-90));
+    public static Pose2d STRAFE_BEHIND_SECOND_SAMPLE = new Pose2d(PUSH_FIRST_SAMPLE.position.x - 10, MOVE_BEYOND_FIRST_SAMPLE.position.y, Math.toRadians(-90));
+    public static Pose2d STRAFE_BEHIND_THIRD_SAMPLE = new Pose2d(STRAFE_BEHIND_SECOND_SAMPLE.position.x - 10, MOVE_BEYOND_FIRST_SAMPLE.position.y, Math.toRadians(-90));
+    public static Pose2d PICK_SPECIMEN = new Pose2d(STRAFE_BEHIND_THIRD_SAMPLE.position.x, 45, Math.toRadians(-90));
+    public static Pose2d MOVE_FORWARD_TO_PICK_SPECIMEN = new Pose2d(PICK_SPECIMEN.position.x, 62, Math.toRadians(-90));
+    public static Pose2d MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_ONE = new Pose2d(-5, PICK_SPECIMEN.position.y, Math.toRadians(-90));
+    public static Pose2d MOVE_TO_BRACE_SUB_SPECIMEN_ONE = new Pose2d(MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_ONE.position.x, 30, Math.toRadians(-90));
+    public static Pose2d MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_TWO = new Pose2d(-1, MOVE_FORWARD_TO_PICK_SPECIMEN.position.y, Math.toRadians(-90));
+    public static Pose2d MOVE_TO_BRACE_SUB_SPECIMEN_TWO = new Pose2d(MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_TWO.position.x, 30, Math.toRadians(-90));
 
-    public static Pose2d BACK_POST_HANG = new Pose2d(-36, 35, Math.toRadians(90));
+    private Action GetArmControlAction(int position, int velocity, boolean waitForAction) {
+        return new ArmMotionAsRRAction(myHardware, position, velocity, waitForAction);
+    }
 
-    public static Pose2d ALIGN_NEXT_TO_SAMP_1 = new Pose2d(-36, 9, Math.toRadians(90));
-    //-
-    public static Pose2d SLIDE_UNDER_SAMP_1 = new Pose2d(-42, 9, Math.toRadians(90));
-    //-
-    public static Pose2d PUSH_SAMP_1 = new Pose2d(-43, 60, Math.toRadians(90));
+    private Action GetSlideControlAction(int position, int velocity, boolean waitForAction) {
+        return new SlideMotionAsRRAction(myHardware, position, velocity, waitForAction);
+    }
 
-    // round 2 - move sample 2  to observation zone, pick and hang specimen 2
-    //-
-    public static Pose2d ALIGN_NEXT_TO_SAMP_2 = new Pose2d(-43, 13, Math.toRadians(90));
-    //-
-    public static Pose2d SLIDE_UNDER_SAMP_2 = new Pose2d(-51, 13, Math.toRadians(90));
-    // adjust a bit on x to allow room for hang
-
-    public static Pose2d HANG_SPEC_2 = new Pose2d(-2, 33, Math.toRadians(90));
-    //-
-    public static Pose2d PUSH_SAMP_2 = new Pose2d(-51, 60, Math.toRadians(90));
-
-    // round 3 - move sample 3  to observation zone, pick and hang specimen 3
-
-    //-
-    public static Pose2d PICK_SPEC = new Pose2d(-62, 50, Math.toRadians(90));
-    //-
-    public static Pose2d ALIGN_NEXT_TO_FINAL_SAMP = new Pose2d(-51, 13, Math.toRadians(90));
-    // adjust a bit on x to allow room for hang
-    public static Pose2d HANG_SPEC_3 = new Pose2d(1, 33, Math.toRadians(90));
-    //-
-    public static Pose2d BRACE_WALL_SAMP_3 = new Pose2d(-62, 13, Math.toRadians(90));
-    //-
-    public static Pose2d PUSH_SAMP_3 = new Pose2d(-62, 60, Math.toRadians(90));
-    //-
-    public static Pose2d BACK_OPEN_ARM = new Pose2d(-62, 40, Math.toRadians(90));
-
-    // round 4 - pick and hand spc 4
-    // adjust a bit on x to allow room for hang
-    public static Pose2d HANG_SPEC_4 = new Pose2d(3, 33, Math.toRadians(90));
-
-    public static Pose2d HANG_SPEC_5 = new Pose2d(3, 33, Math.toRadians(90));
-
-    //-
-    public static Pose2d PARK_POS = new Pose2d(-52, 62, Math.toRadians(90));
-
+    private Action GetClawControlAction(boolean open, double openPosition, double closePosition, boolean waitForAction) {
+        return new ClawMotionAsRRAction(myHardware, open, openPosition, closePosition, waitForAction);
+    }
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -129,192 +105,84 @@ public class IncredibotsAutoSpecimenBlue extends LinearOpMode {
         armControl = new IncredibotsArmControl(gamepad2, myHardware);
         drive = new MecanumDrive(this.hardwareMap, INIT_POS);
 
-        // round 1: Robot hangs first preload and pushes first sample (2nd Trajectory)
-        Action stepOne = drive.actionBuilder(INIT_POS)
-                .strafeToLinearHeading(HANG_SPEC_1.position, HANG_SPEC_1.heading)
-                .strafeToLinearHeading(BACK_POST_HANG.position, BACK_POST_HANG.heading)
-                .strafeToLinearHeading(ALIGN_NEXT_TO_SAMP_1.position, ALIGN_NEXT_TO_SAMP_1.heading)
-                .strafeToLinearHeading(SLIDE_UNDER_SAMP_1.position, SLIDE_UNDER_SAMP_1.heading)
-                .strafeToLinearHeading(PUSH_SAMP_1.position, PUSH_SAMP_1.heading)
+
+        Action pushSampleOne = drive.actionBuilder(INIT_POS)
+                .strafeToConstantHeading(GET_CLOSE_TO_FIRST_SAMPLE.position)
+                .lineToYConstantHeading(MOVE_BEYOND_FIRST_SAMPLE.position.y)
+                .strafeToConstantHeading(STRAFE_BEHIND_FIRST_SAMPLE.position)
+                .setTangent(Math.toRadians(-90))
+                .lineToYConstantHeading(PUSH_FIRST_SAMPLE.position.y)
                 .build();
 
-        // round 2: Robot aligns with remaining two samples and pushes them in (2nd Trajectory)
-        Action stepTwo = drive.actionBuilder(PUSH_SAMP_1) //PUSH_SAMP_1
-                .strafeToLinearHeading(ALIGN_NEXT_TO_SAMP_2.position, ALIGN_NEXT_TO_SAMP_2.heading)
-                .strafeToLinearHeading(SLIDE_UNDER_SAMP_2.position, SLIDE_UNDER_SAMP_2.heading)
-                .strafeToLinearHeading(PUSH_SAMP_2.position, PUSH_SAMP_2.heading)
-                .strafeToLinearHeading(ALIGN_NEXT_TO_FINAL_SAMP.position, ALIGN_NEXT_TO_FINAL_SAMP.heading)
-                .strafeToLinearHeading(BRACE_WALL_SAMP_3.position, BRACE_WALL_SAMP_3.heading)
-                .strafeToLinearHeading(PUSH_SAMP_3.position, PUSH_SAMP_3.heading)
-                .strafeToLinearHeading(BACK_OPEN_ARM.position, BACK_OPEN_ARM.heading)
+        //this action is to push in samples 2 and 3
+        Action pushSamplesTwoAndThree = drive.actionBuilder(PUSH_FIRST_SAMPLE)
+                .lineToYConstantHeading(MOVE_BEYOND_FIRST_SAMPLE.position.y)
+                .strafeToConstantHeading(STRAFE_BEHIND_SECOND_SAMPLE.position)
+                .setTangent(Math.toRadians(-90))
+                .lineToYConstantHeading(PUSH_FIRST_SAMPLE.position.y)
+                .lineToYConstantHeading(MOVE_BEYOND_FIRST_SAMPLE.position.y)
+                .strafeToConstantHeading(STRAFE_BEHIND_THIRD_SAMPLE.position)
+                .setTangent(Math.toRadians(-90))
+                .lineToYConstantHeading(PUSH_FIRST_SAMPLE.position.y)
                 .build();
 
-        Action stepThree = drive.actionBuilder(BACK_OPEN_ARM)
-                //Round 3: Goes to pick up 2nd, 3rd, 4th, and 5th specimens
-                .strafeToLinearHeading(PICK_SPEC.position, PICK_SPEC.heading)
-                .waitSeconds(0.35)
+        Action pickFirstSpecimen = drive.actionBuilder(PUSH_FIRST_SAMPLE)
+                .strafeToConstantHeading(PICK_SPECIMEN.position)
+                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
+                .stopAndAdd(GetClawControlAction(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, false))
+                .setTangent(Math.toRadians(-90))
+                .lineToYConstantHeading(MOVE_FORWARD_TO_PICK_SPECIMEN.position.y)
+                .stopAndAdd(GetClawControlAction(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, true))
+                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_AUTO_HANG_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
+                .strafeToConstantHeading(MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_ONE.position)
+                .setTangent(Math.toRadians(-90))
+                .lineToYConstantHeading(MOVE_TO_BRACE_SUB_SPECIMEN_ONE.position.y)
+                .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN_HIGH, IncredibotsArmControl.SLIDE_VELOCITY, true))
+                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_AUTO_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, true))
+                .waitSeconds(0.75)
+                .stopAndAdd(GetClawControlAction(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, false))
+                .build();
 
-                .strafeToLinearHeading(HANG_SPEC_2.position, HANG_SPEC_2.heading)
-                .waitSeconds(0.35)
-                .strafeToLinearHeading(PICK_SPEC.position, PICK_SPEC.heading)
-                .waitSeconds(0.35)
-                .strafeToLinearHeading(HANG_SPEC_3.position, HANG_SPEC_3.heading)
-                .waitSeconds(0.35)
-                .strafeToLinearHeading(PICK_SPEC.position, PICK_SPEC.heading)
-                .waitSeconds(0.35)
-                .strafeToLinearHeading(HANG_SPEC_4.position, HANG_SPEC_4.heading)
-                .waitSeconds(0.35)
-                .strafeToLinearHeading(PICK_SPEC.position, PICK_SPEC.heading)
-                .waitSeconds(0.35)
-                .strafeToLinearHeading(HANG_SPEC_5.position, HANG_SPEC_5.heading)
-                .waitSeconds(0.35)
-                .strafeToLinearHeading(PARK_POS.position, PARK_POS.heading)
+        Action pickSecondSpecimen = drive.actionBuilder(MOVE_TO_BRACE_SUB_SPECIMEN_ONE)
+                .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_RESTING, IncredibotsArmControl.SLIDE_VELOCITY, false))
+                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
+                .lineToYConstantHeading(MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_ONE.position.y)
+                .strafeToConstantHeading(PICK_SPECIMEN.position)
+                .setTangent(Math.toRadians(-90))
+                .lineToYConstantHeading(MOVE_FORWARD_TO_PICK_SPECIMEN.position.y)
+                .stopAndAdd(GetClawControlAction(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, true))
+                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_AUTO_HANG_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
+                .strafeToConstantHeading(MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_TWO.position)
+                .setTangent(Math.toRadians(-90))
+                .lineToYConstantHeading(MOVE_TO_BRACE_SUB_SPECIMEN_TWO.position.y)
+                .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN_HIGH, IncredibotsArmControl.SLIDE_VELOCITY, true))
+                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_AUTO_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, true))
+                .build();
+
+        Action goPark = drive.actionBuilder(MOVE_TO_BRACE_SUB_SPECIMEN_TWO)
+                .stopAndAdd(GetClawControlAction(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, false))
                 .build();
 
         waitForStart();
 
         while (opModeIsActive()) {
             Actions.runBlocking(
-                    new SequentialAction(
-                            stepOne
-                    )
+                    new SequentialAction(pushSampleOne)
+            );
+
+//            Actions.runBlocking(
+//                    new SequentialAction(pushSamplesTwoAndThree)
+//            );
+
+            Actions.runBlocking(
+                    new SequentialAction(pickFirstSpecimen)
             );
 
             Actions.runBlocking(
-                    new SequentialAction(
-                            stepTwo
-                    )
+                    new SequentialAction(pickSecondSpecimen)
             );
 
-            Actions.runBlocking(
-                    new SequentialAction(
-                            stepThree
-                    )
-            );
+            Log.i("====INCREDIBOTS ====", "");
         }
     }
-
-//    @Override
-//    public void runOpMode() throws InterruptedException {
-//        myHardware = new RobotHardware(this.hardwareMap);
-//        armControl = new IncredibotsArmControl(gamepad2, myHardware);
-//        drive = new MecanumDrive(this.hardwareMap, startPose);
-//
-//        Action dropLoadedSpecimen = drive.actionBuilder(startPose)
-//                .strafeToConstantHeading(step1Pose.position)
-//                .build();
-//
-//        Action positionToPickNextSpecimen = drive.actionBuilder(step1Pose)
-//                .lineToY(STEP2_Y)
-//                .strafeToConstantHeading(step2Pose.position)
-//                .turn(Math.toRadians(-2)) //there seems to be a strafing error that we can account for
-//                .build();
-//
-//        Action moveForwardToPickNextSpecimen = drive.actionBuilder(step2Pose)
-//                .lineToY(step3Pose.position.y)
-//                .build();
-//
-//        Action moveToSnapSecondSpecimen = drive.actionBuilder(step3Pose)
-//                .strafeToLinearHeading(step4Pose.position, STEP4_H)
-//                .build();
-//
-//        Action park = drive.actionBuilder(step4Pose)
-//                .strafeToConstantHeading(endPose.position)
-//                .build();
-//
-//        //make sure claw is closed.
-//        myHardware.operateClawServo(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION);
-//
-//        // Wait for the game to start (driver presses PLAY)
-//        telemetry.addData("Status", "Initialized");
-//
-//        waitForStart();
-//
-//        while (opModeIsActive()) {
-//            Log.i("=== heading ===", "start: " + myHardware.getRobotYawRadians());
-//
-//            myHardware.setClawArmPositionAndVelocity(AUTO_CLAW_ARM_POSITION_TO_HANG_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY);
-//
-//            Actions.runBlocking(
-//                new SequentialAction(
-//                        dropLoadedSpecimen
-//                )
-//            );
-//
-//            myHardware.setClawArmPositionAndVelocityAndWait(AUTO_CLAW_ARM_POSITION_TO_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY);
-//            myHardware.operateClawServo(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION);
-//            myHardware.setClawArmPositionAndVelocityAndWait(CLAW_ARM_VERTICAL, IncredibotsArmControl.CLAW_ARM_VELOCITY);
-//
-//            Actions.runBlocking(
-//                new SequentialAction(
-//                        positionToPickNextSpecimen
-//                )
-//            );
-//
-//            myHardware.setClawArmPositionAndVelocityAndWait(IncredibotsArmControl.CLAW_ARM_PICK_SPECIMEN_ENTER_SUB_X - CLAW_ARM_DIFFERENCE_FOR_PICK, IncredibotsArmControl.CLAW_ARM_VELOCITY);
-//            myHardware.operateClawServo(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION);
-//
-//            Actions.runBlocking(
-//                new SequentialAction(
-//                    moveForwardToPickNextSpecimen
-//                )
-//            );
-//
-//            myHardware.operateClawServo(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION);
-//
-//            //wait for the claw to close
-//            try {
-//                Thread.sleep(1000);
-//            } catch (InterruptedException e) {
-//                Log.i("Incredibots Auto Specimen", "Sleeping thread interrupted");
-//            }
-//
-//            myHardware.setClawArmPositionAndVelocityAndWait(CLAW_ARM_VERTICAL, IncredibotsArmControl.CLAW_ARM_VELOCITY);//was CLAW_ARM_VERTICAL
-//
-//            Actions.runBlocking(
-//                    new SequentialAction(
-//                            moveToSnapSecondSpecimen
-//                    )
-//            );
-//
-//            myHardware.setClawArmPositionAndVelocityAndWait(IncredibotsArmControl.CLAW_ARM_SNAP_SPECIMEN_B - CLAW_ARM_DIFFERENCE_FOR_SNAP, IncredibotsArmControl.CLAW_ARM_VELOCITY);
-//            myHardware.operateClawServo(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION);
-//            myHardware.setClawArmPositionAndVelocityAndWait(CLAW_ARM_VERTICAL, IncredibotsArmControl.CLAW_ARM_VELOCITY);
-//            myHardware.operateClawServo(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION);
-//            myHardware.setClawArmPositionAndVelocityAndWait(IncredibotsArmControl.CLAW_ARM_RESTING_BACK, IncredibotsArmControl.CLAW_ARM_VELOCITY);
-//            myHardware.operateClawServo(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION);
-//
-//            Log.i("=== heading ===", "after turning: " + myHardware.getRobotYawRadians());
-//
-//            Actions.runBlocking(
-//                    new SequentialAction(
-//                            park
-//                    )
-//            );
-//
-//            telemetry.update();
-//
-//            break;
-//        }
-//
-//
-//
-////        TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
-////                .lineToYSplineHeading(33, Math.toRadians(0))
-////                .waitSeconds(2)
-////                .setTangent(Math.toRadians(90))
-////                .lineToY(48)
-////                .lineToX(32)
-////                .setTangent(Math.toRadians(0))
-////                .strafeTo(new Vector2d(44.5, 30))
-////                .turn(Math.toRadians(180))
-////                .lineToX(47.5)
-////                .waitSeconds(3);
-//
-//        //strafes in front of blue tape for net zone
-//
-//        //https://rr.brott.dev/docs/v1-0/guides/centerstage-auto/
-//        //https://rr.brott.dev/docs/v1-0/guides/centerstage-auto/
-//
-//    }
 }

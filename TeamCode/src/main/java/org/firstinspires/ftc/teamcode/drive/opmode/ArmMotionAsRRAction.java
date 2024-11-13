@@ -6,17 +6,18 @@ import com.acmerobotics.roadrunner.Action;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 
 public class ArmMotionAsRRAction implements Action {
-    RobotHardware myHardware;
-    int armPosition;
-    int armVelocity;
+    private RobotHardware myHardware;
+    private int armPosition;
+    private int armVelocity;
     private boolean initialized = false;
+    private boolean waitForAction = false;
 
-    public Action ArmMotionAsRRAction(RobotHardware robotHardware, int armPosition, int armVelocity) {
+    public  ArmMotionAsRRAction(RobotHardware robotHardware, int armPosition, int armVelocity, boolean waitForAction) {
         this.myHardware = robotHardware;
         this.armPosition = armPosition;
         this.armVelocity = armVelocity;
         this.initialized = false;
-        return new ArmMotionAsRRAction();
+        this.waitForAction = waitForAction;
     }
 
     @Override
@@ -25,6 +26,11 @@ public class ArmMotionAsRRAction implements Action {
             myHardware.setClawArmPositionAndVelocity(armPosition, armVelocity);
             initialized = true;
         }
-        return myHardware.isClawArmMotorBusy();
+
+        if (waitForAction) {
+            return myHardware.isClawArmMotorBusy();
+        }
+
+        return false;
     }
 }

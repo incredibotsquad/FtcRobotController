@@ -10,13 +10,14 @@ public class SlideMotionAsRRAction implements Action {
     private int slidePosition;
     private int slideVelocity;
     private boolean initialized = false;
+    private boolean waitForAction = false;
 
-    public Action SlideMotorAsRRAction(RobotHardware robotHardware, int slidePosition, int slideVelocity) {
+    public SlideMotionAsRRAction(RobotHardware robotHardware, int slidePosition, int slideVelocity, boolean waitForAction) {
         this.myHardware = robotHardware;
         this.slidePosition = slidePosition;
         this.slideVelocity = slideVelocity;
         this.initialized = false;
-        return new SlideMotionAsRRAction();
+        this.waitForAction = waitForAction;
     }
 
     @Override
@@ -25,6 +26,11 @@ public class SlideMotionAsRRAction implements Action {
             myHardware.setSlidePositionAndVelocity(slidePosition, slideVelocity);
             initialized = true;
         }
-        return myHardware.isSlideMotorBusy();
+
+        if (waitForAction) {
+            return myHardware.isSlideMotorBusy();
+        }
+
+        return false;
     }
 }
