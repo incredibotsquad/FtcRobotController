@@ -18,7 +18,7 @@ public class IncredibotsArmControl
 
     // Claw Arm constants
     public static int CLAW_ARM_RESTING_BACK = 0;
-    public static int CLAW_ARM_VELOCITY = 700;
+    public static int CLAW_ARM_VELOCITY = 800;
     public static int CLAW_ARM_AUTO_VELOCITY_SNAP_SAMPLE = 1200;
 
     public static int CLAW_ARM_PICK_SAMPLE_A = 1420;
@@ -30,7 +30,7 @@ public class IncredibotsArmControl
     public static int CLAW_ARM_AFTER_DROP_SAMPLE_HIGH = 720;
 
     public static int CLAW_ARM_AUTO_HANG_SPECIMEN = 795;
-    public static int CLAW_ARM_AUTO_SNAP_SPECIMEN = 605;
+    public static int CLAW_ARM_AUTO_SNAP_SPECIMEN = 602;
 
     public static int CLAW_ARM_TELE_HANG_SPECIMEN_HIGH_Y = 795;
     public static int CLAW_ARM_TELE_SNAP_SPECIMEN_HIGH_B = 652;
@@ -143,6 +143,7 @@ public class IncredibotsArmControl
                 buttonState = BUTTON_STATE.BUTTON_RT_Y;
             }
         }
+        Log.i("=== INCREDIBOTS ===", "NEW BUTTON STATE: " + buttonState);
     }
 
     //functions to take gamepad inputs and turn it into movements
