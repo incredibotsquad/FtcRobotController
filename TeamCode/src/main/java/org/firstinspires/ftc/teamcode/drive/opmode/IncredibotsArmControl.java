@@ -33,7 +33,7 @@ public class IncredibotsArmControl
     public static int CLAW_ARM_AUTO_SNAP_SPECIMEN = 602;
 
     public static int CLAW_ARM_TELE_HANG_SPECIMEN_HIGH_Y = 795;
-    public static int CLAW_ARM_TELE_SNAP_SPECIMEN_HIGH_B = 652;
+    public static int CLAW_ARM_TELE_SNAP_SPECIMEN_HIGH_B = 602;
 
     public static int CLAW_ARM_ENTER_SUB = 1330;
 
@@ -97,6 +97,9 @@ public class IncredibotsArmControl
     }
 
     private void CreateStateFromButtonPress() {
+
+        BUTTON_STATE prevButtonState = buttonState;
+
         if (gamepad2.back) {
             buttonState = BUTTON_STATE.BUTTON_BACK;
         }
@@ -141,6 +144,16 @@ public class IncredibotsArmControl
             }
         }
 
+        // if previous state was not NONE (some motion was ongoing / pending)
+        // and if new state is not NONE (some motion is going to happen)
+        // and if previous and new are different
+        // then cancel whatever was going on in the previous state and process the new one.
+        // any pending actions for the previous state will not get executed since the state itself will change.
+        if (prevButtonState != BUTTON_STATE.NONE && buttonState != BUTTON_STATE.NONE && prevButtonState != buttonState) {
+            robotHardware.stopSlide();
+            robotHardware.stopClawArm();
+        }
+
         if (buttonState != BUTTON_STATE.NONE) {
             Log.i("=== INCREDIBOTS ===", "NEW BUTTON STATE: " + buttonState);
         }
@@ -171,6 +184,8 @@ public class IncredibotsArmControl
             case BUTTON_LT_A:   //PICK SPECIMEN
                 Log.i("=== INCREDIBOTS ===", "PROCESSING LT/A");
 
+                robotHardware.operateClawServo(true, CLAW_OPEN_POSITION, CLAW_CLOSE_POSITION);
+
                 if (!robotHardware.isSlideMotorBusy()) {
                     Log.i("=== INCREDIBOTS ===", "PROCESSING LT/A - SLIDE IS BUSY");
                     robotHardware.setSlidePosition(SLIDE_POSITION_RESTING);
@@ -178,7 +193,6 @@ public class IncredibotsArmControl
 
                 if (!robotHardware.isSlideMotorBusy()) {    //move arm after moving the slide
                     robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_PICK_SPECIMEN, CLAW_ARM_VELOCITY);
-                    robotHardware.operateClawServo(false, CLAW_OPEN_POSITION, CLAW_CLOSE_POSITION);
                     buttonState = BUTTON_STATE.NONE;
                     Log.i("=== INCREDIBOTS ===", "PROCESSING LT/A - SLIDE IS FINISHED MOVING - STARTING ARM. BUTTONSTAE: " + buttonState);
                 }
@@ -215,13 +229,15 @@ public class IncredibotsArmControl
                     robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_TELE_SNAP_SPECIMEN_HIGH_B, CLAW_ARM_VELOCITY);
                 }
 
-                // open claw after both slide and arm are done moving
-                if (!robotHardware.isSlideMotorBusy() && !robotHardware.isClawArmMotorBusy()) {
+                readyToPickUpSample = false;
+                readyToDropHighSample = false;
+                break;
+            case  BUTTON_LT_X:
+                Log.i("=== INCREDIBOTS ===", "PROCESSING LT/X");
 
-                    robotHardware.operateClawServo(true, CLAW_OPEN_POSITION, CLAW_CLOSE_POSITION);
-                    buttonState = BUTTON_STATE.NONE;
-                    Log.i("=== INCREDIBOTS ===", "PROCESSING LT/B - BOTH SLIDE AND ARM DONE MOVING - OPENING CLAW. BUTTONSTATE: " + buttonState);
-                }
+                robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_DROP_SAMPLE_LOW, CLAW_ARM_VELOCITY);
+                robotHardware.setSlidePosition(SLIDE_POSITION_RESTING);
+
                 readyToPickUpSample = false;
                 readyToDropHighSample = false;
                 break;

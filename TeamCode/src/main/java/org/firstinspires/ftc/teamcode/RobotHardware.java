@@ -84,18 +84,18 @@ public class RobotHardware {
     }
 
     // Sets the slide's position and velocity
-     public void setSlidePositionAndVelocity(int pos, double velocity) {
-         slideMotor.setTargetPosition(pos);
-         slideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-         slideMotor.setVelocity(velocity);
-     }
+    public void setSlidePositionAndVelocity(int pos, double velocity) {
+        slideMotor.setTargetPosition(pos);
+        slideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        slideMotor.setVelocity(velocity);
+    }
 
-     //returns if slide motor is moving currently
-     public boolean isSlideMotorBusy() {
+    //returns if slide motor is moving currently
+    public boolean isSlideMotorBusy() {
          return slideMotor.isBusy();
      }
 
-     //returns the slide motor position
+    //returns the slide motor position
     public int getSlidePos() {
         return slideMotor.getCurrentPosition();
     }
@@ -120,6 +120,14 @@ public class RobotHardware {
     //decides either to open or close the claw servo
     public void operateClawServo(boolean open, double openPosition, double closePosition) {
         clawServo.setPosition(open? openPosition: closePosition);
+    }
+
+    public void stopSlide() {
+         slideMotor.setPower(0);
+    }
+
+    public void stopClawArm() {
+         armMotor.setPower(0);
     }
 
     //returns the robots yaw as radians
