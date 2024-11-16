@@ -16,12 +16,11 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 @Config
 @Autonomous(name = "IncredibotsAuto3SpecimenBlue", group = "Autonomous")
-/* This auto opmode will do the following steps:
- 1) Robot will start from the inside edge of third tile from closest vertical wall
- 2) The robot will hang the preloaded specimen on the top rung
- 3) The robot will then go back to the observation area to pick another specimen
- 4) The robot will hang the second specimen
- 5) The robot will go park in the observation zone.
+/* This auto opmode will make the robot do the following steps:
+ 1) start from the end line of the observation zone
+ 2) pick first sample and drop in observation zone
+ 3) The robot will then cycle through picking specimen and hanging them 3 times
+ 4) The robot will go park in the observation zone.
  */
 public class IncredibotsAuto3SpecimenBlue extends LinearOpMode {
 
@@ -64,7 +63,7 @@ public class IncredibotsAuto3SpecimenBlue extends LinearOpMode {
     public static Pose2d MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_THREE = new Pose2d(4, 40, heading);
     public static Pose2d MOVE_TO_BRACE_SUB_SPECIMEN_THREE = new Pose2d(MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_THREE.position.x, 33, heading);
 
-    public static Pose2d OBSERVATION_PARK = new Pose2d(-61, 56, heading);
+    public static Pose2d OBSERVATION_PARK = new Pose2d(-58, 56, heading);
 
     private Action GetArmControlAction(int position, int velocity, boolean waitForAction) {
         return new ArmMotionAsRRAction(myHardware, position, velocity, waitForAction);
@@ -98,49 +97,49 @@ public class IncredibotsAuto3SpecimenBlue extends LinearOpMode {
 
         Action pickAndSnapSpecimenOne = drive.actionBuilder(DROP_FIRST_SAMPLE)
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, true))
-                .lineToYConstantHeading(MOVE_FORWARD_TO_PICK_FIRST_SPECIMEN.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(-10, 20))
+                .lineToYConstantHeading(MOVE_FORWARD_TO_PICK_FIRST_SPECIMEN.position.y, new TranslationalVelConstraint(30), new ProfileAccelConstraint(-10, 30))
                 .stopAndAdd(GetClawControlAction(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, true))
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_AUTO_HANG_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
                 .strafeToConstantHeading(MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_ONE.position)
                 .setTangent(heading)
-                .lineToYConstantHeading(MOVE_TO_BRACE_SUB_SPECIMEN_ONE.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(-10, 20))
+                .lineToYConstantHeading(MOVE_TO_BRACE_SUB_SPECIMEN_ONE.position.y, new TranslationalVelConstraint(40), new ProfileAccelConstraint(-20, 40))
                 .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN_HIGH, true))
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_AUTO_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_AUTO_VELOCITY_SNAP_SAMPLE, true))
-                .waitSeconds(0.75)
+                .waitSeconds(0.6)
                 .stopAndAdd(GetClawControlAction(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, false))
                 .build();
 
         Action pickAndSnapSpecimenTwo = drive.actionBuilder(MOVE_TO_BRACE_SUB_SPECIMEN_ONE)
                 .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_RESTING, false))
-                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY + 200, true))
+                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY + 200, false))
                 .strafeToConstantHeading(STRAFE_TO_SECOND_SPECIMEN.position)
                 .setTangent(heading)
-                .lineToYConstantHeading(MOVE_FORWARD_TO_PICK_SECOND_SPECIMEN.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(-10, 20))
+                .lineToYConstantHeading(MOVE_FORWARD_TO_PICK_SECOND_SPECIMEN.position.y, new TranslationalVelConstraint(30), new ProfileAccelConstraint(-10, 30))
                 .stopAndAdd(GetClawControlAction(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, true))
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_AUTO_HANG_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
                 .strafeToConstantHeading(MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_TWO.position)
                 .setTangent(heading)
-                .lineToYConstantHeading(MOVE_TO_BRACE_SUB_SPECIMEN_TWO.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(-10, 20))
+                .lineToYConstantHeading(MOVE_TO_BRACE_SUB_SPECIMEN_TWO.position.y, new TranslationalVelConstraint(40), new ProfileAccelConstraint(-20, 40))
                 .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN_HIGH, true))
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_AUTO_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_AUTO_VELOCITY_SNAP_SAMPLE, true))
-                .waitSeconds(0.75)
+                .waitSeconds(0.6)
                 .stopAndAdd(GetClawControlAction(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, false))
                 .build();
 
         Action pickAndSnapSpecimenThree = drive.actionBuilder(MOVE_TO_BRACE_SUB_SPECIMEN_TWO)
                 .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_RESTING, false))
-                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY + 200, true))
+                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY + 200, false))
                 .strafeToConstantHeading(STRAFE_TO_SECOND_SPECIMEN.position)
                 .setTangent(heading)
-                .lineToYConstantHeading(MOVE_FORWARD_TO_PICK_SECOND_SPECIMEN.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(-10, 20))
+                .lineToYConstantHeading(MOVE_FORWARD_TO_PICK_SECOND_SPECIMEN.position.y, new TranslationalVelConstraint(30), new ProfileAccelConstraint(-10, 30))
                 .stopAndAdd(GetClawControlAction(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, true))
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_AUTO_HANG_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
                 .strafeToConstantHeading(MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_THREE.position)
                 .setTangent(heading)
-                .lineToYConstantHeading(MOVE_TO_BRACE_SUB_SPECIMEN_THREE.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(-10, 20))
+                .lineToYConstantHeading(MOVE_TO_BRACE_SUB_SPECIMEN_THREE.position.y, new TranslationalVelConstraint(40), new ProfileAccelConstraint(-20, 40))
                 .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN_HIGH, true))
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_AUTO_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_AUTO_VELOCITY_SNAP_SAMPLE, true))
-                .waitSeconds(0.75)
+                .waitSeconds(0.6)
                 .stopAndAdd(GetClawControlAction(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, false))
                 .build();
 
@@ -235,6 +234,8 @@ public class IncredibotsAuto3SpecimenBlue extends LinearOpMode {
                             pickAndSnapSpecimenThree,
                             goParkInObservationZone) //, pushSampleOne)
             );
+
+            break;  //stop the opmode after done
 
 //            Actions.runBlocking(
 //                    new SequentialAction(pushSamplesTwoAndThree)
