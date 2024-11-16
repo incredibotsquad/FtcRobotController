@@ -123,10 +123,12 @@ public class RobotHardware {
     }
 
     public void stopSlide() {
-         slideMotor.setPower(0);
+        Log.i("=== INCREDIBOTS ===", " STOPPING SLIDE ");
+        slideMotor.setPower(0);
     }
 
     public void stopClawArm() {
+        Log.i("=== INCREDIBOTS ===", " STOPPING CLAW ARM ");
          armMotor.setPower(0);
     }
 

@@ -67,7 +67,7 @@ import org.firstinspires.ftc.teamcode.RobotHardware;
 @TeleOp(name="IncredibotsMecanumDrive", group="Linear OpMode")
 public class IncredibotsMecanumDrive extends LinearOpMode {
 
-    public static double POWER_RATIO = 0.5;
+    public static double POWER_RATIO = 0.6;
 
     RobotHardware myHardware;
     IncredibotsArmControl armControl;

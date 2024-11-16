@@ -16,7 +16,7 @@ public class ClawMotionAsRRAction implements Action {
     private double closePosition;
     private boolean initialized = false;
     private boolean waitForAction = false;
-    ElapsedTime timer;
+    private ElapsedTime timer;
 
     public ClawMotionAsRRAction(RobotHardware robotHardware, boolean open, double openPosition, double closePosition, boolean waitForAction) {
         this.myHardware = robotHardware;
@@ -31,8 +31,8 @@ public class ClawMotionAsRRAction implements Action {
     public boolean run (@NonNull TelemetryPacket packet) {
         if (!initialized) {
             myHardware.operateClawServo(open, openPosition, closePosition);
-            initialized = true;
             timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+            initialized = true;
         }
 
         if (waitForAction) {
