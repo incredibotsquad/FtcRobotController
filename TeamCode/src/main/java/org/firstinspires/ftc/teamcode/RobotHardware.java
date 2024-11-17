@@ -88,6 +88,9 @@ public class RobotHardware {
         slideMotor.setTargetPosition(pos);
         slideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         slideMotor.setVelocity(velocity);
+        Log.i("=== INCREDIBOTS ===", " !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        Log.i("=== INCREDIBOTS ===", " SETTING SLIDE MOTOR POSITION AND VELOCITY");
+        Log.i("=== INCREDIBOTS ===", " !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
     }
 
     //returns if slide motor is moving currently
@@ -105,6 +108,9 @@ public class RobotHardware {
         armMotor.setTargetPosition(pos);
         armMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         armMotor.setVelocity(velocity);
+        Log.i("=== INCREDIBOTS ===", " !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        Log.i("=== INCREDIBOTS ===", " SETTING CLAW MOTOR POSITION AND VELOCITY");
+        Log.i("=== INCREDIBOTS ===", " !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
     }
 
     //returns if the arm motor is moving currently
@@ -124,12 +130,19 @@ public class RobotHardware {
 
     public void stopSlide() {
         Log.i("=== INCREDIBOTS ===", " STOPPING SLIDE ");
-        slideMotor.setPower(0);
+        setSlidePosition(getSlidePos());
     }
 
     public void stopClawArm() {
         Log.i("=== INCREDIBOTS ===", " STOPPING CLAW ARM ");
-         armMotor.setPower(0);
+        setClawArmPositionAndVelocity(getClawArmMotorPos(), IncredibotsArmControl.CLAW_ARM_VELOCITY);
+    }
+
+    public void stopAndResetSlideEncoder() {
+        Log.i("=== INCREDIBOTS ===", " RESETTING SLIDE ENCODER");
+        slideMotor.setPower(0);
+        slideMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        setSlidePosition(0);
     }
 
     //returns the robots yaw as radians

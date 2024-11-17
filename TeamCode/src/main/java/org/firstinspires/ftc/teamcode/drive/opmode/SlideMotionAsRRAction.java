@@ -24,13 +24,13 @@ public class SlideMotionAsRRAction implements Action {
     @Override
     public boolean run (@NonNull TelemetryPacket packet) {
         if (!initialized) {
-            myHardware.setSlidePositionAndVelocity(slidePosition, IncredibotsArmControl.SLIDE_VELOCITY_CONTRACTING);
+            myHardware.setSlidePositionAndVelocity(slidePosition, IncredibotsArmControl.SLIDE_VELOCITY_CONTRACTING - 2000);
             timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
             initialized = true;
         }
 
         if (waitForAction) {
-            return timer.milliseconds() < 500;
+            return timer.milliseconds() < 400;
         }
 
         return false;
