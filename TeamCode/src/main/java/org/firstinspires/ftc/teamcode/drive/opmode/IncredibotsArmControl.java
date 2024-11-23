@@ -29,8 +29,8 @@ public class IncredibotsArmControl
     public static int CLAW_ARM_PICK_SPECIMEN = 112;
     public static int CLAW_ARM_AFTER_DROP_SAMPLE_HIGH = 720;
 
-    public static int CLAW_ARM_AUTO_HANG_SPECIMEN = 775;
-    public static int CLAW_ARM_AUTO_SNAP_SPECIMEN = 620;
+    public static int CLAW_ARM_AUTO_HANG_SPECIMEN = 735;
+    public static int CLAW_ARM_AUTO_SNAP_SPECIMEN = 602;
 
     public static int CLAW_ARM_TELE_HANG_SPECIMEN_HIGH_Y = CLAW_ARM_AUTO_HANG_SPECIMEN;
     public static int CLAW_ARM_TELE_SNAP_SPECIMEN_HIGH_B = CLAW_ARM_AUTO_SNAP_SPECIMEN;
@@ -49,14 +49,14 @@ public class IncredibotsArmControl
     public static int SLIDE_POSITION_HANG_SPECIMEN_HIGH = 870;
 
     public static int SLIDE_POSITION_HIGH_BASKET = 8100;
-    public static int SLIDE_POSITION_LOW_BASKET = SLIDE_POSITION_RESTING; //1170
+    public static int SLIDE_POSITION_LOW_BASKET = SLIDE_POSITION_RESTING;
 
     //override...
     private boolean MANUAL_OVERRIDE = false;
     private static int MANUAL_OVERRIDE_ARM_POSITION_DELTA = 150;
     private static int MANUAL_OVERRIDE_SLIDE_POSITION_DELTA = 250;
     public static int MAX_SLIDE_POSITION_ARM_BACKWARDS_LOW = 0;
-    public static int MAX_SLIDE_POSITION_ARM_FORWARDS_LOW = 3750;
+    public static int MAX_SLIDE_POSITION_ARM_FORWARDS_LOW = 3100; //3750
 
     private enum BUTTON_STATE {
         NONE,
@@ -406,6 +406,8 @@ public class IncredibotsArmControl
             MANUAL_OVERRIDE = !MANUAL_OVERRIDE;
         }
 
+        Log.i("=== INCREDIBOTS ===", "Manual Override: " + MANUAL_OVERRIDE);
+
         // if manual override is true it will allow the joysticks to control the arms
         if (MANUAL_OVERRIDE) {
 
@@ -415,12 +417,17 @@ public class IncredibotsArmControl
                 buttonState = BUTTON_STATE.NONE;
             }
 
+            //if manual override is enabled and slide position is more than limits, setit
+            if (GetMaxSlidePosition() > 0 && robotHardware.getSlidePos() > GetMaxSlidePosition()) {
+                Log.i("=== INCREDIBOTS ===", "Manual Override: Setting slide position based on arm angle");
+                robotHardware.setSlidePosition(GetMaxSlidePosition());
+            }
+
             float leftYSignal = gamepad2.left_stick_y * -1;
 
             // If the left joystick is greater than zero, it moves the left arm up
             if (leftYSignal > 0) {
                 robotHardware.setClawArmPositionAndVelocity(robotHardware.getClawArmMotorPos() + MANUAL_OVERRIDE_ARM_POSITION_DELTA, leftYSignal * CLAW_ARM_VELOCITY);
-
             }
             // If the left joystick is less than zero, it moves the left arm down
             else if (leftYSignal < 0){
@@ -429,10 +436,25 @@ public class IncredibotsArmControl
         }
     }
 
+    private int GetMaxSlidePosition()
+    {
+        //DEPENDING ON HOW THE CLAW ARM IS, THE SLIDE IS PERMITTED TO MOVE CERTAIN MAX DISTANCES.
+        int maxSlidePosition = -1;
+
+        if (robotHardware.getClawArmMotorPos() < CLAW_ARM_AUTO_HANG_SPECIMEN) { //ARM IS BEHIND ROBOT
+            maxSlidePosition = MAX_SLIDE_POSITION_ARM_BACKWARDS_LOW;
+        }
+        else if (robotHardware.getClawArmMotorPos() > CLAW_ARM_DROP_SAMPLE_HIGH + 100) {
+            maxSlidePosition = MAX_SLIDE_POSITION_ARM_FORWARDS_LOW;
+        }
+
+        return maxSlidePosition;
+    }
+
     private void ProcessDPad() {
 
         //DEPENDING ON HOW THE CLAW ARM IS, THE SLIDE IS PERMITTED TO MOVE CERTAIN MAX DISTANCES.
-         int maxSlidePosition = -1;
+         int maxSlidePosition = GetMaxSlidePosition();
 
          if (robotHardware.getClawArmMotorPos() < CLAW_ARM_AUTO_HANG_SPECIMEN) { //ARM IS BEHIND ROBOT
              maxSlidePosition = MAX_SLIDE_POSITION_ARM_BACKWARDS_LOW;
