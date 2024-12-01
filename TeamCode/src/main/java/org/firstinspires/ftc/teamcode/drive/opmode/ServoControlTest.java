@@ -26,11 +26,14 @@ public class ServoControlTest extends LinearOpMode {
     RobotHardware myHardware;
 
     // Declare OpMode members.
-    public static double servoPosition = 0.42;
+    public static double clawServoPosition;
+    public static double wristServoPosition;
+
     // Close: 0.42
     // Open: 0.55
     private ElapsedTime runtime = new ElapsedTime();
-    private Servo armServo;
+    private Servo ClawServo;
+    private Servo WristServo;
 
 
     @Override
@@ -41,7 +44,8 @@ public class ServoControlTest extends LinearOpMode {
         // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
-        armServo  = hardwareMap.get(Servo.class, "armServo");
+        ClawServo = hardwareMap.get(Servo.class, "ClawServo"); //0.1, 0.55
+        WristServo = hardwareMap.get(Servo.class, "WristServo"); //resting: 0.2, specimen pick: 0.9, before snapping specimen position 0.75, picking sample: 0.83
 
         // Wait for the game to start (driver presses START)
         waitForStart();
@@ -49,14 +53,8 @@ public class ServoControlTest extends LinearOpMode {
 
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
-            if (gamepad1.left_bumper) {
-                servoPosition = 0.55;
-                armServo.setPosition(servoPosition);
-            }
-            if (gamepad1.right_bumper) {
-                servoPosition = 0.42;
-                armServo.setPosition(servoPosition);
-            }
+            ClawServo.setPosition(clawServoPosition);
+            WristServo.setPosition(wristServoPosition);
         }
     }
 }

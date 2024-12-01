@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 
 import com.acmerobotics.dashboard.canvas.Canvas;
@@ -58,19 +60,20 @@ public final class MecanumDrive {
         // TODO: fill in these values based on
         //   see https://ftc-docs.firstinspires.org/en/latest/programming_resources/imu/imu.html?highlight=imu#physical-hub-mounting
         public RevHubOrientationOnRobot.LogoFacingDirection logoFacingDirection =
-                RevHubOrientationOnRobot.LogoFacingDirection.LEFT;
+                RevHubOrientationOnRobot.LogoFacingDirection.RIGHT;
         public RevHubOrientationOnRobot.UsbFacingDirection usbFacingDirection =
                 RevHubOrientationOnRobot.UsbFacingDirection.DOWN;
 
+
         // drive model parameters
         public double inPerTick = 0.002955041159502;
-        public double lateralInPerTick = 0.0022976428040082627;
-        public double trackWidthTicks = 3982.567963437026;
+        public double lateralInPerTick = 0.002176184782486647; //0.002176184782486647
+        public double trackWidthTicks = 4149.966753193063;
 
         // feedforward parameters (in tick units)
-        public double kS = 0.8176930068877661;
-        public double kV = 0.0004498297639617853;
-        public double kA = 0.0002;
+        public double kS = 0.8452259433301617;
+        public double kV = 0.0004252837704439288;
+        public double kA = 0.0001;
 
         // path profile parameters (in inches)
         public double maxWheelVel = 65;
@@ -82,8 +85,8 @@ public final class MecanumDrive {
         public double maxAngAccel = Math.PI;
 
         // path controller gains
-        public double axialGain = 5;
-        public double lateralGain = 3;
+        public double axialGain = 7;
+        public double lateralGain = 4;
         public double headingGain = 3; // shared with turn
 
         public double axialVelGain = 0.0;
@@ -155,6 +158,9 @@ public final class MecanumDrive {
                     leftFrontPosVel, leftBackPosVel, rightBackPosVel, rightFrontPosVel, angles));
 
             Rotation2d heading = Rotation2d.exp(angles.getYaw(AngleUnit.RADIANS));
+
+            Log.i("//==//= INCREDIBOTS =//==", "HEADING: " + angles.getYaw(AngleUnit.DEGREES));
+
 
             if (!initialized) {
                 initialized = true;

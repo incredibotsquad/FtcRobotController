@@ -27,6 +27,7 @@ public class RobotHardware {
      private DcMotor odoLeft;
      private DcMotor odoFront;
      private Servo clawServo;
+     private Servo wristServo;
 
      //making constructor
      public RobotHardware(HardwareMap hwMap) {
@@ -37,9 +38,9 @@ public class RobotHardware {
 
          //this motor is oriented backwards, hence reversing direction
          leftFrontDriveMotor = hwMap.get(DcMotorEx.class, "LFMotor");
-         leftFrontDriveMotor.setDirection(DcMotorSimple.Direction.REVERSE);
          leftFrontDriveMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
          leftFrontDriveMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+         leftFrontDriveMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
          rightBackDriveMotor = hwMap.get(DcMotorEx.class, "RBMotor");
          rightBackDriveMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -70,6 +71,7 @@ public class RobotHardware {
          odoFront = rightFrontDriveMotor;
 
          clawServo = hwMap.get(Servo.class, "ClawServo");
+         wristServo = hwMap.get(Servo.class, "WristServo");
 
          imu = hwMap.get(IMU.class, "imu");
      }
@@ -126,6 +128,10 @@ public class RobotHardware {
     //decides either to open or close the claw servo
     public void operateClawServo(boolean open, double openPosition, double closePosition) {
         clawServo.setPosition(open? openPosition: closePosition);
+    }
+
+    public void operateWristServo(double position) {
+         wristServo.setPosition(position);
     }
 
     public void stopSlide() {
