@@ -20,14 +20,9 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 @Config
 @Autonomous(name = "IncredibotsAuto4SamplesBlue", group = "Autonomous")
-public class IncredibotsAuto4SamplesBlue  extends LinearOpMode {
-
-    RobotHardware myHardware;
-    IncredibotsArmControl armControl;
-    MecanumDrive drive;
+public class IncredibotsAuto4SamplesBlue  extends IncredibotsAuto {
 
     public static double heading = Math.toRadians(-90);
-
 
     public static Pose2d INIT_POS = new Pose2d(38, 62, Math.toRadians(90));
     public static Pose2d OPEN_ARM = new Pose2d(38, 40, Math.toRadians(90));

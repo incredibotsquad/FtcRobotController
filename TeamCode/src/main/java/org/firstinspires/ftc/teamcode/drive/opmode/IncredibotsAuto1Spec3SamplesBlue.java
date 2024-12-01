@@ -14,11 +14,7 @@ import org.firstinspires.ftc.teamcode.RobotHardware;
 
 @Config
 @Autonomous(name = "IncredibotsAuto1Spec3SamplesBlue", group = "Autonomous")
-public class IncredibotsAuto1Spec3SamplesBlue extends LinearOpMode {
-
-    RobotHardware myHardware;
-    IncredibotsArmControl armControl;
-    MecanumDrive drive;
+public class IncredibotsAuto1Spec3SamplesBlue extends IncredibotsAuto {
 
     public static double heading = Math.toRadians(-90);
 
@@ -47,18 +43,6 @@ public class IncredibotsAuto1Spec3SamplesBlue extends LinearOpMode {
     public static Pose2d ALIGN_WITH_SAMP_2 = new Pose2d(58, 38, heading);
     public static Pose2d PICK_SPEC = new Pose2d(-62, 50, heading);
     public static Pose2d PICK_3RD_SAMP = new Pose2d(56, 13, Math.toRadians(45));
-
-    private Action GetArmControlAction(int position, int velocity, boolean waitForAction) {
-        return new ArmMotionAsRRAction(myHardware, position, velocity, waitForAction);
-    }
-
-    private Action GetSlideControlAction(int position, boolean waitForAction) {
-        return new SlideMotionAsRRAction(myHardware, position, waitForAction);
-    }
-
-    private Action GetClawControlAction(boolean open, double openPosition, double closePosition, boolean waitForAction, boolean shortWait) {
-        return new ClawMotionAsRRAction(myHardware, open, openPosition, closePosition, waitForAction, shortWait);
-    }
 
     @Override
     public void runOpMode() throws InterruptedException {

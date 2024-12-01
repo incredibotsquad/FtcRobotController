@@ -63,8 +63,8 @@ public class IncredibotsArmControl
     private boolean MANUAL_OVERRIDE = false;
     private static int MANUAL_OVERRIDE_ARM_POSITION_DELTA = 150;
     private static int MANUAL_OVERRIDE_SLIDE_POSITION_DELTA = 250;
-    public static int MAX_SLIDE_POSITION_ARM_BACKWARDS_LOW = 0;
-    public static int MAX_SLIDE_POSITION_ARM_FORWARDS_LOW = 3100; //3750
+    public static int MAX_SLIDE_POSITION_ARM_BACKWARDS_HIGH = 0;
+    public static int MAX_SLIDE_POSITION_ARM_FORWARDS_LOW = 2300; //3750
 
     private enum BUTTON_STATE {
         NONE,
@@ -86,6 +86,7 @@ public class IncredibotsArmControl
 
     private boolean readyToDropHighSample = false;
     private boolean readyToPickUpSample = false;
+    private boolean preserveSlidePosition = false;
 
     public IncredibotsArmControl(Gamepad gamepad, RobotHardware robotHardware) {
         gamepad2 = gamepad;
@@ -291,7 +292,7 @@ public class IncredibotsArmControl
             case BUTTON_RT_A:   //PICK SAMPLE
                 Log.i("=== INCREDIBOTS ===", "PROCESSING RT/A");
 
-                if (robotHardware.getSlidePos() != SLIDE_POSITION_PICK_SAMPLE) {
+                if (robotHardware.getSlidePos() != SLIDE_POSITION_PICK_SAMPLE && !preserveSlidePosition) {
                     Log.i("=== INCREDIBOTS ===", "PROCESSING RT/A - SLIDE IS MOVING");
                     robotHardware.setSlidePosition(SLIDE_POSITION_PICK_SAMPLE);
                     robotHardware.operateWristServo(WRIST_PICK_SAMPLE);
@@ -304,6 +305,7 @@ public class IncredibotsArmControl
                     readyToPickUpSample = true;
                     Log.i("=== INCREDIBOTS ===", "PROCESSING RT/A - SLIDE IS DONE MOVING - STARTING ARM. BUTTON STATE: " + buttonState);
                 }
+                preserveSlidePosition = false;
                 readyToDropHighSample = false;
                 break;
             case BUTTON_RT_Y:   //HIGH BASKET
@@ -361,6 +363,8 @@ public class IncredibotsArmControl
                         buttonState = BUTTON_STATE.NONE;
                         Log.i("=== INCREDIBOTS ===", "PROCESSING RT/X - SLIDE IS DONE MOVING - STARTING ARM. BUTTONSTATE: " + buttonState);
                     }
+
+                    preserveSlidePosition = true;
                 }
                 readyToPickUpSample = false;
                 readyToDropHighSample = false;
@@ -377,13 +381,7 @@ public class IncredibotsArmControl
                 if (!robotHardware.isClawArmMotorBusy() || Math.abs(CLAW_ARM_AFTER_DROP_SAMPLE_HIGH - robotHardware.getClawArmMotorPos()) < 10) {
                     buttonState = BUTTON_STATE.BUTTON_RT_X;
                 }
-
-//
-//                if (!robotHardware.isClawArmMotorBusy() || Math.abs(CLAW_ARM_AFTER_DROP_SAMPLE_HIGH - robotHardware.getClawArmMotorPos()) < 10) {
-//                    robotHardware.setSlidePosition(SLIDE_POSITION_RESTING);
-//                    buttonState = BUTTON_STATE.NONE;
-//                    Log.i("=== INCREDIBOTS ===", "PROCESSING CLAW ARM AFTER HIGH SAMPLE - CLAW ARM IS DONE MOVING - STARTING SLIDE. BUTTONSTATE: " + buttonState);
-//                }
+                
                 readyToPickUpSample = false;
                 readyToDropHighSample = false;
                 break;
@@ -458,10 +456,10 @@ public class IncredibotsArmControl
         int maxSlidePosition = -1;
 
         if (robotHardware.getClawArmMotorPos() < CLAW_ARM_AUTO_HANG_SPECIMEN) { //ARM IS BEHIND ROBOT
-            maxSlidePosition = MAX_SLIDE_POSITION_ARM_BACKWARDS_LOW;
+            maxSlidePosition = MAX_SLIDE_POSITION_ARM_FORWARDS_LOW;
         }
         else if (robotHardware.getClawArmMotorPos() > CLAW_ARM_DROP_SAMPLE_HIGH + 100) {
-            maxSlidePosition = MAX_SLIDE_POSITION_ARM_FORWARDS_LOW;
+            maxSlidePosition = MAX_SLIDE_POSITION_ARM_BACKWARDS_HIGH;
         }
 
         return maxSlidePosition;
@@ -471,13 +469,6 @@ public class IncredibotsArmControl
 
         //DEPENDING ON HOW THE CLAW ARM IS, THE SLIDE IS PERMITTED TO MOVE CERTAIN MAX DISTANCES.
          int maxSlidePosition = GetMaxSlidePosition();
-
-         if (robotHardware.getClawArmMotorPos() < CLAW_ARM_AUTO_HANG_SPECIMEN) { //ARM IS BEHIND ROBOT
-             maxSlidePosition = MAX_SLIDE_POSITION_ARM_BACKWARDS_LOW;
-         }
-         else if (robotHardware.getClawArmMotorPos() > CLAW_ARM_DROP_SAMPLE_HIGH + 100) {
-             maxSlidePosition = MAX_SLIDE_POSITION_ARM_FORWARDS_LOW;
-         }
 
         if (gamepad2.dpad_up){
             //SLIDE CANNOT EXPAND BEYOND THE FAR POSITION FOR IT TO BE UNDER LIMITS
