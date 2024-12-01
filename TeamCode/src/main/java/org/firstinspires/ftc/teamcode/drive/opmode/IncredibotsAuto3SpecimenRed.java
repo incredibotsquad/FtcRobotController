@@ -22,11 +22,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
  3) The robot will then cycle through picking specimen and hanging them 3 times
  4) The robot will go park in the observation zone.
  */
-public class IncredibotsAuto3SpecimenRed extends LinearOpMode {
-
-    RobotHardware myHardware;
-    IncredibotsArmControl armControl;
-    MecanumDrive drive;
+public class IncredibotsAuto3SpecimenRed extends IncredibotsAuto {
 
     public static double heading = Math.toRadians(90);
 
@@ -64,18 +60,6 @@ public class IncredibotsAuto3SpecimenRed extends LinearOpMode {
     public static Pose2d MOVE_TO_BRACE_SUB_SPECIMEN_THREE = new Pose2d(MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_THREE.position.x, -32, heading);
 
     public static Pose2d OBSERVATION_PARK = new Pose2d(58, -56, heading);
-
-    private Action GetArmControlAction(int position, int velocity, boolean waitForAction) {
-        return new ArmMotionAsRRAction(myHardware, position, velocity, waitForAction);
-    }
-
-    private Action GetSlideControlAction(int position, boolean waitForAction) {
-        return new SlideMotionAsRRAction(myHardware, position, waitForAction);
-    }
-
-    private Action GetClawControlAction(boolean open, double openPosition, double closePosition, boolean waitForAction, boolean shortWait) {
-        return new ClawMotionAsRRAction(myHardware, open, openPosition, closePosition, waitForAction, shortWait);
-    }
 
     @Override
     public void runOpMode() throws InterruptedException {

@@ -22,21 +22,16 @@ import org.firstinspires.ftc.teamcode.RobotHardware;
  4) The robot will hang the second specimen
  5) The robot will go park in the ascent zone.
  */
-public class IncredibotsAutoDoNothing extends LinearOpMode {
+public class IncredibotsAutoDoNothing extends IncredibotsAuto {
 
-    public static double START_X = 0;
-    public static double START_Y = 0;
-    public static double START_H = Math.toRadians(90);
-    Pose2d startPose = new Pose2d(START_X, START_Y, START_H);
-
-    RobotHardware myHardware;
-    IncredibotsArmControl armControl;
-    MecanumDrive drive;
+    public static double heading = Math.toRadians(90);
+    public static Pose2d startPose = new Pose2d(0, 0, heading);
 
     @Override
     public void runOpMode() throws InterruptedException {
         myHardware = new RobotHardware(this.hardwareMap);
         armControl = new IncredibotsArmControl(gamepad2, myHardware);
+
         drive = new MecanumDrive(this.hardwareMap, startPose);
 
         // Wait for the game to start (driver presses PLAY)
@@ -46,6 +41,8 @@ public class IncredibotsAutoDoNothing extends LinearOpMode {
 
         while (opModeIsActive()) {
             telemetry.update();
+
+            break;
         }
     }
 }
