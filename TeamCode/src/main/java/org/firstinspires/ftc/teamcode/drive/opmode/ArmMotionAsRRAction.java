@@ -17,7 +17,7 @@ public class ArmMotionAsRRAction implements Action {
     private boolean waitForAction = false;
     private ElapsedTime timer;
 
-    public  ArmMotionAsRRAction(RobotHardware robotHardware, int armPosition, int armVelocity, boolean waitForAction) {
+    public ArmMotionAsRRAction(RobotHardware robotHardware, int armPosition, int armVelocity, boolean waitForAction) {
         this.myHardware = robotHardware;
         this.armPosition = armPosition;
         this.armVelocity = armVelocity;
