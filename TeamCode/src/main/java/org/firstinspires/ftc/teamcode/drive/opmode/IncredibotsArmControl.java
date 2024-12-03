@@ -3,6 +3,10 @@ package org.firstinspires.ftc.teamcode.drive.opmode;
 import android.util.Log;
 
 import com.acmerobotics.dashboard.config.Config;
+import com.acmerobotics.roadrunner.Action;
+import com.acmerobotics.roadrunner.ParallelAction;
+import com.acmerobotics.roadrunner.SequentialAction;
+import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.hardware.Gamepad;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
@@ -13,85 +17,91 @@ import java.lang.Math;
 @Config
 public class IncredibotsArmControl
 {
-    Gamepad gamepad2;
-    RobotHardware robotHardware;
+    private Gamepad gamepad2;
+    private RobotHardware robotHardware;
 
-    // Claw Arm constants
+    // CLAW ARM CONSTANTS
     public static int CLAW_ARM_RESTING_BACK = 0;
     public static int CLAW_ARM_VELOCITY = 750;
     public static int CLAW_ARM_AUTO_VELOCITY_SNAP_SPECIMEN = 1400;
+    public static int CLAW_ARM_ADJUSTMENT_WITH_SLIDE = 8;
 
-    public static int CLAW_ARM_PICK_SAMPLE_A = CLAW_ARM_RESTING_BACK;
-
-    public static int CLAW_ARM_DROP_SAMPLE_HIGH = 847;
-    public static int CLAW_ARM_DROP_SAMPLE_LOW = CLAW_ARM_DROP_SAMPLE_HIGH; //896
-
-    public static int CLAW_ARM_PICK_SPECIMEN = 300;
-    public static int CLAW_ARM_AFTER_DROP_SAMPLE_HIGH = 720;
-
-    public static int CLAW_ARM_AUTO_HANG_SPECIMEN = 800;
-    public static int CLAW_ARM_AUTO_SNAP_SPECIMEN = 602;
-
-    public static int CLAW_ARM_TELE_HANG_SPECIMEN_HIGH_Y = CLAW_ARM_AUTO_HANG_SPECIMEN;
-    public static int CLAW_ARM_TELE_SNAP_SPECIMEN_HIGH_B = CLAW_ARM_AUTO_SNAP_SPECIMEN;
-
-    public static int CLAW_ARM_ENTER_SUB = 120;
-
-    //claw positions
+    //CLAW CONSTANTS
     public static double CLAW_OPEN_POSITION = 0.1;
     public static double CLAW_CLOSE_POSITION = 0.55;
 
-    //wrist positions
+    //WRIST CONSTANTS
     public static double WRIST_PRELOAD = 0.2;
-    public static double WRIST_DROP_SAMPLE = 0.5;
-    public static double WRIST_PICK_SPECIMEN = 0.93;
-    public static double WRIST_HANG_SPECIMEN = 0.75;
-    public static double WRIST_PICK_SAMPLE = 0.8;
 
-    //Slide movement position
+    //SLIDE CONSTANTS
     public static int SLIDE_POSITION_RESTING = 0;
-    public static int SLIDE_POSITION_PICK_SAMPLE = 300;
-
-    public static int SLIDE_POSITION_HANG_SPECIMEN_HIGH = 200;
-    public static int SLIDE_POSITION_HIGH_BASKET = 3000;
-    public static int SLIDE_POSITION_LOW_BASKET = SLIDE_POSITION_RESTING;
-
     public static int SLIDE_VELOCITY_EXPANDING = 3000;
     public static int SLIDE_VELOCITY_CONTRACTING = SLIDE_VELOCITY_EXPANDING;
+    public static int MAX_SLIDE_POSITION_ARM_FORWARDS_LOW = 1250;
+    public static int MAX_SLIDE_POSITION_ARM_BACKWARDS_HIGH = 2300;
 
-    //override...
+    //MANUAL OVERRIDE CONSTANTS
     private boolean MANUAL_OVERRIDE = false;
     private static int MANUAL_OVERRIDE_ARM_POSITION_DELTA = 150;
     private static int MANUAL_OVERRIDE_SLIDE_POSITION_DELTA = 250;
-    public static int MAX_SLIDE_POSITION_ARM_BACKWARDS_HIGH = 0;
-    public static int MAX_SLIDE_POSITION_ARM_FORWARDS_LOW = 2300; //3750
 
-    private enum BUTTON_STATE {
+    //PICKING SAMPLES: RT/A
+    public static int CLAW_ARM_PICK_SAMPLE_A = 1354;
+    public static int SLIDE_POSITION_PICK_SAMPLE = 0;
+    public static double WRIST_PICK_SAMPLE = 0.2;
+
+    //ENTER EXIT SUB: RT/X
+    public static int CLAW_ARM_ENTER_SUB = 1360;
+    public static int SLIDE_ENTER_SUB = 0;
+    public static double WRIST_ENTER_SUB = 0.5;
+
+    //DROP SAMPLES
+    public static int CLAW_ARM_DROP_SAMPLE_HIGH = 650;//847
+    public static int CLAW_ARM_AFTER_DROP_SAMPLE_HIGH = 720;
+    public static int CLAW_ARM_DROP_SAMPLE_LOW = CLAW_ARM_DROP_SAMPLE_HIGH;
+    public static double WRIST_DROP_SAMPLE = 0.5;
+    public static int SLIDE_POSITION_HIGH_BASKET = 3000;
+    public static int SLIDE_POSITION_LOW_BASKET = 0;
+
+    //PICK SPECIMEN
+    public static int CLAW_ARM_PICK_SPECIMEN = 300;
+    public static double WRIST_PICK_SPECIMEN = 0.93;
+
+    //SNAP SPECIMEN
+    public static int CLAW_ARM_AUTO_HANG_SPECIMEN = 800;
+    public static int CLAW_ARM_AUTO_SNAP_SPECIMEN = 602;
+    public static int CLAW_ARM_TELE_HANG_SPECIMEN_HIGH_Y = CLAW_ARM_AUTO_HANG_SPECIMEN;
+    public static int CLAW_ARM_TELE_SNAP_SPECIMEN_HIGH_B = CLAW_ARM_AUTO_SNAP_SPECIMEN;
+    public static int SLIDE_POSITION_HANG_SPECIMEN_HIGH = 200;
+    public static double WRIST_HANG_SPECIMEN = 0.75;
+
+    private enum ARM_STATE {
         NONE,
-        BUTTON_BACK,
-        BUTTON_HANG,
-        BUTTON_LT_A,
-        BUTTON_RT_A,
-        BUTTON_LT_B,
-        BUTTON_RT_B,
-        BUTTON_LT_X,
-        BUTTON_RT_X,
-        BUTTON_LT_Y,
-        BUTTON_RT_Y,
+        RESTING,
+        ROBOT_HANG,
+        PICK_SPECIMEN,
+        PICK_SAMPLE,
+        SNAP_SPECIMEN,
+        LOW_BASKET,
+        ARM_VERTICAL,
+        ENTER_EXIT_SUB,
+        HANG_SPECIMEN,
+        HIGH_BASKET,
         CLAW_ARM_AFTER_HIGH_SAMPLE,
         RESET_SLIDE_ENCODER
     }
 
-    private BUTTON_STATE buttonState;
+    private ARM_STATE armState;
 
     private boolean readyToDropHighSample = false;
     private boolean readyToPickUpSample = false;
     private boolean preserveSlidePosition = false;
+    private boolean processedPickSample = false;
 
     public IncredibotsArmControl(Gamepad gamepad, RobotHardware robotHardware) {
         gamepad2 = gamepad;
         this.robotHardware = robotHardware;
-        buttonState = BUTTON_STATE.NONE;
+        armState = ARM_STATE.NONE;
     }
 
     public void ProcessInputs(Telemetry telemetry) {
@@ -108,53 +118,54 @@ public class IncredibotsArmControl
 
     private void CreateStateFromButtonPress() {
 
-        BUTTON_STATE prevButtonState = buttonState;
+        ARM_STATE prevButtonState = armState;
 
         if (gamepad2.back) {
-            buttonState = BUTTON_STATE.BUTTON_BACK;
+            armState = ARM_STATE.RESTING;
         }
 
         if (gamepad2.back && gamepad2.start) {
-            buttonState = BUTTON_STATE.RESET_SLIDE_ENCODER;
+            armState = ARM_STATE.RESET_SLIDE_ENCODER;
         }
 
         if (gamepad2.start && gamepad2.left_trigger > 0 && gamepad2.right_trigger > 0) {
-            buttonState = BUTTON_STATE.BUTTON_HANG;
+            armState = ARM_STATE.ROBOT_HANG;
         }
 
         if (gamepad2.a){
             if (gamepad2.left_trigger > 0) {
-                buttonState = BUTTON_STATE.BUTTON_LT_A;
+                armState = ARM_STATE.PICK_SPECIMEN;
             }
             else if (gamepad2.right_trigger > 0) {
-                buttonState = BUTTON_STATE.BUTTON_RT_A;
+                armState = ARM_STATE.PICK_SAMPLE;
+                processedPickSample = false;
             }
         }
 
         if (gamepad2.b) {
             if (gamepad2.left_trigger > 0) {
-                buttonState = BUTTON_STATE.BUTTON_LT_B;
+                armState = ARM_STATE.SNAP_SPECIMEN;
             }
             else if (gamepad2.right_trigger > 0) {
-                buttonState = BUTTON_STATE.BUTTON_RT_B;
+                armState = ARM_STATE.LOW_BASKET;
             }
         }
 
         if (gamepad2.x) {
             if (gamepad2.left_trigger > 0) {
-                buttonState = BUTTON_STATE.BUTTON_LT_X;
+                armState = ARM_STATE.ARM_VERTICAL;
             }
             else if (gamepad2.right_trigger > 0) {
-                buttonState = BUTTON_STATE.BUTTON_RT_X;
+                armState = ARM_STATE.ENTER_EXIT_SUB;
             }
         }
 
         if (gamepad2.y) {
             if (gamepad2.left_trigger > 0) {
-                buttonState = BUTTON_STATE.BUTTON_LT_Y;
+                armState = ARM_STATE.HANG_SPECIMEN;
             }
             else if (gamepad2.right_trigger > 0){
-                buttonState = BUTTON_STATE.BUTTON_RT_Y;
+                armState = ARM_STATE.HIGH_BASKET;
             }
         }
 
@@ -163,31 +174,53 @@ public class IncredibotsArmControl
         // and if previous and new are different
         // then cancel whatever was going on in the previous state and process the new one.
         // any pending actions for the previous state will not get executed since the state itself will change.
-        if (prevButtonState != BUTTON_STATE.NONE && buttonState != BUTTON_STATE.NONE && prevButtonState != buttonState) {
-            Log.i("=== INCREDIBOTS ===", "STOPPING ARMS SINCE BUTTON STATE CHANGE. OLD: " + prevButtonState + " NEW: " + buttonState);
+        if (prevButtonState != ARM_STATE.NONE && armState != ARM_STATE.NONE && prevButtonState != armState) {
+            Log.i("=== INCREDIBOTS ===", "STOPPING ARMS SINCE BUTTON STATE CHANGE. OLD: " + prevButtonState + " NEW: " + armState);
             robotHardware.stopSlide();
             robotHardware.stopClawArm();
         }
 
-        if (buttonState != prevButtonState) {
-            Log.i("=== INCREDIBOTS ===", "NEW BUTTON STATE: " + buttonState);
+        if (armState != prevButtonState) {
+            Log.i("=== INCREDIBOTS ===", "NEW BUTTON STATE: " + armState);
         }
     }
 
     //functions to take gamepad inputs and turn it into movements
     private void ProcessButtons() {
 
-        switch (buttonState) {
+        switch (armState) {
             case RESET_SLIDE_ENCODER:
                 Log.i("=== INCREDIBOTS ===", "PROCESSING RESET_SLIDE_ENCODER");
 
                 robotHardware.stopAndResetSlideEncoder();
-                buttonState = BUTTON_STATE.NONE;
+                armState = ARM_STATE.NONE;
                 readyToPickUpSample = false;
                 readyToDropHighSample = false;
                 break;
-            case BUTTON_BACK:
-                Log.i("=== INCREDIBOTS ===", "PROCESSING BACK BUTTON");
+
+            case RESTING:
+                Log.i("=== INCREDIBOTS ===", "PROCESSING STATE: RESTING");
+
+                Action slideActionResting = new SlideMotionAsRRAction(robotHardware, SLIDE_POSITION_RESTING, true, false);
+                Action armActionResting = new ArmMotionAsRRAction(robotHardware, CLAW_ARM_RESTING_BACK, CLAW_ARM_VELOCITY, false);
+                Action clawActionResting = new ClawMotionAsRRAction(robotHardware, false, CLAW_OPEN_POSITION, CLAW_CLOSE_POSITION, false, false);
+                Action wristActionResting = new WristMotionAsRRAction(robotHardware, WRIST_PRELOAD, false, false);
+
+                Actions.runBlocking(    //slide first, claw, arm, wrist in parallel
+                        new SequentialAction(
+                                slideActionResting,
+                                new ParallelAction(
+                                        armActionResting,
+                                        clawActionResting,
+                                        wristActionResting))
+                );
+
+                armState = ARM_STATE.NONE;
+                readyToPickUpSample = false;
+                readyToDropHighSample = false;
+                break;
+            case ROBOT_HANG: //SLIDE CLOSED, ARM RESTING
+                Log.i("=== INCREDIBOTS ===", "PROCESSING STATE: ROBOT HANG");
 
                 if (robotHardware.getSlidePos() != SLIDE_POSITION_RESTING) {
                     Log.i("=== INCREDIBOTS ===", "PROCESSING BACK BUTTON - SLIDE IS BUSY");
@@ -198,33 +231,14 @@ public class IncredibotsArmControl
                 if (!robotHardware.isSlideMotorBusy() || Math.abs(SLIDE_POSITION_RESTING - robotHardware.getSlidePos()) < 10) {
                     robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_RESTING_BACK, CLAW_ARM_VELOCITY);
                     robotHardware.operateClawServo(false, CLAW_OPEN_POSITION, CLAW_CLOSE_POSITION);
-                    robotHardware.operateWristServo(WRIST_PRELOAD);
-                    buttonState = BUTTON_STATE.NONE;
-                    Log.i("=== INCREDIBOTS ===", "PROCESSING BACK BUTTON - SLIDE FINISHED MOVING - STARTING ARM. BUTTONSTATE: "+ buttonState);
+                    armState = ARM_STATE.NONE;
+                    Log.i("=== INCREDIBOTS ===", "PROCESSING BACK BUTTON - SLIDE FINISHED MOVING - STARTING ARM. BUTTONSTATE: "+ armState);
                 }
                 readyToPickUpSample = false;
                 readyToDropHighSample = false;
                 break;
-            case BUTTON_HANG: //SLIDE CLOSED, ARM RESTING
-                Log.i("=== INCREDIBOTS ===", "PROCESSING HANG BUTTON");
-
-                if (robotHardware.getSlidePos() != SLIDE_POSITION_RESTING) {
-                    Log.i("=== INCREDIBOTS ===", "PROCESSING BACK BUTTON - SLIDE IS BUSY");
-                    robotHardware.setSlidePosition(SLIDE_POSITION_RESTING);
-                }
-
-                //has to be a separate check since the previous action will make the slide motor busy
-                if (!robotHardware.isSlideMotorBusy() || Math.abs(SLIDE_POSITION_RESTING - robotHardware.getSlidePos()) < 10) {
-                    robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_RESTING_BACK, CLAW_ARM_VELOCITY);
-                    robotHardware.operateClawServo(false, CLAW_OPEN_POSITION, CLAW_CLOSE_POSITION);
-                    buttonState = BUTTON_STATE.NONE;
-                    Log.i("=== INCREDIBOTS ===", "PROCESSING BACK BUTTON - SLIDE FINISHED MOVING - STARTING ARM. BUTTONSTATE: "+ buttonState);
-                }
-                readyToPickUpSample = false;
-                readyToDropHighSample = false;
-                break;
-            case BUTTON_LT_A:   //PICK SPECIMEN
-                Log.i("=== INCREDIBOTS ===", "PROCESSING LT/A");
+            case PICK_SPECIMEN:   //PICK SPECIMEN
+                Log.i("=== INCREDIBOTS ===", "PROCESSING STATE: PICK SPECIMEN");
 
                 robotHardware.operateClawServo(true, CLAW_OPEN_POSITION, CLAW_CLOSE_POSITION);
                 robotHardware.operateWristServo(WRIST_PICK_SPECIMEN);
@@ -236,14 +250,14 @@ public class IncredibotsArmControl
 
                 if (!robotHardware.isSlideMotorBusy() || Math.abs(SLIDE_POSITION_RESTING - robotHardware.getSlidePos()) < 10) {    //move arm after moving the slide
                     robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_PICK_SPECIMEN, CLAW_ARM_VELOCITY);
-                    buttonState = BUTTON_STATE.NONE;
-                    Log.i("=== INCREDIBOTS ===", "PROCESSING LT/A - SLIDE IS FINISHED MOVING - STARTING ARM. BUTTONSTAE: " + buttonState);
+                    armState = ARM_STATE.NONE;
+                    Log.i("=== INCREDIBOTS ===", "PROCESSING LT/A - SLIDE IS FINISHED MOVING - STARTING ARM. BUTTONSTAE: " + armState);
                 }
                 readyToPickUpSample = false;
                 readyToDropHighSample = false;
                 break;
-            case BUTTON_LT_Y:   //HANG SPECIMEN - HIGH RUNG
-                Log.i("=== INCREDIBOTS ===", "PROCESSING LT/Y");
+            case HANG_SPECIMEN:   //HANG SPECIMEN - HIGH RUNG
+                Log.i("=== INCREDIBOTS ===", "PROCESSING STATE: HANG SPECIMEN");
 
                 if (robotHardware.getClawArmMotorPos() != CLAW_ARM_TELE_HANG_SPECIMEN_HIGH_Y) {
                     Log.i("=== INCREDIBOTS ===", "PROCESSING LT/Y - CLAW ARM IS MOVING");
@@ -253,14 +267,14 @@ public class IncredibotsArmControl
                 if (!robotHardware.isClawArmMotorBusy() || Math.abs(CLAW_ARM_TELE_HANG_SPECIMEN_HIGH_Y - robotHardware.getClawArmMotorPos()) < 10) {  //set slide after claw arm
                     robotHardware.setSlidePosition(SLIDE_POSITION_HANG_SPECIMEN_HIGH);
                     robotHardware.operateClawServo(false, CLAW_OPEN_POSITION, CLAW_CLOSE_POSITION);
-                    buttonState = BUTTON_STATE.NONE;
-                    Log.i("=== INCREDIBOTS ===", "PROCESSING LT/Y - CLAW ARM IS DONE MOVING - STARTING SLIDE. BUTTONSTATE: " + buttonState);
+                    armState = ARM_STATE.NONE;
+                    Log.i("=== INCREDIBOTS ===", "PROCESSING LT/Y - CLAW ARM IS DONE MOVING - STARTING SLIDE. BUTTONSTATE: " + armState);
                 }
                 readyToPickUpSample = false;
                 readyToDropHighSample = false;
                 break;
-            case BUTTON_LT_B:   //SNAP SPECIMEN
-                Log.i("=== INCREDIBOTS ===", "PROCESSING LT/B");
+            case SNAP_SPECIMEN:   //SNAP SPECIMEN
+                Log.i("=== INCREDIBOTS ===", "PROCESSING STATE: SNAP SPECIMEN");
 
                 if (robotHardware.getSlidePos() != SLIDE_POSITION_HANG_SPECIMEN_HIGH) {
                     Log.i("=== INCREDIBOTS ===", "PROCESSING LT/B - SLIDE IS BUSY");
@@ -272,44 +286,73 @@ public class IncredibotsArmControl
                     robotHardware.operateWristServo(WRIST_PICK_SPECIMEN);
                     robotHardware.setSlidePosition(robotHardware.getSlidePos() + 100);
                     robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_TELE_SNAP_SPECIMEN_HIGH_B, CLAW_ARM_VELOCITY);
-                    buttonState = BUTTON_STATE.NONE;
+                    armState = ARM_STATE.NONE;
                 }
 
                 readyToPickUpSample = false;
                 readyToDropHighSample = false;
                 break;
-            case  BUTTON_LT_X: //ARM VERTICAL TO GET READY TO HANG SPECIMEN
-                Log.i("=== INCREDIBOTS ===", "PROCESSING LT/X");
+            case ARM_VERTICAL: //ARM VERTICAL TO GET READY TO HANG SPECIMEN
+                Log.i("=== INCREDIBOTS ===", "PROCESSING STATE: ARM VERTICAL");
 
                 robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_TELE_HANG_SPECIMEN_HIGH_Y, CLAW_ARM_VELOCITY);
                 robotHardware.setSlidePosition(SLIDE_POSITION_RESTING);
                 robotHardware.operateWristServo(WRIST_HANG_SPECIMEN);
-                buttonState = BUTTON_STATE.NONE;
+                armState = ARM_STATE.NONE;
 
                 readyToPickUpSample = false;
                 readyToDropHighSample = false;
                 break;
-            case BUTTON_RT_A:   //PICK SAMPLE
-                Log.i("=== INCREDIBOTS ===", "PROCESSING RT/A");
+            case PICK_SAMPLE:   //PICK SAMPLE
+                Log.i("=== INCREDIBOTS ===", "PROCESSING STATE: PICK SAMPLE");
 
-                if (robotHardware.getSlidePos() != SLIDE_POSITION_PICK_SAMPLE && !preserveSlidePosition) {
-                    Log.i("=== INCREDIBOTS ===", "PROCESSING RT/A - SLIDE IS MOVING");
-                    robotHardware.setSlidePosition(SLIDE_POSITION_PICK_SAMPLE);
-                    robotHardware.operateWristServo(WRIST_PICK_SAMPLE);
-                    robotHardware.operateClawServo(true, CLAW_OPEN_POSITION, CLAW_CLOSE_POSITION);
-                }
+                if (!processedPickSample) {
+                    Action slideActionPickSample = new SlideMotionAsRRAction(robotHardware, SLIDE_POSITION_PICK_SAMPLE, true, false);
+                    Action armActionPickSample = new ArmMotionAsRRAction(robotHardware, CLAW_ARM_PICK_SAMPLE_A, CLAW_ARM_VELOCITY, true);
+                    Action clawActionPickSample = new ClawMotionAsRRAction(robotHardware, true, CLAW_OPEN_POSITION, CLAW_CLOSE_POSITION, false, false);
+                    Action wristActionPickSample = new WristMotionAsRRAction(robotHardware, WRIST_PICK_SAMPLE, false, false);
 
-                if (!robotHardware.isSlideMotorBusy() || Math.abs(SLIDE_POSITION_PICK_SAMPLE - robotHardware.getSlidePos()) < 10) {    //move claw arm after slide is done moving
-                    robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_PICK_SAMPLE_A, CLAW_ARM_VELOCITY);
-                    buttonState = BUTTON_STATE.NONE;
+                    Actions.runBlocking(
+                            new SequentialAction(
+                                    slideActionPickSample,
+                                    new ParallelAction(
+                                            armActionPickSample,
+                                            clawActionPickSample,
+                                            wristActionPickSample
+                                    )
+                            )
+                    );
                     readyToPickUpSample = true;
-                    Log.i("=== INCREDIBOTS ===", "PROCESSING RT/A - SLIDE IS DONE MOVING - STARTING ARM. BUTTON STATE: " + buttonState);
+                    processedPickSample = true;
                 }
-                preserveSlidePosition = false;
+                else {
+                    // adjust arm position based on slide position
+                    // the arm needs to adjust 8 units more if the slide is fully extended
+                    int slideMinMaxDiff = MAX_SLIDE_POSITION_ARM_FORWARDS_LOW - SLIDE_POSITION_PICK_SAMPLE;
+                    int slideDelta = robotHardware.getSlidePos() -  SLIDE_POSITION_PICK_SAMPLE;
+                    double slideProportion = ((double)slideDelta / (double)slideMinMaxDiff);
+                    int armAdjustment = (int)Math.ceil(CLAW_ARM_ADJUSTMENT_WITH_SLIDE * slideProportion);
+                    robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_PICK_SAMPLE_A + armAdjustment, CLAW_ARM_VELOCITY);
+                }
+
+//                if (robotHardware.getSlidePos() != SLIDE_POSITION_PICK_SAMPLE) {
+//                    Log.i("=== INCREDIBOTS ===", "PROCESSING RT/A - SLIDE IS MOVING");
+//                    robotHardware.setSlidePosition(SLIDE_POSITION_PICK_SAMPLE);
+//                }
+//
+//                if (!robotHardware.isSlideMotorBusy() || Math.abs(SLIDE_POSITION_PICK_SAMPLE - robotHardware.getSlidePos()) < 10) {    //move claw arm after slide is done moving
+//                    robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_PICK_SAMPLE_A, CLAW_ARM_VELOCITY);
+//                    robotHardware.operateWristServo(WRIST_PICK_SAMPLE);
+//                    robotHardware.operateClawServo(true, CLAW_OPEN_POSITION, CLAW_CLOSE_POSITION);
+//                    armState = ARM_STATE.NONE;
+//                    readyToPickUpSample = true;
+//                    Log.i("=== INCREDIBOTS ===", "PROCESSING RT/A - SLIDE IS DONE MOVING - STARTING ARM. BUTTON STATE: " + armState);
+//                }
+
                 readyToDropHighSample = false;
                 break;
-            case BUTTON_RT_Y:   //HIGH BASKET
-                Log.i("=== INCREDIBOTS ===", "PROCESSING RT/Y");
+            case HIGH_BASKET:   //HIGH BASKET
+                Log.i("=== INCREDIBOTS ===", "PROCESSING STATE: HIGH BASKET");
 
                 if (robotHardware.getClawArmMotorPos() != CLAW_ARM_DROP_SAMPLE_HIGH) {
                     Log.i("=== INCREDIBOTS ===", "PROCESSING RT/Y - CLAW ARM IS BUSY");
@@ -319,14 +362,14 @@ public class IncredibotsArmControl
 
                 if (!robotHardware.isClawArmMotorBusy() || Math.abs(CLAW_ARM_DROP_SAMPLE_HIGH - robotHardware.getClawArmMotorPos()) < 10) { //move slide after claw arm is done moving
                     robotHardware.setSlidePosition(SLIDE_POSITION_HIGH_BASKET);
-                    buttonState = BUTTON_STATE.NONE;
+                    armState = ARM_STATE.NONE;
                     readyToDropHighSample = true;
-                    Log.i("=== INCREDIBOTS ===", "PROCESSING RT/Y - CLAW ARM IS DONE MOVING - STARTING SLIDE. BUTTONSTATE: " + buttonState);
+                    Log.i("=== INCREDIBOTS ===", "PROCESSING RT/Y - CLAW ARM IS DONE MOVING - STARTING SLIDE. BUTTONSTATE: " + armState);
                 }
                 readyToPickUpSample = false;
                 break;
-            case BUTTON_RT_B:   //LOW BASKET
-                Log.i("=== INCREDIBOTS ===", "PROCESSING RT/B");
+            case LOW_BASKET:   //LOW BASKET
+                Log.i("=== INCREDIBOTS ===", "PROCESSING STATE: LOW BASKET");
 
                 if (robotHardware.getClawArmMotorPos() != CLAW_ARM_DROP_SAMPLE_LOW) {
                     Log.i("=== INCREDIBOTS ===", "PROCESSING RT/B - CLAW ARM IS BUSY");
@@ -336,52 +379,52 @@ public class IncredibotsArmControl
 
                 if (!robotHardware.isClawArmMotorBusy() || Math.abs(CLAW_ARM_DROP_SAMPLE_LOW - robotHardware.getClawArmMotorPos()) < 10) {  //move slide after getting arm in position
                     robotHardware.setSlidePosition(SLIDE_POSITION_LOW_BASKET);
-                    buttonState = BUTTON_STATE.NONE;
-                    Log.i("=== INCREDIBOTS ===", "PROCESSING RT/B CLAW ARM IS DONE MOVING - STARTING SLIDE. BUTTONSTATE: " + buttonState);
+                    armState = ARM_STATE.NONE;
+                    Log.i("=== INCREDIBOTS ===", "PROCESSING RT/B CLAW ARM IS DONE MOVING - STARTING SLIDE. BUTTONSTATE: " + armState);
                 }
                 readyToPickUpSample = false;
                 readyToDropHighSample = false;
                 break;
-            case BUTTON_RT_X:   //ENTER /EXIT SUB
-                Log.i("=== INCREDIBOTS ===", "PROCESSING RT/X");
+            case ENTER_EXIT_SUB:   //ENTER /EXIT SUB
+                Log.i("=== INCREDIBOTS ===", "PROCESSING STATE: ENTER EXIT SUB");
 
                 if (readyToPickUpSample) { //move arms in parallel after picking up sample
                     Log.i("=== INCREDIBOTS ===", "PROCESSING RT/X - MOVING SLIDE / ARM IN PARALLEL AFTER SAMPLE");
-                    robotHardware.setSlidePosition(SLIDE_POSITION_RESTING);
+                    robotHardware.operateWristServo(WRIST_ENTER_SUB);
+                    robotHardware.setSlidePosition(SLIDE_ENTER_SUB);
                     robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_ENTER_SUB, CLAW_ARM_VELOCITY);
-                    buttonState = BUTTON_STATE.NONE;
+                    armState = ARM_STATE.NONE;
                 }
                 else {
-                    if (robotHardware.getSlidePos() != SLIDE_POSITION_RESTING) {
+                    robotHardware.operateWristServo(WRIST_ENTER_SUB);
+
+                    if (robotHardware.getSlidePos() != SLIDE_ENTER_SUB) {
                         Log.i("=== INCREDIBOTS ===", "PROCESSING RT/X - SLIDE IS MOVING");
-                        robotHardware.setSlidePosition(SLIDE_POSITION_RESTING);
+                        robotHardware.setSlidePosition(SLIDE_ENTER_SUB);
                     }
 
-                    if (!robotHardware.isSlideMotorBusy() || Math.abs(SLIDE_POSITION_RESTING - robotHardware.getSlidePos()) < 10) {    //move claw arm after slide is done moving
+                    if (!robotHardware.isSlideMotorBusy() || Math.abs(SLIDE_ENTER_SUB - robotHardware.getSlidePos()) < 10) {    //move claw arm after slide is done moving
                         robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_ENTER_SUB, CLAW_ARM_VELOCITY);
-                        robotHardware.operateWristServo(WRIST_PICK_SAMPLE);
-                        buttonState = BUTTON_STATE.NONE;
-                        Log.i("=== INCREDIBOTS ===", "PROCESSING RT/X - SLIDE IS DONE MOVING - STARTING ARM. BUTTONSTATE: " + buttonState);
+                        armState = ARM_STATE.NONE;
+                        Log.i("=== INCREDIBOTS ===", "PROCESSING RT/X - SLIDE IS DONE MOVING - STARTING ARM. BUTTONSTATE: " + armState);
                     }
-
-                    preserveSlidePosition = true;
                 }
                 readyToPickUpSample = false;
                 readyToDropHighSample = false;
                 break;
 
             case CLAW_ARM_AFTER_HIGH_SAMPLE:
-                Log.i("=== INCREDIBOTS ===", "PROCESSING CLAW ARM AFTER HIGH SAMPLE");
+                Log.i("=== INCREDIBOTS ===", "PROCESSING STATE: CLAW ARM AFTER HIGH SAMPLE");
 
                 if (robotHardware.getClawArmMotorPos() != CLAW_ARM_AFTER_DROP_SAMPLE_HIGH) {
                     Log.i("=== INCREDIBOTS ===", "PROCESSING CLAW ARM AFTER HIGH SAMPLE - CLAW ARM IS BUSY");
-                    robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_AFTER_DROP_SAMPLE_HIGH, CLAW_ARM_VELOCITY);
+                    robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_AFTER_DROP_SAMPLE_HIGH, CLAW_ARM_VELOCITY/2);
                 }
 
                 if (!robotHardware.isClawArmMotorBusy() || Math.abs(CLAW_ARM_AFTER_DROP_SAMPLE_HIGH - robotHardware.getClawArmMotorPos()) < 10) {
-                    buttonState = BUTTON_STATE.BUTTON_RT_X;
+                    armState = ARM_STATE.ENTER_EXIT_SUB;
                 }
-                
+
                 readyToPickUpSample = false;
                 readyToDropHighSample = false;
                 break;
@@ -402,7 +445,7 @@ public class IncredibotsArmControl
                 }
 
                 //move the robot arm back
-                buttonState = BUTTON_STATE.CLAW_ARM_AFTER_HIGH_SAMPLE;
+                armState = ARM_STATE.CLAW_ARM_AFTER_HIGH_SAMPLE;
 
                 readyToDropHighSample = false;
             }
@@ -425,10 +468,10 @@ public class IncredibotsArmControl
         // if manual override is true it will allow the joysticks to control the arms
         if (MANUAL_OVERRIDE) {
 
-            if (buttonState != BUTTON_STATE.NONE) { //stop any ongoing motions when entering manual override
+            if (armState != ARM_STATE.NONE) { //stop any ongoing motions when entering manual override
                 robotHardware.stopClawArm();
                 robotHardware.stopSlide();
-                buttonState = BUTTON_STATE.NONE;
+                armState = ARM_STATE.NONE;
             }
 
             //if manual override is enabled and slide position is more than limits, setit
@@ -455,11 +498,11 @@ public class IncredibotsArmControl
         //DEPENDING ON HOW THE CLAW ARM IS, THE SLIDE IS PERMITTED TO MOVE CERTAIN MAX DISTANCES.
         int maxSlidePosition = -1;
 
-        if (robotHardware.getClawArmMotorPos() < CLAW_ARM_AUTO_HANG_SPECIMEN) { //ARM IS BEHIND ROBOT
-            maxSlidePosition = MAX_SLIDE_POSITION_ARM_FORWARDS_LOW;
+        if (robotHardware.getClawArmMotorPos() < CLAW_ARM_DROP_SAMPLE_HIGH) { //ARM IS BEHIND ROBOT
+            maxSlidePosition = MAX_SLIDE_POSITION_ARM_BACKWARDS_HIGH;
         }
         else if (robotHardware.getClawArmMotorPos() > CLAW_ARM_DROP_SAMPLE_HIGH + 100) {
-            maxSlidePosition = MAX_SLIDE_POSITION_ARM_BACKWARDS_HIGH;
+            maxSlidePosition = MAX_SLIDE_POSITION_ARM_FORWARDS_LOW;
         }
 
         return maxSlidePosition;
