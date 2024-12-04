@@ -12,7 +12,6 @@ import com.acmerobotics.roadrunner.TranslationalVelConstraint;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 @Config
 @Autonomous(name = "IncredibotsAuto3SpecimenRed", group = "Autonomous")
@@ -83,12 +82,12 @@ public class IncredibotsAuto3SpecimenRed extends IncredibotsAuto {
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, true))
                 .lineToYConstantHeading(MOVE_FORWARD_TO_PICK_FIRST_SPECIMEN.position.y, new TranslationalVelConstraint(30), new ProfileAccelConstraint(-10, 30))
                 .stopAndAdd(GetClawControlAction(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, true, false))
-                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_AUTO_HANG_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
+                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_HANG_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
                 .strafeToConstantHeading(MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_ONE.position)
                 .setTangent(heading)
                 .lineToYConstantHeading(MOVE_TO_BRACE_SUB_SPECIMEN_ONE.position.y, new TranslationalVelConstraint(40), new ProfileAccelConstraint(-20, 40))
-                .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN_HIGH, true))
-                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_AUTO_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_AUTO_VELOCITY_SNAP_SPECIMEN, true))
+                .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN, true))
+                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_AUTO_VELOCITY_SNAP_SPECIMEN, true))
                 //.waitSeconds(0.6)
                 .stopAndAdd(GetClawControlAction(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, true, true))
                 .build();
@@ -100,12 +99,12 @@ public class IncredibotsAuto3SpecimenRed extends IncredibotsAuto {
                 .setTangent(heading)
                 .lineToYConstantHeading(MOVE_FORWARD_TO_PICK_SECOND_SPECIMEN.position.y, new TranslationalVelConstraint(30), new ProfileAccelConstraint(-10, 30))
                 .stopAndAdd(GetClawControlAction(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, true, false))
-                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_AUTO_HANG_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
+                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_HANG_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
                 .strafeToConstantHeading(MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_TWO.position)
                 .setTangent(heading)
                 .lineToYConstantHeading(MOVE_TO_BRACE_SUB_SPECIMEN_TWO.position.y, new TranslationalVelConstraint(40), new ProfileAccelConstraint(-20, 40))
-                .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN_HIGH, true))
-                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_AUTO_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_AUTO_VELOCITY_SNAP_SPECIMEN, true))
+                .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN, true))
+                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_AUTO_VELOCITY_SNAP_SPECIMEN, true))
                 //.waitSeconds(0.6)
                 .stopAndAdd(GetClawControlAction(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, true, true))
                 .build();
@@ -117,12 +116,12 @@ public class IncredibotsAuto3SpecimenRed extends IncredibotsAuto {
                 .setTangent(heading)
                 .lineToYConstantHeading(MOVE_FORWARD_TO_PICK_SECOND_SPECIMEN.position.y, new TranslationalVelConstraint(30), new ProfileAccelConstraint(-10, 30))
                 .stopAndAdd(GetClawControlAction(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, true, false))
-                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_AUTO_HANG_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
+                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_HANG_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
                 .strafeToConstantHeading(MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_THREE.position)
                 .setTangent(heading)
                 .lineToYConstantHeading(MOVE_TO_BRACE_SUB_SPECIMEN_THREE.position.y, new TranslationalVelConstraint(40), new ProfileAccelConstraint(-20, 40))
-                .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN_HIGH, true))
-                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_AUTO_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_AUTO_VELOCITY_SNAP_SPECIMEN, true))
+                .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN, true))
+                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_AUTO_VELOCITY_SNAP_SPECIMEN, true))
                 //.waitSeconds(0.6)
                 .stopAndAdd(GetClawControlAction(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, true, true))
                 .build();
@@ -179,12 +178,12 @@ public class IncredibotsAuto3SpecimenRed extends IncredibotsAuto {
                 .setTangent(heading)
                 .lineToYConstantHeading(MOVE_FORWARD_TO_PICK_SPECIMEN.position.y)
                 .stopAndAdd(GetClawControlAction(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, true, false))
-                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_AUTO_HANG_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
+                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_HANG_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
                 .strafeToConstantHeading(MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_ONE.position)
                 .setTangent(heading)
                 .lineToYConstantHeading(MOVE_TO_BRACE_SUB_SPECIMEN_ONE.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(-30, 50))
-                .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN_HIGH, true))
-                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_AUTO_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_AUTO_VELOCITY_SNAP_SPECIMEN, true))
+                .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN, true))
+                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_AUTO_VELOCITY_SNAP_SPECIMEN, true))
                 .waitSeconds(0.75)
                 .stopAndAdd(GetClawControlAction(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, false, false))
                 .build();
@@ -197,12 +196,12 @@ public class IncredibotsAuto3SpecimenRed extends IncredibotsAuto {
                 .setTangent(heading)
                 .lineToYConstantHeading(MOVE_FORWARD_TO_PICK_SPECIMEN.position.y)
                 .stopAndAdd(GetClawControlAction(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, true, false))
-                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_AUTO_HANG_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
+                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_HANG_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
                 .strafeToConstantHeading(MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_TWO.position)
                 .setTangent(heading)
                 .lineToYConstantHeading(MOVE_TO_BRACE_SUB_SPECIMEN_TWO.position.y)
-                .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN_HIGH, true))
-                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_AUTO_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_AUTO_VELOCITY_SNAP_SPECIMEN, true))
+                .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN, true))
+                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_AUTO_VELOCITY_SNAP_SPECIMEN, true))
                 .waitSeconds(0.75)
                 .stopAndAdd(GetClawControlAction(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, false, false))
                 .build();
