@@ -68,20 +68,20 @@ public class IncredibotsAuto3SpecimenRed extends IncredibotsAuto {
 
         Action pickAndDropSampleOne = drive.actionBuilder(INIT_POS)
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SAMPLE_A, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
-                .stopAndAdd(GetClawControlAction(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, false, false))
+                .stopAndAdd(GetClawControlAction(true, false, false))
                 .strafeToConstantHeading(GET_IN_FRONT_OF_FIRST_SAMPLE.position)
                 .waitSeconds(0.5) //wait for arm to stabilize and claw to open
-                .stopAndAdd(GetClawControlAction(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, true, false))
+                .stopAndAdd(GetClawControlAction(false, true, false))
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_RESTING_BACK, IncredibotsArmControl.CLAW_ARM_VELOCITY + 200, true))
                 .setTangent(heading)
                 .lineToYConstantHeading(DROP_FIRST_SAMPLE.position.y)
-                .stopAndAdd(GetClawControlAction(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, false, false))
+                .stopAndAdd(GetClawControlAction(true, false, false))
                 .build();
 
         Action pickAndSnapSpecimenOne = drive.actionBuilder(DROP_FIRST_SAMPLE)
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, true))
                 .lineToYConstantHeading(MOVE_FORWARD_TO_PICK_FIRST_SPECIMEN.position.y, new TranslationalVelConstraint(30), new ProfileAccelConstraint(-10, 30))
-                .stopAndAdd(GetClawControlAction(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, true, false))
+                .stopAndAdd(GetClawControlAction(false, true, false))
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_HANG_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
                 .strafeToConstantHeading(MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_ONE.position)
                 .setTangent(heading)
@@ -89,7 +89,7 @@ public class IncredibotsAuto3SpecimenRed extends IncredibotsAuto {
                 .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN, true))
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_AUTO_VELOCITY_SNAP_SPECIMEN, true))
                 //.waitSeconds(0.6)
-                .stopAndAdd(GetClawControlAction(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, true, true))
+                .stopAndAdd(GetClawControlAction(true, true, true))
                 .build();
 
         Action pickAndSnapSpecimenTwo = drive.actionBuilder(MOVE_TO_BRACE_SUB_SPECIMEN_ONE)
@@ -98,7 +98,7 @@ public class IncredibotsAuto3SpecimenRed extends IncredibotsAuto {
                 .strafeToConstantHeading(STRAFE_TO_SECOND_SPECIMEN.position)
                 .setTangent(heading)
                 .lineToYConstantHeading(MOVE_FORWARD_TO_PICK_SECOND_SPECIMEN.position.y, new TranslationalVelConstraint(30), new ProfileAccelConstraint(-10, 30))
-                .stopAndAdd(GetClawControlAction(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, true, false))
+                .stopAndAdd(GetClawControlAction(false, true, false))
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_HANG_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
                 .strafeToConstantHeading(MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_TWO.position)
                 .setTangent(heading)
@@ -106,7 +106,7 @@ public class IncredibotsAuto3SpecimenRed extends IncredibotsAuto {
                 .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN, true))
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_AUTO_VELOCITY_SNAP_SPECIMEN, true))
                 //.waitSeconds(0.6)
-                .stopAndAdd(GetClawControlAction(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, true, true))
+                .stopAndAdd(GetClawControlAction(true, true, true))
                 .build();
 
         Action pickAndSnapSpecimenThree = drive.actionBuilder(MOVE_TO_BRACE_SUB_SPECIMEN_TWO)
@@ -115,7 +115,7 @@ public class IncredibotsAuto3SpecimenRed extends IncredibotsAuto {
                 .strafeToConstantHeading(STRAFE_TO_SECOND_SPECIMEN.position)
                 .setTangent(heading)
                 .lineToYConstantHeading(MOVE_FORWARD_TO_PICK_SECOND_SPECIMEN.position.y, new TranslationalVelConstraint(30), new ProfileAccelConstraint(-10, 30))
-                .stopAndAdd(GetClawControlAction(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, true, false))
+                .stopAndAdd(GetClawControlAction(false, true, false))
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_HANG_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
                 .strafeToConstantHeading(MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_THREE.position)
                 .setTangent(heading)
@@ -123,7 +123,7 @@ public class IncredibotsAuto3SpecimenRed extends IncredibotsAuto {
                 .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN, true))
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_AUTO_VELOCITY_SNAP_SPECIMEN, true))
                 //.waitSeconds(0.6)
-                .stopAndAdd(GetClawControlAction(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, true, true))
+                .stopAndAdd(GetClawControlAction(true, true, true))
                 .build();
 
         Action goParkInObservationZone = drive.actionBuilder(MOVE_TO_BRACE_SUB_SPECIMEN_THREE)
@@ -150,13 +150,13 @@ public class IncredibotsAuto3SpecimenRed extends IncredibotsAuto {
         Action pickAndDropSampleTwo = drive.actionBuilder(drive.pose)
                 .strafeToConstantHeading(GET_IN_FRONT_OF_SECOND_SAMPLE.position)
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SAMPLE_A, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
-                .stopAndAdd(GetClawControlAction(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, false, false))
+                .stopAndAdd(GetClawControlAction(true, false, false))
                 .waitSeconds(1) //wait for arm to stabilize and claw to open
-                .stopAndAdd(GetClawControlAction(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, true, false))
+                .stopAndAdd(GetClawControlAction(false, true, false))
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_RESTING_BACK, IncredibotsArmControl.CLAW_ARM_VELOCITY + 200, true))
                 .setTangent(heading)
                 .lineToYConstantHeading(DROP_SECOND_SAMPLE.position.y)
-                .stopAndAdd(GetClawControlAction(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, false, false))
+                .stopAndAdd(GetClawControlAction(true, false, false))
                 .build();
 
         //this action is to push in samples 2 and 3
@@ -174,10 +174,10 @@ public class IncredibotsAuto3SpecimenRed extends IncredibotsAuto {
         Action pickFirstSpecimen = drive.actionBuilder(PUSH_FIRST_SAMPLE)
                 .strafeToConstantHeading(PICK_SPECIMEN.position)
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
-                .stopAndAdd(GetClawControlAction(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, false, false))
+                .stopAndAdd(GetClawControlAction(true,  false, false))
                 .setTangent(heading)
                 .lineToYConstantHeading(MOVE_FORWARD_TO_PICK_SPECIMEN.position.y)
-                .stopAndAdd(GetClawControlAction(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, true, false))
+                .stopAndAdd(GetClawControlAction(false, true, false))
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_HANG_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
                 .strafeToConstantHeading(MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_ONE.position)
                 .setTangent(heading)
@@ -185,7 +185,7 @@ public class IncredibotsAuto3SpecimenRed extends IncredibotsAuto {
                 .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN, true))
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_AUTO_VELOCITY_SNAP_SPECIMEN, true))
                 .waitSeconds(0.75)
-                .stopAndAdd(GetClawControlAction(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, false, false))
+                .stopAndAdd(GetClawControlAction(true,  false, false))
                 .build();
 
         Action pickSecondSpecimen = drive.actionBuilder(MOVE_TO_BRACE_SUB_SPECIMEN_ONE)
@@ -195,7 +195,7 @@ public class IncredibotsAuto3SpecimenRed extends IncredibotsAuto {
                 .strafeToConstantHeading(PICK_SPECIMEN.position)
                 .setTangent(heading)
                 .lineToYConstantHeading(MOVE_FORWARD_TO_PICK_SPECIMEN.position.y)
-                .stopAndAdd(GetClawControlAction(false, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, true, false))
+                .stopAndAdd(GetClawControlAction(false, true, false))
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_HANG_SPECIMEN, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
                 .strafeToConstantHeading(MOVE_IN_FRONT_OF_RUNGS_SPECIMEN_TWO.position)
                 .setTangent(heading)
@@ -203,7 +203,7 @@ public class IncredibotsAuto3SpecimenRed extends IncredibotsAuto {
                 .stopAndAdd(GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_HANG_SPECIMEN, true))
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_SNAP_SPECIMEN, IncredibotsArmControl.CLAW_ARM_AUTO_VELOCITY_SNAP_SPECIMEN, true))
                 .waitSeconds(0.75)
-                .stopAndAdd(GetClawControlAction(true, IncredibotsArmControl.CLAW_OPEN_POSITION, IncredibotsArmControl.CLAW_CLOSE_POSITION, false, false))
+                .stopAndAdd(GetClawControlAction(true,  false, false))
                 .build();
 
         waitForStart();

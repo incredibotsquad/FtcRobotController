@@ -19,7 +19,11 @@ public abstract class IncredibotsAuto extends LinearOpMode {
         return new SlideMotionAsRRAction(myHardware, position, waitForAction);
     }
 
-    protected Action GetClawControlAction(boolean open, double openPosition, double closePosition, boolean waitForAction, boolean shortWait) {
-        return new ClawMotionAsRRAction(myHardware, open, openPosition, closePosition, waitForAction, shortWait);
+    protected Action GetClawControlAction(boolean open, boolean waitForAction, boolean shortWait) {
+        return new ClawMotionAsRRAction(myHardware, open, waitForAction, shortWait);
+    }
+
+    protected Action GetWristControlAction(double position, boolean waitForAction, boolean shortWait) {
+        return new WristMotionAsRRAction(myHardware, position, waitForAction, shortWait);
     }
 }
