@@ -12,18 +12,14 @@ import org.firstinspires.ftc.teamcode.RobotHardware;
 public class ClawMotionAsRRAction implements Action {
     private RobotHardware myHardware;
     private boolean open;
-    private double openPosition;
-    private double closePosition;
     private boolean initialized = false;
     private boolean waitForAction = false;
     private boolean shortWait = false;
     private ElapsedTime timer;
 
-    public ClawMotionAsRRAction(RobotHardware robotHardware, boolean open, double openPosition, double closePosition, boolean waitForAction, boolean shortWait) {
+    public ClawMotionAsRRAction(RobotHardware robotHardware, boolean open, boolean waitForAction, boolean shortWait) {
         this.myHardware = robotHardware;
         this.open = open;
-        this.openPosition = openPosition;
-        this.closePosition = closePosition;
         this.initialized = false;
         this.waitForAction = waitForAction;
         this.shortWait = shortWait;
@@ -32,7 +28,7 @@ public class ClawMotionAsRRAction implements Action {
     @Override
     public boolean run (@NonNull TelemetryPacket packet) {
         if (!initialized) {
-            myHardware.operateClawServo(open, openPosition, closePosition);
+            myHardware.operateClawServo(open);
             timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
             initialized = true;
         }

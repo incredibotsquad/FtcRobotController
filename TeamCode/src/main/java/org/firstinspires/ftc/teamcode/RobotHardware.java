@@ -90,9 +90,7 @@ public class RobotHardware {
         slideMotor.setTargetPosition(pos);
         slideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         slideMotor.setVelocity(velocity);
-        Log.i("=== INCREDIBOTS ===", " !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        Log.i("=== INCREDIBOTS ===", " SETTING SLIDE MOTOR POSITION AND VELOCITY");
-        Log.i("=== INCREDIBOTS ===", " !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " SETTING SLIDE MOTOR POSITION: " + pos + " AND VELOCITY: " + velocity);
     }
 
     //returns if slide motor is moving currently
@@ -110,9 +108,7 @@ public class RobotHardware {
         armMotor.setTargetPosition(pos);
         armMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         armMotor.setVelocity(velocity);
-        Log.i("=== INCREDIBOTS ===", " !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        Log.i("=== INCREDIBOTS ===", " SETTING CLAW MOTOR POSITION AND VELOCITY");
-        Log.i("=== INCREDIBOTS ===", " !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " SETTING CLAW ARM POSITION: " + pos + " AND VELOCITY: " + velocity);
     }
 
     //returns if the arm motor is moving currently
@@ -126,8 +122,8 @@ public class RobotHardware {
     }
 
     //decides either to open or close the claw servo
-    public void operateClawServo(boolean open, double openPosition, double closePosition) {
-        clawServo.setPosition(open? openPosition: closePosition);
+    public void operateClawServo(boolean open) {
+        clawServo.setPosition(open? IncredibotsArmControl.CLAW_OPEN_POSITION: IncredibotsArmControl.CLAW_CLOSE_POSITION);
     }
 
     public void operateWristServo(double position) {
@@ -135,17 +131,17 @@ public class RobotHardware {
     }
 
     public void stopSlide() {
-        Log.i("=== INCREDIBOTS ===", " STOPPING SLIDE ");
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " STOPPING SLIDE ");
         setSlidePosition(getSlidePos());
     }
 
     public void stopClawArm() {
-        Log.i("=== INCREDIBOTS ===", " STOPPING CLAW ARM ");
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " STOPPING CLAW ARM ");
         setClawArmPositionAndVelocity(getClawArmMotorPos(), IncredibotsArmControl.CLAW_ARM_VELOCITY);
     }
 
     public void stopAndResetSlideEncoder() {
-        Log.i("=== INCREDIBOTS ===", " RESETTING SLIDE ENCODER");
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " RESETTING SLIDE ENCODER");
         slideMotor.setPower(0);
         slideMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         setSlidePosition(0);
