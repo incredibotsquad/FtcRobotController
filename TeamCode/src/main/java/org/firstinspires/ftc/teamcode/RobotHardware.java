@@ -147,6 +147,14 @@ public class RobotHardware {
         setSlidePosition(0);
     }
 
+    public void stopAndResetArmEncoder() {
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " RESETTING ARM ENCODER");
+        armMotor.setPower(0);
+        armMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        setClawArmPositionAndVelocity(0, IncredibotsArmControl.CLAW_ARM_VELOCITY);
+    }
+
+
     //returns the robots yaw as radians
     public double getRobotYawRadians() {
          return imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
