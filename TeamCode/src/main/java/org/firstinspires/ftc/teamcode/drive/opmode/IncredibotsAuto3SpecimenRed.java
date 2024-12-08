@@ -14,7 +14,7 @@ import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
 @Config
-@Autonomous(name = "IncredibotsAuto3SpecimenRed", group = "Autonomous")
+//@Autonomous(name = "IncredibotsAuto3SpecimenRed", group = "Autonomous")
 /* This auto opmode will make the robot do the following steps:
  1) start from the end line of the observation zone
  2) pick first sample and drop in observation zone
