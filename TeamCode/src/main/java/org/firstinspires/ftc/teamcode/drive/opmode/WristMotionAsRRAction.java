@@ -40,8 +40,8 @@ public class WristMotionAsRRAction implements Action {
                 timeDuration = 200;
             }
             boolean timerPending = timer.milliseconds() < timeDuration;
-            Log.i("=== INCREDIBOTS ===", "INSIDE WRISTMOTIONASRRACTION - WAITING FOR WRIST: " + timerPending);
-            //tell RR we need to keep running if 500 ms has not elapsed
+
+            //tell RR we need to keep running if duration has not elapsed
             return (timerPending);
         }
 

@@ -19,17 +19,17 @@ import org.firstinspires.ftc.teamcode.RobotHardware;
 
 
 @Config
-@Autonomous(name = "IncredibotsAuto4SpecimenBlue", group = "Autonomous")
-public class IncredibotsAuto4SpecimenBlue extends IncredibotsAuto {
+@Autonomous(name = "IncredibotsAuto4SpecimenRed", group = "Autonomous")
+public class IncredibotsAuto4SpecimenRed extends IncredibotsAuto {
 
-    public static final double heading = Math.toRadians(-90);
-    public static final double reverseHeading = Math.toRadians(90);
+    public static final double heading = Math.toRadians(90);
+    public static final double reverseHeading = Math.toRadians(-90);
 
     public static double minTransVelocity = 30;
     public static double minAccel = -20;
     public static double maxAccel = 40;
 
-    private static final int multiplier = 1;    //used to flip coordinates between blue and red
+    private static final int multiplier = -1; //used to flip coordinates between blue and red
 
     public static Pose2d INIT_POS = new Pose2d(-16 * multiplier, 60.75 * multiplier, heading);
     public static Vector2d SLIDE_NEXT_TO_SAMP_1 = new Vector2d(-37 * multiplier, 25 * multiplier);
@@ -113,10 +113,10 @@ public class IncredibotsAuto4SpecimenBlue extends IncredibotsAuto {
             //snap preloaded specimen
             Actions.runBlocking(
                     new SequentialAction(
-                        new ParallelAction(
-                                armControl.GetHangSpecimenActionSequence(),
-                                robotPreloadedSpecimen),
-                        armControl.GetSnapSpecimenActionSequence()
+                            new ParallelAction(
+                                    armControl.GetHangSpecimenActionSequence(),
+                                    robotPreloadedSpecimen),
+                            armControl.GetSnapSpecimenActionSequence()
                     )
             );
 
@@ -136,7 +136,7 @@ public class IncredibotsAuto4SpecimenBlue extends IncredibotsAuto {
             //move to pick specimen 2
             Actions.runBlocking(
                     new ParallelAction(
-                        armControl.GetPickSpecimenActionSequence(),
+                            armControl.GetPickSpecimenActionSequence(),
                             moveToPickSpecimenTwo
                     )
             );
@@ -144,11 +144,11 @@ public class IncredibotsAuto4SpecimenBlue extends IncredibotsAuto {
             //pick and snap specimen 2
             Actions.runBlocking(
                     new SequentialAction(
-                        new ParallelAction(
-                                pickAndSnapSpecimenTwo,
-                                armControl.GetHangSpecimenActionSequence()),
-                        armControl.GetSnapSpecimenActionSequence()
-            ));
+                            new ParallelAction(
+                                    pickAndSnapSpecimenTwo,
+                                    armControl.GetHangSpecimenActionSequence()),
+                            armControl.GetSnapSpecimenActionSequence()
+                    ));
 
             Log.i("=== INCREDIBOTS  ===", "ELAPSED TIME AFTER SNAPPING SPECIMEN 2: " + timer.milliseconds());
 
