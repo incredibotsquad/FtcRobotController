@@ -29,21 +29,22 @@ public class IncredibotsAuto4SpecimenBlue extends IncredibotsAuto {
     public static double minAccel = -20;
     public static double maxAccel = 40;
 
+    private static final int multiplier = 1;    //used to flip coordinates between blue and red
 
-    public static Pose2d INIT_POS = new Pose2d(-16, 60.75, heading);
-    public static Vector2d SLIDE_NEXT_TO_SAMP_1 = new Vector2d(-37, 25);
-    public static Vector2d SLIDE_BEHIND_SAMP_1 = new Vector2d(-44, 15);
-    public static Vector2d PUSH_SAMP_1 = new Vector2d(SLIDE_BEHIND_SAMP_1.x, 52);
-    public static Vector2d SLIDE_BEHIND_SAMP_2 = new Vector2d(-54, 15);
-    public static Vector2d PUSH_SAMP_2 = new Vector2d(SLIDE_BEHIND_SAMP_2.x, 52);
+    public static Pose2d INIT_POS = new Pose2d(-16 * multiplier, 60.75 * multiplier, heading);
+    public static Vector2d SLIDE_NEXT_TO_SAMP_1 = new Vector2d(-37 * multiplier, 25 * multiplier);
+    public static Vector2d SLIDE_BEHIND_SAMP_1 = new Vector2d(-44 * multiplier, 15 * multiplier);
+    public static Vector2d PUSH_SAMP_1 = new Vector2d(SLIDE_BEHIND_SAMP_1.x, 52 * multiplier);
+    public static Vector2d SLIDE_BEHIND_SAMP_2 = new Vector2d(-54 * multiplier, 15 * multiplier);
+    public static Vector2d PUSH_SAMP_2 = new Vector2d(SLIDE_BEHIND_SAMP_2.x, 52 * multiplier);
 
-    public static Vector2d PICK_SPECIMEN = new Vector2d(-43, 58);
+    public static Vector2d PICK_SPECIMEN = new Vector2d(-43 * multiplier, 58 * multiplier);
 
 
-    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_ONE = new Pose2d(5, 30, heading);
-    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_TWO = new Pose2d(2.5, 30, heading);
-    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_THREE = new Pose2d(0, 30, heading);
-    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_FOUR = new Pose2d(-2.5, 30, heading);
+    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_ONE = new Pose2d(5 * multiplier, 30 * multiplier, heading);
+    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_TWO = new Pose2d(2.5 * multiplier, 30 * multiplier, heading);
+    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_THREE = new Pose2d(0 * multiplier, 30 * multiplier, heading);
+    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_FOUR = new Pose2d(-2.5 * multiplier, 30 * multiplier, heading);
 
     public static Pose2d PARK = new Pose2d(PUSH_SAMP_1.x, PUSH_SAMP_1.y, heading);
 
