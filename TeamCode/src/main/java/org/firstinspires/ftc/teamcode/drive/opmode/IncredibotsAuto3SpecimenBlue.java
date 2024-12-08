@@ -9,9 +9,7 @@ import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.ProfileAccelConstraint;
 import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.TranslationalVelConstraint;
-import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
-import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
 @Config
 //@Autonomous(name = "IncredibotsAuto3SpecimenBlue", group = "Autonomous")
@@ -63,7 +61,7 @@ public class IncredibotsAuto3SpecimenBlue extends IncredibotsAuto {
                 .build();
 
         Action pickAndDropSampleOne = drive.actionBuilder(INIT_POS)
-                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SAMPLE_A, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
+                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SAMPLE, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
                 .stopAndAdd(GetClawControlAction(true, false, false))
                 .strafeToConstantHeading(GET_IN_FRONT_OF_FIRST_SAMPLE.position)
                 .waitSeconds(0.5) //wait for arm to stabilize and claw to open

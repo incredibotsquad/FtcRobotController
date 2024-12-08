@@ -11,7 +11,6 @@ import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.TranslationalVelConstraint;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
-import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
 @Config
 //@Autonomous(name = "IncredibotsAuto3SpecimenRed", group = "Autonomous")
@@ -67,7 +66,7 @@ public class IncredibotsAuto3SpecimenRed extends IncredibotsAuto {
         drive = new MecanumDrive(this.hardwareMap, INIT_POS);
 
         Action pickAndDropSampleOne = drive.actionBuilder(INIT_POS)
-                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SAMPLE_A, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
+                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SAMPLE, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
                 .stopAndAdd(GetClawControlAction(true, false, false))
                 .strafeToConstantHeading(GET_IN_FRONT_OF_FIRST_SAMPLE.position)
                 .waitSeconds(0.5) //wait for arm to stabilize and claw to open
@@ -149,7 +148,7 @@ public class IncredibotsAuto3SpecimenRed extends IncredibotsAuto {
 
         Action pickAndDropSampleTwo = drive.actionBuilder(drive.pose)
                 .strafeToConstantHeading(GET_IN_FRONT_OF_SECOND_SAMPLE.position)
-                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SAMPLE_A, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
+                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SAMPLE, IncredibotsArmControl.CLAW_ARM_VELOCITY, false))
                 .stopAndAdd(GetClawControlAction(true, false, false))
                 .waitSeconds(1) //wait for arm to stabilize and claw to open
                 .stopAndAdd(GetClawControlAction(false, true, false))
