@@ -15,14 +15,20 @@ public class ArmMotionAsRRAction implements Action {
     private int armVelocity;
     private boolean initialized = false;
     private boolean waitForAction = false;
+
+    private boolean shortWait = false;
     private ElapsedTime timer;
 
-    public ArmMotionAsRRAction(RobotHardware robotHardware, int armPosition, int armVelocity, boolean waitForAction) {
+    public ArmMotionAsRRAction(RobotHardware robotHardware, int armPosition, int armVelocity, boolean waitForAction, boolean shortWait) {
         this.myHardware = robotHardware;
         this.armPosition = armPosition;
         this.armVelocity = armVelocity;
         this.initialized = false;
         this.waitForAction = waitForAction;
+        this.shortWait = shortWait;
+    }
+    public ArmMotionAsRRAction(RobotHardware robotHardware, int armPosition, int armVelocity, boolean waitForAction) {
+        this(robotHardware, armPosition, armVelocity, waitForAction, true);
     }
 
     @Override
@@ -34,11 +40,12 @@ public class ArmMotionAsRRAction implements Action {
         }
 
         if (waitForAction) {
-            Log.i("=== INCREDIBOTS ===", "|+|+|+|+|+|+|+|+|+|+|+|+|+|+: ");
-            Log.i("=== INCREDIBOTS ===", "WAITING FOR ARM. MOTOR BUSY: " + myHardware.isClawArmMotorBusy());
-            Log.i("=== INCREDIBOTS ===", "WAITING FOR ARM. TIMER: " + timer.milliseconds());
-            Log.i("=== INCREDIBOTS ===", "|+|+|+|+|+|+|+|+|+|+|+|+|+|+: ");
-            return (myHardware.isClawArmMotorBusy() && (timer.milliseconds() < 700));
+            if (shortWait) {
+                return (myHardware.isClawArmMotorBusy() && (timer.milliseconds() < 700));
+            }
+            else {
+                return myHardware.isClawArmMotorBusy();
+            }
         }
 
         return false;

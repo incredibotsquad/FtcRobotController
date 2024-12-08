@@ -25,24 +25,27 @@ public class IncredibotsAuto4SpecimenBlue extends IncredibotsAuto {
     public static final double heading = Math.toRadians(-90);
     public static final double reverseHeading = Math.toRadians(90);
 
+    public static double minTransVelocity = 32;
+    public static double minAccel = -20;
+    public static double maxAccel = 40;
+
+
     public static Pose2d INIT_POS = new Pose2d(-16, 60.75, heading);
-    public static Vector2d SLIDE_NEXT_TO_SAMP_1 = new Vector2d(-36, 20);
+    public static Vector2d SLIDE_NEXT_TO_SAMP_1 = new Vector2d(-37, 25);
     public static Vector2d SLIDE_BEHIND_SAMP_1 = new Vector2d(-44, 15);
     public static Vector2d PUSH_SAMP_1 = new Vector2d(SLIDE_BEHIND_SAMP_1.x, 52);
     public static Vector2d SLIDE_BEHIND_SAMP_2 = new Vector2d(-54, 15);
     public static Vector2d PUSH_SAMP_2 = new Vector2d(SLIDE_BEHIND_SAMP_2.x, 52);
 
-    public static Vector2d PICK_SPECIMEN_ONE = new Vector2d(PUSH_SAMP_2.x, 56);
+    public static Vector2d PICK_SPECIMEN = new Vector2d(-43, 58);
 
-    //    public static Vector2d SLIDE_BEHIND_SAMP_3 = new Vector2d(-64, 15);
-    //    public static Vector2d PUSH_SAMP_3 = new Vector2d(SLIDE_BEHIND_SAMP_3.x, 52);
 
-    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_ONE = new Pose2d(-4, 30, heading);
-    public static Pose2d MOVE_TO_BRACE_SUB_SPECIMEN_ONE = new Pose2d(BRACE_RUNGS_FOR_SPECIMEN_ONE.position.x, 32, heading);
+    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_ONE = new Pose2d(5, 30, heading);
+    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_TWO = new Pose2d(2.5, 30, heading);
+    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_THREE = new Pose2d(0, 30, heading);
+    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_FOUR = new Pose2d(-2.5, 30, heading);
 
-    RobotHardware myHardware;
-    IncredibotsArmControl armControl;
-    MecanumDrive drive;
+    public static Pose2d PARK = new Pose2d(PUSH_SAMP_1.x, PUSH_SAMP_1.y, heading);
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -54,33 +57,59 @@ public class IncredibotsAuto4SpecimenBlue extends IncredibotsAuto {
 
         Action robotPreloadedSpecimen = drive.actionBuilder(INIT_POS)
                 .strafeToConstantHeading(BRACE_RUNGS_FOR_SPECIMEN_ONE.position)
-//                .setTangent(heading)
-//                .lineToYConstantHeading(MOVE_TO_BRACE_SUB_SPECIMEN_ONE.position.y, new TranslationalVelConstraint(40), new ProfileAccelConstraint(-20, 40))
                 .build();
 
         Action SamplePushingWithSplines = drive.actionBuilder(BRACE_RUNGS_FOR_SPECIMEN_ONE)
                 .setTangent(Math.toRadians(90))
-                .splineToConstantHeading(SLIDE_NEXT_TO_SAMP_1, heading, new TranslationalVelConstraint(30), new ProfileAccelConstraint(-20, 40))
-                .splineToConstantHeading(SLIDE_BEHIND_SAMP_1, reverseHeading, new TranslationalVelConstraint(30), new ProfileAccelConstraint(-20, 40))
-                .splineToConstantHeading(PUSH_SAMP_1, reverseHeading, new TranslationalVelConstraint(30), new ProfileAccelConstraint(-20, 40))
-                .splineToConstantHeading(SLIDE_BEHIND_SAMP_1, heading, new TranslationalVelConstraint(30), new ProfileAccelConstraint(-20, 40))
-                .splineToConstantHeading(SLIDE_BEHIND_SAMP_2, reverseHeading, new TranslationalVelConstraint(30), new ProfileAccelConstraint(-20, 40))
-                .splineToConstantHeading(PUSH_SAMP_2, reverseHeading, new TranslationalVelConstraint(30), new ProfileAccelConstraint(-20, 40))
-//                .splineToConstantHeading(SLIDE_BEHIND_SAMP_3, Math.toRadians(0), new TranslationalVelConstraint(30), new ProfileAccelConstraint(-10, 30))
-//                .splineToConstantHeading(PUSH_SAMP_3, Math.toRadians(90), new TranslationalVelConstraint(30), new ProfileAccelConstraint(-10, 30))
+                .splineToConstantHeading(SLIDE_NEXT_TO_SAMP_1, heading, new TranslationalVelConstraint(minTransVelocity), new ProfileAccelConstraint(minAccel, maxAccel))
+                .splineToConstantHeading(SLIDE_BEHIND_SAMP_1, reverseHeading, new TranslationalVelConstraint(minTransVelocity), new ProfileAccelConstraint(minAccel, maxAccel))
+                .splineToConstantHeading(PUSH_SAMP_1, reverseHeading, new TranslationalVelConstraint(minTransVelocity), new ProfileAccelConstraint(minAccel, maxAccel))
+                .splineToConstantHeading(SLIDE_BEHIND_SAMP_1, heading, new TranslationalVelConstraint(minTransVelocity), new ProfileAccelConstraint(minAccel, maxAccel))
+                .splineToConstantHeading(SLIDE_BEHIND_SAMP_2, reverseHeading, new TranslationalVelConstraint(minTransVelocity), new ProfileAccelConstraint(minAccel, maxAccel))
+                .splineToConstantHeading(PUSH_SAMP_2, reverseHeading, new TranslationalVelConstraint(minTransVelocity), new ProfileAccelConstraint(minAccel, maxAccel))
                 .build();
 
-        Action pickAndSnapSpecimenOne = drive.actionBuilder(new Pose2d(PUSH_SAMP_2, heading))
-                .lineToYConstantHeading(PICK_SPECIMEN_ONE.y)
+        Action moveToPickSpecimenTwo = drive.actionBuilder(new Pose2d(PUSH_SAMP_2, heading))
+                .setTangent(heading)
+                .splineToConstantHeading(PICK_SPECIMEN, reverseHeading, new TranslationalVelConstraint(20), new ProfileAccelConstraint(minAccel, 20))
                 .stopAndAdd(GetClawControlAction(false, true, false))
                 .build();
 
+        Action pickAndSnapSpecimenTwo = drive.actionBuilder(new Pose2d(PICK_SPECIMEN, heading))
+                .strafeToConstantHeading(BRACE_RUNGS_FOR_SPECIMEN_TWO.position)
+                .build();
+
+        Action moveToPickSpecimenThree = drive.actionBuilder(BRACE_RUNGS_FOR_SPECIMEN_TWO)
+                .setTangent(reverseHeading)
+                .splineToConstantHeading(PICK_SPECIMEN, reverseHeading, new TranslationalVelConstraint(minTransVelocity), new ProfileAccelConstraint(minAccel, maxAccel))
+                .stopAndAdd(GetClawControlAction(false, true, false))
+                .build();
+
+        Action pickAndSnapSpecimenThree = drive.actionBuilder(new Pose2d(PICK_SPECIMEN, heading))
+                .strafeToConstantHeading(BRACE_RUNGS_FOR_SPECIMEN_THREE.position)
+                .build();
+
+        Action moveToPickSpecimenFour = drive.actionBuilder(BRACE_RUNGS_FOR_SPECIMEN_THREE)
+                .setTangent(reverseHeading)
+                .splineToConstantHeading(PICK_SPECIMEN, reverseHeading, new TranslationalVelConstraint(minTransVelocity), new ProfileAccelConstraint(minAccel, maxAccel))
+                .stopAndAdd(GetClawControlAction(false, true, false))
+                .build();
+
+        Action pickAndSnapSpecimenFour = drive.actionBuilder(new Pose2d(PICK_SPECIMEN, heading))
+                .setTangent(heading)
+                .splineToConstantHeading(BRACE_RUNGS_FOR_SPECIMEN_FOUR.position, heading, new TranslationalVelConstraint(minTransVelocity), new ProfileAccelConstraint(minAccel, maxAccel))
+                .build();
+
+        Action park = drive.actionBuilder(BRACE_RUNGS_FOR_SPECIMEN_FOUR)
+                .strafeToConstantHeading(PARK.position)
+                .build();
 
         waitForStart();
 
         while (opModeIsActive()) {
             ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
+            //snap preloaded specimen
             Actions.runBlocking(
                     new SequentialAction(
                         new ParallelAction(
@@ -90,24 +119,92 @@ public class IncredibotsAuto4SpecimenBlue extends IncredibotsAuto {
                     )
             );
 
+            Log.i("=== INCREDIBOTS  ===", "ELAPSED TIME AFTER PRELOADED SNAP: " + timer.milliseconds());
+
+
+            //push in samples on spike marks
             Actions.runBlocking(
-                    new SequentialAction(
-                        new ParallelAction(
-                                armControl.GetArmVerticalActionSequence(),
-                                SamplePushingWithSplines),
-                        armControl.GetPickSpecimenActionSequence()
+                    new ParallelAction(
+                            armControl.GetArmVerticalActionSequence(),
+                            SamplePushingWithSplines)
+            );
+
+            Log.i("=== INCREDIBOTS  ===", "ELAPSED TIME AFTER PUSHING IN SPIKES: " + timer.milliseconds());
+
+
+            //move to pick specimen 2
+            Actions.runBlocking(
+                    new ParallelAction(
+                        armControl.GetPickSpecimenActionSequence(),
+                            moveToPickSpecimenTwo
                     )
             );
 
-            Actions.runBlocking(new SequentialAction(
-                    pickAndSnapSpecimenOne
+            //pick and snap specimen 2
+            Actions.runBlocking(
+                    new SequentialAction(
+                        new ParallelAction(
+                                pickAndSnapSpecimenTwo,
+                                armControl.GetHangSpecimenActionSequence()),
+                        armControl.GetSnapSpecimenActionSequence()
             ));
 
-            telemetry.addData("Elapsed Time: ", timer.milliseconds());
+            Log.i("=== INCREDIBOTS  ===", "ELAPSED TIME AFTER SNAPPING SPECIMEN 2: " + timer.milliseconds());
+
+
+            //move to pick specimen 3
+            Actions.runBlocking(
+                    new ParallelAction(
+                            armControl.GetPickSpecimenActionSequence(),
+                            moveToPickSpecimenThree
+                    )
+            );
+
+            //pick and snap specimen3
+            Actions.runBlocking(
+                    new SequentialAction(
+                            new ParallelAction(
+                                    pickAndSnapSpecimenThree,
+                                    armControl.GetHangSpecimenActionSequence()),
+                            armControl.GetSnapSpecimenActionSequence()
+                    )
+            );
+
+            Log.i("=== INCREDIBOTS  ===", "ELAPSED TIME AFTER SNAPPING SPECIMEN 3: " + timer.milliseconds());
+
+
+            //move to pick specimen 4
+            Actions.runBlocking(
+                    new ParallelAction(
+                            armControl.GetPickSpecimenActionSequence(),
+                            moveToPickSpecimenFour
+                    )
+            );
+
+            //pick and snap specimen 4
+            Actions.runBlocking(
+                    new SequentialAction(
+                            new ParallelAction(
+                                    pickAndSnapSpecimenFour,
+                                    armControl.GetHangSpecimenActionSequence()),
+                            armControl.GetSnapSpecimenActionSequence()
+                    )
+            );
+
+            Log.i("=== INCREDIBOTS  ===", "ELAPSED TIME AFTER SNAPPING SPECIMEN 4: " + timer.milliseconds());
+
+            Actions.runBlocking(
+                    new ParallelAction(
+                            park,
+                            armControl.GetRestingActionSequence()
+                    )
+            );
+
+            telemetry.addData("Elapsed Time: TOTAL: ", timer.milliseconds());
             Log.i("=== INCREDIBOTS  ===", "ELAPSED TIME: " + timer.milliseconds());
             telemetry.update();
 
-            //break;
+            break;
         }
     }
 }

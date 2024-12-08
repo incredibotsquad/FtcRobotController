@@ -12,7 +12,7 @@ public class SlideMotionAsRRAction implements Action {
     private int slidePosition;
     private boolean initialized = false;
     private boolean waitForAction = false;
-    private boolean shortWait = true;
+    private boolean shortWait = false;
     private ElapsedTime timer;
 
     public SlideMotionAsRRAction(RobotHardware robotHardware, int slidePosition, boolean waitForAction) {
