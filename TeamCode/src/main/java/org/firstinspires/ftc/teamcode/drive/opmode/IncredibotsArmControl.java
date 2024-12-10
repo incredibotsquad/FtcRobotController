@@ -24,7 +24,7 @@ public class IncredibotsArmControl
     public static int CLAW_ARM_RESTING_BACK = 0;
     public static int CLAW_ARM_VELOCITY = 750;
     public static int CLAW_ARM_AUTO_VELOCITY_SNAP_SPECIMEN = 1400;
-    public static int CLAW_ARM_ADJUSTMENT_WITH_SLIDE = 8;
+    public static int CLAW_ARM_ADJUSTMENT_WITH_SLIDE = 20;
 
     //CLAW CONSTANTS
     public static double CLAW_OPEN_POSITION = 0.1;
@@ -41,40 +41,40 @@ public class IncredibotsArmControl
     public static int MAX_SLIDE_POSITION_ARM_BACKWARDS_HIGH = 2300;
 
     //MANUAL OVERRIDE CONSTANTS
-    private boolean MANUAL_OVERRIDE = false;
+    private boolean MANUAL_OVERRIDE = true;
     private static int MANUAL_OVERRIDE_ARM_POSITION_DELTA = 25;
     private static int MANUAL_OVERRIDE_SLIDE_POSITION_DELTA = 100;
 
     //PICKING SAMPLES: RT/A
-    public static int CLAW_ARM_PICK_SAMPLE = 1354;
+    public static int CLAW_ARM_PICK_SAMPLE = 1310;
     public static int SLIDE_POSITION_PICK_SAMPLE = 0;
     public static double WRIST_PICK_SAMPLE = 0.2;
 
     //ENTER EXIT SUB: RT/X
     public static int CLAW_ARM_ENTER_SUB = 1360;
     public static int SLIDE_ENTER_SUB = 0;
-    public static double WRIST_ENTER_SUB = 0.5;
+    public static double WRIST_ENTER_SUB = 0.6;
 
     //DROP SAMPLES
     public static int CLAW_ARM_DROP_SAMPLE_HIGH = 650;//847
     public static int CLAW_ARM_AFTER_DROP_SAMPLE_HIGH = 720;
     public static int CLAW_ARM_DROP_SAMPLE_LOW = 600;
-    public static double WRIST_DROP_SAMPLE = 0.5;
+    public static double WRIST_DROP_SAMPLE = 0.6;
     public static int SLIDE_POSITION_HIGH_BASKET = 3000;
-    public static int SLIDE_POSITION_LOW_BASKET = 700;
+    public static int SLIDE_POSITION_LOW_BASKET = 900;
 
     //PICK SPECIMEN
     public static int CLAW_ARM_PICK_SPECIMEN = 0;
-    public static double WRIST_PICK_SPECIMEN = 0.2;
+    public static double WRIST_PICK_SPECIMEN = 0.245;
 
     //HANG SPECIMEN
     public static int CLAW_ARM_HANG_SPECIMEN = 670;
-    public static int SLIDE_POSITION_HANG_SPECIMEN = 260;
+    public static int SLIDE_POSITION_HANG_SPECIMEN = 440;
     public static double WRIST_HANG_SPECIMEN = 0.1;
 
     //SNAP SPECIMEN
     public static int CLAW_ARM_SNAP_SPECIMEN = 500;
-    public static int SLIDE_POSITION_SNAP_SPECIMEN = 400;
+    public static int SLIDE_POSITION_SNAP_SPECIMEN = 640;
     public static double WRIST_SNAP_SPECIMEN = 0.1;
 
     private enum ARM_STATE {
@@ -516,13 +516,13 @@ public class IncredibotsArmControl
 //                armState = ARM_STATE.NONE;
 //            }
 
-            //if manual override is enabled and slide position is more than limits, setit
+            //if manual override is enabled and slide position is more than limits, set it
             if (GetMaxSlidePosition() > 0 && robotHardware.getSlidePos() > GetMaxSlidePosition()) {
                 Log.i("=== INCREDIBOTS ===", "Manual Override: Setting slide position based on arm angle");
                 robotHardware.setSlidePosition(GetMaxSlidePosition());
             }
 
-            float leftYSignal = gamepad2.left_stick_y * -1;
+            float leftYSignal = gamepad2.left_stick_y;
 
             // If the left joystick is greater than zero, it moves the left arm up
             if (leftYSignal > 0) {

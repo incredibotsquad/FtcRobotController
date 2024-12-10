@@ -126,8 +126,18 @@ public class RobotHardware {
         clawServo.setPosition(open? IncredibotsArmControl.CLAW_OPEN_POSITION: IncredibotsArmControl.CLAW_CLOSE_POSITION);
     }
 
+
+    //get Claw servo position
+    public double getClawServoPosition() {
+         return clawServo.getPosition();
+    }
+
     public void operateWristServo(double position) {
          wristServo.setPosition(position);
+    }
+
+    public double getWristServoPosition() {
+         return wristServo.getPosition();
     }
 
     public void stopSlide() {

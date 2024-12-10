@@ -29,14 +29,14 @@ public class IncredibotsAuto4SpecimenRed extends IncredibotsAuto {
     public static double minAccel = -20;
     public static double maxAccel = 40;
 
-    private static final int multiplier = -1; //used to flip coordinates between blue and red
+    private static final int multiplier = -1;    //used to flip coordinates between blue and red
 
     public static Pose2d INIT_POS = new Pose2d(-16 * multiplier, 60.75 * multiplier, heading);
     public static Vector2d SLIDE_NEXT_TO_SAMP_1 = new Vector2d(-37 * multiplier, 25 * multiplier);
     public static Vector2d SLIDE_BEHIND_SAMP_1 = new Vector2d(-43.5 * multiplier, 15 * multiplier);
-    public static Vector2d PUSH_SAMP_1 = new Vector2d(SLIDE_BEHIND_SAMP_1.x, 52 * multiplier);
+    public static Vector2d PUSH_SAMP_1 = new Vector2d(SLIDE_BEHIND_SAMP_1.x, 50 * multiplier);
     public static Vector2d SLIDE_BEHIND_SAMP_2 = new Vector2d(-53.5 * multiplier, 15 * multiplier);
-    public static Vector2d PUSH_SAMP_2 = new Vector2d(SLIDE_BEHIND_SAMP_2.x, 52 * multiplier);
+    public static Vector2d PUSH_SAMP_2 = new Vector2d(SLIDE_BEHIND_SAMP_2.x, 51 * multiplier);
 
     public static Vector2d PICK_SPECIMEN = new Vector2d(-43 * multiplier, 58 * multiplier);
 
@@ -82,7 +82,7 @@ public class IncredibotsAuto4SpecimenRed extends IncredibotsAuto {
 
         Action moveToPickSpecimenThree = drive.actionBuilder(BRACE_RUNGS_FOR_SPECIMEN_TWO)
                 .setTangent(reverseHeading)
-                .splineToConstantHeading(PICK_SPECIMEN, reverseHeading, new TranslationalVelConstraint(minTransVelocity), new ProfileAccelConstraint(minAccel, maxAccel))
+                .splineToConstantHeading(PICK_SPECIMEN, reverseHeading, new TranslationalVelConstraint(minTransVelocity + 20), new ProfileAccelConstraint(minAccel - 5 , maxAccel + 5))
                 .stopAndAdd(GetClawControlAction(false, true, false))
                 .build();
 
@@ -92,13 +92,13 @@ public class IncredibotsAuto4SpecimenRed extends IncredibotsAuto {
 
         Action moveToPickSpecimenFour = drive.actionBuilder(BRACE_RUNGS_FOR_SPECIMEN_THREE)
                 .setTangent(reverseHeading)
-                .splineToConstantHeading(PICK_SPECIMEN, reverseHeading, new TranslationalVelConstraint(minTransVelocity), new ProfileAccelConstraint(minAccel, maxAccel))
+                .splineToConstantHeading(PICK_SPECIMEN, reverseHeading, new TranslationalVelConstraint(minTransVelocity + 20), new ProfileAccelConstraint(minAccel - 5, maxAccel + 5))
                 .stopAndAdd(GetClawControlAction(false, true, false))
                 .build();
 
         Action pickAndSnapSpecimenFour = drive.actionBuilder(new Pose2d(PICK_SPECIMEN, heading))
                 .setTangent(heading)
-                .splineToConstantHeading(BRACE_RUNGS_FOR_SPECIMEN_FOUR.position, heading, new TranslationalVelConstraint(minTransVelocity), new ProfileAccelConstraint(minAccel, maxAccel))
+                .splineToConstantHeading(BRACE_RUNGS_FOR_SPECIMEN_FOUR.position, heading, new TranslationalVelConstraint(minTransVelocity + 20), new ProfileAccelConstraint(minAccel-5, maxAccel + 5))
                 .build();
 
         Action park = drive.actionBuilder(BRACE_RUNGS_FOR_SPECIMEN_FOUR)
