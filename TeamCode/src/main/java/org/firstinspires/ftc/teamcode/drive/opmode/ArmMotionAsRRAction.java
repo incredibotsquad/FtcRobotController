@@ -41,7 +41,7 @@ public class ArmMotionAsRRAction implements Action {
 
         if (waitForAction) {
             if (shortWait) {
-                return (myHardware.isClawArmMotorBusy() && (timer.milliseconds() < 700));
+                return (myHardware.isClawArmMotorBusy() && (timer.milliseconds() < 600));
             }
             else {
                 return myHardware.isClawArmMotorBusy();

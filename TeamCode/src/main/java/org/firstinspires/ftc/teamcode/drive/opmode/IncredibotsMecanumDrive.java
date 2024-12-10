@@ -166,6 +166,8 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
             telemetry.addData("Back  left/Right", "%4.2f, %4.2f", leftBackPower, rightBackPower);
             telemetry.addData("Arm Position: ", myHardware.getClawArmMotorPos());
             telemetry.addData("Slide Position", myHardware.getSlidePos());
+            telemetry.addData("Claw servo position ", myHardware.getClawServoPosition());
+            telemetry.addData("Wrist Servo position", myHardware.getWristServoPosition());
 
             // calls the process inputs function from the arm control class
             armControl.ProcessInputs(telemetry);

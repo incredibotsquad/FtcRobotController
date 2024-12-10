@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.drive.opmode;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
@@ -36,7 +38,12 @@ public class SlideMotionAsRRAction implements Action {
         }
 
         if (waitForAction) {
-            return shortWait? (timer.milliseconds() < 400):myHardware.isSlideMotorBusy();
+
+            if (shortWait) {
+                return (timer.milliseconds() < 400);
+            }
+
+            return (Math.abs(myHardware.getSlidePos() - slidePosition) > 20);
         }
 
         return false;
