@@ -606,6 +606,20 @@ public class IncredibotsArmControl
                 armActionResting);
     }
 
+    public Action GetRestingActionSequenceNoWait() {
+        Action slideActionResting = new SlideMotionAsRRAction(robotHardware, SLIDE_POSITION_RESTING, false, false);
+        Action armActionResting = new ArmMotionAsRRAction(robotHardware, CLAW_ARM_RESTING_BACK, CLAW_ARM_VELOCITY, false, false);
+        Action clawActionResting = new ClawMotionAsRRAction(robotHardware, true, false, false);
+        Action wristActionResting = new WristMotionAsRRAction(robotHardware, WRIST_PRELOAD, false, false);
+
+        return new ParallelAction(
+                slideActionResting,
+                clawActionResting,
+                wristActionResting,
+                armActionResting);
+    }
+
+
     public Action GetRobotHangActionSequence() {
         Action slideActionRobotHang = new SlideMotionAsRRAction(robotHardware, SLIDE_POSITION_RESTING, true);
         Action armActionRobotHang = new ArmMotionAsRRAction(robotHardware, CLAW_ARM_RESTING_BACK, CLAW_ARM_VELOCITY, false);
@@ -632,6 +646,19 @@ public class IncredibotsArmControl
                         armActionPickSample,
                         clawActionPickSample,
                         wristActionPickSample));
+    }
+
+    public Action GetHangSpecimenActionSequence_Fast() {
+        Action armActionHangSpecimen = new ArmMotionAsRRAction(robotHardware, CLAW_ARM_HANG_SPECIMEN, CLAW_ARM_VELOCITY, true, false);
+        Action slideActionHangSpecimen = new SlideMotionAsRRAction(robotHardware, SLIDE_POSITION_HANG_SPECIMEN, false);
+        Action wristActionHangSpecimen = new WristMotionAsRRAction(robotHardware, WRIST_HANG_SPECIMEN, false, false);
+        Action clawActionHangSpecimen = new ClawMotionAsRRAction(robotHardware, false, false, false);
+
+        return new ParallelAction(
+                        wristActionHangSpecimen,
+                        clawActionHangSpecimen,
+                        armActionHangSpecimen,
+                        slideActionHangSpecimen);
     }
 
     public Action GetHangSpecimenActionSequence() {
@@ -694,13 +721,16 @@ public class IncredibotsArmControl
         Action armActionHighBasket = new ArmMotionAsRRAction(robotHardware, CLAW_ARM_DROP_SAMPLE_HIGH, CLAW_ARM_VELOCITY, true, false);
         Action wristActionHighBasket = new WristMotionAsRRAction(robotHardware, WRIST_DROP_SAMPLE, false, false);
         Action slideActionHighBasket = new SlideMotionAsRRAction(robotHardware, SLIDE_POSITION_HIGH_BASKET, false);
+        Action clawActionHighBasket = new ClawMotionAsRRAction(robotHardware, false, true, true);
 
         return new SequentialAction(
-                armActionHighBasket,
                 new ParallelAction(
-                        wristActionHighBasket,
-                        slideActionHighBasket
-                ));
+                        clawActionHighBasket,
+                        wristActionHighBasket
+                ),
+                armActionHighBasket,
+                slideActionHighBasket
+            );
     }
 
     public Action GetHighBasketActionSequenceForAuto(){
