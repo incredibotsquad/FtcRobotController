@@ -160,6 +160,12 @@ public class RobotHardware {
     public void stopAndResetArmEncoder() {
         Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " RESETTING ARM ENCODER");
         armMotor.setPower(0);
+        try {
+            Thread.sleep(1000);
+            Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " RESETTING ARM ENCODER - WAIT FOR ARM FALL");
+        } catch (InterruptedException e) {
+            Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " RESETTING ARM ENCODER - WAIT FOR ARM FALL");
+        }
         armMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         setClawArmPositionAndVelocity(0, IncredibotsArmControl.CLAW_ARM_VELOCITY);
     }

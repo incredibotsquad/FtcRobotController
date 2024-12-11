@@ -15,6 +15,10 @@ public abstract class IncredibotsAuto extends LinearOpMode {
         return new ArmMotionAsRRAction(myHardware, position, velocity, waitForAction);
     }
 
+    protected Action GetArmControlAction(int position, int velocity, boolean waitForAction, boolean shortWait) {
+        return new ArmMotionAsRRAction(myHardware, position, velocity, waitForAction, shortWait);
+    }
+
     protected Action GetSlideControlAction(int position, boolean waitForAction) {
         return new SlideMotionAsRRAction(myHardware, position, waitForAction);
     }
