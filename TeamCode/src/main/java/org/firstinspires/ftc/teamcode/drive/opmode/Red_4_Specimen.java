@@ -19,34 +19,34 @@ import org.firstinspires.ftc.teamcode.RobotHardware;
 
 
 @Config
-@Autonomous(name = "IncredibotsAuto4SpecimenRed", group = "Autonomous")
-public class IncredibotsAuto4SpecimenRed extends IncredibotsAuto {
+@Autonomous(name = "Red_4_Specimen", group = "Autonomous")
+public class Red_4_Specimen extends IncredibotsAuto {
 
-    public static final double heading = Math.toRadians(90);
-    public static final double reverseHeading = Math.toRadians(-90);
+    private static final int multiplier = -1;    //used to flip coordinates between blue (1) and red (-1)
+
+    public static final double heading = Math.toRadians(-90 * multiplier);
+    public static final double reverseHeading = Math.toRadians(90 * multiplier);
 
     public static double minTransVelocity = 30;
     public static double minAccel = -20;
     public static double maxAccel = 40;
 
-    private static final int multiplier = -1;    //used to flip coordinates between blue and red
-
     public static Pose2d INIT_POS = new Pose2d(-16 * multiplier, 60.75 * multiplier, heading);
     public static Vector2d SLIDE_NEXT_TO_SAMP_1 = new Vector2d(-37 * multiplier, 25 * multiplier);
     public static Vector2d SLIDE_BEHIND_SAMP_1 = new Vector2d(-43.5 * multiplier, 15 * multiplier);
     public static Vector2d PUSH_SAMP_1 = new Vector2d(SLIDE_BEHIND_SAMP_1.x, 50 * multiplier);
-    public static Vector2d SLIDE_BEHIND_SAMP_2 = new Vector2d(-53.5 * multiplier, 15 * multiplier);
+    public static Vector2d SLIDE_BEHIND_SAMP_2 = new Vector2d(-54 * multiplier, 15 * multiplier);
     public static Vector2d PUSH_SAMP_2 = new Vector2d(SLIDE_BEHIND_SAMP_2.x, 51 * multiplier);
+    public static Vector2d PICK_SPECIMEN = new Vector2d(-43 * multiplier, 57.5 * multiplier);
+    public static Vector2d PICK_SPECIMEN_SLOW = new Vector2d(PICK_SPECIMEN.x, 58 * multiplier);
 
-    public static Vector2d PICK_SPECIMEN = new Vector2d(-43 * multiplier, 58 * multiplier);
 
 
     public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_ONE = new Pose2d(6 * multiplier, 30 * multiplier, heading);
     public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_TWO = new Pose2d(3.5 * multiplier, 30 * multiplier, heading);
     public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_THREE = new Pose2d(1 * multiplier, 30 * multiplier, heading);
-    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_FOUR = new Pose2d(-1.5 * multiplier, 30 * multiplier, heading);
-
-    public static Pose2d PARK = new Pose2d(PUSH_SAMP_1.x, PUSH_SAMP_1.y, heading);
+    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_FOUR = new Pose2d(-2.5 * multiplier, 30 * multiplier, heading);
+    public static Pose2d PARK = new Pose2d(PUSH_SAMP_1.x, PUSH_SAMP_1.y, Math.toRadians((-90 * multiplier) + 270));
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -72,7 +72,7 @@ public class IncredibotsAuto4SpecimenRed extends IncredibotsAuto {
 
         Action moveToPickSpecimenTwo = drive.actionBuilder(new Pose2d(PUSH_SAMP_2, heading))
                 .setTangent(heading)
-                .splineToConstantHeading(PICK_SPECIMEN, reverseHeading, new TranslationalVelConstraint(20), new ProfileAccelConstraint(minAccel, 20))
+                .splineToConstantHeading(PICK_SPECIMEN_SLOW, reverseHeading, new TranslationalVelConstraint(20), new ProfileAccelConstraint(minAccel, 20))
                 .stopAndAdd(GetClawControlAction(false, true, false))
                 .build();
 
@@ -98,11 +98,12 @@ public class IncredibotsAuto4SpecimenRed extends IncredibotsAuto {
 
         Action pickAndSnapSpecimenFour = drive.actionBuilder(new Pose2d(PICK_SPECIMEN, heading))
                 .setTangent(heading)
-                .splineToConstantHeading(BRACE_RUNGS_FOR_SPECIMEN_FOUR.position, heading, new TranslationalVelConstraint(minTransVelocity + 20), new ProfileAccelConstraint(minAccel-5, maxAccel + 5))
+                .splineToConstantHeading(BRACE_RUNGS_FOR_SPECIMEN_FOUR.position, heading, new TranslationalVelConstraint(minTransVelocity + 10), new ProfileAccelConstraint(minAccel-5, maxAccel + 5))
                 .build();
 
         Action park = drive.actionBuilder(BRACE_RUNGS_FOR_SPECIMEN_FOUR)
-                .strafeToConstantHeading(PARK.position)
+                .setTangent(reverseHeading)
+                .splineToConstantHeading(PARK.position, PARK.heading)
                 .build();
 
         waitForStart();
@@ -114,7 +115,7 @@ public class IncredibotsAuto4SpecimenRed extends IncredibotsAuto {
             Actions.runBlocking(
                     new SequentialAction(
                             new ParallelAction(
-                                    armControl.GetHangSpecimenActionSequence(),
+                                    armControl.GetHangSpecimenActionSequence_Fast(),
                                     robotPreloadedSpecimen),
                             armControl.GetSnapSpecimenActionSequence()
                     )
@@ -197,7 +198,7 @@ public class IncredibotsAuto4SpecimenRed extends IncredibotsAuto {
             Actions.runBlocking(
                     new ParallelAction(
                             park,
-                            armControl.GetRestingActionSequence()
+                            armControl.GetRestingActionSequenceNoWait()
                     )
             );
 
