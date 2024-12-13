@@ -43,7 +43,7 @@ public class IncredibotsArmControl
     //MANUAL OVERRIDE CONSTANTS
     private boolean MANUAL_OVERRIDE = true;
     private static int MANUAL_OVERRIDE_ARM_POSITION_DELTA = 25;
-    private static int MANUAL_OVERRIDE_SLIDE_POSITION_DELTA = 100;
+    private static int MANUAL_OVERRIDE_SLIDE_POSITION_DELTA = 300;
 
     //PICKING SAMPLES: RT/A
     public static int CLAW_ARM_PICK_SAMPLE = 1330;
@@ -639,12 +639,13 @@ public class IncredibotsArmControl
         Action wristActionPickSample = new WristMotionAsRRAction(robotHardware, WRIST_PICK_SAMPLE, false, false);
 
         return new SequentialAction(
-                slideActionPickSample,
-                armActionPickSample,
                 new ParallelAction(
                         wristActionPickSample,
                         clawActionPickSample
-                ));
+                ),
+                slideActionPickSample,
+                armActionPickSample
+        );
     }
 
     public Action GetHangSpecimenActionSequence_Fast() {
@@ -718,17 +719,21 @@ public class IncredibotsArmControl
 
     public Action GetHighBasketActionSequence(){
         Action armActionHighBasket = new ArmMotionAsRRAction(robotHardware, CLAW_ARM_DROP_SAMPLE_HIGH, CLAW_ARM_VELOCITY, true, false);
-        Action wristActionHighBasket = new WristMotionAsRRAction(robotHardware, WRIST_DROP_SAMPLE, false, false);
-        Action slideActionHighBasket = new SlideMotionAsRRAction(robotHardware, SLIDE_POSITION_HIGH_BASKET, false);
+        Action wristActionHighBasket = new WristMotionAsRRAction(robotHardware, WRIST_DROP_SAMPLE, true, false);
+        Action slideActionHighBasket1 = new SlideMotionAsRRAction(robotHardware, SLIDE_POSITION_HIGH_BASKET-500, true, false);
+        Action slideActionHighBasket2 = new SlideMotionAsRRAction(robotHardware, SLIDE_POSITION_HIGH_BASKET, true, false);
         Action clawActionHighBasket = new ClawMotionAsRRAction(robotHardware, false, true, true);
 
         return new SequentialAction(
                 new ParallelAction(
-                        clawActionHighBasket,
-                        wristActionHighBasket
+                        clawActionHighBasket
                 ),
                 armActionHighBasket,
-                slideActionHighBasket
+                slideActionHighBasket1,
+                new ParallelAction(
+                        slideActionHighBasket2,
+                        wristActionHighBasket
+                )
             );
     }
 
@@ -775,17 +780,15 @@ public class IncredibotsArmControl
 
     public Action GetClawArmAfterHighSampleActionSequence() {
         Action armActionAfterHighSample = new ArmMotionAsRRAction(robotHardware, CLAW_ARM_AFTER_DROP_SAMPLE_HIGH, CLAW_ARM_VELOCITY/2, true, false);
-        Action wristActionAfterHighSample = new WristMotionAsRRAction(robotHardware, WRIST_ENTER_SUB, false, false);
+        Action wristActionAfterHighSample = new WristMotionAsRRAction(robotHardware, WRIST_PICK_SAMPLE, true, true);
         Action clawActionAfterHighSample = new ClawMotionAsRRAction(robotHardware, true, false, false);
-        Action slideActionAfterHighSample = new SlideMotionAsRRAction(robotHardware, SLIDE_ENTER_SUB, true, false);
+        Action slideActionAfterHighSample = new SlideMotionAsRRAction(robotHardware, MAX_SLIDE_POSITION_ARM_FORWARDS_LOW, true, false);
 
         return new SequentialAction(
+                wristActionAfterHighSample,
                 armActionAfterHighSample,
                 slideActionAfterHighSample,
-                new ParallelAction(
-                        wristActionAfterHighSample,
-                        clawActionAfterHighSample
-                )
+                clawActionAfterHighSample
         );
     }
 }

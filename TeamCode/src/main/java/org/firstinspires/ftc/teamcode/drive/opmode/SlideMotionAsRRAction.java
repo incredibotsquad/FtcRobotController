@@ -43,7 +43,7 @@ public class SlideMotionAsRRAction implements Action {
                 return (timer.milliseconds() < 400);
             }
 
-            return (Math.abs(myHardware.getSlidePos() - slidePosition) > 20);
+            return (Math.abs(myHardware.getSlidePos() - slidePosition) > 50);
         }
 
         return false;
