@@ -35,14 +35,14 @@ public class WristMotionAsRRAction implements Action {
         }
 
         if (waitForAction) {
-            int timeDuration = 400;
+            int timeDuration = 750;
+
             if (shortWait) {
                 timeDuration = 200;
             }
-            boolean timerPending = timer.milliseconds() < timeDuration;
 
             //tell RR we need to keep running if duration has not elapsed
-            return (timerPending);
+            return (timer.milliseconds() < timeDuration);
         }
 
         return false;

@@ -3,27 +3,23 @@ package org.firstinspires.ftc.teamcode.drive.opmode;
 import android.util.Log;
 
 import com.acmerobotics.dashboard.config.Config;
-import com.acmerobotics.roadrunner.ParallelAction;
-import com.acmerobotics.roadrunner.ProfileAccelConstraint;
+import com.acmerobotics.roadrunner.Action;
+import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.SequentialAction;
-import com.acmerobotics.roadrunner.TranslationalVelConstraint;
 import com.acmerobotics.roadrunner.TurnConstraints;
-import com.acmerobotics.roadrunner.Vector2d;
+import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.util.ElapsedTime;
+
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 
-import com.acmerobotics.roadrunner.Action;
-import com.acmerobotics.roadrunner.Pose2d;
-import com.acmerobotics.roadrunner.ftc.Actions;
-import com.qualcomm.robotcore.util.ElapsedTime;
-
 
 @Config
-@Autonomous(name = "Blue_4_Samples", group = "Autonomous")
-public class Blue_4_Samples  extends IncredibotsAuto {
+@Autonomous(name = "Red_4_Samples", group = "Autonomous")
+public class Red_4_Samples extends IncredibotsAuto {
 
-    public static final int multiplier = 1; //used to flip coordinates between blue (1) and red (-1)
+    public static final int multiplier = -1; //used to flip coordinates between blue (1) and red (-1)
 
     public static double heading = Math.toRadians(-90 * multiplier);
     public static double reverseHeading = Math.toRadians(90 * multiplier);

@@ -123,6 +123,7 @@ public class RobotHardware {
 
     //decides either to open or close the claw servo
     public void operateClawServo(boolean open) {
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " SETTING CLAW SERVO OPEN: " + open);
         clawServo.setPosition(open? IncredibotsArmControl.CLAW_OPEN_POSITION: IncredibotsArmControl.CLAW_CLOSE_POSITION);
     }
 
@@ -133,6 +134,8 @@ public class RobotHardware {
     }
 
     public void operateWristServo(double position) {
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " SETTING WRIST SERVO POSITION: " + position);
+
          wristServo.setPosition(position);
     }
 
