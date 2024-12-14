@@ -69,12 +69,12 @@ public class IncredibotsArmControl
 
     //HANG SPECIMEN
     public static int CLAW_ARM_HANG_SPECIMEN = 670;
-    public static int SLIDE_POSITION_HANG_SPECIMEN = 440;
-    public static double WRIST_HANG_SPECIMEN = 0.1;
+    public static int SLIDE_POSITION_HANG_SPECIMEN = 300;
+    public static double WRIST_HANG_SPECIMEN = 0.15;
 
     //SNAP SPECIMEN
     public static int CLAW_ARM_SNAP_SPECIMEN = 500;
-    public static int SLIDE_POSITION_SNAP_SPECIMEN = 640;
+    public static int SLIDE_POSITION_SNAP_SPECIMEN = 480;
     public static double WRIST_SNAP_SPECIMEN = 0.1;
 
     private enum ARM_STATE {
@@ -676,8 +676,8 @@ public class IncredibotsArmControl
         Action clawActionHangSpecimen = new ClawMotionAsRRAction(robotHardware, false, false, false);
 
         return new SequentialAction(
+                        wristActionHangSpecimen,
                         new ParallelAction(
-                                wristActionHangSpecimen,
                                 clawActionHangSpecimen,
                                 armActionHangSpecimen
                         ),
