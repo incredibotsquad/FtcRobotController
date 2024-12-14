@@ -17,6 +17,8 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 
+import java.security.PublicKey;
+
 
 @Config
 @Autonomous(name = "Red_4_Specimen", group = "Autonomous")
@@ -37,15 +39,14 @@ public class Red_4_Specimen extends IncredibotsAuto {
     public static Vector2d PUSH_SAMP_1 = new Vector2d(SLIDE_BEHIND_SAMP_1.x, 50 * multiplier);
     public static Vector2d SLIDE_BEHIND_SAMP_2 = new Vector2d(-54 * multiplier, 15 * multiplier);
     public static Vector2d PUSH_SAMP_2 = new Vector2d(SLIDE_BEHIND_SAMP_2.x, 51 * multiplier);
+
     public static Vector2d PICK_SPECIMEN = new Vector2d(-43 * multiplier, 57.5 * multiplier);
     public static Vector2d PICK_SPECIMEN_SLOW = new Vector2d(PICK_SPECIMEN.x, 58 * multiplier);
 
-
-
     public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_ONE = new Pose2d(6 * multiplier, 30 * multiplier, heading);
-    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_TWO = new Pose2d(3.5 * multiplier, 30 * multiplier, heading);
-    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_THREE = new Pose2d(1 * multiplier, 30 * multiplier, heading);
-    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_FOUR = new Pose2d(-2.5 * multiplier, 30 * multiplier, heading);
+    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_TWO = new Pose2d(3 * multiplier, 30 * multiplier, heading);
+    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_THREE = new Pose2d(0 * multiplier, 30 * multiplier, heading);
+    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_FOUR = new Pose2d(-4 * multiplier, 30 * multiplier, heading);
     public static Pose2d PARK = new Pose2d(PUSH_SAMP_1.x, PUSH_SAMP_1.y, Math.toRadians((-90 * multiplier) + 270));
 
     @Override
@@ -97,7 +98,7 @@ public class Red_4_Specimen extends IncredibotsAuto {
                 .build();
 
         Action pickAndSnapSpecimenFour = drive.actionBuilder(new Pose2d(PICK_SPECIMEN, heading))
-                .setTangent(heading)
+                .setTangent(Math.toRadians(-90 * multiplier + 90))
                 .splineToConstantHeading(BRACE_RUNGS_FOR_SPECIMEN_FOUR.position, heading, new TranslationalVelConstraint(minTransVelocity + 10), new ProfileAccelConstraint(minAccel-5, maxAccel + 5))
                 .build();
 
