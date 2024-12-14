@@ -96,7 +96,7 @@ public class IncredibotsArmControl
     private ARM_STATE armState;
 
     private boolean readyToDropHighSample = false;
-    private boolean readyToPickUpSample = false;
+    private boolean pickedUpSample = false;
     private boolean processedPickSample = false;
 
     public IncredibotsArmControl(Gamepad gamepad, RobotHardware robotHardware) {
@@ -117,26 +117,32 @@ public class IncredibotsArmControl
         HandleManualOverride();
     }
 
+    //Function to create a state from Gamepad inputs
     private void CreateStateFromButtonPress() {
 
         ARM_STATE prevArmState = armState;
 
+        //Back button maps to resting
         if (gamepad2.back) {
             armState = ARM_STATE.RESTING;
         }
 
+        //Back + Start to reset the slide encoder
         if (gamepad2.back && gamepad2.start) {
             armState = ARM_STATE.RESET_SLIDE_ENCODER;
         }
 
+        //Hang the robot with start + left/right triggers
         if (gamepad2.start && gamepad2.left_trigger > 0 && gamepad2.right_trigger > 0) {
             armState = ARM_STATE.ROBOT_HANG;
         }
 
         if (gamepad2.a){
+            //left trigger + A to pick specimen
             if (gamepad2.left_trigger > 0) {
                 armState = ARM_STATE.PICK_SPECIMEN;
             }
+            //right trigger + A to pick samples
             else if (gamepad2.right_trigger > 0) {
                 armState = ARM_STATE.PICK_SAMPLE;
                 processedPickSample = false;
@@ -144,9 +150,11 @@ public class IncredibotsArmControl
         }
 
         if (gamepad2.b) {
+            //left trigger + B to snap specimen
             if (gamepad2.left_trigger > 0) {
                 armState = ARM_STATE.SNAP_SPECIMEN;
             }
+            // right trigger + B for low basket
             else if (gamepad2.right_trigger > 0) {
                 armState = ARM_STATE.LOW_BASKET;
             }
@@ -195,7 +203,7 @@ public class IncredibotsArmControl
 
                 robotHardware.stopAndResetSlideEncoder();
                 armState = ARM_STATE.NONE;
-                readyToPickUpSample = false;
+                pickedUpSample = false;
                 readyToDropHighSample = false;
                 break;
 
@@ -225,7 +233,7 @@ public class IncredibotsArmControl
                     armState = ARM_STATE.NONE;
                 }
 
-                readyToPickUpSample = false;
+                pickedUpSample = false;
                 readyToDropHighSample = false;
 
                 break;
@@ -245,11 +253,12 @@ public class IncredibotsArmControl
                 if (!robotHardware.isSlideMotorBusy() || Math.abs(SLIDE_POSITION_RESTING - robotHardware.getSlidePos()) < 10) {
                     robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_RESTING_BACK, CLAW_ARM_VELOCITY);
                     robotHardware.operateClawServo(false);
+                    robotHardware.operateWristServo(WRIST_ENTER_SUB);
                     armState = ARM_STATE.NONE;
                     Log.i("=== INCREDIBOTS ===", "PROCESSING ROBOT HANG - SLIDE FINISHED MOVING - STARTING ARM. ARM_STATE: "+ armState);
                 }
 
-                readyToPickUpSample = false;
+                pickedUpSample = false;
                 readyToDropHighSample = false;
                 break;
 
@@ -274,7 +283,7 @@ public class IncredibotsArmControl
                     armState = ARM_STATE.NONE;
                     Log.i("=== INCREDIBOTS ===", "PROCESSING PICK_SPECIMEN - SLIDE IS FINISHED MOVING - STARTING ARM. ARM_STATE: " + armState);
                 }
-                readyToPickUpSample = false;
+                pickedUpSample = false;
                 readyToDropHighSample = false;
                 break;
 
@@ -296,7 +305,7 @@ public class IncredibotsArmControl
                     Log.i("=== INCREDIBOTS ===", "PROCESSING ARM VERTICAL - SLIDE IS FINISHED MOVING. STARTING ARM. ARM_STATE: " + armState);
                 }
 
-                readyToPickUpSample = false;
+                pickedUpSample = false;
                 readyToDropHighSample = false;
                 break;
 
@@ -321,7 +330,7 @@ public class IncredibotsArmControl
                     Log.i("=== INCREDIBOTS ===", "PROCESSING HANG SPECIMEN - ARM IS FINISHED MOVING. STARTING SLIDE. ARM_STATE: " + armState);
                 }
 
-                readyToPickUpSample = false;
+                pickedUpSample = false;
                 readyToDropHighSample = false;
                 break;
 
@@ -343,7 +352,7 @@ public class IncredibotsArmControl
 //                    Log.i("=== INCREDIBOTS ===", "PROCESSING STATE: SNAP SPECIMEN - SLIDE IS FINISHED MOVING. STARTING ARM. ARM STATE: " + armState);
 //                }
 //
-                readyToPickUpSample = false;
+                pickedUpSample = false;
                 readyToDropHighSample = false;
                 break;
 
@@ -365,7 +374,7 @@ public class IncredibotsArmControl
                         Log.i("=== INCREDIBOTS ===", "PROCESSING STATE: PICK SAMPLE - SLIDE IS FINISHED MOVING. STARTING ARM");
                     }
 
-                    readyToPickUpSample = true;
+                    pickedUpSample = true;
                     processedPickSample = true;
                     readyToDropHighSample = false;
                 }
@@ -394,7 +403,7 @@ public class IncredibotsArmControl
                     Log.i("=== INCREDIBOTS ===", "PROCESSING HIGH BASKET - CLAW ARM IS DONE MOVING - STARTING SLIDE. ARM_STATE: " + armState);
                 }
 
-                readyToPickUpSample = false;
+                pickedUpSample = false;
                 break;
             case LOW_BASKET:   //LOW BASKET
                 Log.i("=== INCREDIBOTS ===", "PROCESSING STATE: LOW BASKET");
@@ -414,14 +423,14 @@ public class IncredibotsArmControl
                     Log.i("=== INCREDIBOTS ===", "PROCESSING RT/B CLAW ARM IS DONE MOVING - STARTING SLIDE. BUTTONSTATE: " + armState);
                 }
 
-                readyToPickUpSample = false;
+                pickedUpSample = false;
                 readyToDropHighSample = false;
                 break;
 
             case ENTER_EXIT_SUB:   //ENTER /EXIT SUB
                 Log.i("=== INCREDIBOTS ===", "PROCESSING STATE: ENTER EXIT SUB");
 
-                if (readyToPickUpSample) { //move arms in parallel after picking up sample
+                if (pickedUpSample) { //move arms in parallel after picking up sample
                     Log.i("=== INCREDIBOTS ===", "PROCESSING RT/X - MOVING SLIDE / ARM IN PARALLEL AFTER SAMPLE");
                     robotHardware.operateWristServo(WRIST_ENTER_SUB);
                     robotHardware.setSlidePosition(SLIDE_ENTER_SUB);
@@ -448,7 +457,7 @@ public class IncredibotsArmControl
                         Log.i("=== INCREDIBOTS ===", "PROCESSING RT/X - SLIDE IS DONE MOVING - STARTING ARM. BUTTONSTATE: " + armState);
                     }
                 }
-                readyToPickUpSample = false;
+                pickedUpSample = false;
                 readyToDropHighSample = false;
                 break;
 
@@ -458,17 +467,16 @@ public class IncredibotsArmControl
 //                armState = ARM_STATE.ENTER_EXIT_SUB;  //clear out arm state to avoid reprocessing
 //                Actions.runBlocking(GetClawArmAfterHighSampleActionSequence());
 
-
                 if (!robotHardware.isClawArmMotorBusy() && robotHardware.getClawArmMotorPos() != CLAW_ARM_AFTER_DROP_SAMPLE_HIGH) {
                     Log.i("=== INCREDIBOTS ===", "PROCESSING CLAW ARM AFTER HIGH SAMPLE - CLAW ARM IS BUSY");
-                    robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_AFTER_DROP_SAMPLE_HIGH, CLAW_ARM_VELOCITY/2);
+                    robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_AFTER_DROP_SAMPLE_HIGH, CLAW_ARM_VELOCITY * 0.75);
                 }
 
                 if (Math.abs(CLAW_ARM_AFTER_DROP_SAMPLE_HIGH - robotHardware.getClawArmMotorPos()) < 10) {
                     armState = ARM_STATE.ENTER_EXIT_SUB;
                 }
 
-                readyToPickUpSample = false;
+                pickedUpSample = false;
                 readyToDropHighSample = false;
                 break;
         }
