@@ -44,8 +44,8 @@ public class Red_4_Specimen extends IncredibotsAuto {
     public static Vector2d PICK_SPECIMEN_SLOW = new Vector2d(PICK_SPECIMEN.x, 58 * multiplier);
 
     public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_ONE = new Pose2d(6 * multiplier, 30 * multiplier, heading);
-    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_TWO = new Pose2d(3 * multiplier, 30 * multiplier, heading);
-    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_THREE = new Pose2d(0 * multiplier, 30 * multiplier, heading);
+    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_TWO = new Pose2d(2.5 * multiplier, 30 * multiplier, heading);
+    public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_THREE = new Pose2d(0.5 * multiplier, 30 * multiplier, heading);
     public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_FOUR = new Pose2d(-4 * multiplier, 30 * multiplier, heading);
     public static Pose2d PARK = new Pose2d(PUSH_SAMP_1.x, PUSH_SAMP_1.y, Math.toRadians((-90 * multiplier) + 270));
 
@@ -99,7 +99,7 @@ public class Red_4_Specimen extends IncredibotsAuto {
 
         Action pickAndSnapSpecimenFour = drive.actionBuilder(new Pose2d(PICK_SPECIMEN, heading))
                 .setTangent(Math.toRadians(-90 * multiplier + 90))
-                .splineToConstantHeading(BRACE_RUNGS_FOR_SPECIMEN_FOUR.position, heading, new TranslationalVelConstraint(minTransVelocity + 10), new ProfileAccelConstraint(minAccel-5, maxAccel + 5))
+                .splineToConstantHeading(BRACE_RUNGS_FOR_SPECIMEN_FOUR.position, heading, new TranslationalVelConstraint(minTransVelocity + 20), new ProfileAccelConstraint(minAccel-10, maxAccel + 10))
                 .build();
 
         Action park = drive.actionBuilder(BRACE_RUNGS_FOR_SPECIMEN_FOUR)
@@ -147,8 +147,9 @@ public class Red_4_Specimen extends IncredibotsAuto {
             Actions.runBlocking(
                     new SequentialAction(
                             new ParallelAction(
-                                    pickAndSnapSpecimenTwo,
-                                    armControl.GetHangSpecimenActionSequence()),
+                                    armControl.GetHangSpecimenActionSequence(),
+                                    pickAndSnapSpecimenTwo
+                            ),
                             armControl.GetSnapSpecimenActionSequence()
                     ));
 
@@ -167,8 +168,9 @@ public class Red_4_Specimen extends IncredibotsAuto {
             Actions.runBlocking(
                     new SequentialAction(
                             new ParallelAction(
-                                    pickAndSnapSpecimenThree,
-                                    armControl.GetHangSpecimenActionSequence()),
+                                    armControl.GetHangSpecimenActionSequence(),
+                                    pickAndSnapSpecimenThree
+                            ),
                             armControl.GetSnapSpecimenActionSequence()
                     )
             );
@@ -188,8 +190,9 @@ public class Red_4_Specimen extends IncredibotsAuto {
             Actions.runBlocking(
                     new SequentialAction(
                             new ParallelAction(
-                                    pickAndSnapSpecimenFour,
-                                    armControl.GetHangSpecimenActionSequence()),
+                                    armControl.GetHangSpecimenActionSequence(),
+                                    pickAndSnapSpecimenFour
+                            ),
                             armControl.GetSnapSpecimenActionSequence()
                     )
             );

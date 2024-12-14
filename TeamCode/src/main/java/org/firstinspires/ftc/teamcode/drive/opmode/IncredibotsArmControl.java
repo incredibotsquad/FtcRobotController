@@ -469,7 +469,7 @@ public class IncredibotsArmControl
 
                 if (!robotHardware.isClawArmMotorBusy() && robotHardware.getClawArmMotorPos() != CLAW_ARM_AFTER_DROP_SAMPLE_HIGH) {
                     Log.i("=== INCREDIBOTS ===", "PROCESSING CLAW ARM AFTER HIGH SAMPLE - CLAW ARM IS BUSY");
-                    robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_AFTER_DROP_SAMPLE_HIGH, CLAW_ARM_VELOCITY * 0.75);
+                    robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_AFTER_DROP_SAMPLE_HIGH, CLAW_ARM_VELOCITY / 2);
                 }
 
                 if (Math.abs(CLAW_ARM_AFTER_DROP_SAMPLE_HIGH - robotHardware.getClawArmMotorPos()) < 10) {
@@ -517,7 +517,8 @@ public class IncredibotsArmControl
 
 
         // if manual override is true it will allow the joysticks to control the arms
-        if (MANUAL_OVERRIDE && armState == ARM_STATE.PICK_SAMPLE) {
+        // allow this only when robot has started (helpful in reset) or when picking samples
+        if (MANUAL_OVERRIDE && (armState == ARM_STATE.PICK_SAMPLE || armState == ARM_STATE.NONE)) {
 
             int maxSlidePos = GetMaxSlidePosition();
 
