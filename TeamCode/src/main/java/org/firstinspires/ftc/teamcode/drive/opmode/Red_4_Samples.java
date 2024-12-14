@@ -22,12 +22,11 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 @Config
 @Autonomous(name = "Red_4_Samples", group = "Autonomous")
 public class Red_4_Samples  extends IncredibotsAuto {
-
-    public static final int multiplier = 1; //used to flip coordinates between blue (1) and red (-1)
+    public static final int multiplier = -1; //used to flip coordinates between blue (1) and red (-1)
 
     public static double heading = Math.toRadians(-90 * multiplier);
     public static double basketHeading = Math.toRadians(-90 * multiplier - 21);
-    public static double farSampleHeading = Math.toRadians(-90 * multiplier + 17);
+    public static double farSampleHeading = Math.toRadians(-90 * multiplier + 21); //17
     public static Pose2d INIT_POS = new Pose2d(41 * multiplier, 60.75 * multiplier, heading);
     public static Pose2d DROP_PRELOADED_SAMPLE = new Pose2d(60.5 * multiplier, 54 * multiplier, heading);
 
@@ -80,7 +79,6 @@ public class Red_4_Samples  extends IncredibotsAuto {
             Actions.runBlocking(
                     new SequentialAction(
                             armControl.GetClawArmAfterHighSampleActionSequence(),
-                            GetWristControlAction(IncredibotsArmControl.WRIST_PICK_SAMPLE, false, false),
                             GetArmControlAction(IncredibotsArmControl.CLAW_ARM_ENTER_SUB, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY * 0.4), true, false),
                             GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SAMPLE + 30, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY *0.4), true, false),
                             GetClawControlAction(false, true, false),
@@ -93,14 +91,15 @@ public class Red_4_Samples  extends IncredibotsAuto {
             Actions.runBlocking(
                     new SequentialAction(
                             armControl.GetClawArmAfterHighSampleActionSequence(),
-                            positionForThirdSample,
-                            GetSlideControlAction(IncredibotsArmControl.MAX_SLIDE_POSITION_ARM_FORWARDS_LOW - 200, false),   //middle sample doesnt need to go as far
-                            GetWristControlAction(IncredibotsArmControl.WRIST_PICK_SAMPLE, false, false),
+                            new ParallelAction(
+                                    positionForThirdSample,
+                                    GetSlideControlAction(IncredibotsArmControl.MAX_SLIDE_POSITION_ARM_FORWARDS_LOW - 200, false)   //middle sample doesnt need to go as far
+                            ),
                             GetArmControlAction(IncredibotsArmControl.CLAW_ARM_ENTER_SUB, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY *0.4), true, false),
                             GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SAMPLE + 30, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY *0.4), true, false),
                             GetClawControlAction(false, true, false),
-                            GetWristControlAction(0.3, false, false),
                             new ParallelAction(
+                                    GetWristControlAction(0.3, false, false),
                                     turnToDropThirdSample,
                                     armControl.GetHighBasketActionSequence()
                             ),
@@ -112,13 +111,17 @@ public class Red_4_Samples  extends IncredibotsAuto {
             Actions.runBlocking(
                     new SequentialAction(
                             armControl.GetClawArmAfterHighSampleActionSequence(),
+                            new ParallelAction(
+                                    GetSlideControlAction(IncredibotsArmControl.MAX_SLIDE_POSITION_ARM_FORWARDS_LOW - 80, false),   //far sample optimization
+                                    GetWristControlAction(IncredibotsArmControl.WRIST_ENTER_SUB, false, false),
+                                    GetArmControlAction(IncredibotsArmControl.CLAW_ARM_ENTER_SUB, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY *0.4), true, false)
+                            ),
                             positionForFourthSample,
-                            GetWristControlAction(IncredibotsArmControl.WRIST_PICK_SAMPLE, false, false),
-                            GetArmControlAction(IncredibotsArmControl.CLAW_ARM_ENTER_SUB, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY *0.4), true, false),
+                            GetWristControlAction(IncredibotsArmControl.WRIST_PICK_SAMPLE, true, false),
                             GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SAMPLE + 30, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY *0.4), true, false),
                             GetClawControlAction(false, true, false),
-                            GetWristControlAction(0.3, false, false),
                             new ParallelAction(
+                                    GetWristControlAction(0.3, false, false),
                                     turnToDropFourthSample,
                                     armControl.GetHighBasketActionSequence()
                             ),
