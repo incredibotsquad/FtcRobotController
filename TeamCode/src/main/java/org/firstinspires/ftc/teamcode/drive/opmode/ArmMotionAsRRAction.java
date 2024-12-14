@@ -44,7 +44,9 @@ public class ArmMotionAsRRAction implements Action {
                 return (myHardware.isClawArmMotorBusy() && (timer.milliseconds() < 600));
             }
             else {
-                return myHardware.isClawArmMotorBusy();
+
+                // Busy status can lag for a bit - check against position as well
+                return (myHardware.isClawArmMotorBusy() || Math.abs(armPosition - myHardware.getClawArmMotorPos()) > 20);
             }
         }
 

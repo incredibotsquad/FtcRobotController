@@ -103,7 +103,8 @@ public class Blue_4_Specimen extends IncredibotsAuto {
                 .build();
 
         Action park = drive.actionBuilder(BRACE_RUNGS_FOR_SPECIMEN_FOUR)
-                .strafeToConstantHeading(PARK.position)
+                .setTangent(reverseHeading)
+                .splineToConstantHeading(PARK.position, PARK.heading)
                 .build();
 
         waitForStart();
