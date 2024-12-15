@@ -46,7 +46,7 @@ public class IncredibotsArmControl
     private static int MANUAL_OVERRIDE_SLIDE_POSITION_DELTA = 300;
 
     //PICKING SAMPLES: RT/A
-    public static int CLAW_ARM_PICK_SAMPLE = 1330;
+    public static int CLAW_ARM_PICK_SAMPLE = 1350;
     public static int SLIDE_POSITION_PICK_SAMPLE = 0;
     public static double WRIST_PICK_SAMPLE = 0.2;
 
@@ -90,7 +90,7 @@ public class IncredibotsArmControl
         HANG_SPECIMEN,
         HIGH_BASKET,
         CLAW_ARM_AFTER_HIGH_SAMPLE,
-        RESET_SLIDE_ENCODER
+        RESET_ENCODERS
     }
 
     private ARM_STATE armState;
@@ -129,7 +129,7 @@ public class IncredibotsArmControl
 
         //Back + Start to reset the slide encoder
         if (gamepad2.back && gamepad2.start) {
-            armState = ARM_STATE.RESET_SLIDE_ENCODER;
+            armState = ARM_STATE.RESET_ENCODERS;
         }
 
         //Hang the robot with start + left/right triggers
@@ -198,10 +198,11 @@ public class IncredibotsArmControl
     private void ProcessButtons() {
 
         switch (armState) {
-            case RESET_SLIDE_ENCODER:
+            case RESET_ENCODERS:
                 Log.i("=== INCREDIBOTS ===", "PROCESSING RESET_SLIDE_ENCODER");
 
                 robotHardware.stopAndResetSlideEncoder();
+                robotHardware.stopAndResetArmEncoder();
                 armState = ARM_STATE.NONE;
                 pickedUpSample = false;
                 readyToDropHighSample = false;
@@ -532,12 +533,12 @@ public class IncredibotsArmControl
 
             // If the left joystick is greater than zero, it moves the left arm up
             if (leftYSignal > 0) {
-                robotHardware.setClawArmPositionAndVelocity(robotHardware.getClawArmMotorPos() + MANUAL_OVERRIDE_ARM_POSITION_DELTA, CLAW_ARM_VELOCITY);
+                robotHardware.setClawArmPositionAndVelocity(robotHardware.getClawArmMotorPos() + MANUAL_OVERRIDE_ARM_POSITION_DELTA, CLAW_ARM_VELOCITY * 2);
             }
 
             // If the left joystick is less than zero, it moves the left arm down
             else if (leftYSignal < 0){
-                robotHardware.setClawArmPositionAndVelocity(robotHardware.getClawArmMotorPos() - MANUAL_OVERRIDE_ARM_POSITION_DELTA, CLAW_ARM_VELOCITY);
+                robotHardware.setClawArmPositionAndVelocity(robotHardware.getClawArmMotorPos() - MANUAL_OVERRIDE_ARM_POSITION_DELTA, CLAW_ARM_VELOCITY * 2);
             }
         }
     }
@@ -579,6 +580,11 @@ public class IncredibotsArmControl
             Log.i("=== INCREDIBOTS ===", "PROCESSING DPAD DOWN");
 
             //SLIDE POSITION CANNOT BE LESS THAN 0
+            // EXCEPT IF WE ARE DOING IT TO RESET THE SLIDE IN CASE OF AN ERROR
+            // THAT IS WHEN THE ARM STATE WOULD BE NONE
+            if (armState == ARM_STATE.NONE) {
+                robotHardware.setSlidePosition(robotHardware.getSlidePos() - MANUAL_OVERRIDE_SLIDE_POSITION_DELTA);
+            }
             robotHardware.setSlidePosition(Math.max(robotHardware.getSlidePos() - MANUAL_OVERRIDE_SLIDE_POSITION_DELTA, 0));
         }
 
