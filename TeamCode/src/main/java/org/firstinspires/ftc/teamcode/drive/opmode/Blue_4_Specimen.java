@@ -37,7 +37,7 @@ public class Blue_4_Specimen extends IncredibotsAuto {
     public static Vector2d SLIDE_NEXT_TO_SAMP_1 = new Vector2d(-37 * multiplier, 25 * multiplier);
     public static Vector2d SLIDE_BEHIND_SAMP_1 = new Vector2d(-43.5 * multiplier, 15 * multiplier);
     public static Vector2d PUSH_SAMP_1 = new Vector2d(SLIDE_BEHIND_SAMP_1.x, 50 * multiplier);
-    public static Vector2d SLIDE_BEHIND_SAMP_2 = new Vector2d(-54 * multiplier, 15 * multiplier);
+    public static Vector2d SLIDE_BEHIND_SAMP_2 = new Vector2d(-55 * multiplier, 15 * multiplier);
     public static Vector2d PUSH_SAMP_2 = new Vector2d(SLIDE_BEHIND_SAMP_2.x, 51 * multiplier);
 
     public static Vector2d PICK_SPECIMEN = new Vector2d(-43 * multiplier, 57.5 * multiplier);
