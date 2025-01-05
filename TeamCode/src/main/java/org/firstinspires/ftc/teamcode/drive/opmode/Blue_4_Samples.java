@@ -113,27 +113,27 @@ public class Blue_4_Samples  extends IncredibotsAuto {
             );
 
             //pick and drop sample 4
-            Actions.runBlocking(
-                    new SequentialAction(
-                            armControl.GetClawArmAfterHighSampleActionSequence(),
-                            new ParallelAction(
-                                    GetSlideControlAction(IncredibotsArmControl.MAX_SLIDE_POSITION_ARM_FORWARDS_LOW - 80, false),   //far sample optimization
-                                    GetWristControlAction(IncredibotsArmControl.WRIST_ENTER_SUB, false, false),
-                                    positionForFourthSampleStep1,
-                                    GetArmControlAction(IncredibotsArmControl.CLAW_ARM_ENTER_SUB, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY *0.37), true, true)
-                            ),
-                            positionForFourthSampleStep2,
-                            GetWristControlAction(IncredibotsArmControl.WRIST_PICK_SAMPLE, true, false),
-                            GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SAMPLE + 30, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY *0.34), true, true),
-                            GetClawControlAction(false, true, false),
-                            new ParallelAction(
-                                    GetWristControlAction(0.3, false, false),
-                                    turnToDropFourthSample,
-                                    armControl.GetHighBasketActionSequence()
-                            ),
-                            GetClawControlAction(true, true, true)
-                    )
-            );
+//            Actions.runBlocking(
+//                    new SequentialAction(
+//                            armControl.GetClawArmAfterHighSampleActionSequence(),
+//                            new ParallelAction(
+//                                    GetSlideControlAction(IncredibotsArmControl.MAX_SLIDE_POSITION_ARM_FORWARDS_LOW - 80, false),   //far sample optimization
+//                                    GetWristControlAction(IncredibotsArmControl.WRIST_ENTER_SUB, false, false),
+//                                    positionForFourthSampleStep1,
+//                                    GetArmControlAction(IncredibotsArmControl.CLAW_ARM_ENTER_SUB, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY *0.37), true, true)
+//                            ),
+//                            positionForFourthSampleStep2,
+//                            GetWristControlAction(IncredibotsArmControl.WRIST_PICK_SAMPLE, true, false),
+//                            GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SAMPLE + 30, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY *0.34), true, true),
+//                            GetClawControlAction(false, true, false),
+//                            new ParallelAction(
+//                                    GetWristControlAction(0.3, false, false),
+//                                    turnToDropFourthSample,
+//                                    armControl.GetHighBasketActionSequence()
+//                            ),
+//                            GetClawControlAction(true, true, true)
+//                    )
+//            );
 
             //bring arm back to resting for TeleOp
             Actions.runBlocking(
