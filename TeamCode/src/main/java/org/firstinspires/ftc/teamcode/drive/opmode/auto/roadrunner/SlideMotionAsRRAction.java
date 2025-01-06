@@ -1,6 +1,4 @@
-package org.firstinspires.ftc.teamcode.drive.opmode;
-
-import android.util.Log;
+package org.firstinspires.ftc.teamcode.drive.opmode.auto.roadrunner;
 
 import androidx.annotation.NonNull;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
@@ -8,6 +6,7 @@ import com.acmerobotics.roadrunner.Action;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.RobotHardware;
+import org.firstinspires.ftc.teamcode.drive.opmode.IncredibotsArmControl;
 
 public class SlideMotionAsRRAction implements Action {
     private RobotHardware myHardware;

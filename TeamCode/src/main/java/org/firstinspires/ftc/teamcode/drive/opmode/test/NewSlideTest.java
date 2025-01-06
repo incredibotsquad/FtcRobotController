@@ -1,9 +1,8 @@
-package org.firstinspires.ftc.teamcode.drive.opmode;
+package org.firstinspires.ftc.teamcode.drive.opmode.test;
 
 import android.util.Log;
 
 import com.acmerobotics.dashboard.config.Config;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -26,26 +25,31 @@ import org.firstinspires.ftc.teamcode.RobotHardware;
  * Use Android Studio to Copy this Class, and Paste it into your team's code folder with a new name.
  * Remove or comment out the @Disabled line to add this OpMode to the Driver Station OpMode list
  */
-@Disabled
+
 @Config
-@TeleOp(name="VerticalArmTest", group="Linear OpMode")
-public class VerticalArmTest extends LinearOpMode {
+@TeleOp(name="NewSlideTest", group="Linear OpMode")
+public class NewSlideTest extends LinearOpMode {
     RobotHardware myHardware;
 
     // Declare OpMode members.
-    public static double wristServoPosition;
-    public static double clawServoPosition;
     public static int slidePosition;
-    public static int armPosition;
-    public static double armVelocity;
     public static double slideVelocity;
     private ElapsedTime runtime = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+    private DcMotorEx SlideMotor1;
+    private DcMotorEx SlideMotor2;
+
+    private Servo armServo;
     private Servo wristServo;
     private Servo clawServo;
-    private DcMotorEx SlideMotor;
-    private DcMotorEx ArmMotor;
 
+    private Servo leftVBSerbo;
+    private Servo rightVBSerbo;
 
+    public static double armServoPosition;
+    public static double wristServoPosition;
+    public static double clawServoPosition;
+    public static double leftVBServoPosition;
+    public static double rightVBServoPosition;
 
     @Override
     public void runOpMode() {
@@ -55,19 +59,24 @@ public class VerticalArmTest extends LinearOpMode {
         // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
-        clawServo = hardwareMap.get(Servo.class, "ClawServo");
-        wristServo = hardwareMap.get(Servo.class, "WristServo");
-        SlideMotor = hardwareMap.get(DcMotorEx.class, "SlideMotor");
-        SlideMotor.setTargetPosition(0);
-        SlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        SlideMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        SlideMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+        SlideMotor1 = hardwareMap.get(DcMotorEx.class, "SlideMotor1");
+        SlideMotor1.setTargetPosition(0);
+        SlideMotor1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        SlideMotor1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
-        ArmMotor = hardwareMap.get(DcMotorEx.class, "ArmMotor");
-        ArmMotor.setTargetPosition(0);
-        ArmMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        ArmMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        ArmMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+        SlideMotor2 = hardwareMap.get(DcMotorEx.class, "SlideMotor2");
+        SlideMotor2.setTargetPosition(0);
+        SlideMotor2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        SlideMotor2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        SlideMotor2.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        armServo = hardwareMap.get(Servo.class, "ArmServo");
+        wristServo = hardwareMap.get(Servo.class, "WristServo");
+        clawServo = hardwareMap.get(Servo.class, "ClawServo");
+
+        leftVBSerbo = hardwareMap.get(Servo.class, "LeftVB");
+        rightVBSerbo = hardwareMap.get(Servo.class, "RightVB");
+
 
         // Wait for the game to start (driver presses START)
         waitForStart();
@@ -76,39 +85,51 @@ public class VerticalArmTest extends LinearOpMode {
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
             if (gamepad1.a) {
-                Log.i("== ISHIKA ==", "GAMEPAD.A PRESSED");
                 runtime.reset();
-                setClawArmPositionAndVelocity(armPosition, armVelocity);
+
                 setSlidePositionAndVelocity(slidePosition, slideVelocity);
-                wristServo.setPosition(wristServoPosition);
-                clawServo.setPosition(clawServoPosition);
-                while(isSlideMotorBusy()) {
 
-                    Log.i("== ISHIKA ==", "SLIDE MOTOR BUSY");
-
-                }
                 telemetry.addData("Time: ", runtime.milliseconds());
+
+                Log.i("INCREDIBOTS", "SLIDE RUNTIME: " + runtime.milliseconds());
                 telemetry.update();
             }
+
+            if (gamepad1.b) {
+                runtime.reset();
+
+                armServo.setPosition(armServoPosition);
+            }
+
+            if (gamepad1.x) {
+                wristServo.setPosition(wristServoPosition);
+            }
+
+            if (gamepad1.y) {
+                clawServo.setPosition(clawServoPosition);
+            }
+
+            if (gamepad1.left_trigger > 0 && gamepad1.a) {
+                leftVBSerbo.setPosition(leftVBServoPosition);
+            }
+
+            if (gamepad1.right_trigger > 0 && gamepad1.a) {
+                rightVBSerbo.setPosition(rightVBServoPosition);
+            }
+
+            armServo.setPosition(armServoPosition);
+            wristServo.setPosition(wristServoPosition);
+            clawServo.setPosition(clawServoPosition);
+
         }
     }
-    public void setClawArmPositionAndVelocity(int pos, double velocity) {
-        ArmMotor.setTargetPosition(pos);
-        ArmMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        ArmMotor.setVelocity(velocity);
-        Log.i("=== INCREDIBOTS ===", " !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        Log.i("=== INCREDIBOTS ===", " SETTING CLAW MOTOR POSITION AND VELOCITY");
-        Log.i("=== INCREDIBOTS ===", " !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-    }
     public void setSlidePositionAndVelocity(int pos, double velocity) {
-        SlideMotor.setTargetPosition(pos);
-        SlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        SlideMotor.setVelocity(velocity);
-        Log.i("=== INCREDIBOTS ===", " !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        Log.i("=== INCREDIBOTS ===", " SETTING SLIDE MOTOR POSITION AND VELOCITY");
-        Log.i("=== INCREDIBOTS ===", " !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-    }
-    public boolean isSlideMotorBusy() {
-        return SlideMotor.isBusy();
+        SlideMotor1.setTargetPosition(pos);
+        SlideMotor1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        SlideMotor1.setVelocity(velocity);
+
+        SlideMotor2.setTargetPosition(pos);
+        SlideMotor2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        SlideMotor2.setVelocity(velocity);
     }
 }

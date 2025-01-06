@@ -3,28 +3,39 @@ package org.firstinspires.ftc.teamcode.drive.opmode;
 import android.util.Log;
 
 import com.acmerobotics.dashboard.config.Config;
+import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.ProfileAccelConstraint;
 import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.TranslationalVelConstraint;
 import com.acmerobotics.roadrunner.Vector2d;
-import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.firstinspires.ftc.teamcode.RobotHardware;
-
-import java.security.PublicKey;
+import org.firstinspires.ftc.teamcode.drive.opmode.auto.IncredibotsAuto;
 
 
 @Config
-@Autonomous(name = "Red_4_Specimen", group = "Autonomous")
-public class Red_4_Specimen extends IncredibotsAuto {
+@Autonomous(name = "NewBotAuto", group = "Autonomous")
+public class NewBotAuto extends IncredibotsAuto {
 
-    private static final int multiplier = -1;    //used to flip coordinates between blue (1) and red (-1)
+
+    private static final int slidePos = 850;
+
+    private static final int specimenPickWrist = 0;
+
+    private static double clawOpen = 0.25;
+    private static double clawClose = 0.42;
+
+    //left vbar servo: closed: 0.85. full extension: 0.6
+
+    //right vbar servp:closed 0.1, full extension: 0.4
+
+    private static final int multiplier = 1;    //used to flip coordinates between blue (1) and red (-1)
 
     public static final double heading = Math.toRadians(-90 * multiplier);
     public static final double reverseHeading = Math.toRadians(90 * multiplier);
@@ -115,10 +126,10 @@ public class Red_4_Specimen extends IncredibotsAuto {
             //snap preloaded specimen
             Actions.runBlocking(
                     new SequentialAction(
-                            new ParallelAction(
-                                    armControl.GetHangSpecimenActionSequence_Fast(),
-                                    robotPreloadedSpecimen),
-                            armControl.GetSnapSpecimenActionSequence()
+                        new ParallelAction(
+                                armControl.GetHangSpecimenActionSequence_Fast(),
+                                robotPreloadedSpecimen),
+                        armControl.GetSnapSpecimenActionSequence()
                     )
             );
 
@@ -138,7 +149,7 @@ public class Red_4_Specimen extends IncredibotsAuto {
             //move to pick specimen 2
             Actions.runBlocking(
                     new ParallelAction(
-                            armControl.GetPickSpecimenActionSequence(),
+                        armControl.GetPickSpecimenActionSequence(),
                             moveToPickSpecimenTwo
                     )
             );
@@ -146,12 +157,12 @@ public class Red_4_Specimen extends IncredibotsAuto {
             //pick and snap specimen 2
             Actions.runBlocking(
                     new SequentialAction(
-                            new ParallelAction(
-                                    armControl.GetHangSpecimenActionSequence(),
-                                    pickAndSnapSpecimenTwo
-                            ),
-                            armControl.GetSnapSpecimenActionSequence()
-                    ));
+                        new ParallelAction(
+                                armControl.GetHangSpecimenActionSequence(),
+                                pickAndSnapSpecimenTwo
+                        ),
+                        armControl.GetSnapSpecimenActionSequence()
+            ));
 
             Log.i("=== INCREDIBOTS  ===", "ELAPSED TIME AFTER SNAPPING SPECIMEN 2: " + timer.milliseconds());
 
