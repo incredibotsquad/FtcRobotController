@@ -1,17 +1,12 @@
-package org.firstinspires.ftc.teamcode.drive.opmode;
-
-import android.util.Log;
+package org.firstinspires.ftc.teamcode.drive.opmode.auto;
 
 import com.acmerobotics.dashboard.config.Config;
-import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.Pose2d;
-import com.acmerobotics.roadrunner.SequentialAction;
-import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.firstinspires.ftc.teamcode.RobotHardware;
+import org.firstinspires.ftc.teamcode.drive.opmode.IncredibotsArmControl;
 
 @Config
 @Autonomous(name = "IncredibotsAutoDoNothing", group = "Autonomous")

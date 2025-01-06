@@ -11,6 +11,10 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.RobotHardware;
+import org.firstinspires.ftc.teamcode.drive.opmode.auto.roadrunner.ArmMotionAsRRAction;
+import org.firstinspires.ftc.teamcode.drive.opmode.auto.roadrunner.ClawMotionAsRRAction;
+import org.firstinspires.ftc.teamcode.drive.opmode.auto.roadrunner.SlideMotionAsRRAction;
+import org.firstinspires.ftc.teamcode.drive.opmode.auto.roadrunner.WristMotionAsRRAction;
 
 import java.lang.Math;
 
