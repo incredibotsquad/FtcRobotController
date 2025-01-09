@@ -33,6 +33,7 @@ import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
+import org.firstinspires.ftc.teamcode.RobotConstants;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 
 /*
@@ -72,6 +73,7 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
     RobotHardware myHardware;
     IncredibotsArmControl armControl;
 
+
 // Declare OpMode members for each of the 4 motors.
 //    private DcMotor leftFrontDrive = null;
 //    private DcMotor leftBackDrive = null;
@@ -109,6 +111,20 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
         // Wait for the game to start (driver presses PLAY)
         telemetry.addData("Status", "Initialized");
         telemetry.update();
+
+        while (opModeInInit()) {
+            RobotConstants.GAME_COLORS gameColor;
+
+            if (gamepad1.x || gamepad2.x) {
+                gameColor = RobotConstants.GAME_COLORS.BLUE;
+                armControl.setGameColor(gameColor);
+            }
+
+            if (gamepad1.b || gamepad2.b) {
+                gameColor = RobotConstants.GAME_COLORS.RED;
+                armControl.setGameColor(gameColor);
+            }
+        }
 
         waitForStart();
 

@@ -6,4 +6,10 @@ public class RobotConstants {
     public static final double wheelCircumferenceMM = 48 * Math.PI;
     public static final double MMPerTick = wheelCircumferenceMM / tickPerRev;
 
+    public enum GAME_COLORS{
+        RED,
+        BLUE,
+        OTHER
+    }
+
 }
