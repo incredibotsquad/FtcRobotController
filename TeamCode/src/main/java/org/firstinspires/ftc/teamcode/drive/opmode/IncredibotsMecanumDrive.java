@@ -72,6 +72,8 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
 
     RobotHardware myHardware;
     IncredibotsArmControl armControl;
+    RobotConstants.GAME_COLORS gameColor;
+
 
 
 // Declare OpMode members for each of the 4 motors.
@@ -108,23 +110,27 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
 //        rightFrontDrive.setDirection(DcMotor.Direction.FORWARD);
 //        rightBackDrive.setDirection(DcMotor.Direction.FORWARD);
 
-        // Wait for the game to start (driver presses PLAY)
-        telemetry.addData("Status", "Initialized");
-        telemetry.update();
 
         while (opModeInInit()) {
-            RobotConstants.GAME_COLORS gameColor;
+            gameColor = RobotConstants.GAME_COLORS.BLUE;
 
             if (gamepad1.x || gamepad2.x) {
                 gameColor = RobotConstants.GAME_COLORS.BLUE;
                 armControl.setGameColor(gameColor);
+                telemetry.addData("Game Color: ", gameColor);
+                telemetry.update();
             }
 
             if (gamepad1.b || gamepad2.b) {
                 gameColor = RobotConstants.GAME_COLORS.RED;
                 armControl.setGameColor(gameColor);
-            }
+                telemetry.addData("Game Color: ", gameColor);
+                telemetry.update();}
         }
+
+        // Wait for the game to start (driver presses PLAY)
+        telemetry.addData("Status", "Initialized");
+        telemetry.update();
 
         waitForStart();
 
