@@ -113,10 +113,10 @@ public class Blue_1_Spec_3_Samples extends IncredibotsAuto {
             Actions.runBlocking(
                     new SequentialAction(
 //                            navigateToPickSamples,
-                            GetWristControlAction(IncredibotsArmControl.WRIST_PICK_SAMPLE, false, false),
+                            GetWristControlAction(IncredibotsArmControl.PICK_SAMPLE_WRIST, false, false),
                             armControl.GetClawArmAfterHighSampleActionSequence(),
-                            GetArmControlAction(IncredibotsArmControl.CLAW_ARM_ENTER_SUB, IncredibotsArmControl.CLAW_ARM_VELOCITY / 3, true, false),
-                            GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SAMPLE + 30, IncredibotsArmControl.CLAW_ARM_VELOCITY / 3, true, false),
+                            GetArmControlAction(IncredibotsArmControl.ENTER_SUB_ARM, IncredibotsArmControl.CLAW_ARM_VELOCITY / 3, true, false),
+                            GetArmControlAction(IncredibotsArmControl.PICK_SAMPLE_ARM + 30, IncredibotsArmControl.CLAW_ARM_VELOCITY / 3, true, false),
                             GetClawControlAction(false, true, false),
                             armControl.GetHighBasketActionSequence(),
                             GetClawControlAction(true, true, true)
@@ -130,9 +130,9 @@ public class Blue_1_Spec_3_Samples extends IncredibotsAuto {
                             armControl.GetClawArmAfterHighSampleActionSequence(),
                             positionForMiddleSample,
                             GetSlideControlAction(IncredibotsArmControl.MAX_SLIDE_POSITION_ARM_FORWARDS_LOW - 150, false),   //middle sample doesnt need to go as far
-                            GetWristControlAction(IncredibotsArmControl.WRIST_PICK_SAMPLE, false, false),
-                            GetArmControlAction(IncredibotsArmControl.CLAW_ARM_ENTER_SUB, IncredibotsArmControl.CLAW_ARM_VELOCITY / 3, true, false),
-                            GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SAMPLE + 30, IncredibotsArmControl.CLAW_ARM_VELOCITY / 3, true, false),
+                            GetWristControlAction(IncredibotsArmControl.PICK_SAMPLE_WRIST, false, false),
+                            GetArmControlAction(IncredibotsArmControl.ENTER_SUB_ARM, IncredibotsArmControl.CLAW_ARM_VELOCITY / 3, true, false),
+                            GetArmControlAction(IncredibotsArmControl.PICK_SAMPLE_ARM + 30, IncredibotsArmControl.CLAW_ARM_VELOCITY / 3, true, false),
                             GetClawControlAction(false, true, false),
                             GetWristControlAction(0.3, false, false),
                             armControl.GetHighBasketActionSequence(),
@@ -145,9 +145,9 @@ public class Blue_1_Spec_3_Samples extends IncredibotsAuto {
                     new SequentialAction(
                             armControl.GetClawArmAfterHighSampleActionSequence(),
                             positionForFarSample,
-                            GetWristControlAction(IncredibotsArmControl.WRIST_PICK_SAMPLE, false, false),
-                            GetArmControlAction(IncredibotsArmControl.CLAW_ARM_ENTER_SUB, IncredibotsArmControl.CLAW_ARM_VELOCITY / 3, true, false),
-                            GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SAMPLE + 30, IncredibotsArmControl.CLAW_ARM_VELOCITY / 3, true, false),
+                            GetWristControlAction(IncredibotsArmControl.PICK_SAMPLE_WRIST, false, false),
+                            GetArmControlAction(IncredibotsArmControl.ENTER_SUB_ARM, IncredibotsArmControl.CLAW_ARM_VELOCITY / 3, true, false),
+                            GetArmControlAction(IncredibotsArmControl.PICK_SAMPLE_ARM + 30, IncredibotsArmControl.CLAW_ARM_VELOCITY / 3, true, false),
                             GetClawControlAction(false, true, false),
                             GetWristControlAction(0.3, false, false),
                             turnToDropFarSample,

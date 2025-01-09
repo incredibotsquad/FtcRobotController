@@ -1,14 +1,17 @@
 package org.firstinspires.ftc.teamcode;
-//importing stuff
 
 import android.util.Log;
 
+import org.firstinspires.ftc.teamcode.RobotConstants.*;
+import com.qualcomm.robotcore.hardware.CRServo;
+import com.qualcomm.robotcore.hardware.ColorRangeSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
+
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.drive.opmode.IncredibotsArmControl;
@@ -28,6 +31,13 @@ public class RobotHardware {
      private DcMotor odoFront;
      private Servo clawServo;
      private Servo wristServo;
+
+     private CRServo leftIntakeServo;
+
+    private CRServo rightIntakeServo;
+
+    private ColorRangeSensor colorSensor;
+
 
      //making constructor
      public RobotHardware(HardwareMap hwMap) {
@@ -72,8 +82,45 @@ public class RobotHardware {
 
          clawServo = hwMap.get(Servo.class, "ClawServo");
          wristServo = hwMap.get(Servo.class, "WristServo");
+         leftIntakeServo = hwMap.get(CRServo.class, "LeftIntake");
+         rightIntakeServo = hwMap.get(CRServo.class, "RightIntake");
+
+         colorSensor = hwMap.get(ColorRangeSensor.class, "ColorSensor");
 
          imu = hwMap.get(IMU.class, "imu");
+     }
+
+     public void operateIntake(boolean intake) {
+         if (intake) {
+             leftIntakeServo.setPower(1);
+             rightIntakeServo.setPower(-1);
+         }
+         else {
+             leftIntakeServo.setPower(-1);
+             rightIntakeServo.setPower(1);
+         }
+     }
+
+     public void stopIntake() {
+         leftIntakeServo.setPower(0);
+         rightIntakeServo.setPower(0);
+     }
+
+     public GAME_COLORS getDetectedColor(){
+         if (colorSensor.red() > colorSensor.green() && colorSensor.red() > colorSensor.blue()) {
+             return GAME_COLORS.RED;
+         }
+
+         if (colorSensor.blue() > colorSensor.green() && colorSensor.blue() > colorSensor.red()) {
+             return GAME_COLORS.BLUE;
+         }
+
+         return GAME_COLORS.OTHER;
+    }
+
+
+     public boolean isIntakeOn() {
+         return leftIntakeServo.getPower() !=0 || rightIntakeServo.getPower() != 0;
      }
 
     private int GetSlideVelocity(int slidePos) {

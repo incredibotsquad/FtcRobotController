@@ -35,7 +35,7 @@ public class Red_4_Samples  extends IncredibotsAuto {
         drive = new MecanumDrive(this.hardwareMap, INIT_POS);
 
         Action positionToDropPreloadedSample = drive.actionBuilder(INIT_POS)
-                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.CLAW_ARM_DROP_SAMPLE_HIGH, IncredibotsArmControl.CLAW_ARM_VELOCITY, false, false))
+                .stopAndAdd(GetArmControlAction(IncredibotsArmControl.DROP_SAMPLE_HIGH_ARM, IncredibotsArmControl.CLAW_ARM_VELOCITY, false, false))
                 .strafeToLinearHeading(DROP_PRELOADED_SAMPLE.position, basketHeading)
                 .build();
 
@@ -82,8 +82,8 @@ public class Red_4_Samples  extends IncredibotsAuto {
             Actions.runBlocking(
                     new SequentialAction(
                             armControl.GetClawArmAfterHighSampleActionSequence(),
-                            GetArmControlAction(IncredibotsArmControl.CLAW_ARM_ENTER_SUB, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY * 0.34), true, false),
-                            GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SAMPLE + 30, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY *0.34), true, true),
+                            GetArmControlAction(IncredibotsArmControl.ENTER_SUB_ARM, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY * 0.34), true, false),
+                            GetArmControlAction(IncredibotsArmControl.PICK_SAMPLE_ARM + 30, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY *0.34), true, true),
                             GetClawControlAction(false, true, false),
                             armControl.GetHighBasketActionSequence(),
                             GetClawControlAction(true, true, true)
@@ -98,8 +98,8 @@ public class Red_4_Samples  extends IncredibotsAuto {
                                     positionForThirdSample
                             ),
                             GetSlideControlAction(IncredibotsArmControl.MAX_SLIDE_POSITION_ARM_FORWARDS_LOW - 200, false),  //middle sample doesnt need to go as far
-                            GetArmControlAction(IncredibotsArmControl.CLAW_ARM_ENTER_SUB, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY *0.34), true, false),
-                            GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SAMPLE + 30, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY *0.34), true, true),
+                            GetArmControlAction(IncredibotsArmControl.ENTER_SUB_ARM, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY *0.34), true, false),
+                            GetArmControlAction(IncredibotsArmControl.PICK_SAMPLE_ARM + 30, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY *0.34), true, true),
                             GetClawControlAction(false, true, false),
                             new ParallelAction(
                                     GetWristControlAction(0.3, false, false),
