@@ -39,8 +39,8 @@ public class Blue_4_Specimen extends IncredibotsAuto {
     public static Vector2d SLIDE_BEHIND_SAMP_2 = new Vector2d(-55 * multiplier, 15 * multiplier);
     public static Vector2d PUSH_SAMP_2 = new Vector2d(SLIDE_BEHIND_SAMP_2.x, 51 * multiplier);
 
-    public static Vector2d PICK_SPECIMEN = new Vector2d(-43 * multiplier, 57.5 * multiplier);
-    public static Vector2d PICK_SPECIMEN_SLOW = new Vector2d(PICK_SPECIMEN.x, 58 * multiplier);
+    public static Vector2d PICK_SPECIMEN = new Vector2d(-43 * multiplier, 56 * multiplier); //57.5
+    public static Vector2d PICK_SPECIMEN_SLOW = new Vector2d(PICK_SPECIMEN.x, 57 * multiplier); //58
 
     public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_ONE = new Pose2d(6 * multiplier, 30 * multiplier, heading);
     public static Pose2d BRACE_RUNGS_FOR_SPECIMEN_TWO = new Pose2d(2.5 * multiplier, 30 * multiplier, heading);
@@ -127,7 +127,7 @@ public class Blue_4_Specimen extends IncredibotsAuto {
             //push in samples on spike marks
             Actions.runBlocking(
                     new ParallelAction(
-                            armControl.GetArmVerticalActionSequence(),
+                            armControl.GetArmHorizontalActionSequence(),
                             SamplePushingWithSplines)
             );
 

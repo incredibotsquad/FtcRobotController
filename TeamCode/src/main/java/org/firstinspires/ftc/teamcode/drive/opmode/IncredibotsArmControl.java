@@ -14,6 +14,7 @@ import org.firstinspires.ftc.teamcode.RobotConstants;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.roadrunner.ArmMotionAsRRAction;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.roadrunner.ClawMotionAsRRAction;
+import org.firstinspires.ftc.teamcode.drive.opmode.auto.roadrunner.IntakeMotionAsRRAction;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.roadrunner.SlideMotionAsRRAction;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.roadrunner.WristMotionAsRRAction;
 
@@ -79,7 +80,7 @@ public class IncredibotsArmControl
     public static double PICK_SPECIMEN_WRIST = 0.25;
 
     //HANG SPECIMEN
-    public static int HANG_SPECIMEN_ARM = 1600;
+    public static int HANG_SPECIMEN_ARM = 1700;
     public static int HANG_SPECIMEN_SLIDE = 150;
     public static double HANG_SPECIMEN_WRIST = 0.1;
 
@@ -412,8 +413,10 @@ public class IncredibotsArmControl
                 if (Math.abs(ENTER_SUB_ARM - robotHardware.getClawArmMotorPos()) < 400) {
                     Log.i("=== INCREDIBOTS ===", "PROCESSING RT/X - MOVING SLIDE / ARM IN PARALLEL AFTER SAMPLE");
                     robotHardware.operateWristServo(ENTER_SUB_WRIST);
+                    robotHardware.operateClawServo(false);
                     robotHardware.setClawArmPositionAndVelocity(ENTER_SUB_ARM, CLAW_ARM_VELOCITY);
                     robotHardware.setSlidePosition(ENTER_SUB_SLIDE);
+                    robotHardware.operateIntake(true);
                     armState = ARM_STATE.NONE;
                 }
                 else {
@@ -614,13 +617,32 @@ public class IncredibotsArmControl
 //        }
     }
 
+    public Action GetDropSampleObZoneActionSequence() {
+        Action slideActionDropSample = new SlideMotionAsRRAction(robotHardware, SLIDE_POSITION_RESTING, true, false);
+        Action armActionDropSample = new ArmMotionAsRRAction(robotHardware, CLAW_ARM_RESTING_BACK, CLAW_ARM_VELOCITY, true, false);
+        Action clawActionDropSample = new ClawMotionAsRRAction(robotHardware, true, true, false);
+        Action wristActionDropSample = new WristMotionAsRRAction(robotHardware, DROP_SAMPLE_HIGH_WRIST, false, false);
+        Action intakeActionDropSample = new IntakeMotionAsRRAction(robotHardware, false, false, false);
+
+        return new SequentialAction(
+                slideActionDropSample,
+                armActionDropSample,
+                new ParallelAction(
+                        clawActionDropSample,
+                        wristActionDropSample),
+                intakeActionDropSample
+            );
+    }
+
     public Action GetRestingActionSequence() {
         Action slideActionResting = new SlideMotionAsRRAction(robotHardware, SLIDE_POSITION_RESTING, true, false);
         Action armActionResting = new ArmMotionAsRRAction(robotHardware, CLAW_ARM_RESTING_BACK, CLAW_ARM_VELOCITY, true, false);
         Action clawActionResting = new ClawMotionAsRRAction(robotHardware, true, false, false);
         Action wristActionResting = new WristMotionAsRRAction(robotHardware, WRIST_PRELOAD_RESTING, false, false);
+        Action intakeActionResting = new IntakeMotionAsRRAction(robotHardware, false, true, false);
 
         return new SequentialAction(
+                intakeActionResting,
                 slideActionResting,
                 new ParallelAction(
                         clawActionResting,
@@ -633,14 +655,15 @@ public class IncredibotsArmControl
         Action armActionResting = new ArmMotionAsRRAction(robotHardware, CLAW_ARM_RESTING_BACK, CLAW_ARM_VELOCITY, false, false);
         Action clawActionResting = new ClawMotionAsRRAction(robotHardware, true, false, false);
         Action wristActionResting = new WristMotionAsRRAction(robotHardware, WRIST_PRELOAD_RESTING, false, false);
+        Action intakeActionResting = new IntakeMotionAsRRAction(robotHardware, false, true, false);
 
         return new ParallelAction(
+                intakeActionResting,
                 slideActionResting,
                 clawActionResting,
                 wristActionResting,
                 armActionResting);
     }
-
 
     public Action GetRobotHangActionSequence() {
         Action slideActionRobotHang = new SlideMotionAsRRAction(robotHardware, SLIDE_POSITION_RESTING, true);
@@ -656,20 +679,24 @@ public class IncredibotsArmControl
                         wristActionRobotHang));
     }
 
-    public Action GetPickSampleActionSequence() {
-        Action slideActionPickSample = new SlideMotionAsRRAction(robotHardware, PICK_SAMPLE_SLIDE, true, false);
-        Action armActionPickSample = new ArmMotionAsRRAction(robotHardware, PICK_SAMPLE_ARM, CLAW_ARM_VELOCITY, true, false);
-        Action clawActionPickSample = new ClawMotionAsRRAction(robotHardware, true, false, false);
-        Action wristActionPickSample = new WristMotionAsRRAction(robotHardware, PICK_SAMPLE_WRIST, false, false);
+    public Action GetPickSpikeActionSequence() {
 
-        return new SequentialAction(
-                new ParallelAction(
-                        wristActionPickSample,
-                        clawActionPickSample
-                ),
-                slideActionPickSample,
-                armActionPickSample
-        );
+        int AUTO_PICK_SPIKE_SLIDE = 500;
+        int AUTO_PICK_SPIKE_ARM = 3300;
+        int AUTO_ARM_VELOCITY = 1000;
+
+        Action wristActionPickSpike = new WristMotionAsRRAction(robotHardware, ENTER_SUB_WRIST, false, false);
+        Action clawActionPickSpike = new ClawMotionAsRRAction(robotHardware, false, false, false);
+        Action slideActionPickSpike = new SlideMotionAsRRAction(robotHardware, AUTO_PICK_SPIKE_SLIDE, true, false);
+        Action armActionPickSpike = new ArmMotionAsRRAction(robotHardware, AUTO_PICK_SPIKE_ARM, AUTO_ARM_VELOCITY, true, false);
+        Action intakeActionPickSpike = new IntakeMotionAsRRAction(robotHardware,true, false, false);
+
+        return new ParallelAction(
+                        slideActionPickSpike,
+                        armActionPickSpike,
+                        clawActionPickSpike,
+                        wristActionPickSpike,
+                        intakeActionPickSpike);
     }
 
     public Action GetHangSpecimenActionSequence_Fast() {
@@ -677,12 +704,14 @@ public class IncredibotsArmControl
         Action slideActionHangSpecimen = new SlideMotionAsRRAction(robotHardware, HANG_SPECIMEN_SLIDE, false);
         Action wristActionHangSpecimen = new WristMotionAsRRAction(robotHardware, HANG_SPECIMEN_WRIST, false, false);
         Action clawActionHangSpecimen = new ClawMotionAsRRAction(robotHardware, false, false, false);
+        Action intakeActionHangSpecimen = new IntakeMotionAsRRAction(robotHardware, false, true, false);
 
         return new ParallelAction(
                         wristActionHangSpecimen,
                         clawActionHangSpecimen,
                         armActionHangSpecimen,
-                        slideActionHangSpecimen);
+                        slideActionHangSpecimen,
+                        intakeActionHangSpecimen);
     }
 
     public Action GetHangSpecimenActionSequence() {
@@ -690,8 +719,10 @@ public class IncredibotsArmControl
         Action slideActionHangSpecimen = new SlideMotionAsRRAction(robotHardware, HANG_SPECIMEN_SLIDE, false);
         Action wristActionHangSpecimen = new WristMotionAsRRAction(robotHardware, HANG_SPECIMEN_WRIST, false, false);
         Action clawActionHangSpecimen = new ClawMotionAsRRAction(robotHardware, false, false, false);
+        Action intakeActionHangSpecimen = new IntakeMotionAsRRAction(robotHardware, false, true, false);
 
         return new SequentialAction(
+                        intakeActionHangSpecimen,
                         wristActionHangSpecimen,
                         new ParallelAction(
                                 clawActionHangSpecimen,
@@ -704,12 +735,35 @@ public class IncredibotsArmControl
         Action armActionVertical = new ArmMotionAsRRAction(robotHardware, HANG_SPECIMEN_ARM, CLAW_ARM_VELOCITY, false);
         Action slideActionVertical = new SlideMotionAsRRAction(robotHardware, SLIDE_POSITION_RESTING, true);
         Action wristActionVertical = new WristMotionAsRRAction(robotHardware, WRIST_PRELOAD_RESTING, false, false);
+        Action clawActionVertical = new ClawMotionAsRRAction(robotHardware, false, false, false);
+        Action intakeActionVertical = new IntakeMotionAsRRAction(robotHardware, false, true, false);
 
         return new SequentialAction(
                 slideActionVertical,
                 new ParallelAction(
                         armActionVertical,
-                        wristActionVertical
+                        wristActionVertical,
+                        clawActionVertical,
+                        intakeActionVertical
+                ));
+    }
+
+    public Action GetArmHorizontalActionSequence() {
+        int AUTO_ARM_HORIZONTAL = 300;
+
+        Action armActionHorizontal = new ArmMotionAsRRAction(robotHardware, AUTO_ARM_HORIZONTAL, CLAW_ARM_VELOCITY, false);
+        Action slideActionHorizontal = new SlideMotionAsRRAction(robotHardware, SLIDE_POSITION_RESTING, true);
+        Action wristActionHorizontal = new WristMotionAsRRAction(robotHardware, WRIST_PRELOAD_RESTING, false, false);
+        Action clawActionHorizontal = new ClawMotionAsRRAction(robotHardware, false, false, false);
+        Action intakeActionHorizontal = new IntakeMotionAsRRAction(robotHardware, false, true, false);
+
+        return new SequentialAction(
+                slideActionHorizontal,
+                new ParallelAction(
+                        armActionHorizontal,
+                        wristActionHorizontal,
+                        clawActionHorizontal,
+                        intakeActionHorizontal
                 ));
     }
 
@@ -718,13 +772,15 @@ public class IncredibotsArmControl
         Action armActionSnapSpecimen = new ArmMotionAsRRAction(robotHardware, SNAP_SPECIMEN_ARM, CLAW_ARM_VELOCITY, true);
         Action wristActionSnapSpecimen = new WristMotionAsRRAction(robotHardware, SNAP_SPECIMEN_WRIST, false, false);
         Action clawActionSnapSpecimen = new ClawMotionAsRRAction(robotHardware, true, false, false);
+        Action intakeActionSnapSpecimen = new IntakeMotionAsRRAction(robotHardware, false, true, false);
 
         return new SequentialAction(
                 slideActionSnapSpecimen,
                 armActionSnapSpecimen,
                 new ParallelAction(
                         clawActionSnapSpecimen,
-                        wristActionSnapSpecimen)
+                        wristActionSnapSpecimen,
+                        intakeActionSnapSpecimen)
         );
     }
 
@@ -790,16 +846,18 @@ public class IncredibotsArmControl
 
     public Action GetEnterExitSubActionSequence() {
         Action wristActionEnterExitSub = new WristMotionAsRRAction(robotHardware, ENTER_SUB_WRIST, false, false);
-        Action clawActionEnterExitSub = new ClawMotionAsRRAction(robotHardware, true, false, false);
+        Action clawActionEnterExitSub = new ClawMotionAsRRAction(robotHardware, false, false, false);
         Action slideActionEnterExitSub = new SlideMotionAsRRAction(robotHardware, ENTER_SUB_SLIDE, true, false);
-        Action armActionEnterExitSub = new ArmMotionAsRRAction(robotHardware, ENTER_SUB_ARM, CLAW_ARM_VELOCITY / 2, true, true);
+        Action armActionEnterExitSub = new ArmMotionAsRRAction(robotHardware, ENTER_SUB_ARM, CLAW_ARM_VELOCITY, true, false);
+        Action intakeActionEnterExitSub = new IntakeMotionAsRRAction(robotHardware,true, false, false);
 
         return new SequentialAction(
                 slideActionEnterExitSub,
                 new ParallelAction(
                         armActionEnterExitSub,
                         clawActionEnterExitSub,
-                        wristActionEnterExitSub));
+                        wristActionEnterExitSub,
+                        intakeActionEnterExitSub));
     }
 
     public Action GetClawArmAfterHighSampleActionSequence() {
