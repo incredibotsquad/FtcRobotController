@@ -19,23 +19,20 @@ import org.firstinspires.ftc.teamcode.drive.opmode.IncredibotsArmControl;
 public class RobotHardware {
     //making variables
 
-     IMU imu;
-     private DcMotorEx rightFrontDriveMotor;
-     private DcMotorEx leftFrontDriveMotor;
-     private DcMotorEx rightBackDriveMotor;
-     private DcMotorEx leftBackDriveMotor;
-     public static DcMotorEx armMotor;
-     public static DcMotorEx slideMotor;
-     private DcMotor odoRight;
-     private DcMotor odoLeft;
-     private DcMotor odoFront;
-     private Servo clawServo;
-     private Servo wristServo;
-
-     private CRServo leftIntakeServo;
-
+    IMU imu;
+    private DcMotorEx rightFrontDriveMotor;
+    private DcMotorEx leftFrontDriveMotor;
+    private DcMotorEx rightBackDriveMotor;
+    private DcMotorEx leftBackDriveMotor;
+    public static DcMotorEx armMotor;
+    public static DcMotorEx slideMotor;
+    private DcMotor odoRight;
+    private DcMotor odoLeft;
+    private DcMotor odoFront;
+    private Servo clawServo;
+    private Servo wristServo;
+    private CRServo leftIntakeServo;
     private CRServo rightIntakeServo;
-
     private ColorRangeSensor colorSensor;
 
 
@@ -104,6 +101,11 @@ public class RobotHardware {
      public void stopIntake() {
          leftIntakeServo.setPower(0);
          rightIntakeServo.setPower(0);
+     }
+
+     public void ejectSampleFromIntake() {
+         leftIntakeServo.setPower(-0.1);
+         rightIntakeServo.setPower(0.1);
      }
 
      public GAME_COLORS getDetectedColor(){
