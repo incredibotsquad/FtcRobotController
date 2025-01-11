@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.drive.opmode.test;
 
 import com.acmerobotics.dashboard.config.Config;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
@@ -23,6 +24,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
  */
 
 @Config
+@Disabled
 @TeleOp(name="Intake Test", group="Linear OpMode")
 public class IntakeTest extends LinearOpMode {
 

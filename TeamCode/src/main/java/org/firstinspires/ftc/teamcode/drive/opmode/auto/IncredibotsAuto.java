@@ -29,7 +29,7 @@ public abstract class IncredibotsAuto extends LinearOpMode {
         return new SlideMotionAsRRAction(myHardware, position, waitForAction);
     }
 
-    protected Action GetSideControlAction(int position, int velocity, boolean waitForAction, boolean shortWait) {
+    protected Action GetSlideControlAction(int position, int velocity, boolean waitForAction, boolean shortWait) {
         return new SlideMotionAsRRAction(myHardware, position, velocity, waitForAction, shortWait);
     }
 
@@ -49,7 +49,7 @@ public abstract class IncredibotsAuto extends LinearOpMode {
         return new IntakeMotionAsRRAction(myHardware, intake, stop, waitForAction);
     }
 
-    protected Action GetHighBasketSampleDropIntakeMotionAsRRAction() {
-        return new HighBasketSampleDropIntakeMotionAsRRAction(myHardware);
+    protected Action GetHighBasketSampleDropIntakeMotionAsRRAction(boolean waitForAction) {
+        return new HighBasketSampleDropIntakeMotionAsRRAction(myHardware, waitForAction);
     }
 }

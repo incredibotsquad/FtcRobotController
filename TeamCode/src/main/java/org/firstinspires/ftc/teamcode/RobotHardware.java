@@ -194,8 +194,9 @@ public class RobotHardware {
 
     public void operateWristServo(double position) {
         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " SETTING WRIST SERVO POSITION: " + position);
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " WRIST SERVO DIRECTION: " + wristServo.getDirection());
 
-         wristServo.setPosition(position);
+        wristServo.setPosition(position);
     }
 
     public double getWristServoPosition() {

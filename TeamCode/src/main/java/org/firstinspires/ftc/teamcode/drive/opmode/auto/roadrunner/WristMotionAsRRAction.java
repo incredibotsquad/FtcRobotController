@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.drive.opmode.auto.roadrunner;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
@@ -27,20 +29,18 @@ public class WristMotionAsRRAction implements Action {
     @Override
     public boolean run (@NonNull TelemetryPacket packet) {
         if (!initialized) {
-            myHardware.operateWristServo(position);
             timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+            myHardware.operateWristServo(position);
             initialized = true;
         }
 
         if (waitForAction) {
-            int timeDuration = 500;
-
             if (shortWait) {
-                timeDuration = 200;
+                return (timer.milliseconds() < 250);
             }
 
             //tell RR we need to keep running if duration has not elapsed
-            return (timer.milliseconds() < timeDuration);
+            return (myHardware.getWristServoPosition() != position);
         }
 
         return false;

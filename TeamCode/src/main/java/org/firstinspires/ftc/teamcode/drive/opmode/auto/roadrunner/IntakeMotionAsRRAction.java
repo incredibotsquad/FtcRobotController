@@ -39,7 +39,7 @@ public class IntakeMotionAsRRAction implements Action {
         }
 
         if (waitForAction) {
-            int timeDuration = 200;
+            int timeDuration = 250;
 
             //tell RR we need to keep running if duration has not elapsed
             return (timer.milliseconds() < timeDuration);
