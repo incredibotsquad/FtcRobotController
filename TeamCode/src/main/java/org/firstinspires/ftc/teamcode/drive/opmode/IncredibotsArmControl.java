@@ -770,9 +770,19 @@ public class IncredibotsArmControl
                         wristActionHangSpecimen,
                         new ParallelAction(
                                 clawActionHangSpecimen,
-                                armActionHangSpecimen
-                        ),
-                        slideActionHangSpecimen);
+                                armActionHangSpecimen,
+                                slideActionHangSpecimen
+                        )
+                    );
+
+//        return new SequentialAction(
+//                intakeActionHangSpecimen,
+//                wristActionHangSpecimen,
+//                new ParallelAction(
+//                        clawActionHangSpecimen,
+//                        armActionHangSpecimen
+//                ),
+//                slideActionHangSpecimen);
     }
 
     public Action GetArmVerticalActionSequence() {
