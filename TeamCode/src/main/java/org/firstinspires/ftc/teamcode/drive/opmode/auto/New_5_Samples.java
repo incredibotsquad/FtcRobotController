@@ -10,6 +10,7 @@ import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.TurnConstraints;
 import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.MecanumDrive;
@@ -18,6 +19,7 @@ import org.firstinspires.ftc.teamcode.drive.opmode.IncredibotsArmControl;
 
 
 @Config
+@Disabled
 @Autonomous(name = "New_5_Samples", group = "Autonomous")
 public class New_5_Samples extends IncredibotsAuto {
     public static final int multiplier = 1; //used to flip coordinates between blue (1) and red (-1)
