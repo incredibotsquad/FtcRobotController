@@ -4,8 +4,11 @@ import android.util.Log;
 
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.roadrunner.ParallelAction;
+import com.acmerobotics.roadrunner.ProfileAccelConstraint;
 import com.acmerobotics.roadrunner.SequentialAction;
-import com.acmerobotics.roadrunner.TurnConstraints;
+import com.acmerobotics.roadrunner.SleepAction;
+import com.acmerobotics.roadrunner.TranslationalVelConstraint;
+import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.firstinspires.ftc.teamcode.RobotHardware;
@@ -23,10 +26,18 @@ public class Red_4_Samples  extends IncredibotsAuto {
     public static final int multiplier = -1; //used to flip coordinates between blue (1) and red (-1)
 
     public static double heading = Math.toRadians(-90 * multiplier);
-    public static double basketHeading = Math.toRadians(-90 * multiplier - 22);
-    public static double farSampleHeading = Math.toRadians(-90 * multiplier + 21); //17
+    public static double basketHeading = Math.toRadians(-90 * multiplier - 45);
+    public static double leftSampleHeading = Math.toRadians(-90 * multiplier + 35);
     public static Pose2d INIT_POS = new Pose2d(41 * multiplier, 60.75 * multiplier, heading);
-    public static Pose2d DROP_PRELOADED_SAMPLE = new Pose2d(60.5 * multiplier, 54 * multiplier, heading);
+    public static Pose2d DROP_SAMPLE_POS = new Pose2d(61 * multiplier, 60 * multiplier, basketHeading);
+    public static Pose2d RIGHT_SAMPLE_POS = new Pose2d(49 * multiplier, 42 * multiplier, heading); //43
+    public static Pose2d MIDDLE_SAMPLE_POS = new Pose2d(59 * multiplier, 42 * multiplier, heading);
+    public static Pose2d LEFT_SAMPLE_POS = new Pose2d(59 * multiplier, 38.5 * multiplier, leftSampleHeading); //59 - 39.5
+    public static Vector2d END_POS = new Vector2d(48 * multiplier, 48 * multiplier);
+
+    public static double minTransVelocity = 30;
+    public static double minAccel = -20;
+    public static double maxAccel = 40;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -36,27 +47,35 @@ public class Red_4_Samples  extends IncredibotsAuto {
 
         Action positionToDropPreloadedSample = drive.actionBuilder(INIT_POS)
                 .stopAndAdd(GetArmControlAction(IncredibotsArmControl.DROP_SAMPLE_HIGH_ARM, IncredibotsArmControl.CLAW_ARM_VELOCITY, false, false))
-                .strafeToLinearHeading(DROP_PRELOADED_SAMPLE.position, basketHeading)
+                .strafeToLinearHeading(DROP_SAMPLE_POS.position, DROP_SAMPLE_POS.heading)
                 .build();
 
-        Action positionForThirdSample = drive.actionBuilder(new Pose2d(DROP_PRELOADED_SAMPLE.position, basketHeading))
-                .turnTo(heading, new TurnConstraints(drive.PARAMS.maxAngVel / 2, -drive.PARAMS.maxAngAccel / 2, drive.PARAMS.maxAngAccel / 2))
+        Action positionToPickRightSample = drive.actionBuilder(DROP_SAMPLE_POS)
+                .strafeToLinearHeading(RIGHT_SAMPLE_POS.position, RIGHT_SAMPLE_POS.heading, new TranslationalVelConstraint(minTransVelocity), new ProfileAccelConstraint(minAccel, maxAccel))
                 .build();
 
-        Action turnToDropThirdSample = drive.actionBuilder(new Pose2d(DROP_PRELOADED_SAMPLE.position, heading))
-                .turnTo(basketHeading, new TurnConstraints(drive.PARAMS.maxAngVel / 2, -drive.PARAMS.maxAngAccel / 2, drive.PARAMS.maxAngAccel / 2))
+        Action positionToDropRightSample = drive.actionBuilder(RIGHT_SAMPLE_POS)
+                .strafeToLinearHeading(DROP_SAMPLE_POS.position, DROP_SAMPLE_POS.heading, new TranslationalVelConstraint(minTransVelocity), new ProfileAccelConstraint(minAccel, maxAccel))
                 .build();
 
-        Action positionForFourthSampleStep1 = drive.actionBuilder(new Pose2d(DROP_PRELOADED_SAMPLE.position, basketHeading))
-                .turnTo(heading, new TurnConstraints(drive.PARAMS.maxAngVel / 4, -drive.PARAMS.maxAngAccel / 4, drive.PARAMS.maxAngAccel / 3))
+        Action positionToPickMiddleSample = drive.actionBuilder(DROP_SAMPLE_POS)
+                .strafeToLinearHeading(MIDDLE_SAMPLE_POS.position, MIDDLE_SAMPLE_POS.heading, new TranslationalVelConstraint(minTransVelocity), new ProfileAccelConstraint(minAccel, maxAccel))
                 .build();
 
-        Action positionForFourthSampleStep2 = drive.actionBuilder(new Pose2d(DROP_PRELOADED_SAMPLE.position, heading))
-                .turnTo(farSampleHeading, new TurnConstraints(drive.PARAMS.maxAngVel / 3, -drive.PARAMS.maxAngAccel / 3, drive.PARAMS.maxAngAccel / 3))
+        Action positionToDropMiddleSample = drive.actionBuilder(MIDDLE_SAMPLE_POS)
+                .strafeToLinearHeading(DROP_SAMPLE_POS.position, DROP_SAMPLE_POS.heading, new TranslationalVelConstraint(minTransVelocity), new ProfileAccelConstraint(minAccel, maxAccel))
                 .build();
 
-        Action turnToDropFourthSample = drive.actionBuilder(new Pose2d(DROP_PRELOADED_SAMPLE.position, farSampleHeading))
-                .turnTo(basketHeading, new TurnConstraints(drive.PARAMS.maxAngVel / 2, -drive.PARAMS.maxAngAccel / 2, drive.PARAMS.maxAngAccel / 2))
+        Action positionToPickLeftSample = drive.actionBuilder(DROP_SAMPLE_POS)
+                .strafeToLinearHeading(LEFT_SAMPLE_POS.position, LEFT_SAMPLE_POS.heading, new TranslationalVelConstraint(minTransVelocity), new ProfileAccelConstraint(minAccel, maxAccel))
+                .build();
+
+        Action positionToDropLeftSample = drive.actionBuilder(LEFT_SAMPLE_POS)
+                .strafeToLinearHeading(DROP_SAMPLE_POS.position, DROP_SAMPLE_POS.heading, new TranslationalVelConstraint(minTransVelocity), new ProfileAccelConstraint(minAccel, maxAccel))
+                .build();
+
+        Action moveForwardToAvoidGettingStuck = drive.actionBuilder(DROP_SAMPLE_POS)
+                .strafeToConstantHeading(END_POS)
                 .build();
 
         waitForStart();
@@ -70,74 +89,79 @@ public class Red_4_Samples  extends IncredibotsAuto {
                     new SequentialAction(
                             GetClawControlAction(false, false, false),
                             new ParallelAction(
-                                    positionToDropPreloadedSample,
-                                    GetSideControlAction(IncredibotsArmControl.MAX_SLIDE_POSITION_ARM_FORWARDS_LOW, IncredibotsArmControl.SLIDE_VELOCITY_EXPANDING / 4, false, false)
+                                    positionToDropPreloadedSample
                             ),
                             armControl.GetHighBasketActionSequence(),
-                            GetClawControlAction(true, true, true)
+                            armControl.GetSampleEjectActionSequence(),
+                            GetWristControlAction(IncredibotsArmControl.ENTER_SUB_WRIST, false, false),
+                            GetSlideControlAction(IncredibotsArmControl.ENTER_SUB_SLIDE, IncredibotsArmControl.SLIDE_VELOCITY_EXPANDING, true, false)
                     )
             );
 
-            //pick and drop sample 2
+            Log.i("=== INCREDIBOTS  ===", "ELAPSED TIME AFTER DROPPING PRELOAD: " + elapsedTime.milliseconds());
+
+            //pick and drop right sample
             Actions.runBlocking(
                     new SequentialAction(
-                            armControl.GetClawArmAfterHighSampleActionSequence(),
-                            GetArmControlAction(IncredibotsArmControl.ENTER_SUB_ARM, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY * 0.34), true, false),
-                            GetArmControlAction(IncredibotsArmControl.PICK_SAMPLE_ARM + 30, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY *0.34), true, true),
-                            GetClawControlAction(false, true, false),
+                            positionToPickRightSample,
+                            armControl.GetPickSampleActionSequence(),
+                            new SleepAction(0.1),   //make sure sample gets picked
+                            GetIntakeControlAction(false, true, true),  //else it kills RR
+                            GetArmControlAction(IncredibotsArmControl.DROP_SAMPLE_HIGH_ARM, IncredibotsArmControl.CLAW_ARM_VELOCITY, false),
+                            GetWristControlAction(IncredibotsArmControl.DROP_SAMPLE_HIGH_WRIST, true, false),
+                            positionToDropRightSample,
                             armControl.GetHighBasketActionSequence(),
-                            GetClawControlAction(true, true, true)
+                            armControl.GetSampleEjectActionSequence(),
+                            new SleepAction(0.3),   //make sure sample falls
+                            GetWristControlAction(IncredibotsArmControl.PICK_SAMPLE_WRIST, true, false),
+                            GetClawControlAction(false, false, false),
+                            GetSlideControlAction(IncredibotsArmControl.PICK_SAMPLE_SLIDE, IncredibotsArmControl.SLIDE_VELOCITY_EXPANDING, true, true)
                     )
             );
 
-            //pick and drop sample 3
+            Log.i("=== INCREDIBOTS  ===", "ELAPSED TIME AFTER DROPPING RIGHT SAMPLE: " + elapsedTime.milliseconds());
+
             Actions.runBlocking(
                     new SequentialAction(
-                            new ParallelAction(
-                                    armControl.GetClawArmAfterHighSampleActionSequence(),
-                                    positionForThirdSample
-                            ),
-                            GetSlideControlAction(IncredibotsArmControl.MAX_SLIDE_POSITION_ARM_FORWARDS_LOW - 200, false),  //middle sample doesnt need to go as far
-                            GetArmControlAction(IncredibotsArmControl.ENTER_SUB_ARM, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY *0.34), true, false),
-                            GetArmControlAction(IncredibotsArmControl.PICK_SAMPLE_ARM + 30, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY *0.34), true, true),
-                            GetClawControlAction(false, true, false),
-                            new ParallelAction(
-                                    GetWristControlAction(0.3, false, false),
-                                    turnToDropThirdSample,
-                                    armControl.GetHighBasketActionSequence()
-                            ),
-                            GetClawControlAction(true, true, true)
+                            positionToPickMiddleSample,
+                            GetIntakeControlAction(true, false, false),
+                            armControl.GetPickSampleActionSequence(),
+                            new SleepAction(0.1),   //make sure sample gets picked
+                            GetIntakeControlAction(false, true, true),  //else it kills RR
+                            GetArmControlAction(IncredibotsArmControl.DROP_SAMPLE_HIGH_ARM, IncredibotsArmControl.CLAW_ARM_VELOCITY, false),
+                            GetWristControlAction(IncredibotsArmControl.DROP_SAMPLE_HIGH_WRIST, true, false),
+                            positionToDropMiddleSample,
+                            armControl.GetHighBasketActionSequence(),
+                            armControl.GetSampleEjectActionSequence(),
+                            new SleepAction(0.3),   //make sure sample falls
+                            GetWristControlAction(IncredibotsArmControl.PICK_SAMPLE_WRIST, true, false),
+                            GetClawControlAction(false, false, false),
+                            GetSlideControlAction(IncredibotsArmControl.PICK_SAMPLE_SLIDE, IncredibotsArmControl.SLIDE_VELOCITY_EXPANDING, true, true)
                     )
             );
 
-            //pick and drop sample 4
-//            Actions.runBlocking(
-//                    new SequentialAction(
-//                            armControl.GetClawArmAfterHighSampleActionSequence(),
-//                            new ParallelAction(
-//                                    GetSlideControlAction(IncredibotsArmControl.MAX_SLIDE_POSITION_ARM_FORWARDS_LOW - 80, false),   //far sample optimization
-//                                    GetWristControlAction(IncredibotsArmControl.WRIST_ENTER_SUB, false, false),
-//                                    positionForFourthSampleStep1,
-//                                    GetArmControlAction(IncredibotsArmControl.CLAW_ARM_ENTER_SUB, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY *0.37), true, true)
-//                            ),
-//                            positionForFourthSampleStep2,
-//                            GetWristControlAction(IncredibotsArmControl.WRIST_PICK_SAMPLE, true, false),
-//                            GetArmControlAction(IncredibotsArmControl.CLAW_ARM_PICK_SAMPLE + 30, (int)(IncredibotsArmControl.CLAW_ARM_VELOCITY *0.34), true, true),
-//                            GetClawControlAction(false, true, false),
-//                            new ParallelAction(
-//                                    GetWristControlAction(0.3, false, false),
-//                                    turnToDropFourthSample,
-//                                    armControl.GetHighBasketActionSequence()
-//                            ),
-//                            GetClawControlAction(true, true, true)
-//                    )
-//            );
+            Log.i("=== INCREDIBOTS  ===", "ELAPSED TIME AFTER DROPPING MIDDLE SAMPLE: " + elapsedTime.milliseconds());
 
-            //bring arm back to resting for TeleOp
             Actions.runBlocking(
                     new SequentialAction(
-                            armControl.GetClawArmAfterHighSampleActionSequence(),
-                            armControl.GetRestingActionSequence()
+                            positionToPickLeftSample,
+                            GetIntakeControlAction(true, false, false),
+                            armControl.GetPickSampleActionSequence(),
+                            new SleepAction(0.1),   //make sure sample gets picked
+                            GetIntakeControlAction(false, true, true),  //else it kills RR
+                            GetArmControlAction(IncredibotsArmControl.DROP_SAMPLE_HIGH_ARM, IncredibotsArmControl.CLAW_ARM_VELOCITY, false),
+                            GetWristControlAction(IncredibotsArmControl.DROP_SAMPLE_HIGH_WRIST, true, false),
+                            positionToDropLeftSample,
+                            armControl.GetHighBasketActionSequence(),
+                            armControl.GetSampleEjectActionSequence(),
+                            new SleepAction(0.3),   //make sure sample falls
+                            GetWristControlAction(IncredibotsArmControl.WRIST_PRELOAD_RESTING, true, false),
+                            GetClawControlAction(false, false, false),
+                            GetSlideControlAction(IncredibotsArmControl.SLIDE_POSITION_RESTING, IncredibotsArmControl.SLIDE_VELOCITY_EXPANDING, true, true),
+                            new ParallelAction(
+                                    moveForwardToAvoidGettingStuck,
+                                    GetArmControlAction(IncredibotsArmControl.CLAW_ARM_RESTING_BACK, IncredibotsArmControl.CLAW_ARM_VELOCITY, false)
+                            )
                     )
             );
 
