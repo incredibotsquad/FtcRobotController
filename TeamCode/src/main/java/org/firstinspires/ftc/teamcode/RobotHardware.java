@@ -88,6 +88,8 @@ public class RobotHardware {
      }
 
      public void operateIntake(boolean intake) {
+         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " OPERATING INTAKE: " + intake);
+
          if (intake) {
              leftIntakeServo.setPower(1);
              rightIntakeServo.setPower(-1);
@@ -99,11 +101,15 @@ public class RobotHardware {
      }
 
      public void stopIntake() {
+         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " STOPPING INTAKE: ");
+
          leftIntakeServo.setPower(0);
          rightIntakeServo.setPower(0);
      }
 
      public void ejectSampleFromIntake() {
+         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " EJECTING FROM INTAKE: ");
+
          leftIntakeServo.setPower(-0.1);
          rightIntakeServo.setPower(0.1);
      }
@@ -176,6 +182,10 @@ public class RobotHardware {
         clawServo.setPosition(open? IncredibotsArmControl.CLAW_OPEN_POSITION: IncredibotsArmControl.CLAW_CLOSE_POSITION);
     }
 
+    public void operateClawServo(double position) {
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " SETTING CLAW SERVO CUSTOM POSITION: " + position);
+        clawServo.setPosition(position);
+    }
 
     //get Claw servo position
     public double getClawServoPosition() {

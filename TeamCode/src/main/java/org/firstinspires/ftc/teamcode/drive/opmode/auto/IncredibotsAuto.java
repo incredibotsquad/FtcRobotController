@@ -7,6 +7,7 @@ import org.firstinspires.ftc.teamcode.RobotHardware;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.roadrunner.ArmMotionAsRRAction;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.roadrunner.ClawMotionAsRRAction;
 import org.firstinspires.ftc.teamcode.drive.opmode.IncredibotsArmControl;
+import org.firstinspires.ftc.teamcode.drive.opmode.auto.roadrunner.HighBasketSampleDropIntakeMotionAsRRAction;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.roadrunner.IntakeMotionAsRRAction;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.roadrunner.SlideMotionAsRRAction;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.roadrunner.WristMotionAsRRAction;
@@ -46,5 +47,9 @@ public abstract class IncredibotsAuto extends LinearOpMode {
 
     protected Action GetIntakeControlAction(boolean intake, boolean stop, boolean waitForAction) {
         return new IntakeMotionAsRRAction(myHardware, intake, stop, waitForAction);
+    }
+
+    protected Action GetHighBasketSampleDropIntakeMotionAsRRAction() {
+        return new HighBasketSampleDropIntakeMotionAsRRAction(myHardware);
     }
 }

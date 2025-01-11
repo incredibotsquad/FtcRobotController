@@ -8,12 +8,12 @@ import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.ProfileAccelConstraint;
 import com.acmerobotics.roadrunner.SequentialAction;
-import com.acmerobotics.roadrunner.SleepAction;
 import com.acmerobotics.roadrunner.TranslationalVelConstraint;
 import com.acmerobotics.roadrunner.TurnConstraints;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.MecanumDrive;
@@ -22,6 +22,7 @@ import org.firstinspires.ftc.teamcode.drive.opmode.IncredibotsArmControl;
 
 
 @Config
+@Disabled
 @Autonomous(name = "New_5_Specimen", group = "Autonomous")
 public class New_5_Specimen extends IncredibotsAuto {
 
@@ -133,7 +134,7 @@ public class New_5_Specimen extends IncredibotsAuto {
                                 armControl.GetArmVerticalActionSequence(),
                                 positionToPickSpikes
                         ),
-                        armControl.GetPickSpikeActionSequence(),
+                        armControl.GetPickSampleActionSequence(),
                         //new SleepAction(100), //sleep for 100 ms to pick the spike up
                         armControl.GetDropSampleObZoneActionSequence()
                     )

@@ -21,7 +21,7 @@ import org.firstinspires.ftc.teamcode.RobotHardware;
  * Use Android Studio to Copy this Class, and Paste it into your team's code folder with a new name.
  * Remove or comment out the @Disabled line to add this OpMode to the Driver Station OpMode list
  */
-@Disabled
+
 @Config
 @TeleOp(name="ServoTest", group="Linear OpMode")
 public class ServoControlTest extends LinearOpMode {

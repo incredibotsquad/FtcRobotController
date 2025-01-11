@@ -8,18 +8,19 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.RobotHardware;
 
-public class WristMotionAsRRAction implements Action {
+public class CustomClawPositionAsRRAction implements Action {
     private RobotHardware myHardware;
-    private double position;
     private boolean initialized = false;
     private boolean waitForAction = false;
     private boolean shortWait = false;
+
+    private double position;
     private ElapsedTime timer;
 
-    public WristMotionAsRRAction(RobotHardware robotHardware, double position, boolean waitForAction, boolean shortWait) {
+    public CustomClawPositionAsRRAction(RobotHardware robotHardware, double position, boolean waitForAction, boolean shortWait) {
         this.myHardware = robotHardware;
-        this.position = position;
         this.initialized = false;
+        this.position = position;
         this.waitForAction = waitForAction;
         this.shortWait = shortWait;
     }
@@ -27,20 +28,20 @@ public class WristMotionAsRRAction implements Action {
     @Override
     public boolean run (@NonNull TelemetryPacket packet) {
         if (!initialized) {
-            myHardware.operateWristServo(position);
+            myHardware.operateClawServo(position);
             timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
             initialized = true;
         }
 
         if (waitForAction) {
-            int timeDuration = 500;
-
+            int timeDuration = 400;
             if (shortWait) {
                 timeDuration = 200;
             }
+            boolean timerPending = timer.milliseconds() < timeDuration;
 
             //tell RR we need to keep running if duration has not elapsed
-            return (timer.milliseconds() < timeDuration);
+            return (timerPending);
         }
 
         return false;
