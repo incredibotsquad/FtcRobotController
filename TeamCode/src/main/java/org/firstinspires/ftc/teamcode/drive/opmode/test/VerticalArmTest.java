@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.drive.opmode.test;
 import android.util.Log;
 
 import com.acmerobotics.dashboard.config.Config;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -27,6 +28,7 @@ import org.firstinspires.ftc.teamcode.RobotHardware;
  */
 
 @Config
+@Disabled
 @TeleOp(name="VerticalArmTest", group="Linear OpMode")
 public class VerticalArmTest extends LinearOpMode {
     RobotHardware myHardware;
