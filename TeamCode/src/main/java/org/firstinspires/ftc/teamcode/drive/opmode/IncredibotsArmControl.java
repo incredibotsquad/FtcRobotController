@@ -53,7 +53,7 @@ public class IncredibotsArmControl
     public static int SLIDE_POSITION_RESTING = 0;
     public static int SLIDE_VELOCITY_EXPANDING = 3000;
     public static int SLIDE_VELOCITY_CONTRACTING = SLIDE_VELOCITY_EXPANDING;
-    public static int MAX_SLIDE_POSITION_ARM_FORWARDS_LOW = 1250;
+    public static int MAX_SLIDE_POSITION_ARM_FORWARDS_LOW = 850;
     public static int MAX_SLIDE_POSITION_ARM_BACKWARDS_HIGH = 0;
 
     //MANUAL OVERRIDE CONSTANTS
