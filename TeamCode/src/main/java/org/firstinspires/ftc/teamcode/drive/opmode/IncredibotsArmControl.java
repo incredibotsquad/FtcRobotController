@@ -42,12 +42,12 @@ public class IncredibotsArmControl
 
     //WRIST CONSTANTS
     public static double WRIST_PRELOAD_RESTING = 0.1;
-    public static double WRIST_HANG = 1;
+    public static double WRIST_HANG = 0.1;
 
     public static double WRIST_SPIT_OUT = 0.35;
     public static int ARM_DELTA_WITH_SLIDE_MOTION = 120;
 
-    public static double WRIST_DELTA_WITH_SLIDE_MOTION = 0.05;
+    public static double WRIST_DELTA_WITH_SLIDE_MOTION = 0.02;
 
     //SLIDE CONSTANTS
     public static int SLIDE_POSITION_RESTING = 0;
@@ -86,7 +86,7 @@ public class IncredibotsArmControl
     //PICK SPECIMEN
     public static int PICK_SPECIMEN_ARM = 0;
     public static double PICK_SPECIMEN_WRIST = 0.25;
-    public static double PICK_SPECIMEN_WRIST_TELE = 0.26;
+    public static double PICK_SPECIMEN_WRIST_TELE = 0.3;
 
     //HANG SPECIMEN
     public static int HANG_SPECIMEN_ARM = 1700;
@@ -274,7 +274,8 @@ public class IncredibotsArmControl
                 //has to be a separate check since the previous action will make the slide motor busy
                 if (!robotHardware.isSlideMotorBusy() || Math.abs(SLIDE_POSITION_RESTING - robotHardware.getSlidePos()) < 10) {
                     robotHardware.setClawArmPositionAndVelocity(CLAW_ARM_RESTING_BACK, CLAW_ARM_VELOCITY);
-                    robotHardware.operateClawServo(false);
+                    robotHardware.operateClawServo(true);
+                    robotHardware.stopIntake();
                     robotHardware.operateWristServo(WRIST_HANG);
                     armState = ARM_STATE.NONE;
                     Log.i("=== INCREDIBOTS ===", "PROCESSING ROBOT HANG - SLIDE FINISHED MOVING - STARTING ARM. ARM_STATE: "+ armState);
