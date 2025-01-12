@@ -449,7 +449,7 @@ public class IncredibotsArmControl
                         robotHardware.setSlidePosition(ENTER_SUB_SLIDE);
                     }
 
-                    if (!robotHardware.isSlideMotorBusy() || Math.abs(ENTER_SUB_SLIDE - robotHardware.getSlidePos()) < 10) {    //move claw arm after slide is done moving
+                    if (Math.abs(ENTER_SUB_SLIDE - robotHardware.getSlidePos()) < 10) {    //move claw arm after slide is done moving
                         robotHardware.setClawArmPositionAndVelocity(ENTER_SUB_ARM, CLAW_ARM_VELOCITY);
                         robotHardware.operateIntake(true);
                         armState = ARM_STATE.NONE;
@@ -471,9 +471,9 @@ public class IncredibotsArmControl
                     robotHardware.setSlidePosition(ENTER_SUB_SLIDE);
                 }
 
-                if (!robotHardware.isSlideMotorBusy() || Math.abs(ENTER_SUB_SLIDE - robotHardware.getSlidePos()) < 10) {    //move claw arm after slide is done moving
+                if (Math.abs(ENTER_SUB_SLIDE - robotHardware.getSlidePos()) < 10) {    //move claw arm after slide is done moving
                     armState = ARM_STATE.ENTER_EXIT_SUB;
-                    Log.i("=== INCREDIBOTS ===", "PROCESSING  CLAW_ARM_AFTER_HIGH_SAMPLE - SLIDE IS DONE MOVING - STARTING ARM. BUTTONSTATE: " + armState);
+                    Log.i("=== INCREDIBOTS ===", "PROCESSING  CLAW_ARM_AFTER_HIGH_SAMPLE - SLIDE IS DONE MOVING - STARTING ARM. ARMSTATE: " + armState);
                 }
 
                 enableArmAdjustmentWithSlide = false;
@@ -502,11 +502,18 @@ public class IncredibotsArmControl
                 robotHardware.operateClawServo((CLAW_CLOSE_POSITION + CLAW_OPEN_POSITION) / 2);
 
                 try {
-                    Thread.sleep(500);
+                    Thread.sleep(250);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
 
+                robotHardware.operateClawServo(true);
+
+                try {
+                    Thread.sleep(250);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
                 //move the robot arm back
                 armState = ARM_STATE.CLAW_ARM_AFTER_HIGH_SAMPLE;
 
