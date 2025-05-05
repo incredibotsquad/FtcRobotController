@@ -10,7 +10,9 @@ import com.acmerobotics.roadrunner.ProfileAccelConstraint;
 import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.TranslationalVelConstraint;
 import com.acmerobotics.roadrunner.ftc.Actions;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 
+@Disabled
 @Config
 //@Autonomous(name = "IncredibotsAuto3SpecimenBlue", group = "Autonomous")
 /* This auto opmode will make the robot do the following steps:

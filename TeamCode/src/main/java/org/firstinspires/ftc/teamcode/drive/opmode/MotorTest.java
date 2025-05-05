@@ -1,9 +1,15 @@
 package org.firstinspires.ftc.teamcode.drive.opmode;
 
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+import android.util.Log;
+
+import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotor;
+
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 
@@ -20,13 +26,17 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  * Remove or comment out the @Disabled line to add this OpMode to the Driver Station OpMode list
  */
 
-@Disabled
+@Config
 @TeleOp(name="MotorTest", group="Linear OpMode")
 public class MotorTest extends LinearOpMode {
 
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
-    private DcMotor RBMotor;
+    private DcMotorEx Vbar;
+
+    public static int pos = 0;
+
+    public static double velocity = 100;
 
     @Override
     public void runOpMode() {
@@ -36,7 +46,12 @@ public class MotorTest extends LinearOpMode {
         // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
-        RBMotor  = hardwareMap.get(DcMotor.class, "RBM");
+        Vbar = hardwareMap.get(DcMotorEx.class,"Vbar");
+        Vbar.setDirection(DcMotorSimple.Direction.REVERSE);
+        Vbar.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        Vbar.setTargetPosition(0);
+        Vbar.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        Vbar.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
         // Wait for the game to start (driver presses START)
         waitForStart();
@@ -44,7 +59,15 @@ public class MotorTest extends LinearOpMode {
 
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
-            RBMotor.setPower(0.25);
+            if (!Vbar.isBusy()) {
+                setVBarPositionAndVelocity(pos, velocity);
+            }
         }
+    }
+
+    public void setVBarPositionAndVelocity(int pos, double velocity) {
+        Vbar.setTargetPosition(pos);
+        Vbar.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        Vbar.setVelocity(velocity);
     }
 }

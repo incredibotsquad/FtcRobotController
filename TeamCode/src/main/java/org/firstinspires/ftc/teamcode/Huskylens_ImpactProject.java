@@ -1,4 +1,4 @@
-/*
+package org.firstinspires.ftc.teamcode;/*
 Copyright (c) 2023 FIRST
 
 All rights reserved.
@@ -30,17 +30,11 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
 TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-package org.firstinspires.ftc.robotcontroller.external.samples;
-
-import android.util.Log;
-
 import com.qualcomm.hardware.dfrobot.HuskyLens;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.TouchSensor;
+import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.internal.system.Deadline;
 
@@ -56,7 +50,7 @@ import java.util.concurrent.TimeUnit;
  *
  * For detailed instructions on how a HuskyLens is used in FTC, please see this tutorial:
  * https://ftc-docs.firstinspires.org/en/latest/devices/huskylens/huskylens.html
- * 
+ *
  * This sample illustrates how to detect AprilTags, but can be used to detect other types
  * of objects by changing the algorithm. It assumes that the HuskyLens is configured with
  * a name of "huskylens".
@@ -64,32 +58,21 @@ import java.util.concurrent.TimeUnit;
  * Use Android Studio to Copy this Class, and Paste it into your team's code folder with a new name.
  * Remove or comment out the @Disabled line to add this OpMode to the Driver Station OpMode list
  */
-@TeleOp(name = "Sensor: HuskyLens", group = "Sensor")
-public class SensorHuskyLens extends LinearOpMode {
+@TeleOp(name = "Huskylens Impact Project", group = "Sensor")
+public class Huskylens_ImpactProject extends LinearOpMode {
 
     private final int READ_PERIOD = 1;
 
     private HuskyLens huskyLens;
 
-    private TouchSensor magSwitch;
-
-    private DcMotor motor;
+    private Servo servo;
 
     @Override
     public void runOpMode()
     {
-        huskyLens = hardwareMap.get(HuskyLens.class, "huskylens");
+        huskyLens = hardwareMap.get(HuskyLens.class, "Cam");
 
-        magSwitch = hardwareMap.get(TouchSensor.class, "magSwitch");
-
-
-        motor = hardwareMap.get(DcMotor.class, "motor");
-        motor.setDirection(DcMotorSimple.Direction.REVERSE);
-        motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        motor.setTargetPosition(0);
-        motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-
+        servo = hardwareMap.get(Servo.class, "Servo");
 
         /*
          * This sample rate limits the reads solely to allow a user time to observe
@@ -132,8 +115,12 @@ public class SensorHuskyLens extends LinearOpMode {
          *
          * Other algorithm choices for FTC might be: OBJECT_RECOGNITION, COLOR_RECOGNITION or OBJECT_CLASSIFICATION.
          */
-        huskyLens.selectAlgorithm(HuskyLens.Algorithm.COLOR_RECOGNITION);
+        huskyLens.selectAlgorithm(HuskyLens.Algorithm.OBJECT_TRACKING);
+
         telemetry.update();
+
+        servo.setPosition(0);
+
         waitForStart();
 
         /*
@@ -143,20 +130,6 @@ public class SensorHuskyLens extends LinearOpMode {
          * Note again that the device only recognizes the 36h11 family of tags out of the box.
          */
         while(opModeIsActive()) {
-
-
-
-            if (magSwitch.isPressed()){
-                motor.setTargetPosition(motor.getCurrentPosition() - 300);
-                motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                motor.setPower(0.5);
-
-                Log.i("===INCREDIBOTS===", "Switch is pressed");
-
-                telemetry.addData("Door state:", "Closed");
-
-            }
-
             if (!rateLimit.hasExpired()) {
                 continue;
             }
@@ -176,31 +149,20 @@ public class SensorHuskyLens extends LinearOpMode {
             for (int i = 0; i < blocks.length; i++) {
                 telemetry.addData("Block", blocks[i].toString());
 
-                int Xpos = blocks[i].x;
+                if (blocks.length > 0){
+                    if (blocks[i].x < 160){
 
-                int Ypos = blocks[i].y;
+                        sleep(1000);
 
-                double ishan = blocks[i].top;
+                        servo.setPosition(0);
 
-                double anay = blocks[i].left;
+                    }else{
 
-                if (blocks[i].toString().contains("id=1")) {
-                    telemetry.addData("Object", "Scissors");
-                    motor.setTargetPosition(motor.getCurrentPosition() + 300);
-                    motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                    motor.setPower(0.5);
+                        sleep(1000);
 
-                    telemetry.addData("Top", ishan);
-
-                    telemetry.addData("Left", anay);
-
+                        servo.setPosition(1);
+                    }
                 }
-
-
-
-            };
-
-
 
                 /*
                  * Here inside the FOR loop, you could save or evaluate specific info for the currently recognized Bounding Box:
@@ -211,8 +173,7 @@ public class SensorHuskyLens extends LinearOpMode {
                  *
                  * These values have Java type int (integer).
                  */
-
-
+            }
 
             telemetry.update();
         }
