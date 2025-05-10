@@ -39,6 +39,7 @@ import org.opencv.core.RotatedRect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Console;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -337,8 +338,6 @@ public class ConceptVisionColorLocatorREALWith2Servos extends LinearOpMode
 //            telemetry.addData("Found List of Objects: ", blocks.length);
             // Display the size (area) and center location for each Blob.
             for(ColorBlobLocatorProcessor.Blob b : blobs) {
-
-
                 RotatedRect boxFit = b.getBoxFit();
                 if (!blobs.isEmpty()) {
 
@@ -477,31 +476,40 @@ public class ConceptVisionColorLocatorREALWith2Servos extends LinearOpMode
                         double edge1 = Math.hypot(vertices[0].x - vertices[1].x, vertices[0].y - vertices[1].y);
                         double edge2 = Math.hypot(vertices[1].x - vertices[2].x, vertices[1].y - vertices[2].y);
 
-                        startPoint = vertices[0];
-                        endPoint = vertices[1];
+
+                        telemetry.addData("Got defualt angle: ", boxFit.angle);
                         if(edge1 > edge2){
-                            double angle = boxFit.angle;
-                            telemetry.addData("Got angle: ", angle);
+                            telemetry.addData("Got edge: ", "1");
+                            startPoint = vertices[0];
+                            endPoint = vertices[1];
+//                            telemetry.addData("Got angle: ", angle);
                         }
                         else{
-                            double angle = boxFit.angle + 90;
-                            telemetry.addData("Got angle: ", angle);
+                            telemetry.addData("Got edge: ", "2");
+                            startPoint = vertices[1];
+                            endPoint = vertices[2];
+//                            telemetry.addData("Got angle: ", angle);
                         }
-                        telemetry.addData("Point 1: ", vertices[0]);
-                        telemetry.addData("Point 2: ", vertices[1]);
-                        telemetry.addData("Point 3: ", vertices[2]);
-                        telemetry.addData("Point 4: ", vertices[3]);
-                        telemetry.addData("Got length of 1 edge: ", edge1);
-                        telemetry.addData("Got length of another edge: ", edge2);
+//                        telemetry.addData("Point 1: ", vertices[0]);
+//                        telemetry.addData("Point 2: ", vertices[1]);
+//                        telemetry.addData("Point 3: ", vertices[2]);
+//                        telemetry.addData("Point 4: ", vertices[3]);
+//                        telemetry.addData("Got length of 1 edge: ", edge1);
+//                        telemetry.addData("Got length of another edge: ", edge2);
                         angleRad = Math.atan((endPoint.y - startPoint.y) / (endPoint.x - startPoint.x));
 //                        telemetry.addData()
                         double angleDeg = Math.toDegrees(angleRad);
+//                        if(edge1 > edge2){
+//                            angleDeg += 90;
+//                        }
+                        telemetry.addData("Before angle Deg: ", angleDeg);
 
+                        angleDeg = (angleDeg + 360) % 180;
+                        telemetry.addData("After angle deg: ", angleDeg);
                         // Normalize angle to [0, 360)
-                        angleDeg = (angleDeg + 360) % 360;
-                        if (angleDeg >= 270) {
-                            angleDeg -= 180;
-                        }
+//                        if (angleDeg >= 270) {
+//                            angleDeg -= 180;
+//                        }
                         //angle = angleDeg;
 
 //                        if (boxFit.center.y > 360) {
@@ -517,6 +525,7 @@ public class ConceptVisionColorLocatorREALWith2Servos extends LinearOpMode
                                 AngleServo.setPosition(1 - (angleDeg / 180));
                             }
                         }
+                        telemetry.addData("Got angle: ", angle);
 
 //
 //                        if (angle >= 90 - 22.5 && angle < 90 + 22.5) {
