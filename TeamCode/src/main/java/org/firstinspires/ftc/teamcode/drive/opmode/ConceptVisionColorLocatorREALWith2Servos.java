@@ -72,13 +72,21 @@ import java.util.concurrent.CompletableFuture;
 public class ConceptVisionColorLocatorREALWith2Servos extends LinearOpMode
 {
 
-
+    public double angleRad;
+    Point startPoint = null;
+    Point endPoint = null;
+    private final double sampleLength = 3.5;
     public static double sampleHeight = 0;
     public static double cameraHeight = 13;
     public static double cameraMountAngle = 45; //175
     public static double imageCenterY = 360;
     public static double verticalFOV = 43; //37.8
     public static double image_height = 720;
+    public static double angleDeg;
+    public static double sigma = 0;
+
+
+
 
     public static double getDepth(double sampleY){
 
@@ -106,6 +114,17 @@ public class ConceptVisionColorLocatorREALWith2Servos extends LinearOpMode
     public double getHorizontalServoPosition(double xpos) {
         double depthFromClaw = Math.sqrt((armLength*armLength) - (xpos * xpos));
         return (1 - Math.toDegrees(Math.atan(depthFromClaw/ xpos))/180);
+    };
+
+    /**
+     * @param y1 the y value in pixels of one of the corners of the sample
+     * @param y2 another y value in pixels of the other corner
+     */
+    public double getAngle(double y1, double y2){
+        double y1Depth = getDepth(y1);
+        double y2Depth = getDepth(y2);
+        double VerticalDistance = Math.abs(y1 - y2);
+        return Math.toDegrees(Math.atan(VerticalDistance/sampleLength));
     };
     public double servo_position_from_claw;
 
@@ -395,48 +414,42 @@ public class ConceptVisionColorLocatorREALWith2Servos extends LinearOpMode
 //                    SampleY = (boxFit.center.y/lengthPixels) * lengthInches;
 //                    SampleX = (boxFit.center.x/widthPixels) * widthInches;
                     //amount to move
-                    SampleDepth.add(getDepth(360-boxFit.center.y));
+                    SampleDepth.add(getDepth(360 - boxFit.center.y));
                     CompletableFuture.supplyAsync(() -> {
-                        try{
+                        try {
                             SampleDepth.sort(Comparator.comparingDouble(Depth -> Depth));
-                        }
-                        catch (Error e){
+                        } catch (Error e) {
                             return e;
                         }
                         return null;
                     });
-                    SampleX = (boxFit.center.x)/1280 * widthInches;
-                    SampleY = (720 - boxFit.center.y)/720  * lengthInches;
-                    samplePixelX = (boxFit.center.x - 640)/640;
+                    SampleX = (boxFit.center.x) / 1280 * widthInches;
+                    SampleY = (720 - boxFit.center.y) / 720 * lengthInches;
+                    samplePixelX = (boxFit.center.x - 640) / 640;
                     samplePixelY = boxFit.center.y;
                     pixelList.add(new Point(samplePixelX, samplePixelY));
                     CompletableFuture.supplyAsync(() -> {
                         try {
-                            pixelList.sort(Comparator.comparingDouble(point -> point.x*point.x + point.y*point.y));
-                        }
-                        catch (Error error){
+                            pixelList.sort(Comparator.comparingDouble(point -> point.x * point.x + point.y * point.y));
+                        } catch (Error error) {
                             return error;
                         }
                         return null;
                     });
-                    if(boxFit.center.x-640 < 0){
+                    if (boxFit.center.x - 640 < 0) {
                         Xdirection = "Right";
-                    }
-                    else if(boxFit.center.x-640 > 0){
+                    } else if (boxFit.center.x - 640 > 0) {
                         Xdirection = "Left";
-                    }
-                    else{
+                    } else {
 
 
                         Xdirection = "On Sample";
                     }
-                    if(boxFit.center.y-360 < 0){
+                    if (boxFit.center.y - 360 < 0) {
                         Ydirection = "down";
-                    }
-                    else if(boxFit.center.y-360 > 0){
+                    } else if (boxFit.center.y - 360 > 0) {
                         Ydirection = "up";
-                    }
-                    else{
+                    } else {
                         Ydirection = "On Sample";
                     }
 
@@ -445,19 +458,18 @@ public class ConceptVisionColorLocatorREALWith2Servos extends LinearOpMode
                     blobData.add(samplePoint);
                     CompletableFuture.supplyAsync(() -> {
                         try {
-                            blobData.sort(Comparator.comparingDouble(point -> point.x*point.x + point.y*point.y));
-                        }
-                        catch (Error error){
+                            blobData.sort(Comparator.comparingDouble(point -> point.x * point.x + point.y * point.y));
+                        } catch (Error error) {
                             return error;
                         }
                         return null;
                     });
                     length = blobData.toArray().length;
                     //get the degrees to move the servo to the closest sample
-                    Radians = Math.atan(blobData.get(0).y/blobData.get(0).x);
-                    Degrees = (-Math.toDegrees(Radians))+90;
+                    Radians = Math.atan(blobData.get(0).y / blobData.get(0).x);
+                    Degrees = (-Math.toDegrees(Radians)) + 90;
                     //servo.setPosition(Math.abs(Degrees/180));
-                    if(Math.abs(pixelList.get(0).x - boxFit.center.x) < tolerance){
+                   // if (Math.abs(pixelList.get(0).x - boxFit.center.x) < tolerance) {
                         Point[] vertices = new Point[4];
                         boxFit.points(vertices); // Get the 4 corner points of the rectangle
 
@@ -465,36 +477,46 @@ public class ConceptVisionColorLocatorREALWith2Servos extends LinearOpMode
                         double edge1 = Math.hypot(vertices[0].x - vertices[1].x, vertices[0].y - vertices[1].y);
                         double edge2 = Math.hypot(vertices[1].x - vertices[2].x, vertices[1].y - vertices[2].y);
 
-                        // Determine longer edge for direction reference
-                        Point startPoint, endPoint;
-                        if (edge1 > edge2) {
-                            startPoint = vertices[0];
-                            endPoint = vertices[1];
-                        } else {
-                            startPoint = vertices[1];
-                            endPoint = vertices[2];
+                        startPoint = vertices[0];
+                        endPoint = vertices[1];
+                        if(edge1 > edge2){
+                            double angle = boxFit.angle;
+                            telemetry.addData("Got angle: ", angle);
                         }
-
-                        // Calculate angle of the longer edge
-                        double angleRad = Math.atan((endPoint.y - startPoint.y)/(endPoint.x - startPoint.x));
+                        else{
+                            double angle = boxFit.angle + 90;
+                            telemetry.addData("Got angle: ", angle);
+                        }
+                        telemetry.addData("Point 1: ", vertices[0]);
+                        telemetry.addData("Point 2: ", vertices[1]);
+                        telemetry.addData("Point 3: ", vertices[2]);
+                        telemetry.addData("Point 4: ", vertices[3]);
+                        telemetry.addData("Got length of 1 edge: ", edge1);
+                        telemetry.addData("Got length of another edge: ", edge2);
+                        angleRad = Math.atan((endPoint.y - startPoint.y) / (endPoint.x - startPoint.x));
+//                        telemetry.addData()
                         double angleDeg = Math.toDegrees(angleRad);
 
                         // Normalize angle to [0, 360)
                         angleDeg = (angleDeg + 360) % 360;
-                        if (angleDeg >= 270){
+                        if (angleDeg >= 270) {
                             angleDeg -= 180;
                         }
                         //angle = angleDeg;
-                        telemetry.addData("got angle: ", angleDeg);
 
-//                        if(!Double.isNaN(angleDeg)){
-//
-//                            if(angleDeg < 10 || angleDeg > 170){
-//                                AngleServo.setPosition(0.125);
-//                            } else{
-//                                AngleServo.setPosition(1-(angleDeg/180));
-//                            }
+//                        if (boxFit.center.y > 360) {
+//                            angleDeg += sigma;
+//                            telemetry.addData("Got Real Angle: ", angleDeg);
 //                        }
+
+                        if (!Double.isNaN(angleDeg)) {
+
+                            if (angleDeg < 10 || angleDeg > 170) {
+                                AngleServo.setPosition(0.125);
+                            } else {
+                                AngleServo.setPosition(1 - (angleDeg / 180));
+                            }
+                        }
 
 //
 //                        if (angle >= 90 - 22.5 && angle < 90 + 22.5) {
@@ -516,20 +538,23 @@ public class ConceptVisionColorLocatorREALWith2Servos extends LinearOpMode
 //                            AngleServo.setPosition(1);
 //                            telemetry.addData("Orientation:", "HORIZONTAL");
 //                        }
-                    }
+                    //}
+                    // kumbaya
+//                    if ((startPoint != null) && (endPoint != null)) {
+//                        angleDeg = getAngle(startPoint.y, endPoint.y);
+//                    }
                     depth = getDepth(360 - boxFit.center.y);
+                    telemetry.addData("got angle: ", angleDeg);
                     servo_position_from_claw = getHorizontalServoPosition(SampleX);
-                    if(!Double.isNaN(servo_position_from_claw)) {
+                    if (!Double.isNaN(servo_position_from_claw)) {
                         servo.setPosition(servo_position_from_claw);
                     }
-                    if(Double.isNaN(servo_position_from_claw)){
+                    if (Double.isNaN(servo_position_from_claw)) {
                         telemetry.addData("Returned Servo Position is: ", "Not a number");
                     }
+                    telemetry.addData("Angle Rad: ", angleRad);
                     telemetry.addData("Moving claw servo: ", servo_position_from_claw);
-                    telemetry.addData("Old servo pos: ", Math.abs(Degrees/180));
-
-
-                    //depth = getDepth(360 - boxFit.center.y);
+                    telemetry.addData("Old servo pos: ", Math.abs(Degrees / 180));
 
                     telemetry.addData("got depth: ", depth);
 
@@ -545,13 +570,13 @@ public class ConceptVisionColorLocatorREALWith2Servos extends LinearOpMode
 
                     telemetry.addData("Need to move servo: ", Degrees);
 
-                    telemetry.addData("Need to move servo position: ", Degrees/180);
+                    telemetry.addData("Need to move servo position: ", Degrees / 180);
 
                     telemetry.addData("Got blob x: ", boxFit.center.x);
 
                     telemetry.addData("Got closest sample X pixels: ", pixelList.get(0).x);
 
-                   // telemetry.addData("Got First Blob: ", First);
+                    // telemetry.addData("Got First Blob: ", First);
 //                    telemetry.addData("Length Inches: ", lengthInches);
 //                    telemetry.addData("Width Inches: ", widthInches);
 //                    telemetry.addData("AMOUNT TO MOVE X: ", SampleX);
