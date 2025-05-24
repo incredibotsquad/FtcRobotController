@@ -3,7 +3,7 @@ package org.firstinspires.ftc.teamcode;
 import android.util.Log;
 
 import org.firstinspires.ftc.teamcode.RobotConstants.*;
-import com.qualcomm.robotcore.hardware.CRServo;
+
 import com.qualcomm.robotcore.hardware.ColorRangeSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
@@ -14,7 +14,7 @@ import com.qualcomm.robotcore.hardware.Servo;
 
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.teamcode.drive.opmode.IncredibotsArmControl;
+import org.firstinspires.ftc.teamcode.drive.opmode.IncredibotsMechanismControl;
 
 public class RobotHardware {
     //making variables
@@ -29,11 +29,23 @@ public class RobotHardware {
     private DcMotor odoRight;
     private DcMotor odoLeft;
     private DcMotor odoFront;
-    private Servo clawServo;
-    private Servo wristServo;
-    private CRServo leftIntakeServo;
-    private CRServo rightIntakeServo;
+
+
+    public static DcMotorEx horizontalSlideMotor;
+    private Servo horizontalClawServo;
+    private Servo horizontalWristServo;
+    private Servo horizontalElbowServo;
+    private Servo horizontalShoulderServo;
+    private Servo horizontalTurretServo;
     private ColorRangeSensor colorSensor;
+
+    public static DcMotorEx verticalSlideMotor1;
+    public static DcMotorEx verticalSlideMotor2;
+
+    private Servo verticalClawServo;
+    private Servo verticalWristServo;
+    private Servo verticalElbowServo;
+    private Servo verticalShoulderServo;
 
 
      //making constructor
@@ -59,62 +71,105 @@ public class RobotHardware {
          leftBackDriveMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
          leftBackDriveMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
-         armMotor = hwMap.get(DcMotorEx.class,"ArmMotor");
-         armMotor.setDirection(DcMotorSimple.Direction.REVERSE);
-         armMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-         armMotor.setTargetPosition(0);
-         armMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-         armMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-
-         slideMotor = hwMap.get(DcMotorEx.class, "SlideMotor");
-         slideMotor.setDirection(DcMotorSimple.Direction.REVERSE);
-         slideMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-         slideMotor.setTargetPosition(0);
-         slideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-         slideMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-
          odoRight = rightBackDriveMotor;
          odoLeft = leftBackDriveMotor;
          odoFront = rightFrontDriveMotor;
 
-         clawServo = hwMap.get(Servo.class, "ClawServo");
-         wristServo = hwMap.get(Servo.class, "WristServo");
-         leftIntakeServo = hwMap.get(CRServo.class, "LeftIntake");
-         rightIntakeServo = hwMap.get(CRServo.class, "RightIntake");
+         // horizontal stack
+         horizontalSlideMotor = hwMap.get(DcMotorEx.class, "HorizontalSlideMotor");
+         horizontalSlideMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+         horizontalSlideMotor.setTargetPosition(0);
+         horizontalSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+         horizontalSlideMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
+         horizontalClawServo = hwMap.get(Servo.class, "HorizontalClawServo");
+         horizontalWristServo = hwMap.get(Servo.class, "HorizontalWristServo");
+         horizontalElbowServo = hwMap.get(Servo.class, "HorizontalElbowServo");
+         horizontalShoulderServo = hwMap.get(Servo.class, "HorizontalShoulderServo");
+         horizontalTurretServo = hwMap.get(Servo.class, "HorizontalTurretServo");
          colorSensor = hwMap.get(ColorRangeSensor.class, "ColorSensor");
+
+         // vertical stack
+         verticalSlideMotor1 = hwMap.get(DcMotorEx.class, "VerticalSlideMotor1");
+         verticalSlideMotor1.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+         verticalSlideMotor1.setTargetPosition(0);
+         verticalSlideMotor1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+         verticalSlideMotor1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+         verticalSlideMotor2 = hwMap.get(DcMotorEx.class, "VerticalSlideMotor2");
+         verticalSlideMotor2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+         verticalSlideMotor2.setDirection(DcMotorSimple.Direction.REVERSE);
+         verticalSlideMotor2.setTargetPosition(0);
+         verticalSlideMotor2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+         verticalSlideMotor2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+         verticalClawServo = hwMap.get(Servo.class, "VerticalClawServo");
+         verticalWristServo = hwMap.get(Servo.class, "VerticalWristServo");
+         verticalElbowServo = hwMap.get(Servo.class, "VerticalElbowServo");
+         verticalShoulderServo = hwMap.get(Servo.class, "VerticalShoulderServo");
 
          imu = hwMap.get(IMU.class, "imu");
      }
 
-     public void operateIntake(boolean intake) {
-         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " OPERATING INTAKE: " + intake);
+     public boolean getHorizontalClawState () {
+         return horizontalClawServo.getPosition() == RobotConstants.HORIZONTAL_CLAW_OPEN;
+     }
 
-         if (intake) {
-             leftIntakeServo.setPower(1);
-             rightIntakeServo.setPower(-1);
+     public void setHorizontalClawState(boolean open) {
+         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " operateHorizontalClaw: " + open);
+
+         if (open) {
+             horizontalClawServo.setPosition(RobotConstants.HORIZONTAL_CLAW_OPEN);
          }
          else {
-             leftIntakeServo.setPower(-1);
-             rightIntakeServo.setPower(1);
+             horizontalClawServo.setPosition(RobotConstants.HORIZONTAL_CLAW_CLOSE);
          }
      }
 
-     public void stopIntake() {
-         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " STOPPING INTAKE: ");
+     public double getHorizontalWristServoPosition() {
+         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getHorizontalWristServoPosition");
 
-         leftIntakeServo.setPower(0);
-         rightIntakeServo.setPower(0);
+         return horizontalWristServo.getPosition();
      }
 
-     public void ejectSampleFromIntake() {
-         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " EJECTING FROM INTAKE: ");
+     public void setHorizontalWristServoPosition(double pos) {
+         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " setHorizontalWristServoPosition: " + pos);
+         horizontalWristServo.setPosition(pos);
+     }
 
-         leftIntakeServo.setPower(-0.1);
-         rightIntakeServo.setPower(0.1);
+     public double getHorizontalElbowServoPosition() {
+         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getHorizontalElbowServoPosition");
+         return horizontalElbowServo.getPosition();
+     }
+
+     public void setHorizontalElbowServoPosition(double pos) {
+         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " setHorizontalElbowServoPosition: " + pos);
+         horizontalElbowServo.setPosition(pos);
+     }
+
+     public double getHorizontalShoulderServoPosition() {
+         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getHorizontalShoulderServoPosition");
+         return horizontalShoulderServo.getPosition();
+     }
+
+     public void setHorizontalShoulderServo(double pos) {
+         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " setHorizontalShoulderServo: " + pos);
+         horizontalShoulderServo.setPosition(pos);
+     }
+
+     public double getHorizontalTurretServoPosition() {
+         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getHorizontalTurretServoPosition");
+         return horizontalTurretServo.getPosition();
+     }
+
+     public void setHorizontalTurretServoPosition(double pos) {
+         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " setHorizontalTurretServoPosition: " + pos);
+         horizontalTurretServo.setPosition(pos);
      }
 
      public GAME_COLORS getDetectedColor(){
+         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getDetectedColor");
+
          if (colorSensor.red() > colorSensor.green() && colorSensor.red() > colorSensor.blue()) {
              return GAME_COLORS.RED;
          }
@@ -126,111 +181,90 @@ public class RobotHardware {
          return GAME_COLORS.OTHER;
     }
 
-
-     public boolean isIntakeOn() {
-         return leftIntakeServo.getPower() !=0 || rightIntakeServo.getPower() != 0;
-     }
-
-    private int GetSlideVelocity(int slidePos) {
-        //contract faster than expanding
-        return (slidePos < getSlidePos())? IncredibotsArmControl.SLIDE_VELOCITY_CONTRACTING : IncredibotsArmControl.SLIDE_VELOCITY_EXPANDING;
+    public int getHorizontalSlidePosition() {
+        return horizontalSlideMotor.getCurrentPosition();
     }
 
-    public void setSlidePosition(int pos) {
-        setSlidePositionAndVelocity(pos, GetSlideVelocity(pos));
+    public void setHorizontalSlidePosition(int pos) {
+        horizontalSlideMotor.setTargetPosition(pos);
+        horizontalSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        horizontalSlideMotor.setVelocity(RobotConstants.HORIZONTAL_SLIDE_VELOCITY);
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " setHorizontalSlidePosition: " + pos + " AND VELOCITY: " + RobotConstants.HORIZONTAL_SLIDE_VELOCITY);
     }
 
-    // Sets the slide's position and velocity
-    public void setSlidePositionAndVelocity(int pos, double velocity) {
-        slideMotor.setTargetPosition(pos);
-        slideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        slideMotor.setVelocity(velocity);
-        Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " SETTING SLIDE MOTOR POSITION: " + pos + " AND VELOCITY: " + velocity);
+    // function to check proximity sensors and ensure the motor stops
+    public void horizontalSlideSafetyChecks()
+    {}
+
+    public boolean getVerticalClawState() {
+         return verticalClawServo.getPosition() == RobotConstants.VERTICAL_CLAW_OPEN;
     }
 
-    //returns if slide motor is moving currently
-    public boolean isSlideMotorBusy() {
-         return slideMotor.isBusy();
-     }
+    public void setVerticalClawState(boolean open) {
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " operateVerticalClaw: " + open);
 
-    //returns the slide motor position
-    public int getSlidePos() {
-        return slideMotor.getCurrentPosition();
-    }
-
-    // Sets the left arm's position and velocity
-    public void setClawArmPositionAndVelocity(int pos, double velocity) {
-        armMotor.setTargetPosition(pos);
-        armMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        armMotor.setVelocity(velocity);
-        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " SETTING CLAW ARM POSITION: " + pos + " AND VELOCITY: " + velocity);
-    }
-
-    //returns if the arm motor is moving currently
-    public boolean isClawArmMotorBusy() {
-         return armMotor.isBusy();
-    }
-
-    // Returns the claw arm position
-    public int getClawArmMotorPos() {
-        return armMotor.getCurrentPosition();
-    }
-
-    //decides either to open or close the claw servo
-    public void operateClawServo(boolean open) {
-        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " SETTING CLAW SERVO OPEN: " + open);
-        clawServo.setPosition(open? IncredibotsArmControl.CLAW_OPEN_POSITION: IncredibotsArmControl.CLAW_CLOSE_POSITION);
-    }
-
-    public void operateClawServo(double position) {
-        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " SETTING CLAW SERVO CUSTOM POSITION: " + position);
-        clawServo.setPosition(position);
-    }
-
-    //get Claw servo position
-    public double getClawServoPosition() {
-         return clawServo.getPosition();
-    }
-
-    public void operateWristServo(double position) {
-        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " SETTING WRIST SERVO POSITION: " + position);
-        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " WRIST SERVO DIRECTION: " + wristServo.getDirection());
-
-        wristServo.setPosition(position);
-    }
-
-    public double getWristServoPosition() {
-         return wristServo.getPosition();
-    }
-
-    public void stopSlide() {
-        Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " STOPPING SLIDE ");
-        setSlidePosition(getSlidePos());
-    }
-
-    public void stopClawArm() {
-        Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " STOPPING CLAW ARM ");
-        setClawArmPositionAndVelocity(getClawArmMotorPos(), IncredibotsArmControl.CLAW_ARM_VELOCITY);
-    }
-
-    public void stopAndResetSlideEncoder() {
-        Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " RESETTING SLIDE ENCODER");
-        slideMotor.setPower(0);
-        slideMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        setSlidePosition(0);
-    }
-
-    public void stopAndResetArmEncoder() {
-        Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " RESETTING ARM ENCODER");
-        armMotor.setPower(0);
-        try {
-            Thread.sleep(1000);
-            Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " RESETTING ARM ENCODER - WAIT FOR ARM FALL");
-        } catch (InterruptedException e) {
-            Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " RESETTING ARM ENCODER - WAIT FOR ARM FALL");
+        if (open) {
+            verticalClawServo.setPosition(RobotConstants.VERTICAL_CLAW_OPEN);
         }
-        armMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        setClawArmPositionAndVelocity(0, IncredibotsArmControl.CLAW_ARM_VELOCITY);
+        else {
+            verticalClawServo.setPosition(RobotConstants.VERTICAL_CLAW_CLOSE);
+        }
+    }
+
+    public double getVerticalWristServoPosition() {
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getVerticalWristServoPosition");
+
+        return verticalWristServo.getPosition();
+    }
+
+    public void setVerticalWristServoPosition(double pos) {
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " setVerticalWristServoPosition: " + pos);
+        verticalWristServo.setPosition(pos);
+    }
+
+    public double getVerticalElbowServoPosition() {
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getVerticalElbowServoPosition");
+        return verticalElbowServo.getPosition();
+    }
+
+    public void setVerticalElbowServoPosition(double pos) {
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " setVerticalElbowServoPosition: " + pos);
+        verticalElbowServo.setPosition(pos);
+    }
+
+    public double getVerticalShoulderServoPosition() {
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getVerticalShoulderServoPosition");
+        return verticalShoulderServo.getPosition();
+    }
+
+    public void setVerticalShoulderServo(double pos) {
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " setVerticalShoulderServo: " + pos);
+        verticalShoulderServo.setPosition(pos);
+    }
+
+    //function to return the minimum of 2 motors on the vertical slide.
+    public int getVerticalSlidePosition() {
+        return Math.min(verticalSlideMotor1.getCurrentPosition(), verticalSlideMotor2.getCurrentPosition());
+    }
+
+    public void setVerticalSlidePosition(int pos) {
+        verticalSlideMotor1.setTargetPosition(pos);
+        verticalSlideMotor2.setTargetPosition(pos);
+
+        verticalSlideMotor1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        verticalSlideMotor2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+        verticalSlideMotor1.setVelocity(RobotConstants.VERTICAL_SLIDE_VELOCITY);
+        verticalSlideMotor2.setVelocity(RobotConstants.VERTICAL_SLIDE_VELOCITY);
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " setVerticalSlidePosition: " + pos + " AND VELOCITY: " + RobotConstants.VERTICAL_SLIDE_VELOCITY);
+    }
+
+    // function to check proximity sensors and ensure the motor stops
+    public void verticalSlideSafetyChecks()
+    {
+//        slideMotor.setPower(0);
+//        slideMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+//        setSlidePosition(0);
     }
 
 

@@ -70,8 +70,8 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
 
     public static double POWER_RATIO = 0.6;
 
-    RobotHardware myHardware;
-    IncredibotsArmControl armControl;
+    RobotHardware robotHardware;
+    IncredibotsMechanismControl incredibotsMechanismControl;
     RobotConstants.GAME_COLORS gameColor;
 
 
@@ -87,8 +87,8 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
 
         // Initialize the hardware variables. Note that the strings used here must correspond
         // to the names assigned during the robot configuration step on the DS or RC devices.
-        myHardware = new RobotHardware(this.hardwareMap);
-        armControl = new IncredibotsArmControl(gamepad2, myHardware);
+        robotHardware = new RobotHardware(this.hardwareMap);
+        incredibotsMechanismControl = new IncredibotsMechanismControl(gamepad2, robotHardware);
 //
 //        leftFrontDrive  = hardwareMap.get(DcMotor.class, "left_front_drive");
 //        leftBackDrive  = hardwareMap.get(DcMotor.class, "left_back_drive");
@@ -116,14 +116,14 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
 
             if (gamepad1.x || gamepad2.x) {
                 gameColor = RobotConstants.GAME_COLORS.BLUE;
-                armControl.setGameColor(gameColor);
+                incredibotsMechanismControl.setGameColor(gameColor);
                 telemetry.addData("Game Color: ", gameColor);
                 telemetry.update();
             }
 
             if (gamepad1.b || gamepad2.b) {
                 gameColor = RobotConstants.GAME_COLORS.RED;
-                armControl.setGameColor(gameColor);
+                incredibotsMechanismControl.setGameColor(gameColor);
                 telemetry.addData("Game Color: ", gameColor);
                 telemetry.update();}
         }
@@ -181,18 +181,25 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
             */
 
             // Sets the drive motor powers
-            myHardware.setDriveMotorPowers(rightFrontPower, leftFrontPower, rightBackPower, leftBackPower);
+            robotHardware.setDriveMotorPowers(rightFrontPower, leftFrontPower, rightBackPower, leftBackPower);
 
             // Show the elapsed game time and wheel power.
             telemetry.addData("Front left/Right", "%4.2f, %4.2f", leftFrontPower, rightFrontPower);
             telemetry.addData("Back  left/Right", "%4.2f, %4.2f", leftBackPower, rightBackPower);
-            telemetry.addData("Arm Position: ", myHardware.getClawArmMotorPos());
-            telemetry.addData("Slide Position", myHardware.getSlidePos());
-            telemetry.addData("Claw servo position ", myHardware.getClawServoPosition());
-            telemetry.addData("Wrist Servo position", myHardware.getWristServoPosition());
+
+            telemetry.addData("Horizontal Claw: ", robotHardware.getHorizontalClawState());
+            telemetry.addData("Horizontal Wrist: ", robotHardware.getHorizontalWristServoPosition());
+            telemetry.addData("Horizontal Elbow: ", robotHardware.getHorizontalElbowServoPosition());
+            telemetry.addData("Horizontal Shoulder: ", robotHardware.getHorizontalShoulderServoPosition());
+            telemetry.addData("Horizontal Turret: ", robotHardware.getHorizontalTurretServoPosition());
+
+            telemetry.addData("Vertical Claw: ", robotHardware.getVerticalClawState());
+            telemetry.addData("Vertical Wrist: ", robotHardware.getVerticalWristServoPosition());
+            telemetry.addData("Vertical Elbow: ", robotHardware.getVerticalElbowServoPosition());
+            telemetry.addData("Vertical Shoulder: ", robotHardware.getVerticalShoulderServoPosition());
 
             // calls the process inputs function from the arm control class
-            armControl.ProcessInputs(telemetry);
+            incredibotsMechanismControl.ProcessInputs(telemetry);
             //updates telemetry
             telemetry.update();
 
