@@ -24,8 +24,6 @@ public class RobotHardware {
     private DcMotorEx leftFrontDriveMotor;
     private DcMotorEx rightBackDriveMotor;
     private DcMotorEx leftBackDriveMotor;
-    public static DcMotorEx armMotor;
-    public static DcMotorEx slideMotor;
     private DcMotor odoRight;
     private DcMotor odoLeft;
     private DcMotor odoFront;
