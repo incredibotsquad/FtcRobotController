@@ -1,0 +1,849 @@
+package org.firstinspires.ftc.teamcode.drive.opmode;
+
+import android.util.Log;
+
+import com.acmerobotics.dashboard.config.Config;
+import com.qualcomm.robotcore.hardware.Gamepad;
+
+import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.teamcode.RobotConstants;
+import org.firstinspires.ftc.teamcode.RobotHardware;
+
+@Config
+public class RobotControl
+{
+    RobotConstants.GAME_COLORS gameColor;
+
+    //HORIZONTAL CLAW CONSTANTS
+
+
+    private Gamepad gamepad2;
+    private RobotHardware robotHardware;
+
+
+    private enum ROBOT_STATE {
+        NONE,
+        RESTING,
+        RESET_ENCODERS,
+        PICK_SAMPLE,
+        TRANSFER_SAMPLE,
+        TRANSFER_TO_OB_ZONE,
+        LOW_BASKET,
+        HIGH_BASKET,
+        PICK_SPECIMEN,
+        SNAP_SPECIMEN,
+        ROBOT_HANG,
+        ENTER_EXIT_SUB
+    }
+
+    private ROBOT_STATE currentRobotState;
+    private ROBOT_STATE targetRobotState;
+
+
+    public RobotControl(Gamepad gamepad, RobotHardware robotHardware) {
+        gamepad2 = gamepad;
+        this.robotHardware = robotHardware;
+        currentRobotState = ROBOT_STATE.NONE;
+        targetRobotState = ROBOT_STATE.NONE;
+    }
+
+    public void ProcessInputs(Telemetry telemetry) {
+
+        CreateStateFromButtonPress();
+
+        ProcessState();
+
+        ProcessSafetyChecks();
+//
+//        ProcessDPad();
+//
+//        HandleManualOverride();
+
+
+        HandleMotorCurrentProblems();
+    }
+
+    private void ProcessSafetyChecks() {
+        robotHardware.horizontalSlideSafetyChecks();
+        robotHardware.verticalSlideSafetyChecks();
+    }
+
+    public void setGameColor(RobotConstants.GAME_COLORS gameColor) {
+        this.gameColor = gameColor;
+    }
+
+    //Function to create a state from Gamepad inputs
+    private void CreateStateFromButtonPress() {
+
+        ROBOT_STATE newTargetRobotState =  targetRobotState;
+
+        //Back button maps to resting
+        if (gamepad2.back) {
+            newTargetRobotState = ROBOT_STATE.RESTING;
+        }
+
+        //Back + Start to reset the slide encoder
+        if (gamepad2.back && gamepad2.start) {
+            newTargetRobotState = ROBOT_STATE.RESET_ENCODERS;
+        }
+
+        //Hang the robot with start + left/right triggers
+        if (gamepad2.start && gamepad2.left_trigger > 0 && gamepad2.right_trigger > 0) {
+            newTargetRobotState = ROBOT_STATE.ROBOT_HANG;
+        }
+
+        if (gamepad2.a){
+            //left trigger + A to pick specimen
+            if (gamepad2.left_trigger > 0) {
+                newTargetRobotState = ROBOT_STATE.PICK_SPECIMEN;
+            }
+            //right trigger + A to pick samples
+            else if (gamepad2.right_trigger > 0) {
+                newTargetRobotState = ROBOT_STATE.PICK_SAMPLE;
+            }
+        }
+
+        if (gamepad2.b) {
+            //left trigger + B to snap specimen
+            if (gamepad2.left_trigger > 0) {
+                newTargetRobotState = ROBOT_STATE.SNAP_SPECIMEN;
+            }
+            // right trigger + B for low basket
+            else if (gamepad2.right_trigger > 0) {
+                newTargetRobotState = ROBOT_STATE.LOW_BASKET;
+            }
+        }
+
+        if (newTargetRobotState != currentRobotState) {
+
+            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "TRANSITIONING STATE CURRENT: " + targetRobotState + " TARGET: " + newTargetRobotState);
+
+            if (currentRobotState != targetRobotState) {
+                //TODO: STOP ALL PROCESSING - STATE TRANSITION WAS GOING ON WHEN NEW STATE WAS CALLED IN
+
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "STOPPING! STATE TRANSITION WAS GOING ON WHEN NEW TARGET WAS CALLED IN. OLD TARGET: " + targetRobotState + " NEW TARGET: " + newTargetRobotState);
+            }
+
+            targetRobotState = newTargetRobotState;
+        }
+    }
+
+    //functions to take gamepad inputs and turn it into movements
+    private void ProcessState() {
+
+        if (currentRobotState == targetRobotState) return;
+
+        switch (targetRobotState) {
+
+            case RESTING:
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: RESTING");
+
+                robotHardware.setVerticalClawState(false);
+                robotHardware.setVerticalShoulderServoPosition(RobotConstants.VERTICAL_SHOULDER_RESTING);
+                robotHardware.setVerticalElbowServoPosition(RobotConstants.VERTICAL_ELBOW_RESTING);
+                robotHardware.setVerticalWristServoPosition(RobotConstants.VERTICAL_WRIST_RESTING);
+                robotHardware.setVerticalSlidePosition(RobotConstants.VERTICAL_SLIDE_RESTING);
+
+                robotHardware.setHorizontalTurretServoPosition(RobotConstants.HORIZONTAL_TURRET_RESTING);
+                robotHardware.setHorizontalClawState(false);
+                robotHardware.setHorizontalShoulderServo(RobotConstants.HORIZONTAL_SHOULDER_RESTING);
+                robotHardware.setHorizontalElbowServoPosition(RobotConstants.HORIZONTAL_ELBOW_RESTING);
+                robotHardware.setHorizontalWristServoPosition(RobotConstants.HORIZONTAL_WRIST_RESTING);
+                robotHardware.setHorizontalSlidePosition(RobotConstants.HORIZONTAL_SLIDE_RESTING);
+
+                // WHEN THE SLIDES ARE DONE MOVING, WE ARE DONE PROCESSING
+                if ((Math.abs(robotHardware.getHorizontalSlidePosition() - RobotConstants.HORIZONTAL_SLIDE_RESTING) < RobotConstants.SLIDE_POSITION_TOLERANCE)  &&
+                        Math.abs(robotHardware.getVerticalSlidePosition() - RobotConstants.VERTICAL_SLIDE_RESTING)  < RobotConstants.SLIDE_POSITION_TOLERANCE) {
+                    currentRobotState = targetRobotState;
+                }
+
+                break;
+
+            case RESET_ENCODERS:
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: RESET ENCODERS");
+
+                currentRobotState = targetRobotState;
+                break;
+
+            case PICK_SAMPLE:   //PICK SAMPLE
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: PICK SAMPLE");
+
+                //TODO: THESE NEED TO COME FROM THE CAMERA
+                robotHardware.setHorizontalClawState(true);
+                robotHardware.setHorizontalTurretServoPosition(RobotConstants.HORIZONTAL_TURRET_PICK_SAMPLE);
+                robotHardware.setHorizontalShoulderServo(RobotConstants.HORIZONTAL_SHOULDER_PICK_SAMPLE);
+                robotHardware.setHorizontalElbowServoPosition(RobotConstants.HORIZONTAL_ELBOW_PICK_SAMPLE);
+                robotHardware.setHorizontalWristServoPosition(RobotConstants.HORIZONTAL_WRIST_PICK_SAMPLE);
+                robotHardware.setHorizontalSlidePosition(RobotConstants.HORIZONTAL_SLIDE_PICK_SAMPLE);
+
+                // VERTICAL GET READY FOR TRANSFER
+                robotHardware.setVerticalClawState(true);
+                robotHardware.setVerticalShoulderServoPosition(RobotConstants.VERTICAL_SHOULDER_TRANSFER);
+                robotHardware.setVerticalElbowServoPosition(RobotConstants.VERTICAL_ELBOW_TRANSFER);
+                robotHardware.setVerticalWristServoPosition(RobotConstants.VERTICAL_WRIST_TRANSFER);
+                robotHardware.setVerticalSlidePosition(RobotConstants.VERTICAL_SLIDE_TRANSFER);
+
+                currentRobotState = targetRobotState;
+                break;
+
+            case TRANSFER_SAMPLE:
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: TRANSFER SAMPLE");
+
+                robotHardware.setHorizontalTurretServoPosition(RobotConstants.HORIZONTAL_TURRET_TRANSFER);
+                robotHardware.setHorizontalShoulderServo(RobotConstants.HORIZONTAL_SHOULDER_TRANSFER);
+                robotHardware.setHorizontalElbowServoPosition(RobotConstants.HORIZONTAL_ELBOW_TRANSFER);
+                robotHardware.setHorizontalWristServoPosition(RobotConstants.HORIZONTAL_WRIST_TRANSFER);
+                robotHardware.setHorizontalSlidePosition(RobotConstants.HORIZONTAL_SLIDE_TRANSFER);
+
+                // VERTICAL STATE SHOULD HAVE ALREADY BEEN DONE DURING PICK SAMPLE
+                robotHardware.setVerticalClawState(true);
+                robotHardware.setVerticalShoulderServoPosition(RobotConstants.VERTICAL_SHOULDER_TRANSFER);
+                robotHardware.setVerticalElbowServoPosition(RobotConstants.VERTICAL_ELBOW_TRANSFER);
+                robotHardware.setVerticalWristServoPosition(RobotConstants.VERTICAL_WRIST_TRANSFER);
+                robotHardware.setVerticalSlidePosition(RobotConstants.VERTICAL_SLIDE_TRANSFER);
+
+                robotHardware.setVerticalClawState(false);  //close vertical claw
+                try {
+                    Thread.sleep(100);
+                }
+                catch (InterruptedException e) {
+                }
+
+                robotHardware.setHorizontalClawState(true); //open horizontal claw
+
+                currentRobotState = targetRobotState;
+
+                break;
+
+            case TRANSFER_TO_OB_ZONE:
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: TRANSFER TO OBSERVATION ZONE");
+
+                //TODO: MOVE ROBOT TO OB ZONE
+                robotHardware.setHorizontalTurretServoPosition(RobotConstants.HORIZONTAL_TURRET_TRANSFER);
+                robotHardware.setHorizontalShoulderServo(RobotConstants.HORIZONTAL_SHOULDER_TRANSFER);
+                robotHardware.setHorizontalElbowServoPosition(RobotConstants.HORIZONTAL_ELBOW_TRANSFER);
+                robotHardware.setHorizontalWristServoPosition(RobotConstants.HORIZONTAL_WRIST_TRANSFER);
+                robotHardware.setHorizontalSlidePosition(RobotConstants.HORIZONTAL_SLIDE_TRANSFER);
+
+                robotHardware.setVerticalShoulderServoPosition(RobotConstants.VERTICAL_SHOULDER_DROP_SAMPLE_OBZONE);
+                robotHardware.setVerticalElbowServoPosition(RobotConstants.VERTICAL_ELBOW_DROP_SAMPLE_OBZONE);
+                robotHardware.setVerticalWristServoPosition(RobotConstants.VERTICAL_WRIST_DROP_SAMPLE_OBZONE);
+                robotHardware.setVerticalSlidePosition(RobotConstants.VERTICAL_SLIDE_DROP_SAMPLE_OBZONE);
+
+                robotHardware.setVerticalClawState(true);  //close vertical claw
+                try {
+                    Thread.sleep(100);
+                }
+                catch (InterruptedException e) {
+                }
+
+                currentRobotState = targetRobotState;
+
+                break;
+
+            case LOW_BASKET:   //LOW BASKET
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: LOW BASKET");
+
+                // HORIZONTAL STATE SHOULD HAVE ALREADY BEEN DONE DURING TRANSFER
+                robotHardware.setHorizontalTurretServoPosition(RobotConstants.HORIZONTAL_TURRET_TRANSFER);
+                robotHardware.setHorizontalShoulderServo(RobotConstants.HORIZONTAL_SHOULDER_TRANSFER);
+                robotHardware.setHorizontalElbowServoPosition(RobotConstants.HORIZONTAL_ELBOW_TRANSFER);
+                robotHardware.setHorizontalWristServoPosition(RobotConstants.HORIZONTAL_WRIST_TRANSFER);
+                robotHardware.setHorizontalSlidePosition(RobotConstants.HORIZONTAL_SLIDE_TRANSFER);
+
+                // TODO: MOVE ROBOT TO BASKET COORDINATES
+
+                robotHardware.setVerticalSlidePosition(RobotConstants.VERTICAL_SLIDE_DROP_LOW_SAMPLE);
+                robotHardware.setVerticalElbowServoPosition(RobotConstants.VERTICAL_ELBOW_DROP_LOW_SAMPLE);
+                robotHardware.setVerticalWristServoPosition(RobotConstants.VERTICAL_WRIST_DROP_LOW_SAMPLE);
+                robotHardware.setVerticalShoulderServoPosition(RobotConstants.VERTICAL_SHOULDER_DROP_LOW_SAMPLE);
+
+                if (1 == 1) {   // TODO: update to check robot position
+                    robotHardware.setVerticalClawState(true);  //open vertical claw
+                    currentRobotState = targetRobotState;
+                    targetRobotState = ROBOT_STATE.PICK_SAMPLE;
+                }
+
+                break;
+            case HIGH_BASKET:   //HIGH BASKET
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: HIGH BASKET");
+
+                // HORIZONTAL STATE SHOULD HAVE ALREADY BEEN DONE DURING TRANSFER
+                robotHardware.setHorizontalTurretServoPosition(RobotConstants.HORIZONTAL_TURRET_TRANSFER);
+                robotHardware.setHorizontalShoulderServo(RobotConstants.HORIZONTAL_SHOULDER_TRANSFER);
+                robotHardware.setHorizontalElbowServoPosition(RobotConstants.HORIZONTAL_ELBOW_TRANSFER);
+                robotHardware.setHorizontalWristServoPosition(RobotConstants.HORIZONTAL_WRIST_TRANSFER);
+                robotHardware.setHorizontalSlidePosition(RobotConstants.HORIZONTAL_SLIDE_TRANSFER);
+
+                // TODO: MOVE ROBOT TO BASKET COORDINATES
+
+                robotHardware.setVerticalShoulderServoPosition(RobotConstants.VERTICAL_SHOULDER_DROP_HIGH_SAMPLE);
+                robotHardware.setVerticalSlidePosition(RobotConstants.VERTICAL_SLIDE_DROP_HIGH_SAMPLE);
+                robotHardware.setVerticalElbowServoPosition(RobotConstants.VERTICAL_ELBOW_DROP_HIGH_SAMPLE);
+                robotHardware.setVerticalWristServoPosition(RobotConstants.VERTICAL_WRIST_DROP_HIGH_SAMPLE);
+
+                if (1 == 1) {   // TODO: update to check robot position
+                    robotHardware.setVerticalClawState(true);  //open vertical claw
+                    currentRobotState = targetRobotState;
+                    targetRobotState = ROBOT_STATE.PICK_SAMPLE;
+                }
+
+                break;
+
+            case PICK_SPECIMEN:   //PICK SPECIMEN
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: PICK SPECIMEN");
+
+                //TODO: MOVE ROBOT TO PICK SPECIMEN
+
+                // HORIZONTAL STATE SHOULD HAVE ALREADY BEEN DONE DURING TRANSFER
+                robotHardware.setHorizontalTurretServoPosition(RobotConstants.HORIZONTAL_TURRET_PICK_SPECIMEN);
+                robotHardware.setHorizontalShoulderServo(RobotConstants.HORIZONTAL_SHOULDER_PICK_SPECIMEN);
+                robotHardware.setHorizontalElbowServoPosition(RobotConstants.HORIZONTAL_ELBOW_PICK_SPECIMEN);
+                robotHardware.setHorizontalWristServoPosition(RobotConstants.HORIZONTAL_WRIST_PICK_SPECIMEN);
+                robotHardware.setHorizontalSlidePosition(RobotConstants.HORIZONTAL_SLIDE_PICK_SPECIMEN);
+
+                robotHardware.setVerticalShoulderServoPosition(RobotConstants.VERTICAL_SHOULDER_PICK_SPECIMEN);
+                robotHardware.setVerticalSlidePosition(RobotConstants.VERTICAL_SLIDE_PICK_SPECIMEN);
+                robotHardware.setVerticalElbowServoPosition(RobotConstants.VERTICAL_ELBOW_PICK_SPECIMEN);
+                robotHardware.setVerticalWristServoPosition(RobotConstants.VERTICAL_WRIST_PICK_SPECIMEN);
+
+                currentRobotState = targetRobotState;
+
+                break;
+
+            case SNAP_SPECIMEN:   //SNAP SPECIMEN
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: SNAP SPECIMEN");
+
+                //TODO: MOVE ROBOT TO SNAP SPECIMEN
+
+                // HORIZONTAL STATE SHOULD HAVE ALREADY BEEN DONE DURING PICK SPECIMEN
+                robotHardware.setHorizontalTurretServoPosition(RobotConstants.HORIZONTAL_TURRET_PICK_SPECIMEN);
+                robotHardware.setHorizontalShoulderServo(RobotConstants.HORIZONTAL_SHOULDER_PICK_SPECIMEN);
+                robotHardware.setHorizontalElbowServoPosition(RobotConstants.HORIZONTAL_ELBOW_PICK_SPECIMEN);
+                robotHardware.setHorizontalWristServoPosition(RobotConstants.HORIZONTAL_WRIST_PICK_SPECIMEN);
+                robotHardware.setHorizontalSlidePosition(RobotConstants.HORIZONTAL_SLIDE_PICK_SPECIMEN);
+
+                robotHardware.setVerticalSlidePosition(RobotConstants.VERTICAL_SLIDE_SNAP_HIGH_SPECIMEN);
+                robotHardware.setVerticalElbowServoPosition(RobotConstants.VERTICAL_ELBOW_SNAP_HIGH_SPECIMEN);
+                robotHardware.setVerticalWristServoPosition(RobotConstants.VERTICAL_WRIST_SNAP_HIGH_SPECIMEN);
+                robotHardware.setVerticalShoulderServoPosition(RobotConstants.VERTICAL_SHOULDER_SNAP_HIGH_SPECIMEN);
+
+                currentRobotState = targetRobotState;
+
+                break;
+
+            case ROBOT_HANG: //SLIDE CLOSED, ARM RESTING
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: ROBOT HANG");
+
+
+                break;
+
+
+            case ENTER_EXIT_SUB:   //ENTER /EXIT SUB
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: ENTER EXIT SUB." );
+
+                //this mode will flip flop between entering and exiting sub
+                //when entering, we need a particular sequence of things
+                //when exiting, they can be in parallel.
+
+                //can execute things in parallel if the arm is close to its target
+                //this indicates the robot is in the position to pick samples from sub
+//                if (Math.abs(ENTER_SUB_ARM - robotHardware.getClawArmMotorPos()) < 600) {
+//                    Log.i("=== INCREDIBOTS ===", "PROCESSING RT/X - MOVING SLIDE / ARM IN PARALLEL AFTER SAMPLE");
+//                    robotHardware.operateWristServo(ENTER_SUB_WRIST);
+//                    robotHardware.operateClawServo(false);
+//                    robotHardware.setClawArmPositionAndVelocity(ENTER_SUB_ARM, CLAW_ARM_VELOCITY);
+//                    robotHardware.setSlidePosition(ENTER_SUB_SLIDE);
+//                    robotHardware.operateIntake(true);
+//                    robotState = ROBOT_STATE.NONE;
+//                }
+//                else {
+//                    robotHardware.operateWristServo(ENTER_SUB_WRIST);
+//                    robotHardware.operateClawServo(false);
+//
+//                    if (!robotHardware.isSlideMotorBusy() && robotHardware.getSlidePos() != ENTER_SUB_SLIDE) {
+//                        Log.i("=== INCREDIBOTS ===", "PROCESSING ENTER EXIT SUB - SLIDE IS MOVING");
+//                        robotHardware.setSlidePosition(ENTER_SUB_SLIDE);
+//                    }
+//
+//                    if (Math.abs(ENTER_SUB_SLIDE - robotHardware.getSlidePos()) < 10) {    //move claw arm after slide is done moving
+//                        robotHardware.setClawArmPositionAndVelocity(ENTER_SUB_ARM, CLAW_ARM_VELOCITY);
+//                        robotHardware.operateIntake(true);
+//                        robotState = ROBOT_STATE.NONE;
+//                        Log.i("=== INCREDIBOTS ===", "PROCESSING  ENTER EXIT SUB - SLIDE IS DONE MOVING - STARTING ARM. BUTTONSTATE: " + robotState);
+//                    }
+//                }
+
+                break;
+
+        }
+    }
+
+    private void ProcessBumpers() {
+        // if the right bumper is pressed it opens the claw
+        if (gamepad2.right_bumper) {
+
+//            if (robotHardware.isIntakeOn()) {
+//                robotHardware.operateIntake(false);
+//            }
+//
+//            if (readyToDropHighSample) {
+//                robotHardware.ejectSampleFromIntake();
+//
+//                try {
+//                    Thread.sleep(250);
+//                } catch (InterruptedException e) {
+//                    Thread.currentThread().interrupt();
+//                }
+//
+//                robotHardware.operateClawServo((CLAW_CLOSE_POSITION + CLAW_OPEN_POSITION) / 2);
+//
+//                try {
+//                    Thread.sleep(250);
+//                } catch (InterruptedException e) {
+//                    Thread.currentThread().interrupt();
+//                }
+//
+//                robotHardware.operateClawServo(true);
+//
+//                try {
+//                    Thread.sleep(250);
+//                } catch (InterruptedException e) {
+//                    Thread.currentThread().interrupt();
+//                }
+//                //move the robot arm back
+//                robotState = ROBOT_STATE.CLAW_ARM_AFTER_HIGH_SAMPLE;
+//
+//                readyToDropHighSample = false;
+//            }
+//            else {
+//                robotHardware.operateClawServo(true);
+//            }
+//
+//        }
+//        // if the left bumper is pressed it closes the claw
+//        else if (gamepad2.left_bumper) {
+//            //telemetry.addLine("left bumper pressed");
+//            robotHardware.operateClawServo(false);
+//
+//            if (robotHardware.isIntakeOn()) {
+//                robotHardware.operateIntake(true);
+//            }
+//
+//        }
+    }
+
+//    private void HandleManualOverride() {
+        // if the back button is pressed it switches manual ovverides value
+//        if (gamepad2.left_stick_button && gamepad2.right_stick_button){
+//            MANUAL_OVERRIDE = !MANUAL_OVERRIDE;
+//            Log.i("=== INCREDIBOTS ===", "Manual Override: " + MANUAL_OVERRIDE);
+//        }
+//
+//
+//        // if manual override is true it will allow the joysticks to control the arms
+//        // allow this only when robot has started (helpful in reset) or when picking samples
+//        if (MANUAL_OVERRIDE && (robotState == ROBOT_STATE.PICK_SAMPLE || robotState == ROBOT_STATE.NONE || robotState == ROBOT_STATE.SNAP_SPECIMEN || robotState == ROBOT_STATE.HANG_SPECIMEN)) {
+//
+//            float leftYSignal = gamepad2.left_stick_y;
+//
+//            // If the left joystick is greater than zero, it moves the left arm up
+//            if (leftYSignal > 0) {
+//                robotHardware.setClawArmPositionAndVelocity(robotHardware.getClawArmMotorPos() + MANUAL_OVERRIDE_ARM_POSITION_DELTA, CLAW_ARM_VELOCITY * 2);
+//            }
+//
+//            // If the left joystick is less than zero, it moves the left arm down
+//            else if (leftYSignal < 0){
+//                robotHardware.setClawArmPositionAndVelocity(robotHardware.getClawArmMotorPos() - MANUAL_OVERRIDE_ARM_POSITION_DELTA, CLAW_ARM_VELOCITY * 2);
+//            }
+//        }
+//    }
+
+//    private int GetMaxSlidePosition()
+//    {
+        //DEPENDING ON HOW THE CLAW ARM IS, THE SLIDE IS PERMITTED TO MOVE CERTAIN MAX DISTANCES.
+//        int maxSlidePosition = -1;
+//
+//        if (robotHardware.getClawArmMotorPos() < DROP_SAMPLE_HIGH_ARM - 100) { //ARM IS BEHIND ROBOT
+//            maxSlidePosition = MAX_SLIDE_POSITION_ARM_BACKWARDS_HIGH;
+//        }
+//        else if (robotHardware.getClawArmMotorPos() > DROP_SAMPLE_HIGH_ARM + 100) {
+//            maxSlidePosition = MAX_SLIDE_POSITION_ARM_FORWARDS_LOW;
+//        }
+//
+//        return maxSlidePosition;
+
+//    }
+
+//    private void ProcessDPad() {
+
+        //DEPENDING ON HOW THE CLAW ARM IS, THE SLIDE IS PERMITTED TO MOVE CERTAIN MAX DISTANCES.
+//        int maxSlidePosition = GetMaxSlidePosition();
+//        int oldSlidePos = robotHardware.getSlidePos();
+
+//        if (gamepad2.dpad_left) { //move wrist down
+//            robotHardware.operateWristServo(robotHardware.getWristServoPosition() - 0.01);
+//        }
+//
+//        if (gamepad2.dpad_right) { //move wrist up
+//            robotHardware.operateWristServo(robotHardware.getWristServoPosition() + 0.01);
+//        }
+
+//        if (gamepad2.dpad_up){
+//            Log.i("=== INCREDIBOTS ===", "PROCESSING DPAD UP");
+//
+//            //SLIDE CANNOT EXPAND BEYOND THE FAR POSITION FOR IT TO BE UNDER LIMITS
+//            if (maxSlidePosition < 0) { //no max applies
+//                robotHardware.setSlidePosition(robotHardware.getSlidePos() + MANUAL_OVERRIDE_SLIDE_POSITION_DELTA);
+//            }
+//            else {
+//                robotHardware.setSlidePosition(Math.min(robotHardware.getSlidePos() + MANUAL_OVERRIDE_SLIDE_POSITION_DELTA, maxSlidePosition));
+//            }
+//
+//            if (enableArmAdjustmentWithSlide) {
+//
+//                Log.i("=== INCREDIBOTS ===", "PROCESSING DPAD: ADJUSTING ARM POSITION WITH SLIDE POSITION");
+//
+//                if (robotHardware.getSlidePos() > oldSlidePos) {    //slide extended - lower arm, increase wrist position
+//                    robotHardware.setClawArmPositionAndVelocity(robotHardware.getClawArmMotorPos() + ARM_DELTA_WITH_SLIDE_MOTION, CLAW_ARM_VELOCITY / 5);
+//                    robotHardware.operateWristServo(robotHardware.getWristServoPosition() + WRIST_DELTA_WITH_SLIDE_MOTION);
+//                }
+//            }
+//        }
+
+        //process Dpad down input to retract linear slide
+        if (gamepad2.dpad_down){
+            Log.i("=== INCREDIBOTS ===", "PROCESSING DPAD DOWN");
+
+            //SLIDE POSITION CANNOT BE LESS THAN 0
+            // EXCEPT IF WE ARE DOING IT TO RESET THE SLIDE IN CASE OF AN ERROR
+            // THAT IS WHEN THE ARM STATE WOULD BE NONE
+//            robotHardware.setSlidePosition(robotHardware.getSlidePos() - MANUAL_OVERRIDE_SLIDE_POSITION_DELTA);
+//
+//            if (enableArmAdjustmentWithSlide) {
+//
+//                Log.i("=== INCREDIBOTS ===", "PROCESSING DPAD: ADJUSTING ARM POSITION WITH SLIDE POSITION");
+//
+//                if (robotHardware.getSlidePos() < oldSlidePos) {    //slide retracted - raise arm, decrease wrist position
+//                    robotHardware.setClawArmPositionAndVelocity(robotHardware.getClawArmMotorPos() - ARM_DELTA_WITH_SLIDE_MOTION, CLAW_ARM_VELOCITY / 5);
+//                    robotHardware.operateWristServo(robotHardware.getWristServoPosition() - WRIST_DELTA_WITH_SLIDE_MOTION);
+//                }
+//            }
+        }
+    }
+
+    private void HandleColorDetection() {
+//        if (!robotHardware.isIntakeOn()) {
+//            return; //do nothing if intake was not operating
+//        }
+//
+//        if (gameColor == RobotConstants.GAME_COLORS.BLUE && robotHardware.getDetectedColor() == RobotConstants.GAME_COLORS.RED) {
+//            while (robotHardware.getDetectedColor() == RobotConstants.GAME_COLORS.RED) {
+//                robotHardware.operateWristServo(WRIST_SPIT_OUT);
+//                robotHardware.operateIntake(false);
+//            }
+//            robotHardware.operateWristServo(ENTER_SUB_WRIST);
+//            robotHardware.operateIntake(true);
+//        }
+//
+//        if (gameColor == RobotConstants.GAME_COLORS.RED && robotHardware.getDetectedColor() == RobotConstants.GAME_COLORS.BLUE) {
+//            while (robotHardware.getDetectedColor() == RobotConstants.GAME_COLORS.BLUE) {
+//                robotHardware.operateWristServo(WRIST_SPIT_OUT);
+//                robotHardware.operateIntake(false);
+//            }
+//            robotHardware.operateWristServo(ENTER_SUB_WRIST);
+//            robotHardware.operateIntake(true);
+//        }
+    }
+
+    private void HandleMotorCurrentProblems() {
+//        if (((DcMotorEx) armMotor).isOverCurrent()){
+//            telemetry.addLine("MOTOR EXCEEDED CURRENT LIMIT!");
+//        }
+    }
+
+//    public Action GetDropSampleObZoneActionSequence() {
+//        Action slideActionDropSample = new SlideMotionAsRRAction(robotHardware, SLIDE_POSITION_RESTING, true, false);
+//        Action armActionDropSample = new ArmMotionAsRRAction(robotHardware, CLAW_ARM_RESTING_BACK, CLAW_ARM_VELOCITY, true, false);
+//        Action clawActionDropSample = new ClawMotionAsRRAction(robotHardware, true, true, false);
+//        Action wristActionDropSample = new WristMotionAsRRAction(robotHardware, DROP_SAMPLE_HIGH_WRIST, false, false);
+//        Action intakeActionDropSample = new IntakeMotionAsRRAction(robotHardware, false, false, false);
+//
+//        return new SequentialAction(
+//                slideActionDropSample,
+//                armActionDropSample,
+//                new ParallelAction(
+//                        clawActionDropSample,
+//                        wristActionDropSample),
+//                intakeActionDropSample
+//            );
+//    }
+//
+//    public Action GetRestingActionSequence() {
+//        Action slideActionResting = new SlideMotionAsRRAction(robotHardware, SLIDE_POSITION_RESTING, true, false);
+//        Action armActionResting = new ArmMotionAsRRAction(robotHardware, CLAW_ARM_RESTING_BACK, CLAW_ARM_VELOCITY, true, false);
+//        Action clawActionResting = new ClawMotionAsRRAction(robotHardware, true, false, false);
+//        Action wristActionResting = new WristMotionAsRRAction(robotHardware, WRIST_PRELOAD_RESTING, false, false);
+//        Action intakeActionResting = new IntakeMotionAsRRAction(robotHardware, false, true, false);
+//
+//        return new SequentialAction(
+//                intakeActionResting,
+//                slideActionResting,
+//                new ParallelAction(
+//                        clawActionResting,
+//                        wristActionResting),
+//                armActionResting);
+//    }
+//
+//    public Action GetRestingActionSequenceNoWait() {
+//        Action slideActionResting = new SlideMotionAsRRAction(robotHardware, SLIDE_POSITION_RESTING, false, false);
+//        Action armActionResting = new ArmMotionAsRRAction(robotHardware, CLAW_ARM_RESTING_BACK, CLAW_ARM_VELOCITY, false, false);
+//        Action clawActionResting = new ClawMotionAsRRAction(robotHardware, true, false, false);
+//        Action wristActionResting = new WristMotionAsRRAction(robotHardware, WRIST_PRELOAD_RESTING, false, false);
+//        Action intakeActionResting = new IntakeMotionAsRRAction(robotHardware, false, true, false);
+//
+//        return new ParallelAction(
+//                intakeActionResting,
+//                slideActionResting,
+//                clawActionResting,
+//                wristActionResting,
+//                armActionResting);
+//    }
+//
+//    public Action GetRobotHangActionSequence() {
+//        Action slideActionRobotHang = new SlideMotionAsRRAction(robotHardware, SLIDE_POSITION_RESTING, true);
+//        Action armActionRobotHang = new ArmMotionAsRRAction(robotHardware, CLAW_ARM_RESTING_BACK, CLAW_ARM_VELOCITY, false);
+//        Action clawActionRobotHang = new ClawMotionAsRRAction(robotHardware, false, false, false);
+//        Action wristActionRobotHang = new WristMotionAsRRAction(robotHardware, WRIST_PRELOAD_RESTING, false, false);
+//
+//        return new SequentialAction(
+//                slideActionRobotHang,
+//                new ParallelAction(
+//                        armActionRobotHang,
+//                        clawActionRobotHang,
+//                        wristActionRobotHang));
+//    }
+//
+//    public Action GetPickSampleActionSequence() {
+//
+//        Action wristActionPickSample = new WristMotionAsRRAction(robotHardware, ENTER_SUB_WRIST, true, false);
+//        Action clawActionPickSample = new ClawMotionAsRRAction(robotHardware, false, false, false);
+//        Action slideActionPickSample = new SlideMotionAsRRAction(robotHardware, ENTER_SUB_SLIDE, true, false);
+//        Action armActionPickSample = new ArmMotionAsRRAction(robotHardware, PICK_SAMPLE_ARM, CLAW_ARM_VELOCITY, true, false);
+//        Action intakeActionPickSample = new IntakeMotionAsRRAction(robotHardware,true, false, false);
+//
+//        return new SequentialAction(
+//                        new ParallelAction(
+//                            clawActionPickSample,
+//                            intakeActionPickSample
+//                        ),
+//                        armActionPickSample
+//                    );
+//
+////        return new SequentialAction(
+////                wristActionPickSample,
+////                slideActionPickSample,
+////                new ParallelAction(
+////                        armActionPickSample,
+////                        clawActionPickSample,
+////                        intakeActionPickSample));
+//    }
+//
+//    public Action GetHangSpecimenActionSequence_Fast() {
+//        Action armActionHangSpecimen = new ArmMotionAsRRAction(robotHardware, HANG_SPECIMEN_ARM, CLAW_ARM_VELOCITY, true, false);
+//        Action slideActionHangSpecimen = new SlideMotionAsRRAction(robotHardware, HANG_SPECIMEN_SLIDE, false);
+//        Action wristActionHangSpecimen = new WristMotionAsRRAction(robotHardware, HANG_SPECIMEN_WRIST, false, false);
+//        Action clawActionHangSpecimen = new ClawMotionAsRRAction(robotHardware, false, false, false);
+//        Action intakeActionHangSpecimen = new IntakeMotionAsRRAction(robotHardware, false, true, false);
+//
+//        return new ParallelAction(
+//                        wristActionHangSpecimen,
+//                        clawActionHangSpecimen,
+//                        armActionHangSpecimen,
+//                        slideActionHangSpecimen,
+//                        intakeActionHangSpecimen);
+//    }
+//
+//    public Action GetHangSpecimenActionSequence() {
+//        Action armActionHangSpecimen = new ArmMotionAsRRAction(robotHardware, HANG_SPECIMEN_ARM, CLAW_ARM_VELOCITY, true, false);
+//        Action slideActionHangSpecimen = new SlideMotionAsRRAction(robotHardware, HANG_SPECIMEN_SLIDE, false);
+//        Action wristActionHangSpecimen = new WristMotionAsRRAction(robotHardware, HANG_SPECIMEN_WRIST, false, false);
+//        Action clawActionHangSpecimen = new ClawMotionAsRRAction(robotHardware, false, false, false);
+//        Action intakeActionHangSpecimen = new IntakeMotionAsRRAction(robotHardware, false, true, false);
+//
+//        return new SequentialAction(
+//                        intakeActionHangSpecimen,
+//                        wristActionHangSpecimen,
+//                        new ParallelAction(
+//                                clawActionHangSpecimen,
+//                                armActionHangSpecimen,
+//                                slideActionHangSpecimen
+//                        )
+//                    );
+//
+////        return new SequentialAction(
+////                intakeActionHangSpecimen,
+////                wristActionHangSpecimen,
+////                new ParallelAction(
+////                        clawActionHangSpecimen,
+////                        armActionHangSpecimen
+////                ),
+////                slideActionHangSpecimen);
+//    }
+//
+//    public Action GetArmVerticalActionSequence() {
+//        Action armActionVertical = new ArmMotionAsRRAction(robotHardware, HANG_SPECIMEN_ARM, CLAW_ARM_VELOCITY, false);
+//        Action slideActionVertical = new SlideMotionAsRRAction(robotHardware, SLIDE_POSITION_RESTING, true);
+//        Action wristActionVertical = new WristMotionAsRRAction(robotHardware, WRIST_PRELOAD_RESTING, false, false);
+//        Action clawActionVertical = new ClawMotionAsRRAction(robotHardware, false, false, false);
+//        Action intakeActionVertical = new IntakeMotionAsRRAction(robotHardware, false, true, false);
+//
+//        return new SequentialAction(
+//                slideActionVertical,
+//                new ParallelAction(
+//                        armActionVertical,
+//                        wristActionVertical,
+//                        clawActionVertical,
+//                        intakeActionVertical
+//                ));
+//    }
+//
+//    public Action GetArmHorizontalActionSequence() {
+//        int AUTO_ARM_HORIZONTAL = 300;
+//
+//        Action armActionHorizontal = new ArmMotionAsRRAction(robotHardware, AUTO_ARM_HORIZONTAL, CLAW_ARM_VELOCITY, false);
+//        Action slideActionHorizontal = new SlideMotionAsRRAction(robotHardware, SLIDE_POSITION_RESTING, true);
+//        Action wristActionHorizontal = new WristMotionAsRRAction(robotHardware, WRIST_PRELOAD_RESTING, false, false);
+//        Action clawActionHorizontal = new ClawMotionAsRRAction(robotHardware, false, false, false);
+//        Action intakeActionHorizontal = new IntakeMotionAsRRAction(robotHardware, false, true, false);
+//
+//        return new SequentialAction(
+//                slideActionHorizontal,
+//                new ParallelAction(
+//                        armActionHorizontal,
+//                        wristActionHorizontal,
+//                        clawActionHorizontal,
+//                        intakeActionHorizontal
+//                ));
+//    }
+//
+//    public Action GetSnapSpecimenActionSequence() {
+//        Action slideActionSnapSpecimen = new SlideMotionAsRRAction(robotHardware, SNAP_SPECIMEN_SLIDE, true);
+//        Action armActionSnapSpecimen = new ArmMotionAsRRAction(robotHardware, SNAP_SPECIMEN_ARM, CLAW_ARM_VELOCITY, true);
+//        Action wristActionSnapSpecimen = new WristMotionAsRRAction(robotHardware, SNAP_SPECIMEN_WRIST, false, false);
+//        Action clawActionSnapSpecimen = new ClawMotionAsRRAction(robotHardware, true, false, false);
+//        Action intakeActionSnapSpecimen = new IntakeMotionAsRRAction(robotHardware, false, true, false);
+//
+//        return new SequentialAction(
+//                slideActionSnapSpecimen,
+//                armActionSnapSpecimen,
+//                new ParallelAction(
+//                        clawActionSnapSpecimen,
+//                        wristActionSnapSpecimen,
+//                        intakeActionSnapSpecimen)
+//        );
+//    }
+//
+//    public Action GetLowBasketActionSequence() {
+//        Action armActionLowBasket = new ArmMotionAsRRAction(robotHardware, DROP_SAMPLE_LOW_ARM, CLAW_ARM_VELOCITY, true, false);
+//        Action slideActionLowBasket = new SlideMotionAsRRAction(robotHardware, DROP_SAMPLE_LOW_SLIDE, false);
+//        Action wristActionLowBasket = new WristMotionAsRRAction(robotHardware, DROP_SAMPLE_HIGH_WRIST, false, false);
+//
+//        return new SequentialAction(
+//                armActionLowBasket,
+//                new ParallelAction(
+//                        slideActionLowBasket,
+//                        wristActionLowBasket
+//                ));
+//    }
+//
+//    public Action GetHighBasketActionSequence(){
+//        Action armActionHighBasket = new ArmMotionAsRRAction(robotHardware, DROP_SAMPLE_HIGH_ARM - 35, CLAW_ARM_VELOCITY, true, false);
+//        Action wristActionHighBasket1 = new WristMotionAsRRAction(robotHardware, DROP_SAMPLE_HIGH_WRIST + 0.1, true, false);
+//        Action wristActionHighBasket2 = new WristMotionAsRRAction(robotHardware, DROP_SAMPLE_HIGH_OVER_BASKET_WRIST - 0.1, true, false);
+//        Action slideActionHighBasket = new SlideMotionAsRRAction(robotHardware, DROP_SAMPLE_HIGH_SLIDE, true, false);
+//        Action clawActionHighBasket = new ClawMotionAsRRAction(robotHardware, false, false, true);
+//
+//        return new SequentialAction(
+//                new ParallelAction(
+//                    clawActionHighBasket,
+//                    wristActionHighBasket1
+//                ),
+//                armActionHighBasket,
+//                slideActionHighBasket,
+//                wristActionHighBasket2
+//            );
+//    }
+//
+//    public Action GetHighBasketActionSequenceForAuto(){
+//        Action armActionHighBasket = new ArmMotionAsRRAction(robotHardware, DROP_SAMPLE_HIGH_ARM, CLAW_ARM_VELOCITY, true, true);
+//        Action wristActionHighBasket = new WristMotionAsRRAction(robotHardware, DROP_SAMPLE_HIGH_WRIST, false, false);
+//        Action slideActionHighBasket = new SlideMotionAsRRAction(robotHardware, DROP_SAMPLE_HIGH_SLIDE, true, false);
+//
+//        return new SequentialAction(
+//                armActionHighBasket,
+//                slideActionHighBasket,
+//                wristActionHighBasket
+//            );
+//    }
+//
+//    public Action GetPickSpecimenActionSequence() {
+//        Action clawActionPickSpecimen = new ClawMotionAsRRAction(robotHardware, true, false, false);
+//        Action wristActionPickSpecimen = new WristMotionAsRRAction(robotHardware, PICK_SPECIMEN_WRIST, false, false);
+//        Action slideActionPickSpecimen = new SlideMotionAsRRAction(robotHardware, SLIDE_POSITION_RESTING, true);
+//        Action armActionPickSpecimen = new ArmMotionAsRRAction(robotHardware, PICK_SPECIMEN_ARM, CLAW_ARM_VELOCITY, false);
+//
+//       return new SequentialAction(
+//                slideActionPickSpecimen,
+//                new ParallelAction(
+//                        armActionPickSpecimen,
+//                        clawActionPickSpecimen,
+//                        wristActionPickSpecimen
+//                ));
+//    }
+//
+//    public Action GetEnterExitSubActionSequence() {
+//        Action wristActionEnterExitSub = new WristMotionAsRRAction(robotHardware, ENTER_SUB_WRIST, true, false);
+//        Action clawActionEnterExitSub = new ClawMotionAsRRAction(robotHardware, false, false, false);
+//        Action slideActionEnterExitSub = new SlideMotionAsRRAction(robotHardware, ENTER_SUB_SLIDE, true, false);
+//        Action armActionEnterExitSub = new ArmMotionAsRRAction(robotHardware, ENTER_SUB_ARM, CLAW_ARM_VELOCITY, true, false);
+//        Action intakeActionEnterExitSub = new IntakeMotionAsRRAction(robotHardware,true, false, false);
+//
+//        return new SequentialAction(
+//                wristActionEnterExitSub,
+//                slideActionEnterExitSub,
+//                new ParallelAction(
+//                        armActionEnterExitSub,
+//                        clawActionEnterExitSub,
+//                        intakeActionEnterExitSub));
+//    }
+//
+//    public Action GetClawArmAfterHighSampleActionSequence() {
+//        Action armActionAfterHighSample = new ArmMotionAsRRAction(robotHardware, DROP_SAMPLE_HIGH_ARM_AFTER_DROP, CLAW_ARM_VELOCITY/2, true, false);
+//        Action clawActionAfterHighSample = new ClawMotionAsRRAction(robotHardware, false, false, false);
+//        Action slideActionAfterHighSample = new SlideMotionAsRRAction(robotHardware, SLIDE_POSITION_RESTING, true, false);
+//        Action wristActionAfterHighSample = new WristMotionAsRRAction(robotHardware, DROP_SAMPLE_HIGH_WRIST, false, false);
+//
+//        return new SequentialAction(
+//                wristActionAfterHighSample,
+//                slideActionAfterHighSample,
+//                new ParallelAction(
+//                        armActionAfterHighSample,
+//                        clawActionAfterHighSample
+//                )
+//        );
+//    }
+//
+//    public Action GetSampleEjectActionSequence() {
+//
+//        Action intakeActionEject = new HighBasketSampleDropIntakeMotionAsRRAction(robotHardware, true);
+//        Action customClawPositionActionEject = new CustomClawPositionAsRRAction(robotHardware, (CLAW_OPEN_POSITION + CLAW_CLOSE_POSITION) / 2, true, true);
+//        Action clawActionEject = new ClawMotionAsRRAction(robotHardware, true, true, false);
+//
+//        return new SequentialAction(
+//                intakeActionEject,
+//                customClawPositionActionEject,
+//                clawActionEject
+//        );
+//    }
+}
