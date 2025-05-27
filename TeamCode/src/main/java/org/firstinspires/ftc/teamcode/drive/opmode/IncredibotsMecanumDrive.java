@@ -29,7 +29,9 @@
 
 package org.firstinspires.ftc.teamcode.drive.opmode;
 
+import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
+import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
@@ -71,9 +73,8 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
     public static double POWER_RATIO = 0.6;
 
     RobotHardware robotHardware;
-    IncredibotsMechanismControl incredibotsMechanismControl;
+    RobotControl robotControl;
     RobotConstants.GAME_COLORS gameColor;
-
 
 
 // Declare OpMode members for each of the 4 motors.
@@ -88,7 +89,7 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
         // Initialize the hardware variables. Note that the strings used here must correspond
         // to the names assigned during the robot configuration step on the DS or RC devices.
         robotHardware = new RobotHardware(this.hardwareMap);
-        incredibotsMechanismControl = new IncredibotsMechanismControl(gamepad2, robotHardware);
+        robotControl = new RobotControl(gamepad2, robotHardware);
 //
 //        leftFrontDrive  = hardwareMap.get(DcMotor.class, "left_front_drive");
 //        leftBackDrive  = hardwareMap.get(DcMotor.class, "left_back_drive");
@@ -116,14 +117,14 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
 
             if (gamepad1.x || gamepad2.x) {
                 gameColor = RobotConstants.GAME_COLORS.BLUE;
-                incredibotsMechanismControl.setGameColor(gameColor);
+                robotControl.setGameColor(gameColor);
                 telemetry.addData("Game Color: ", gameColor);
                 telemetry.update();
             }
 
             if (gamepad1.b || gamepad2.b) {
                 gameColor = RobotConstants.GAME_COLORS.RED;
-                incredibotsMechanismControl.setGameColor(gameColor);
+                robotControl.setGameColor(gameColor);
                 telemetry.addData("Game Color: ", gameColor);
                 telemetry.update();}
         }
@@ -192,14 +193,16 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
             telemetry.addData("Horizontal Elbow: ", robotHardware.getHorizontalElbowServoPosition());
             telemetry.addData("Horizontal Shoulder: ", robotHardware.getHorizontalShoulderServoPosition());
             telemetry.addData("Horizontal Turret: ", robotHardware.getHorizontalTurretServoPosition());
+            telemetry.addData("Horizontal Slide: ", robotHardware.getHorizontalSlidePosition());
 
             telemetry.addData("Vertical Claw: ", robotHardware.getVerticalClawState());
             telemetry.addData("Vertical Wrist: ", robotHardware.getVerticalWristServoPosition());
             telemetry.addData("Vertical Elbow: ", robotHardware.getVerticalElbowServoPosition());
             telemetry.addData("Vertical Shoulder: ", robotHardware.getVerticalShoulderServoPosition());
+            telemetry.addData("Vertical Slide: ", robotHardware.getVerticalSlidePosition());
 
             // calls the process inputs function from the arm control class
-            incredibotsMechanismControl.ProcessInputs(telemetry);
+            robotControl.ProcessInputs(telemetry);
             //updates telemetry
             telemetry.update();
 

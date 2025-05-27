@@ -11,13 +11,12 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.TouchSensor;
 
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.teamcode.drive.opmode.IncredibotsMechanismControl;
 
 public class RobotHardware {
-    //making variables
 
     IMU imu;
     private DcMotorEx rightFrontDriveMotor;
@@ -36,6 +35,7 @@ public class RobotHardware {
     private Servo horizontalShoulderServo;
     private Servo horizontalTurretServo;
     private ColorRangeSensor colorSensor;
+    private TouchSensor horizontalLimitSwitch;
 
     public static DcMotorEx verticalSlideMotor1;
     public static DcMotorEx verticalSlideMotor2;
@@ -44,6 +44,7 @@ public class RobotHardware {
     private Servo verticalWristServo;
     private Servo verticalElbowServo;
     private Servo verticalShoulderServo;
+    private TouchSensor verticalLimitSwitch;
 
 
      //making constructor
@@ -86,6 +87,8 @@ public class RobotHardware {
          horizontalShoulderServo = hwMap.get(Servo.class, "HorizontalShoulderServo");
          horizontalTurretServo = hwMap.get(Servo.class, "HorizontalTurretServo");
          colorSensor = hwMap.get(ColorRangeSensor.class, "ColorSensor");
+         horizontalLimitSwitch = hwMap.get(TouchSensor.class, "HorizontalLimitSwitch");
+
 
          // vertical stack
          verticalSlideMotor1 = hwMap.get(DcMotorEx.class, "VerticalSlideMotor1");
@@ -105,6 +108,7 @@ public class RobotHardware {
          verticalWristServo = hwMap.get(Servo.class, "VerticalWristServo");
          verticalElbowServo = hwMap.get(Servo.class, "VerticalElbowServo");
          verticalShoulderServo = hwMap.get(Servo.class, "VerticalShoulderServo");
+         verticalLimitSwitch = hwMap.get(TouchSensor.class, "VerticalLimitSwitch");
 
          imu = hwMap.get(IMU.class, "imu");
      }
@@ -150,7 +154,7 @@ public class RobotHardware {
          return horizontalShoulderServo.getPosition();
      }
 
-     public void setHorizontalShoulderServo(double pos) {
+     public void setHorizontalShoulderServoPosition(double pos) {
          Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " setHorizontalShoulderServo: " + pos);
          horizontalShoulderServo.setPosition(pos);
      }
@@ -184,15 +188,28 @@ public class RobotHardware {
     }
 
     public void setHorizontalSlidePosition(int pos) {
+        setHorizontalSlidePositionAndVelocity(pos, RobotConstants.HORIZONTAL_SLIDE_VELOCITY);
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " setHorizontalSlidePosition: " + pos + " AND VELOCITY: " + RobotConstants.HORIZONTAL_SLIDE_VELOCITY);
+    }
+
+    public void setHorizontalSlidePositionAndVelocity(int pos, int velocity) {
         horizontalSlideMotor.setTargetPosition(pos);
         horizontalSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        horizontalSlideMotor.setVelocity(RobotConstants.HORIZONTAL_SLIDE_VELOCITY);
-        Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " setHorizontalSlidePosition: " + pos + " AND VELOCITY: " + RobotConstants.HORIZONTAL_SLIDE_VELOCITY);
+        horizontalSlideMotor.setVelocity(velocity);
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " setHorizontalSlidePositionAndVelocity: " + pos + " AND VELOCITY: " + velocity);
     }
 
     // function to check proximity sensors and ensure the motor stops
     public void horizontalSlideSafetyChecks()
-    {}
+    {
+        if (horizontalLimitSwitch.isPressed() && horizontalSlideMotor.isBusy()) {
+            //int pos = horizontalSlideMotor.getCurrentPosition();
+
+            horizontalSlideMotor.setPower(0);
+
+            //horizontalSlideMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        }
+    }
 
     public boolean getVerticalClawState() {
          return verticalClawServo.getPosition() == RobotConstants.VERTICAL_CLAW_OPEN;
@@ -235,8 +252,8 @@ public class RobotHardware {
         return verticalShoulderServo.getPosition();
     }
 
-    public void setVerticalShoulderServo(double pos) {
-        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " setVerticalShoulderServo: " + pos);
+    public void setVerticalShoulderServoPosition(double pos) {
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " setVerticalShoulderServoPosition: " + pos);
         verticalShoulderServo.setPosition(pos);
     }
 
@@ -246,25 +263,30 @@ public class RobotHardware {
     }
 
     public void setVerticalSlidePosition(int pos) {
+        setVerticalSlidePositionAndVelocity(pos, RobotConstants.VERTICAL_SLIDE_VELOCITY);
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " setVerticalSlidePosition: " + pos + " AND VELOCITY: " + RobotConstants.VERTICAL_SLIDE_VELOCITY);
+    }
+
+    public void setVerticalSlidePositionAndVelocity(int pos, int velocity) {
         verticalSlideMotor1.setTargetPosition(pos);
         verticalSlideMotor2.setTargetPosition(pos);
 
         verticalSlideMotor1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         verticalSlideMotor2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
-        verticalSlideMotor1.setVelocity(RobotConstants.VERTICAL_SLIDE_VELOCITY);
-        verticalSlideMotor2.setVelocity(RobotConstants.VERTICAL_SLIDE_VELOCITY);
-        Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " setVerticalSlidePosition: " + pos + " AND VELOCITY: " + RobotConstants.VERTICAL_SLIDE_VELOCITY);
+        verticalSlideMotor1.setVelocity(velocity);
+        verticalSlideMotor2.setVelocity(velocity);
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " setVerticalSlidePositionAndVelocity: " + pos + " AND VELOCITY: " + velocity);
     }
 
     // function to check proximity sensors and ensure the motor stops
     public void verticalSlideSafetyChecks()
     {
-//        slideMotor.setPower(0);
-//        slideMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-//        setSlidePosition(0);
+        if (verticalLimitSwitch.isPressed() && (verticalSlideMotor1.isBusy() || verticalSlideMotor2.isBusy())) {
+            verticalSlideMotor1.setPower(0);
+            verticalSlideMotor2.setPower(0);
+        }
     }
-
 
     //returns the robots yaw as radians
     public double getRobotYawRadians() {
