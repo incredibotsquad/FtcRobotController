@@ -1,9 +1,12 @@
 package org.firstinspires.ftc.teamcode.drive.opmode.test;
 
+import android.util.Log;
+
 import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -23,7 +26,6 @@ import org.firstinspires.ftc.teamcode.RobotHardware;
  */
 
 @Config
-@Disabled
 @TeleOp(name="ServoTest", group="Linear OpMode")
 public class ServoControlTest extends LinearOpMode {
     RobotHardware myHardware;
@@ -47,8 +49,10 @@ public class ServoControlTest extends LinearOpMode {
         // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
-        ClawServo = hardwareMap.get(Servo.class, "ClawServo"); //0.1, 0.55
-        WristServo = hardwareMap.get(Servo.class, "WristServo"); //resting: 0.2, specimen pick: 0.9, before snapping specimen position 0.75, picking sample: 0.83
+        ClawServo = hardwareMap.get(Servo.class, "VerticalElbowServo"); //0.1, 0.55
+//        WristServo = hardwareMap.get(Servo.class, "WristServo"); //resting: 0.2, specimen pick: 0.9, before snapping specimen position 0.75, picking sample: 0.83
+
+        AnalogInput analogInput = hardwareMap.get(AnalogInput.class, "AxonEncoder");
 
         // Wait for the game to start (driver presses START)
         waitForStart();
@@ -56,8 +60,15 @@ public class ServoControlTest extends LinearOpMode {
 
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
-            ClawServo.setPosition(clawServoPosition);
-            WristServo.setPosition(wristServoPosition);
+
+            if(gamepad1.a) {
+                ClawServo.setPosition(clawServoPosition);
+//            WristServo.setPosition(wristServoPosition);
+
+                double position = analogInput.getVoltage() / 3.3;
+
+                Log.i("ServoTest: position: ", Double.toString(position));
+            }
         }
     }
 }

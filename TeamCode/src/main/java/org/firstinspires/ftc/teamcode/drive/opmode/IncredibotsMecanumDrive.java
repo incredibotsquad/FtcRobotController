@@ -35,6 +35,7 @@ import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
+import org.firstinspires.ftc.teamcode.GameConstants;
 import org.firstinspires.ftc.teamcode.RobotConstants;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 
@@ -74,7 +75,7 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
 
     RobotHardware robotHardware;
     RobotControl robotControl;
-    RobotConstants.GAME_COLORS gameColor;
+    GameConstants.GAME_COLORS gameColor;
 
 
 // Declare OpMode members for each of the 4 motors.
@@ -113,17 +114,17 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
 
 
         while (opModeInInit()) {
-            gameColor = RobotConstants.GAME_COLORS.BLUE;
+            gameColor = GameConstants.GAME_COLORS.BLUE;
 
             if (gamepad1.x || gamepad2.x) {
-                gameColor = RobotConstants.GAME_COLORS.BLUE;
+                gameColor = GameConstants.GAME_COLORS.BLUE;
                 robotControl.setGameColor(gameColor);
                 telemetry.addData("Game Color: ", gameColor);
                 telemetry.update();
             }
 
             if (gamepad1.b || gamepad2.b) {
-                gameColor = RobotConstants.GAME_COLORS.RED;
+                gameColor = GameConstants.GAME_COLORS.RED;
                 robotControl.setGameColor(gameColor);
                 telemetry.addData("Game Color: ", gameColor);
                 telemetry.update();}
@@ -188,18 +189,18 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
             telemetry.addData("Front left/Right", "%4.2f, %4.2f", leftFrontPower, rightFrontPower);
             telemetry.addData("Back  left/Right", "%4.2f, %4.2f", leftBackPower, rightBackPower);
 
-            telemetry.addData("Horizontal Claw: ", robotHardware.getHorizontalClawState());
-            telemetry.addData("Horizontal Wrist: ", robotHardware.getHorizontalWristServoPosition());
-            telemetry.addData("Horizontal Elbow: ", robotHardware.getHorizontalElbowServoPosition());
-            telemetry.addData("Horizontal Shoulder: ", robotHardware.getHorizontalShoulderServoPosition());
-            telemetry.addData("Horizontal Turret: ", robotHardware.getHorizontalTurretServoPosition());
-            telemetry.addData("Horizontal Slide: ", robotHardware.getHorizontalSlidePosition());
-
-            telemetry.addData("Vertical Claw: ", robotHardware.getVerticalClawState());
-            telemetry.addData("Vertical Wrist: ", robotHardware.getVerticalWristServoPosition());
-            telemetry.addData("Vertical Elbow: ", robotHardware.getVerticalElbowServoPosition());
-            telemetry.addData("Vertical Shoulder: ", robotHardware.getVerticalShoulderServoPosition());
-            telemetry.addData("Vertical Slide: ", robotHardware.getVerticalSlidePosition());
+//            telemetry.addData("Horizontal Claw: ", robotHardware.getHorizontalClawState());
+//            telemetry.addData("Horizontal Wrist: ", robotHardware.getHorizontalWristServoPosition());
+//            telemetry.addData("Horizontal Elbow: ", robotHardware.getHorizontalElbowServoPosition());
+//            telemetry.addData("Horizontal Shoulder: ", robotHardware.getHorizontalShoulderServoPosition());
+//            telemetry.addData("Horizontal Turret: ", robotHardware.getHorizontalTurretServoPosition());
+//            telemetry.addData("Horizontal Slide: ", robotHardware.getHorizontalSlidePosition());
+//
+//            telemetry.addData("Vertical Claw: ", robotHardware.getVerticalClawState());
+//            telemetry.addData("Vertical Wrist: ", robotHardware.getVerticalWristServoPosition());
+//            telemetry.addData("Vertical Elbow: ", robotHardware.getVerticalElbowServoPosition());
+//            telemetry.addData("Vertical Shoulder: ", robotHardware.getVerticalShoulderServoPosition());
+//            telemetry.addData("Vertical Slide: ", robotHardware.getVerticalSlidePosition());
 
             // calls the process inputs function from the arm control class
             robotControl.ProcessInputs(telemetry);

@@ -38,7 +38,7 @@ public class HorizontalWristAction implements Action {
             }
 
             //tell RR we need to keep running if duration has not elapsed
-            return (robotHardware.getHorizontalWristServoPosition() != position);
+            return (timer.milliseconds() < 500);
         }
 
         return false;

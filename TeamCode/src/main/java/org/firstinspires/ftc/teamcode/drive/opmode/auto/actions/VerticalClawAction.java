@@ -34,14 +34,12 @@ public class VerticalClawAction implements Action {
         }
 
         if (waitForAction) {
-            int timeDuration = 400;
             if (shortWait) {
-                timeDuration = 200;
+                return (timer.milliseconds() < 250);
             }
-            boolean timerPending = timer.milliseconds() < timeDuration;
 
             //tell RR we need to keep running if duration has not elapsed
-            return (timerPending);
+            return (timer.milliseconds() < 500);
         }
 
         return false;

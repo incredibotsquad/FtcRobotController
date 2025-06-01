@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode;
 
 import android.util.Log;
 
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.RobotConstants.*;
 
 import com.qualcomm.robotcore.hardware.ColorRangeSensor;
@@ -87,19 +88,19 @@ public class RobotHardware {
          horizontalShoulderServo = hwMap.get(Servo.class, "HorizontalShoulderServo");
          horizontalTurretServo = hwMap.get(Servo.class, "HorizontalTurretServo");
          colorSensor = hwMap.get(ColorRangeSensor.class, "ColorSensor");
-         horizontalLimitSwitch = hwMap.get(TouchSensor.class, "HorizontalLimitSwitch");
+//         horizontalLimitSwitch = hwMap.get(TouchSensor.class, "HorizontalLimitSwitch");
 
 
          // vertical stack
          verticalSlideMotor1 = hwMap.get(DcMotorEx.class, "VerticalSlideMotor1");
          verticalSlideMotor1.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+         verticalSlideMotor1.setDirection(DcMotorSimple.Direction.REVERSE);
          verticalSlideMotor1.setTargetPosition(0);
          verticalSlideMotor1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
          verticalSlideMotor1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
          verticalSlideMotor2 = hwMap.get(DcMotorEx.class, "VerticalSlideMotor2");
          verticalSlideMotor2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-         verticalSlideMotor2.setDirection(DcMotorSimple.Direction.REVERSE);
          verticalSlideMotor2.setTargetPosition(0);
          verticalSlideMotor2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
          verticalSlideMotor2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -108,10 +109,31 @@ public class RobotHardware {
          verticalWristServo = hwMap.get(Servo.class, "VerticalWristServo");
          verticalElbowServo = hwMap.get(Servo.class, "VerticalElbowServo");
          verticalShoulderServo = hwMap.get(Servo.class, "VerticalShoulderServo");
-         verticalLimitSwitch = hwMap.get(TouchSensor.class, "VerticalLimitSwitch");
+//         verticalLimitSwitch = hwMap.get(TouchSensor.class, "VerticalLimitSwitch");
 
          imu = hwMap.get(IMU.class, "imu");
      }
+
+     public void stopAllMechanisms()
+     {
+         horizontalSlideMotor.setPower(0);
+         verticalSlideMotor1.setPower(0);
+         verticalSlideMotor2.setPower(0);
+
+
+     }
+
+    public void stopRobotChassis() {
+         rightFrontDriveMotor.setPower(0);
+         leftFrontDriveMotor.setPower(0);
+         rightBackDriveMotor.setPower(0);
+         leftBackDriveMotor.setPower(0);
+    }
+
+    public void stopRobotAndMechanisms() {
+        stopRobotChassis();
+        stopAllMechanisms();
+    }
 
      public boolean getHorizontalClawState () {
          return horizontalClawServo.getPosition() == RobotConstants.HORIZONTAL_CLAW_OPEN;
@@ -169,18 +191,28 @@ public class RobotHardware {
          horizontalTurretServo.setPosition(pos);
      }
 
-     public GAME_COLORS getDetectedColor(){
-         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getDetectedColor");
+     public GameConstants.GAME_COLORS getDetectedColor(){
+         GameConstants.GAME_COLORS detectedColor = GameConstants.GAME_COLORS.OTHER;
 
          if (colorSensor.red() > colorSensor.green() && colorSensor.red() > colorSensor.blue()) {
-             return GAME_COLORS.RED;
+             detectedColor = GameConstants.GAME_COLORS.RED;
          }
 
          if (colorSensor.blue() > colorSensor.green() && colorSensor.blue() > colorSensor.red()) {
-             return GAME_COLORS.BLUE;
+             detectedColor = GameConstants.GAME_COLORS.BLUE;
          }
 
-         return GAME_COLORS.OTHER;
+         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getDetectedColor: " + detectedColor.toString());
+
+         return detectedColor;
+    }
+
+    public ColorSenorOutput getDetectedColorAndDistance() {
+         ColorSenorOutput colorSenorOutput = new ColorSenorOutput(getDetectedColor(),  colorSensor.getDistance(DistanceUnit.CM));
+
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getDetectedColorAndDistance: " + colorSenorOutput.detectedColor.toString() + " Distance: " + colorSenorOutput.distance);
+
+         return colorSenorOutput;
     }
 
     public int getHorizontalSlidePosition() {

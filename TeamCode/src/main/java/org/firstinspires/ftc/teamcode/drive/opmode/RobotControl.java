@@ -12,6 +12,8 @@ import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.hardware.Gamepad;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.teamcode.ColorSenorOutput;
+import org.firstinspires.ftc.teamcode.GameConstants;
 import org.firstinspires.ftc.teamcode.RobotConstants;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.HorizontalClawAction;
@@ -31,7 +33,7 @@ import java.util.List;
 
 public class RobotControl
 {
-    RobotConstants.GAME_COLORS gameColor;
+    GameConstants.GAME_COLORS gameColor;
 
     private Gamepad gamepad2;
     private RobotHardware robotHardware;
@@ -57,6 +59,8 @@ public class RobotControl
     private ROBOT_STATE targetRobotState;
     private boolean stateTransitionInProgress;
 
+    private boolean readyToPickSample;
+
     public RobotControl(Gamepad gamepad, RobotHardware robotHardware) {
         gamepad2 = gamepad;
         this.robotHardware = robotHardware;
@@ -65,6 +69,7 @@ public class RobotControl
         stateTransitionInProgress = false;
         dashboard = FtcDashboard.getInstance();
         runningActions = new ArrayList<>();
+        readyToPickSample = false;
     }
 
     public void ProcessInputs(Telemetry telemetry) {
@@ -75,12 +80,13 @@ public class RobotControl
 
 //        ProcessState();
 
-        ProcessSafetyChecks();
+//        ProcessSafetyChecks();
 //
 //        ProcessDPad();
 //
 //        HandleManualOverride();
 
+        ProcessPickSampleState();
 
         HandleMotorCurrentProblems();
     }
@@ -90,7 +96,7 @@ public class RobotControl
         robotHardware.verticalSlideSafetyChecks();
     }
 
-    public void setGameColor(RobotConstants.GAME_COLORS gameColor) {
+    public void setGameColor(GameConstants.GAME_COLORS gameColor) {
         this.gameColor = gameColor;
     }
 
@@ -138,10 +144,14 @@ public class RobotControl
 
         if (newTargetRobotState != currentRobotState) {
 
-            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "TRANSITIONING STATE CURRENT: " + targetRobotState + " TARGET: " + newTargetRobotState);
+            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "TRANSITIONING STATE CURRENT: " + currentRobotState + " TARGET: " + newTargetRobotState);
 
-            if (currentRobotState != targetRobotState) {
+            if (newTargetRobotState != targetRobotState) {
                 //TODO: STOP ALL PROCESSING - STATE TRANSITION WAS GOING ON WHEN NEW STATE WAS CALLED IN
+
+//                for (Action action : runningActions) {
+//                    action.
+//                }
 
                 Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "STOPPING! STATE TRANSITION WAS GOING ON WHEN NEW TARGET WAS CALLED IN. OLD TARGET: " + targetRobotState + " NEW TARGET: " + newTargetRobotState);
             }
@@ -235,11 +245,15 @@ public class RobotControl
         ProcessActions();
 
         if (runningActions.isEmpty()) {
+            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "DONE RUNNING ACTIONS");
             currentRobotState = targetRobotState;
             stateTransitionInProgress = false;
 
             //set new state based on older target
             switch (targetRobotState) {
+                case PICK_SAMPLE:
+//                    targetRobotState = ROBOT_STATE.TRANSFER_SAMPLE;
+                    break;
                 case LOW_BASKET:
                 case HIGH_BASKET:
                     targetRobotState = ROBOT_STATE.PICK_SAMPLE;
@@ -260,12 +274,29 @@ public class RobotControl
         for (Action action : runningActions) {
             action.preview(packet.fieldOverlay());
 
+            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "Executing Action: " + action.toString());
+
             if (action.run(packet)) {
                 newActions.add(action); //add if action indicates it needs to run again
             }
         }
         runningActions = newActions;
         dashboard.sendTelemetryPacket(packet);
+    }
+
+    public void ProcessPickSampleState() {
+        if (currentRobotState != ROBOT_STATE.PICK_SAMPLE || targetRobotState == ROBOT_STATE.TRANSFER_SAMPLE) return;
+
+        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "ProcessPickSampleState");
+
+        ColorSenorOutput colorSenorOutput = robotHardware.getDetectedColorAndDistance();
+
+        if (colorSenorOutput.detectedColor == this.gameColor || colorSenorOutput.detectedColor == GameConstants.GAME_COLORS.OTHER) {
+            if (colorSenorOutput.distance < RobotConstants.COLOR_SENSOR_DISTANCE_THRESHOLD) {
+                robotHardware.setHorizontalClawState(false);
+                this.targetRobotState = ROBOT_STATE.TRANSFER_SAMPLE;
+            }
+        }
     }
 
     public Action GetRestingActionSequence() {
@@ -294,24 +325,28 @@ public class RobotControl
 
     public Action GetPickSampleActionSequence() {
 
-        // VERTICAL GET READY FOR TRANSFER
-        Action verticalActions = new ParallelAction(
-                new VerticalClawAction(robotHardware, true, false, false),
-                new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_TRANSFER, false, false),
-                new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_TRANSFER, false, false),
-                new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_TRANSFER, false, false),
-                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_TRANSFER, false, false)
-
+        Action verticalActions = new SequentialAction(
+                new ParallelAction(
+                        new VerticalClawAction(robotHardware, false, false, false),
+                        new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_TRANSFER, false, false),
+                        new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_TRANSFER, false, false),
+                        new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_TRANSFER, false, false),
+                        new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_TRANSFER, false, false)
+                ),
+                new VerticalClawAction(robotHardware, true, false, false)
         );
 
-        //TODO: THESE NEED TO COME FROM THE CAMERA
-        Action horizontalActions = new ParallelAction(
-                new HorizontalClawAction(robotHardware, true, false, false),
-                new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_PICK_SAMPLE, false, false),
-                new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SAMPLE, false, false),
-                new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_PICK_SAMPLE, false, false),
-                new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_PICK_SAMPLE, false,false),
-                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_PICK_SAMPLE, false, false)
+        //TODO: THE CONSTANTS BELOW NEED TO COME FROM THE CAMERA
+        Action horizontalActions = new SequentialAction(
+                new ParallelAction(
+                    new HorizontalClawAction(robotHardware, true, false, false),
+                    new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_PICK_SAMPLE, false, false),
+                    new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_PICK_SAMPLE, false, false),
+                    new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_PICK_SAMPLE, true, false),
+                    new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SAMPLE, true, false),
+                    new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_PICK_SAMPLE, false,false)
+            ),
+                new InstantAction(() -> readyToPickSample = true)
         );
 
         return new ParallelAction(
@@ -321,17 +356,20 @@ public class RobotControl
 
     public Action GetTransferSampleActionSequence() {
         // VERTICAL STATE SHOULD HAVE ALREADY BEEN DONE DURING PICK SAMPLE
-        Action verticalActions = new ParallelAction(
-                new VerticalClawAction(robotHardware, true, true, false),
-                new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_TRANSFER, false, false),
-                new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_TRANSFER, false, false),
-                new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_TRANSFER, false, false),
-                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_TRANSFER, false, false)
+        Action verticalActions = new SequentialAction(
+                new ParallelAction(
+                    new VerticalClawAction(robotHardware, false, true, false),
+                    new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_TRANSFER, false, false),
+                    new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_TRANSFER, false, false),
+                    new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_TRANSFER, false, false),
+                    new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_TRANSFER, false, false)
+                ),
+                new VerticalClawAction(robotHardware, true, true, false)
         );
 
         Action horizontalActions = new ParallelAction(
+                new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_TRANSFER, true, false),
                 new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_TRANSFER, false, false),
-                new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_TRANSFER, false, false),
                 new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_TRANSFER, false, false),
                 new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_TRANSFER, false, false),
                 new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_TRANSFER, false, false)
@@ -339,10 +377,10 @@ public class RobotControl
 
         return new SequentialAction(
                 new ParallelAction(
-                        verticalActions,
-                        horizontalActions
+                        horizontalActions,
+                        verticalActions
                 ),
-                new VerticalClawAction(robotHardware, false, true, true),
+                new VerticalClawAction(robotHardware, false, true, false),
                 new HorizontalClawAction(robotHardware, true, true, true)
         );
     }
