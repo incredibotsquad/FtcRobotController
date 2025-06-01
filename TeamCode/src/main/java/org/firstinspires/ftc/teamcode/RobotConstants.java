@@ -42,7 +42,9 @@ public class RobotConstants {
     public static int HORIZONTAL_SLIDE_TRANSFER = 0;
     public static double HORIZONTAL_TURRET_TRANSFER = 0.5;
     public static double HORIZONTAL_SHOULDER_TRANSFER = 0.34;
-    public static double HORIZONTAL_ELBOW_TRANSFER = 0.7; // 0.47
+    public static double HORIZONTAL_SHOULDER_AFTER_TRANSFER = 0.37;
+    public static double HORIZONTAL_ELBOW_TRANSFER = 0.7;
+    public static double HORIZONTAL_ELBOW_AFTER_TRANSFER = 0.5;
     public static double HORIZONTAL_WRIST_TRANSFER = 0.52;
 
 
@@ -57,8 +59,8 @@ public class RobotConstants {
     public static double VERTICAL_WRIST_RESTING = 0;
 
     // VERTICAL DROP SAMPLE OB-ZONE VALUES
-    public static int VERTICAL_SLIDE_DROP_SAMPLE_OBZONE = 0;
-    public static double VERTICAL_SHOULDER_DROP_SAMPLE_OBZONE = 0;
+    public static int VERTICAL_SLIDE_DROP_SAMPLE_OBZONE = 150;
+    public static double VERTICAL_SHOULDER_DROP_SAMPLE_OBZONE = 0.85;
     public static double VERTICAL_ELBOW_DROP_SAMPLE_OBZONE = 0;
     public static double VERTICAL_WRIST_DROP_SAMPLE_OBZONE = 0;
 

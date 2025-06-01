@@ -49,7 +49,7 @@ public class ServoControlTest extends LinearOpMode {
         // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
-        ClawServo = hardwareMap.get(Servo.class, "VerticalElbowServo"); //0.1, 0.55
+        ClawServo = hardwareMap.get(Servo.class, "VerticalClawServo"); //0.1, 0.55
 //        WristServo = hardwareMap.get(Servo.class, "WristServo"); //resting: 0.2, specimen pick: 0.9, before snapping specimen position 0.75, picking sample: 0.83
 
         AnalogInput analogInput = hardwareMap.get(AnalogInput.class, "AxonEncoder");
@@ -72,28 +72,3 @@ public class ServoControlTest extends LinearOpMode {
         }
     }
 }
-/*
-Control Hub
-Motors:
-Port 0 - LB
-Port 1 - RB
-Port 2 - LF
-Port 3 - RF
-
-Odometry:
-Port 0: OL
-Port 1: OR
-Port 2: OF
-
-Expansion Hub
-Motors:
-Port 0 - Arm
-Port 1 - Slide
-
-Encoders:
-Port 0 - Arm
-Port 1 - Slide
-
-Servos:
-Port 0 - Claw
- */

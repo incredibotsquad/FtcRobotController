@@ -14,6 +14,7 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.ColorSenorOutput;
 import org.firstinspires.ftc.teamcode.GameConstants;
+import org.firstinspires.ftc.teamcode.R;
 import org.firstinspires.ftc.teamcode.RobotConstants;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.HorizontalClawAction;
@@ -45,6 +46,7 @@ public class RobotControl
         NONE,
         RESTING,
         RESET_ENCODERS,
+        ENTER_EXIT_SUB,
         PICK_SAMPLE,
         TRANSFER_SAMPLE,
         TRANSFER_TO_OB_ZONE,
@@ -139,6 +141,18 @@ public class RobotControl
             // right trigger + B for low basket
             else if (gamepad2.right_trigger > 0) {
                 newTargetRobotState = ROBOT_STATE.LOW_BASKET;
+            }
+        }
+
+        if (gamepad2.x) {
+            if (gamepad2.left_trigger > 0) {
+                newTargetRobotState = ROBOT_STATE.TRANSFER_TO_OB_ZONE;
+            }
+        }
+
+        if (gamepad2.y) {
+            if (gamepad2.right_trigger > 0) {
+                newTargetRobotState = ROBOT_STATE.HIGH_BASKET;
             }
         }
 
@@ -381,34 +395,35 @@ public class RobotControl
                         verticalActions
                 ),
                 new VerticalClawAction(robotHardware, false, true, false),
-                new HorizontalClawAction(robotHardware, true, true, true)
+                new HorizontalClawAction(robotHardware, true, true, true),
+                new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_AFTER_TRANSFER, false, false),
+                new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_AFTER_TRANSFER, false, false)
         );
     }
 
     private Action GetTransferToObZoneActionSequence() {
 
-        //TODO: MOVE ROBOT TO OB ZONE
+        //TODO: MOVE ROBOT TO OB ZONE ??
+
         Action horizontalActions = new ParallelAction(
                 new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_TRANSFER, false, false),
-                new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_TRANSFER, false, false),
-                new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_TRANSFER, false, false),
+                new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_AFTER_TRANSFER, false, false),
+                new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_AFTER_TRANSFER, false, false),
                 new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_TRANSFER, false, false),
                 new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_TRANSFER, false, false)
         );
 
-        Action verticalActions = new ParallelAction(
-                new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_DROP_SAMPLE_OBZONE, false, false),
-                new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_DROP_SAMPLE_OBZONE, false, false),
-                new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_DROP_SAMPLE_OBZONE, false, false),
-                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_DROP_SAMPLE_OBZONE, false, false)
+        Action verticalActions = new SequentialAction(
+                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_DROP_SAMPLE_OBZONE, true, false),
+                new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_DROP_SAMPLE_OBZONE, true, false),
+                new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_DROP_SAMPLE_OBZONE, true, false),
+                new VerticalClawAction(robotHardware, true, false, false)
+//                new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_DROP_SAMPLE_OBZONE, false, false)
         );
 
-        return new SequentialAction(
-                new ParallelAction(
-                        horizontalActions,
-                        verticalActions
-                ),
-                new VerticalClawAction(robotHardware, true, true, false)
+        return new ParallelAction(
+                horizontalActions,
+                verticalActions
         );
     }
 
