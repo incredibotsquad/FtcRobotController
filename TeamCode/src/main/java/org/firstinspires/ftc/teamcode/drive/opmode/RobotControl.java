@@ -8,6 +8,7 @@ import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SequentialAction;
+import com.acmerobotics.roadrunner.SleepAction;
 import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.hardware.Gamepad;
 
@@ -265,12 +266,9 @@ public class RobotControl
 
             //set new state based on older target
             switch (targetRobotState) {
-                case PICK_SAMPLE:
-//                    targetRobotState = ROBOT_STATE.TRANSFER_SAMPLE;
-                    break;
                 case LOW_BASKET:
                 case HIGH_BASKET:
-                    targetRobotState = ROBOT_STATE.PICK_SAMPLE;
+//                    targetRobotState = ROBOT_STATE.PICK_SAMPLE;
                     break;
                 case SNAP_SPECIMEN:
                     targetRobotState = ROBOT_STATE.PICK_SPECIMEN;
@@ -287,8 +285,6 @@ public class RobotControl
         List<Action> newActions = new ArrayList<>();
         for (Action action : runningActions) {
             action.preview(packet.fieldOverlay());
-
-            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "Executing Action: " + action.toString());
 
             if (action.run(packet)) {
                 newActions.add(action); //add if action indicates it needs to run again
@@ -462,17 +458,18 @@ public class RobotControl
         // HORIZONTAL STATE SHOULD HAVE ALREADY BEEN DONE DURING TRANSFER
         Action horizontalActions = new ParallelAction(
                 new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_TRANSFER, false, false),
-                new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_TRANSFER, false, false),
-                new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_TRANSFER, false, false),
+                new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_AFTER_TRANSFER, false, false),
+                new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_AFTER_TRANSFER, false, false),
                 new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_TRANSFER, false, false),
                 new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_TRANSFER, false, false)
         );
 
         Action verticalActions = new ParallelAction(
-                new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_DROP_HIGH_SAMPLE, false, false),
-                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_DROP_HIGH_SAMPLE, false, false),
+                new VerticalClawAction(robotHardware, false, false, false),
+                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_DROP_HIGH_SAMPLE, true, false),
                 new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_DROP_HIGH_SAMPLE, false, false),
-                new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_DROP_HIGH_SAMPLE, false, false)
+                new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_DROP_HIGH_SAMPLE, false, false),
+                new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_DROP_HIGH_SAMPLE, true, false)
         );
 
         return new SequentialAction(
@@ -480,6 +477,7 @@ public class RobotControl
                         horizontalActions,
                         verticalActions
                 ),
+                new SleepAction(0.5),
                 new VerticalClawAction(robotHardware, true, true, false)
         );
     }
@@ -497,15 +495,18 @@ public class RobotControl
         );
 
         Action verticalActions = new ParallelAction(
-                new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_PICK_SPECIMEN, false, false),
+                new VerticalClawAction(robotHardware, false, false, false), //close the claw to make sure we pass thru the slides
+                new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_PICK_SPECIMEN, true, false),
                 new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_PICK_SPECIMEN, false, false),
                 new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_PICK_SPECIMEN, false, false),
                 new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_PICK_SPECIMEN, false, false)
         );
 
-        return new ParallelAction(
-                horizontalActions,
-                verticalActions
+        return new SequentialAction(
+                new ParallelAction(
+                    horizontalActions,
+                    verticalActions),
+                new VerticalClawAction(robotHardware, true, false, false)
         );
     }
 

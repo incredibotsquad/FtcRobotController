@@ -37,8 +37,8 @@ public class VerticalShoulderAction implements Action {
                 return (timer.milliseconds() < 250);
             }
 
-            //tell RR we need to keep running if duration has not elapsed
-            return (timer.milliseconds() < 500);
+            //tell RR we need to keep running if shoulder is not in the right position yet
+            return (Math.abs(robotHardware.getVerticalShoulderServoPosition() - position) > 0.05);
         }
 
         return false;

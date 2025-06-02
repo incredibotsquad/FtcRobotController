@@ -5,6 +5,7 @@ import android.util.Log;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.RobotConstants.*;
 
+import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.ColorRangeSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
@@ -45,6 +46,7 @@ public class RobotHardware {
     private Servo verticalWristServo;
     private Servo verticalElbowServo;
     private Servo verticalShoulderServo;
+    private AnalogInput verticalShoulderServoEncoder;
     private TouchSensor verticalLimitSwitch;
 
 
@@ -109,6 +111,8 @@ public class RobotHardware {
          verticalWristServo = hwMap.get(Servo.class, "VerticalWristServo");
          verticalElbowServo = hwMap.get(Servo.class, "VerticalElbowServo");
          verticalShoulderServo = hwMap.get(Servo.class, "VerticalShoulderServo");
+         verticalShoulderServoEncoder = hwMap.get(AnalogInput.class, "AxonEncoder");
+
 //         verticalLimitSwitch = hwMap.get(TouchSensor.class, "VerticalLimitSwitch");
 
          imu = hwMap.get(IMU.class, "imu");
@@ -280,8 +284,12 @@ public class RobotHardware {
     }
 
     public double getVerticalShoulderServoPosition() {
-        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getVerticalShoulderServoPosition");
-        return verticalShoulderServo.getPosition();
+        double voltage = verticalShoulderServoEncoder.getVoltage();
+        double position = 1 - (voltage / 3.3);  //position via encoder seems to be flipped
+//        double position = verticalShoulderServoEncoder.getVoltage() / 3.3;
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getVerticalShoulderServo Voltage: " + voltage);
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getVerticalShoulderServo Position: " + position);
+        return position;
     }
 
     public void setVerticalShoulderServoPosition(double pos) {
