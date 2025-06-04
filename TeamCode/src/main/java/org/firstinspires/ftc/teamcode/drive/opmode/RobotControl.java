@@ -9,13 +9,12 @@ import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.SleepAction;
-import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.hardware.Gamepad;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.ColorSenorOutput;
 import org.firstinspires.ftc.teamcode.GameConstants;
-import org.firstinspires.ftc.teamcode.R;
+import org.firstinspires.ftc.teamcode.HorizontalPickupVector;
 import org.firstinspires.ftc.teamcode.RobotConstants;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.HorizontalClawAction;
@@ -79,9 +78,8 @@ public class RobotControl
 
         CreateStateFromButtonPress();
 
-        ProcessStateNew();
+        ProcessState();
 
-//        ProcessState();
 
 //        ProcessSafetyChecks();
 //
@@ -175,8 +173,33 @@ public class RobotControl
         }
     }
 
+
+    public HorizontalPickupVector GetHorizontalPickupVectorFromCameraInputs(double YOffset, double XOffset, double sampleOrientation) {
+
+        double accountForPickupArm = Math.sqrt((RobotConstants.PICKUP_ARM_LENGTH * RobotConstants.PICKUP_ARM_LENGTH) - (XOffset * XOffset));
+
+        int newSlidePosition = (int)((YOffset - accountForPickupArm) * RobotConstants.HORIZONTAL_SLIDE_TICKS_PER_INCH);
+
+//        robotHardware.setHorizontalSlidePosition((int) (newSlidePosition * RobotConstants.HORIZONTAL_SLIDE_TICKS_PER_INCH));
+
+        double turretMovementAngle = Math.toDegrees(Math.atan(XOffset / accountForPickupArm));
+
+        double turretServoPos = 0.5 + (turretMovementAngle/300);
+
+//        robotHardware.setHorizontalTurretServoPosition(0.5 + (turretMovementAngle/300));
+
+        double netSampleOrientation = sampleOrientation - turretMovementAngle;
+
+        double wristPosition = (60 + netSampleOrientation) / 300;
+
+//        robotHardware.setHorizontalWristServoPosition(wristPosition);
+
+        return new HorizontalPickupVector(newSlidePosition, turretServoPos, wristPosition);
+    }
+
+
     //function to take the new target state and turn it into robot movements
-    private void ProcessStateNew() {
+    private void ProcessState() {
 
         if (currentRobotState == targetRobotState) return;
 
@@ -347,17 +370,32 @@ public class RobotControl
         );
 
         //TODO: THE CONSTANTS BELOW NEED TO COME FROM THE CAMERA
+
+        HorizontalPickupVector pickupVector = GetHorizontalPickupVectorFromCameraInputs(RobotConstants.HORIZONTAL_SLIDE_PICK_SAMPLE, RobotConstants.HORIZONTAL_TURRET_PICK_SAMPLE, RobotConstants.HORIZONTAL_WRIST_PICK_SAMPLE);
+
         Action horizontalActions = new SequentialAction(
                 new ParallelAction(
-                    new HorizontalClawAction(robotHardware, true, false, false),
-                    new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_PICK_SAMPLE, false, false),
-                    new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_PICK_SAMPLE, false, false),
-                    new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_PICK_SAMPLE, true, false),
-                    new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SAMPLE, true, false),
-                    new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_PICK_SAMPLE, false,false)
-            ),
+                        new HorizontalClawAction(robotHardware, true, false, false),
+                        new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_PICK_SAMPLE, false, false),
+                        new HorizontalTurretAction(robotHardware, pickupVector.turretPosition, false, false),
+                        new HorizontalSlideAction(robotHardware, pickupVector.slidePosition, true, false),
+                        new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SAMPLE, true, false),
+                        new HorizontalWristAction(robotHardware, pickupVector.clawOrientation, false,false)
+                ),
                 new InstantAction(() -> readyToPickSample = true)
         );
+
+//        Action horizontalActions = new SequentialAction(
+//                new ParallelAction(
+//                    new HorizontalClawAction(robotHardware, true, false, false),
+//                    new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_PICK_SAMPLE, false, false),
+//                    new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_PICK_SAMPLE, false, false),
+//                    new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_PICK_SAMPLE, true, false),
+//                    new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SAMPLE, true, false),
+//                    new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_PICK_SAMPLE, false,false)
+//            ),
+//                new InstantAction(() -> readyToPickSample = true)
+//        );
 
         return new ParallelAction(
                 verticalActions,
@@ -535,216 +573,6 @@ public class RobotControl
         );
     }
 
-    private void ProcessState() {
-
-        if (currentRobotState == targetRobotState) return;
-
-        switch (targetRobotState) {
-
-            case RESTING:
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: RESTING");
-
-                robotHardware.setVerticalClawState(false);
-                robotHardware.setVerticalShoulderServoPosition(RobotConstants.VERTICAL_SHOULDER_RESTING);
-                robotHardware.setVerticalElbowServoPosition(RobotConstants.VERTICAL_ELBOW_RESTING);
-                robotHardware.setVerticalWristServoPosition(RobotConstants.VERTICAL_WRIST_RESTING);
-                robotHardware.setVerticalSlidePosition(RobotConstants.VERTICAL_SLIDE_RESTING);
-
-                robotHardware.setHorizontalTurretServoPosition(RobotConstants.HORIZONTAL_TURRET_RESTING);
-                robotHardware.setHorizontalClawState(false);
-                robotHardware.setHorizontalShoulderServoPosition(RobotConstants.HORIZONTAL_SHOULDER_RESTING);
-                robotHardware.setHorizontalElbowServoPosition(RobotConstants.HORIZONTAL_ELBOW_RESTING);
-                robotHardware.setHorizontalWristServoPosition(RobotConstants.HORIZONTAL_WRIST_RESTING);
-                robotHardware.setHorizontalSlidePosition(RobotConstants.HORIZONTAL_SLIDE_RESTING);
-
-                // WHEN THE SLIDES ARE DONE MOVING, WE ARE DONE PROCESSING
-                if ((Math.abs(robotHardware.getHorizontalSlidePosition() - RobotConstants.HORIZONTAL_SLIDE_RESTING) < RobotConstants.SLIDE_POSITION_TOLERANCE)  &&
-                        Math.abs(robotHardware.getVerticalSlidePosition() - RobotConstants.VERTICAL_SLIDE_RESTING)  < RobotConstants.SLIDE_POSITION_TOLERANCE) {
-                    currentRobotState = targetRobotState;
-                }
-
-
-                break;
-
-            case RESET_ENCODERS:
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: RESET ENCODERS");
-
-                currentRobotState = targetRobotState;
-                break;
-
-            case PICK_SAMPLE:   //PICK SAMPLE
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: PICK SAMPLE");
-
-                //TODO: THESE NEED TO COME FROM THE CAMERA
-                robotHardware.setHorizontalClawState(true);
-                robotHardware.setHorizontalTurretServoPosition(RobotConstants.HORIZONTAL_TURRET_PICK_SAMPLE);
-                robotHardware.setHorizontalShoulderServoPosition(RobotConstants.HORIZONTAL_SHOULDER_PICK_SAMPLE);
-                robotHardware.setHorizontalElbowServoPosition(RobotConstants.HORIZONTAL_ELBOW_PICK_SAMPLE);
-                robotHardware.setHorizontalWristServoPosition(RobotConstants.HORIZONTAL_WRIST_PICK_SAMPLE);
-                robotHardware.setHorizontalSlidePosition(RobotConstants.HORIZONTAL_SLIDE_PICK_SAMPLE);
-
-                // VERTICAL GET READY FOR TRANSFER
-                robotHardware.setVerticalClawState(true);
-                robotHardware.setVerticalShoulderServoPosition(RobotConstants.VERTICAL_SHOULDER_TRANSFER);
-                robotHardware.setVerticalElbowServoPosition(RobotConstants.VERTICAL_ELBOW_TRANSFER);
-                robotHardware.setVerticalWristServoPosition(RobotConstants.VERTICAL_WRIST_TRANSFER);
-                robotHardware.setVerticalSlidePosition(RobotConstants.VERTICAL_SLIDE_TRANSFER);
-
-                currentRobotState = targetRobotState;
-                break;
-
-            case TRANSFER_SAMPLE:
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: TRANSFER SAMPLE");
-
-                robotHardware.setHorizontalTurretServoPosition(RobotConstants.HORIZONTAL_TURRET_TRANSFER);
-                robotHardware.setHorizontalShoulderServoPosition(RobotConstants.HORIZONTAL_SHOULDER_TRANSFER);
-                robotHardware.setHorizontalElbowServoPosition(RobotConstants.HORIZONTAL_ELBOW_TRANSFER);
-                robotHardware.setHorizontalWristServoPosition(RobotConstants.HORIZONTAL_WRIST_TRANSFER);
-                robotHardware.setHorizontalSlidePosition(RobotConstants.HORIZONTAL_SLIDE_TRANSFER);
-
-                // VERTICAL STATE SHOULD HAVE ALREADY BEEN DONE DURING PICK SAMPLE
-                robotHardware.setVerticalClawState(true);
-                robotHardware.setVerticalShoulderServoPosition(RobotConstants.VERTICAL_SHOULDER_TRANSFER);
-                robotHardware.setVerticalElbowServoPosition(RobotConstants.VERTICAL_ELBOW_TRANSFER);
-                robotHardware.setVerticalWristServoPosition(RobotConstants.VERTICAL_WRIST_TRANSFER);
-                robotHardware.setVerticalSlidePosition(RobotConstants.VERTICAL_SLIDE_TRANSFER);
-
-                robotHardware.setVerticalClawState(false);  //close vertical claw
-                try {
-                    Thread.sleep(100);
-                }
-                catch (InterruptedException e) {
-                }
-
-                robotHardware.setHorizontalClawState(true); //open horizontal claw
-
-                currentRobotState = targetRobotState;
-
-                break;
-
-            case TRANSFER_TO_OB_ZONE:
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: TRANSFER TO OBSERVATION ZONE");
-
-                //TODO: MOVE ROBOT TO OB ZONE
-                robotHardware.setHorizontalTurretServoPosition(RobotConstants.HORIZONTAL_TURRET_TRANSFER);
-                robotHardware.setHorizontalShoulderServoPosition(RobotConstants.HORIZONTAL_SHOULDER_TRANSFER);
-                robotHardware.setHorizontalElbowServoPosition(RobotConstants.HORIZONTAL_ELBOW_TRANSFER);
-                robotHardware.setHorizontalWristServoPosition(RobotConstants.HORIZONTAL_WRIST_TRANSFER);
-                robotHardware.setHorizontalSlidePosition(RobotConstants.HORIZONTAL_SLIDE_TRANSFER);
-
-                robotHardware.setVerticalShoulderServoPosition(RobotConstants.VERTICAL_SHOULDER_DROP_SAMPLE_OBZONE);
-                robotHardware.setVerticalElbowServoPosition(RobotConstants.VERTICAL_ELBOW_DROP_SAMPLE_OBZONE);
-                robotHardware.setVerticalWristServoPosition(RobotConstants.VERTICAL_WRIST_DROP_SAMPLE_OBZONE);
-                robotHardware.setVerticalSlidePosition(RobotConstants.VERTICAL_SLIDE_DROP_SAMPLE_OBZONE);
-
-                robotHardware.setVerticalClawState(true);  //close vertical claw
-                try {
-                    Thread.sleep(100);
-                }
-                catch (InterruptedException e) {
-                }
-
-                currentRobotState = targetRobotState;
-
-                break;
-
-            case LOW_BASKET:   //LOW BASKET
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: LOW BASKET");
-
-                // HORIZONTAL STATE SHOULD HAVE ALREADY BEEN DONE DURING TRANSFER
-                robotHardware.setHorizontalTurretServoPosition(RobotConstants.HORIZONTAL_TURRET_TRANSFER);
-                robotHardware.setHorizontalShoulderServoPosition(RobotConstants.HORIZONTAL_SHOULDER_TRANSFER);
-                robotHardware.setHorizontalElbowServoPosition(RobotConstants.HORIZONTAL_ELBOW_TRANSFER);
-                robotHardware.setHorizontalWristServoPosition(RobotConstants.HORIZONTAL_WRIST_TRANSFER);
-                robotHardware.setHorizontalSlidePosition(RobotConstants.HORIZONTAL_SLIDE_TRANSFER);
-
-                // TODO: MOVE ROBOT TO BASKET COORDINATES
-
-                robotHardware.setVerticalSlidePosition(RobotConstants.VERTICAL_SLIDE_DROP_LOW_SAMPLE);
-                robotHardware.setVerticalElbowServoPosition(RobotConstants.VERTICAL_ELBOW_DROP_LOW_SAMPLE);
-                robotHardware.setVerticalWristServoPosition(RobotConstants.VERTICAL_WRIST_DROP_LOW_SAMPLE);
-                robotHardware.setVerticalShoulderServoPosition(RobotConstants.VERTICAL_SHOULDER_DROP_LOW_SAMPLE);
-
-                if (1 == 1) {   // TODO: update to check robot position
-                    robotHardware.setVerticalClawState(true);  //open vertical claw
-                    currentRobotState = targetRobotState;
-                    targetRobotState = ROBOT_STATE.PICK_SAMPLE;
-                }
-
-                break;
-            case HIGH_BASKET:   //HIGH BASKET
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: HIGH BASKET");
-
-                // HORIZONTAL STATE SHOULD HAVE ALREADY BEEN DONE DURING TRANSFER
-                robotHardware.setHorizontalTurretServoPosition(RobotConstants.HORIZONTAL_TURRET_TRANSFER);
-                robotHardware.setHorizontalShoulderServoPosition(RobotConstants.HORIZONTAL_SHOULDER_TRANSFER);
-                robotHardware.setHorizontalElbowServoPosition(RobotConstants.HORIZONTAL_ELBOW_TRANSFER);
-                robotHardware.setHorizontalWristServoPosition(RobotConstants.HORIZONTAL_WRIST_TRANSFER);
-                robotHardware.setHorizontalSlidePosition(RobotConstants.HORIZONTAL_SLIDE_TRANSFER);
-
-                // TODO: MOVE ROBOT TO BASKET COORDINATES
-
-                robotHardware.setVerticalShoulderServoPosition(RobotConstants.VERTICAL_SHOULDER_DROP_HIGH_SAMPLE);
-                robotHardware.setVerticalSlidePosition(RobotConstants.VERTICAL_SLIDE_DROP_HIGH_SAMPLE);
-                robotHardware.setVerticalElbowServoPosition(RobotConstants.VERTICAL_ELBOW_DROP_HIGH_SAMPLE);
-                robotHardware.setVerticalWristServoPosition(RobotConstants.VERTICAL_WRIST_DROP_HIGH_SAMPLE);
-
-                if (1 == 1) {   // TODO: update to check robot position
-                    robotHardware.setVerticalClawState(true);  //open vertical claw
-                    currentRobotState = targetRobotState;
-                    targetRobotState = ROBOT_STATE.PICK_SAMPLE;
-                }
-
-                break;
-
-            case PICK_SPECIMEN:   //PICK SPECIMEN
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: PICK SPECIMEN");
-
-                //TODO: MOVE ROBOT TO PICK SPECIMEN
-
-                // HORIZONTAL STATE SHOULD HAVE ALREADY BEEN DONE DURING TRANSFER
-                robotHardware.setHorizontalTurretServoPosition(RobotConstants.HORIZONTAL_TURRET_PICK_SPECIMEN);
-                robotHardware.setHorizontalShoulderServoPosition(RobotConstants.HORIZONTAL_SHOULDER_PICK_SPECIMEN);
-                robotHardware.setHorizontalElbowServoPosition(RobotConstants.HORIZONTAL_ELBOW_PICK_SPECIMEN);
-                robotHardware.setHorizontalWristServoPosition(RobotConstants.HORIZONTAL_WRIST_PICK_SPECIMEN);
-                robotHardware.setHorizontalSlidePosition(RobotConstants.HORIZONTAL_SLIDE_PICK_SPECIMEN);
-
-                robotHardware.setVerticalShoulderServoPosition(RobotConstants.VERTICAL_SHOULDER_PICK_SPECIMEN);
-                robotHardware.setVerticalSlidePosition(RobotConstants.VERTICAL_SLIDE_PICK_SPECIMEN);
-                robotHardware.setVerticalElbowServoPosition(RobotConstants.VERTICAL_ELBOW_PICK_SPECIMEN);
-                robotHardware.setVerticalWristServoPosition(RobotConstants.VERTICAL_WRIST_PICK_SPECIMEN);
-
-                currentRobotState = targetRobotState;
-
-                break;
-
-            case SNAP_SPECIMEN:   //SNAP SPECIMEN
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: SNAP SPECIMEN");
-
-                //TODO: MOVE ROBOT TO SNAP SPECIMEN
-
-                // HORIZONTAL STATE SHOULD HAVE ALREADY BEEN DONE DURING PICK SPECIMEN
-                robotHardware.setHorizontalTurretServoPosition(RobotConstants.HORIZONTAL_TURRET_PICK_SPECIMEN);
-                robotHardware.setHorizontalShoulderServoPosition(RobotConstants.HORIZONTAL_SHOULDER_PICK_SPECIMEN);
-                robotHardware.setHorizontalElbowServoPosition(RobotConstants.HORIZONTAL_ELBOW_PICK_SPECIMEN);
-                robotHardware.setHorizontalWristServoPosition(RobotConstants.HORIZONTAL_WRIST_PICK_SPECIMEN);
-                robotHardware.setHorizontalSlidePosition(RobotConstants.HORIZONTAL_SLIDE_PICK_SPECIMEN);
-
-                robotHardware.setVerticalSlidePosition(RobotConstants.VERTICAL_SLIDE_SNAP_HIGH_SPECIMEN);
-                robotHardware.setVerticalElbowServoPosition(RobotConstants.VERTICAL_ELBOW_SNAP_HIGH_SPECIMEN);
-                robotHardware.setVerticalWristServoPosition(RobotConstants.VERTICAL_WRIST_SNAP_HIGH_SPECIMEN);
-                robotHardware.setVerticalShoulderServoPosition(RobotConstants.VERTICAL_SHOULDER_SNAP_HIGH_SPECIMEN);
-
-                currentRobotState = targetRobotState;
-
-                break;
-
-            case ROBOT_HANG: //SLIDE CLOSED, ARM RESTING
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: ROBOT HANG");
-
-                break;
-        }
-    }
 
     private void ProcessBumpers() {
         // if the right bumper is pressed it opens the claw

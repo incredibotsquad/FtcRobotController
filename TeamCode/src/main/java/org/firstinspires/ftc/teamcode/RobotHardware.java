@@ -118,13 +118,12 @@ public class RobotHardware {
          imu = hwMap.get(IMU.class, "imu");
      }
 
+
      public void stopAllMechanisms()
      {
          horizontalSlideMotor.setPower(0);
          verticalSlideMotor1.setPower(0);
          verticalSlideMotor2.setPower(0);
-
-
      }
 
     public void stopRobotChassis() {

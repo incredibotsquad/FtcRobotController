@@ -9,6 +9,10 @@ public class RobotConstants {
     public static final double wheelCircumferenceMM = 48 * Math.PI;
     public static final double MMPerTick = wheelCircumferenceMM / tickPerRev;
 
+    public static double HORIZONTAL_SLIDE_TICKS_PER_INCH = 538 / (1.575 * Math.PI); //Total ticks to extend slide divided by slide length
+
+    public static double PICKUP_ARM_LENGTH = 7; // 8 inches
+
     public static double COLOR_SENSOR_DISTANCE_THRESHOLD = 2;   // in cm.
 
     public static int SLIDE_POSITION_TOLERANCE = 50;
