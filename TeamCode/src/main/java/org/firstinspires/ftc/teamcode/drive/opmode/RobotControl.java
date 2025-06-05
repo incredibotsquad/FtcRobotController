@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.drive.opmode;
 
+import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.telemetry;
+
 import android.util.Log;
 
 import com.acmerobotics.dashboard.FtcDashboard;
@@ -12,6 +14,7 @@ import com.acmerobotics.roadrunner.SleepAction;
 import com.qualcomm.robotcore.hardware.Gamepad;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.teamcode.ColorSenorOutput;
 import org.firstinspires.ftc.teamcode.GameConstants;
 import org.firstinspires.ftc.teamcode.HorizontalPickupVector;
@@ -28,6 +31,11 @@ import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.VerticalElbowAct
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.VerticalShoulderAction;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.VerticalSlideAction;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.VerticalWristAction;
+import org.opencv.core.RotatedRect;
+import org.openftc.easyopencv.OpenCvCamera;
+import org.openftc.easyopencv.OpenCvCameraFactory;
+import org.openftc.easyopencv.OpenCvCameraRotation;
+import org.openftc.easyopencv.OpenCvWebcam;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,6 +49,9 @@ public class RobotControl
     private FtcDashboard dashboard;
     private List<Action> runningActions;
 
+    public TensorFlow VisionCalibration;
+    OpenCvWebcam webcam;
+    SampleDetectionPipelineV2 sampleDetectionPipeline;
 
     private enum ROBOT_STATE {
         NONE,
@@ -72,6 +83,30 @@ public class RobotControl
         dashboard = FtcDashboard.getInstance();
         runningActions = new ArrayList<>();
         readyToPickSample = false;
+
+        VisionCalibration = new TensorFlow();
+        int camMonitorViewId = robotHardware.hardwareMap.appContext.getResources()
+                .getIdentifier("cameraMonitorViewId", "id", robotHardware.hardwareMap.appContext.getPackageName());
+
+        webcam = OpenCvCameraFactory.getInstance().createWebcam(
+                robotHardware.hardwareMap.get(WebcamName.class, "Webcam 1"), camMonitorViewId);
+
+        sampleDetectionPipeline = new SampleDetectionPipelineV2();
+        sampleDetectionPipeline.setColorMode(GameConstants.GAME_COLORS.RED);
+        webcam.setPipeline(sampleDetectionPipeline);
+
+        webcam.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener() {
+            //override onOpened to start streaming
+            @Override
+            public void onOpened() {
+                webcam.startStreaming(RobotConstants.IMAGE_WIDTH, RobotConstants.IMAGE_HEIGHT, OpenCvCameraRotation.UPRIGHT);
+            }
+            //Handle error handling
+            @Override
+            public void onError(int errorCode) {
+                telemetry.addData("Got error number: ", errorCode);
+            }
+        });
     }
 
     public void ProcessInputs(Telemetry telemetry) {
@@ -98,6 +133,7 @@ public class RobotControl
     }
 
     public void setGameColor(GameConstants.GAME_COLORS gameColor) {
+        sampleDetectionPipeline.setColorMode(gameColor);
         this.gameColor = gameColor;
     }
 
@@ -147,6 +183,9 @@ public class RobotControl
             if (gamepad2.left_trigger > 0) {
                 newTargetRobotState = ROBOT_STATE.TRANSFER_TO_OB_ZONE;
             }
+            else if (gamepad2.right_trigger > 0) {
+                newTargetRobotState = ROBOT_STATE.ENTER_EXIT_SUB;
+            }
         }
 
         if (gamepad2.y) {
@@ -160,13 +199,11 @@ public class RobotControl
             Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "TRANSITIONING STATE CURRENT: " + currentRobotState + " TARGET: " + newTargetRobotState);
 
             if (newTargetRobotState != targetRobotState) {
-                //TODO: STOP ALL PROCESSING - STATE TRANSITION WAS GOING ON WHEN NEW STATE WAS CALLED IN
-
-//                for (Action action : runningActions) {
-//                    action.
-//                }
-
+                //STOP ALL PROCESSING - STATE TRANSITION WAS GOING ON WHEN NEW STATE WAS CALLED IN
                 Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "STOPPING! STATE TRANSITION WAS GOING ON WHEN NEW TARGET WAS CALLED IN. OLD TARGET: " + targetRobotState + " NEW TARGET: " + newTargetRobotState);
+
+                robotHardware.stopRobotAndMechanisms();
+                runningActions.clear();
             }
 
             targetRobotState = newTargetRobotState;
@@ -174,7 +211,42 @@ public class RobotControl
     }
 
 
-    public HorizontalPickupVector GetHorizontalPickupVectorFromCameraInputs(double YOffset, double XOffset, double sampleOrientation) {
+    public HorizontalPickupVector GetHorizontalPickupVectorFromCameraInputs() {
+
+//        if (sampleDetectionPipeline.latestRects != null && sampleDetectionPipeline.latestDistances != null) {
+//            for (int i = 0; i < sampleDetectionPipeline.latestRects.length; i++) {
+//                TensorFlow.CalibrationResult result = VisionCalibration.calibrate((float) sampleDetectionPipeline.GetRealXinches(i), (float) sampleDetectionPipeline.GetRealYinches(i), (float) sampleDetectionPipeline.GetSampleOrientation(i));
+//                RotatedRect rect = sampleDetectionPipeline.latestRects[i];
+//                telemetry.addData("GOT CENTER Y: ", rect.center.y);
+//                telemetry.addData("GOT CENTER X:", rect.center.x);
+//                telemetry.addData("GOT VERTICAL DISTANCE FROM ROBOT: ", result.realY);
+//                telemetry.addData("GOT HORIONTAL DISTANCE FROM ROBOT: ", result.realX);
+//                telemetry.addData("GOT RECTANGLE OREINTATION: ", result.realAngle);
+//                telemetry.addData("GOT ANGLE FROM ROBOT: ", sampleDetectionPipeline.GetSampleAngleFromRobot(i));
+//            }
+//        }
+
+        double YOffset;
+        double XOffset;
+        double sampleOrientation;
+
+        if (sampleDetectionPipeline.latestRects != null && sampleDetectionPipeline.latestDistances != null) {
+            TensorFlow.CalibrationResult result = VisionCalibration.calibrate((float) sampleDetectionPipeline.GetRealXinches(0), (float) sampleDetectionPipeline.GetRealYinches(0), (float) sampleDetectionPipeline.GetSampleOrientation(0));
+            RotatedRect rect = sampleDetectionPipeline.latestRects[0];
+            telemetry.addData("GOT CENTER Y: ", rect.center.y);
+            telemetry.addData("GOT CENTER X:", rect.center.x);
+
+            telemetry.addData("GOT VERTICAL DISTANCE FROM ROBOT: ", result.realY);
+            telemetry.addData("GOT HORIONTAL DISTANCE FROM ROBOT: ", result.realX);
+            telemetry.addData("GOT RECTANGLE OREINTATION: ", result.realAngle);
+
+            telemetry.addData("GOT ANGLE FROM ROBOT: ", sampleDetectionPipeline.GetSampleAngleFromRobot(0));
+
+            YOffset = result.realY;
+            XOffset = result.realX;
+            sampleOrientation = result.realAngle;
+        }
+        else return null;
 
         double accountForPickupArm = Math.sqrt((RobotConstants.PICKUP_ARM_LENGTH * RobotConstants.PICKUP_ARM_LENGTH) - (XOffset * XOffset));
 
@@ -184,13 +256,16 @@ public class RobotControl
 
         double turretMovementAngle = Math.toDegrees(Math.atan(XOffset / accountForPickupArm));
 
-        double turretServoPos = 0.5 + (turretMovementAngle/300);
+        double turretServoPos = RobotConstants.TURRET_CENTER_POSITION + (turretMovementAngle / 300);
 
 //        robotHardware.setHorizontalTurretServoPosition(0.5 + (turretMovementAngle/300));
 
-        double netSampleOrientation = sampleOrientation - turretMovementAngle;
+        double wristOrientation = sampleOrientation - 90;   //wrist has to be perpendicular to the sample
+        wristOrientation -= turretMovementAngle;    //adjust for turret movement
 
-        double wristPosition = (60 + netSampleOrientation) / 300;
+        wristOrientation = (RobotConstants.HORIZONTAL_WRIST_TRANSFER * 300) + wristOrientation; //angle in degrees
+
+        double wristPosition =  wristOrientation / 300; // normalized between 0 and 1
 
 //        robotHardware.setHorizontalWristServoPosition(wristPosition);
 
@@ -218,7 +293,13 @@ public class RobotControl
                     Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: RESET ENCODERS");
 
                     //TODO: add code here
-                    currentRobotState = targetRobotState;
+                    runningActions.add(GetResetEncodersActionSequence());
+                    break;
+
+                case ENTER_EXIT_SUB:
+                    Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: ENTER EXIT SUB");
+
+                    runningActions.add(GetEnterExitSubActionSequence());
                     break;
 
                 case PICK_SAMPLE:   //PICK SAMPLE
@@ -324,7 +405,7 @@ public class RobotControl
 
         ColorSenorOutput colorSenorOutput = robotHardware.getDetectedColorAndDistance();
 
-        if (colorSenorOutput.detectedColor == this.gameColor || colorSenorOutput.detectedColor == GameConstants.GAME_COLORS.OTHER) {
+        if (colorSenorOutput.detectedColor == this.gameColor || colorSenorOutput.detectedColor == GameConstants.GAME_COLORS.YELLOW) {
             if (colorSenorOutput.distance < RobotConstants.COLOR_SENSOR_DISTANCE_THRESHOLD) {
                 robotHardware.setHorizontalClawState(false);
                 this.targetRobotState = ROBOT_STATE.TRANSFER_SAMPLE;
@@ -356,8 +437,12 @@ public class RobotControl
                 horizontalActions);
     }
 
-    public Action GetPickSampleActionSequence() {
+    public Action GetResetEncodersActionSequence() {
+        //TODO: add proper code here
+        return new SleepAction(0);
+    }
 
+    public Action GetVerticalActionsForTransfer() {
         Action verticalActions = new SequentialAction(
                 new ParallelAction(
                         new VerticalClawAction(robotHardware, false, false, false),
@@ -369,9 +454,34 @@ public class RobotControl
                 new VerticalClawAction(robotHardware, true, false, false)
         );
 
-        //TODO: THE CONSTANTS BELOW NEED TO COME FROM THE CAMERA
+        return verticalActions;
+    }
 
-        HorizontalPickupVector pickupVector = GetHorizontalPickupVectorFromCameraInputs(RobotConstants.HORIZONTAL_SLIDE_PICK_SAMPLE, RobotConstants.HORIZONTAL_TURRET_PICK_SAMPLE, RobotConstants.HORIZONTAL_WRIST_PICK_SAMPLE);
+    public Action GetEnterExitSubActionSequence() {
+
+        Action verticalActions = GetVerticalActionsForTransfer();
+
+        Action horizontalActions = new ParallelAction(
+                new HorizontalClawAction(robotHardware, true, false, false),
+                new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_ENTER_EXIT_SUB, false, false),
+                new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_ENTER_EXIT_SUB, false, false),
+                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_ENTER_EXIT_SUB, true, false),
+                new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_ENTER_EXIT_SUB, true, false),
+                new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_ENTER_EXIT_SUB, false,false)
+        );
+
+        return new ParallelAction(
+                verticalActions,
+                horizontalActions
+        );
+    }
+
+    public Action GetPickSampleActionSequence() {
+
+        Action verticalActions = GetVerticalActionsForTransfer();
+
+        //THE CONSTANTS BELOW NEED TO COME FROM THE CAMERA
+        HorizontalPickupVector pickupVector = GetHorizontalPickupVectorFromCameraInputs();
 
         Action horizontalActions = new SequentialAction(
                 new ParallelAction(
@@ -385,6 +495,7 @@ public class RobotControl
                 new InstantAction(() -> readyToPickSample = true)
         );
 
+        //uncomment below to go back to state before integrating camera input
 //        Action horizontalActions = new SequentialAction(
 //                new ParallelAction(
 //                    new HorizontalClawAction(robotHardware, true, false, false),
@@ -404,16 +515,7 @@ public class RobotControl
 
     public Action GetTransferSampleActionSequence() {
         // VERTICAL STATE SHOULD HAVE ALREADY BEEN DONE DURING PICK SAMPLE
-        Action verticalActions = new SequentialAction(
-                new ParallelAction(
-                    new VerticalClawAction(robotHardware, false, true, false),
-                    new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_TRANSFER, false, false),
-                    new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_TRANSFER, false, false),
-                    new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_TRANSFER, false, false),
-                    new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_TRANSFER, false, false)
-                ),
-                new VerticalClawAction(robotHardware, true, true, false)
-        );
+        Action verticalActions = GetVerticalActionsForTransfer();
 
         Action horizontalActions = new ParallelAction(
                 new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_TRANSFER, true, false),

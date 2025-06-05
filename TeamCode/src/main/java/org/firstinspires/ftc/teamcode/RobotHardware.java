@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode;
 import android.util.Log;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.teamcode.RobotConstants.*;
 
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.ColorRangeSensor;
@@ -20,6 +19,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 public class RobotHardware {
 
+    public HardwareMap hardwareMap;
     IMU imu;
     private DcMotorEx rightFrontDriveMotor;
     private DcMotorEx leftFrontDriveMotor;
@@ -53,22 +53,24 @@ public class RobotHardware {
      //making constructor
      public RobotHardware(HardwareMap hwMap) {
 
-         rightFrontDriveMotor = hwMap.get(DcMotorEx.class, "RFMotor");
+         this.hardwareMap = hwMap;
+
+         rightFrontDriveMotor = hardwareMap.get(DcMotorEx.class, "RFMotor");
          rightFrontDriveMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
          rightFrontDriveMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
          //this motor is oriented backwards, hence reversing direction
-         leftFrontDriveMotor = hwMap.get(DcMotorEx.class, "LFMotor");
+         leftFrontDriveMotor = hardwareMap.get(DcMotorEx.class, "LFMotor");
          leftFrontDriveMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
          leftFrontDriveMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
          leftFrontDriveMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
-         rightBackDriveMotor = hwMap.get(DcMotorEx.class, "RBMotor");
+         rightBackDriveMotor = hardwareMap.get(DcMotorEx.class, "RBMotor");
          rightBackDriveMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
          rightBackDriveMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
          //this motor is oriented backwards, hence reversing direction
-         leftBackDriveMotor = hwMap.get(DcMotorEx.class, "LBMotor");
+         leftBackDriveMotor = hardwareMap.get(DcMotorEx.class, "LBMotor");
          leftBackDriveMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
          leftBackDriveMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
          leftBackDriveMotor.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -78,44 +80,44 @@ public class RobotHardware {
          odoFront = rightFrontDriveMotor;
 
          // horizontal stack
-         horizontalSlideMotor = hwMap.get(DcMotorEx.class, "HorizontalSlideMotor");
+         horizontalSlideMotor = hardwareMap.get(DcMotorEx.class, "HorizontalSlideMotor");
          horizontalSlideMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
          horizontalSlideMotor.setTargetPosition(0);
          horizontalSlideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
          horizontalSlideMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
-         horizontalClawServo = hwMap.get(Servo.class, "HorizontalClawServo");
-         horizontalWristServo = hwMap.get(Servo.class, "HorizontalWristServo");
-         horizontalElbowServo = hwMap.get(Servo.class, "HorizontalElbowServo");
-         horizontalShoulderServo = hwMap.get(Servo.class, "HorizontalShoulderServo");
-         horizontalTurretServo = hwMap.get(Servo.class, "HorizontalTurretServo");
-         colorSensor = hwMap.get(ColorRangeSensor.class, "ColorSensor");
-//         horizontalLimitSwitch = hwMap.get(TouchSensor.class, "HorizontalLimitSwitch");
+         horizontalClawServo = hardwareMap.get(Servo.class, "HorizontalClawServo");
+         horizontalWristServo = hardwareMap.get(Servo.class, "HorizontalWristServo");
+         horizontalElbowServo = hardwareMap.get(Servo.class, "HorizontalElbowServo");
+         horizontalShoulderServo = hardwareMap.get(Servo.class, "HorizontalShoulderServo");
+         horizontalTurretServo = hardwareMap.get(Servo.class, "HorizontalTurretServo");
+         colorSensor = hardwareMap.get(ColorRangeSensor.class, "ColorSensor");
+//         horizontalLimitSwitch = hardwareMap.get(TouchSensor.class, "HorizontalLimitSwitch");
 
 
          // vertical stack
-         verticalSlideMotor1 = hwMap.get(DcMotorEx.class, "VerticalSlideMotor1");
+         verticalSlideMotor1 = hardwareMap.get(DcMotorEx.class, "VerticalSlideMotor1");
          verticalSlideMotor1.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
          verticalSlideMotor1.setDirection(DcMotorSimple.Direction.REVERSE);
          verticalSlideMotor1.setTargetPosition(0);
          verticalSlideMotor1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
          verticalSlideMotor1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
-         verticalSlideMotor2 = hwMap.get(DcMotorEx.class, "VerticalSlideMotor2");
+         verticalSlideMotor2 = hardwareMap.get(DcMotorEx.class, "VerticalSlideMotor2");
          verticalSlideMotor2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
          verticalSlideMotor2.setTargetPosition(0);
          verticalSlideMotor2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
          verticalSlideMotor2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
-         verticalClawServo = hwMap.get(Servo.class, "VerticalClawServo");
-         verticalWristServo = hwMap.get(Servo.class, "VerticalWristServo");
-         verticalElbowServo = hwMap.get(Servo.class, "VerticalElbowServo");
-         verticalShoulderServo = hwMap.get(Servo.class, "VerticalShoulderServo");
-         verticalShoulderServoEncoder = hwMap.get(AnalogInput.class, "AxonEncoder");
+         verticalClawServo = hardwareMap.get(Servo.class, "VerticalClawServo");
+         verticalWristServo = hardwareMap.get(Servo.class, "VerticalWristServo");
+         verticalElbowServo = hardwareMap.get(Servo.class, "VerticalElbowServo");
+         verticalShoulderServo = hardwareMap.get(Servo.class, "VerticalShoulderServo");
+         verticalShoulderServoEncoder = hardwareMap.get(AnalogInput.class, "AxonEncoder");
 
-//         verticalLimitSwitch = hwMap.get(TouchSensor.class, "VerticalLimitSwitch");
+//         verticalLimitSwitch = hardwareMap.get(TouchSensor.class, "VerticalLimitSwitch");
 
-         imu = hwMap.get(IMU.class, "imu");
+         imu = hardwareMap.get(IMU.class, "imu");
      }
 
 
@@ -195,7 +197,7 @@ public class RobotHardware {
      }
 
      public GameConstants.GAME_COLORS getDetectedColor(){
-         GameConstants.GAME_COLORS detectedColor = GameConstants.GAME_COLORS.OTHER;
+         GameConstants.GAME_COLORS detectedColor = GameConstants.GAME_COLORS.YELLOW;
 
          if (colorSensor.red() > colorSensor.green() && colorSensor.red() > colorSensor.blue()) {
              detectedColor = GameConstants.GAME_COLORS.RED;

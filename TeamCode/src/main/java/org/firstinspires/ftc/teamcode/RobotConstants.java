@@ -12,6 +12,10 @@ public class RobotConstants {
     public static double HORIZONTAL_SLIDE_TICKS_PER_INCH = 538 / (1.575 * Math.PI); //Total ticks to extend slide divided by slide length
 
     public static double PICKUP_ARM_LENGTH = 7; // 8 inches
+    public static double TURRET_CENTER_POSITION = 0.475;
+
+    public static int IMAGE_WIDTH = 640;
+    public static int IMAGE_HEIGHT = 480;
 
     public static double COLOR_SENSOR_DISTANCE_THRESHOLD = 2;   // in cm.
 
@@ -34,6 +38,13 @@ public class RobotConstants {
     public static double HORIZONTAL_SHOULDER_PICK_SAMPLE = 0.47;
     public static double HORIZONTAL_ELBOW_PICK_SAMPLE = 0.1;
     public static double HORIZONTAL_WRIST_PICK_SAMPLE = 0;
+
+    //HORIZONTAL ENTER EXIT SUB STATE VALUES
+    public static double HORIZONTAL_ELBOW_ENTER_EXIT_SUB = 0;
+    public static double HORIZONTAL_TURRET_ENTER_EXIT_SUB = 0;
+    public static int HORIZONTAL_SLIDE_ENTER_EXIT_SUB = 0;
+    public static double HORIZONTAL_SHOULDER_ENTER_EXIT_SUB = 0;
+    public static double HORIZONTAL_WRIST_ENTER_EXIT_SUB = 0;
 
     // HORIZONTAL TRANSFER STATE VALUES
     public static int HORIZONTAL_SLIDE_TRANSFER = 0;
