@@ -35,6 +35,7 @@ import org.openftc.easyopencv.OpenCvCameraRotation;
 import org.openftc.easyopencv.OpenCvWebcam;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public class RobotControl
@@ -85,6 +86,7 @@ public class RobotControl
         dashboard = FtcDashboard.getInstance();
         runningActions = new ArrayList<>();
         readyToPickSample = false;
+        sampleChoices = new ArrayList<>();
 
         VisionCalibration = new TensorFlow();
         int camMonitorViewId = robotHardware.hardwareMap.appContext.getResources()
@@ -115,7 +117,6 @@ public class RobotControl
         CreateStateFromButtonPress();
 
         ProcessState();
-
 
 //        ProcessSafetyChecks();
 //
@@ -209,93 +210,60 @@ public class RobotControl
     }
 
 
-    public HorizontalPickupVector GetHorizontalPickupVectorFromCameraInputs() {
+    public void GetSampleChoicesFromCameraInputs() {
 
-//        if (sampleDetectionPipeline.latestRects != null && sampleDetectionPipeline.latestDistances != null) {
-//            for (int i = 0; i < sampleDetectionPipeline.latestRects.length; i++) {
-//                TensorFlow.CalibrationResult result = VisionCalibration.calibrate((float) sampleDetectionPipeline.GetRealXinches(i), (float) sampleDetectionPipeline.GetRealYinches(i), (float) sampleDetectionPipeline.GetSampleOrientation(i));
-//                RotatedRect rect = sampleDetectionPipeline.latestRects[i];
-//                telemetry.addData("GOT CENTER Y: ", rect.center.y);
-//                telemetry.addData("GOT CENTER X:", rect.center.x);
-//                telemetry.addData("GOT VERTICAL DISTANCE FROM ROBOT: ", result.realY);
-//                telemetry.addData("GOT HORIONTAL DISTANCE FROM ROBOT: ", result.realX);
-//                telemetry.addData("GOT RECTANGLE OREINTATION: ", result.realAngle);
-//                telemetry.addData("GOT ANGLE FROM ROBOT: ", sampleDetectionPipeline.GetSampleAngleFromRobot(i));
-//            }
-//        }
-
-        double calibratedYOffset;
-        double calibratedXOffset;
-        double calibratedSampleOrientation;
+        sampleChoices.clear();  //remove any previous choices
 
         if (sampleDetectionPipeline.latestRects != null && sampleDetectionPipeline.latestDistances != null) {
 
-            double realX;
-            double realY;
-            double realOrientation;
+            for (int loop = 0; loop < sampleDetectionPipeline.latestRects.length; loop++) {
+                double realX = sampleDetectionPipeline.GetRealXinches(loop);
+                double realY = sampleDetectionPipeline.GetRealYinches(loop);
+                double realOrientation = sampleDetectionPipeline.GetRealSampleOrientation(loop);
 
-            realX = sampleDetectionPipeline.GetRealXinches(0);
-            realY = sampleDetectionPipeline.GetRealYinches(0);
-            realOrientation = sampleDetectionPipeline.GetRealSampleOrientation(0);
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Real Vertical: " + realY);
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Real Horizontal: " + realX);
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Real Orientation: " + realOrientation);
 
-//            TensorFlow.CalibrationResult result = VisionCalibration.calibrate((float) (sampleDetectionPipeline.GetRealXinches(0) - RobotConstants.TURRET_OFFSET_FROM_CAMERA), (float) sampleDetectionPipeline.GetRealYinches(0), (float) sampleDetectionPipeline.GetSampleOrientation(0));
+                TensorFlow.CalibrationResult result = VisionCalibration.calibrate((float) (realX - RobotConstants.TURRET_OFFSET_FROM_CAMERA), (float) realY, (float) realOrientation);
 
-            TensorFlow.CalibrationResult result = VisionCalibration.calibrate((float) (realX - RobotConstants.TURRET_OFFSET_FROM_CAMERA), (float) realY, (float) realOrientation);
+                double calibratedYOffset = result.calibratedY;
+                double calibratedXOffset = result.calibratedX;
+                double calibratedSampleOrientation = result.calibratedAngle;
 
-            telemetry.addData("GOT VERTICAL DISTANCE FROM ROBOT: ", result.calibratedY);
-            telemetry.addData("GOT HORIZONTAL DISTANCE FROM ROBOT: ", result.calibratedX);
-            telemetry.addData("GOT RECTANGLE ORIENTATION: ", result.calibratedAngle);
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Calibrated Vertical: " + calibratedYOffset);
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Calibrated Horizontal: " + calibratedXOffset);
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Calibrated Orientation: " + calibratedSampleOrientation);
 
-            calibratedYOffset = result.calibratedY;
-            calibratedXOffset = result.calibratedX;
-            calibratedSampleOrientation = result.calibratedAngle;
+                double accountForPickupArm = Math.sqrt((RobotConstants.PICKUP_ARM_LENGTH * RobotConstants.PICKUP_ARM_LENGTH) - (calibratedXOffset * calibratedXOffset));
+                int horizontalSlidePosition = (int) ((calibratedYOffset - accountForPickupArm) * RobotConstants.HORIZONTAL_SLIDE_TICKS_PER_INCH);
 
+                if (horizontalSlidePosition < 0 || horizontalSlidePosition > RobotConstants.HORIZONTAL_SLIDE_MAX_POS) continue; // no need to add an option which we cannot reach
+                if (calibratedXOffset >= RobotConstants.PICKUP_ARM_LENGTH) continue;    // cannot reach beyond pickup arm length
 
-            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Real Vertical: " + realY);
-            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Real Horizontal: " + realX);
-            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Real Orientation: " + realOrientation);
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. horizontalSlidePosition: " + horizontalSlidePosition);
 
-            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Calibrated Vertical: " + calibratedYOffset);
-            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Calibrated Horizontal: " + calibratedXOffset);
-            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Calibrated Orientation: " + calibratedSampleOrientation);
+                double turretMovementAngle = Math.toDegrees(Math.atan(calibratedXOffset / accountForPickupArm));
 
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. turretMovementAngle: " + turretMovementAngle);
+
+                double turretServoPos = RobotConstants.TURRET_CENTER_POSITION - (turretMovementAngle / 300);
+
+                double clawParallelOrientation = RobotConstants.HORIZONTAL_WRIST_TRANSFER + (turretMovementAngle / 300);    //this will keep the claw parallel to the robot
+
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. clawParallelOrientation: " + clawParallelOrientation);
+
+                double wristTargetAngle = 180 - calibratedSampleOrientation - 90;   //wrist has to be perpendicular to the sample
+                double horizontalWristPosition = clawParallelOrientation + (wristTargetAngle / 300);
+
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. horizontalWristPosition: " + horizontalWristPosition);
+
+                sampleChoices.add(new HorizontalPickupVector(horizontalSlidePosition, turretServoPos, horizontalWristPosition));
+            }
+
+            //sort by vertical distance
+            sampleChoices.sort(Comparator.comparingInt(choice -> choice.slidePosition));
         }
-        else return null;
-
-        double accountForPickupArm = Math.sqrt((RobotConstants.PICKUP_ARM_LENGTH * RobotConstants.PICKUP_ARM_LENGTH) - (calibratedXOffset * calibratedXOffset));
-        int horizontalSlidePosition = (int)((calibratedYOffset - accountForPickupArm) * RobotConstants.HORIZONTAL_SLIDE_TICKS_PER_INCH);
-
-        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. horizontalSlidePosition: " + horizontalSlidePosition);
-
-        double turretMovementAngle = Math.toDegrees(Math.atan(calibratedXOffset / accountForPickupArm));
-
-        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. turretMovementAngle: " + turretMovementAngle);
-
-        double turretServoPos = RobotConstants.TURRET_CENTER_POSITION - (turretMovementAngle / 300);
-
-        double clawParallelOrientation = RobotConstants.HORIZONTAL_WRIST_TRANSFER + (turretMovementAngle / 300);    //this will keep the claw parallel to the robot
-
-        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. clawParallelOrientation: " + clawParallelOrientation);
-
-        double wristTargetAngle = 180 - calibratedSampleOrientation - 90;   //wrist has to be perpendicular to the sample
-        double horizontalWristPosition = clawParallelOrientation + (wristTargetAngle / 300);
-
-        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. horizontalWristPosition: " + horizontalWristPosition);
-
-//        double wristTargetAngle = 180 - calibratedSampleOrientation;   //wrist is flipped as compared to the field
-
-//        wristTargetAngle -= turretMovementAngle > 0? turretMovementAngle : (90 + turretMovementAngle);    //adjust for turret movement
-//        wristTargetAngle -= 90; // perpendicular to the sample
-
-//        double horizontalWristPosition  = (RobotConstants.HORIZONTAL_WRIST_TRANSFER) + (wristTargetAngle / 300); //angle in degrees
-
-//        double horizontalWristPosition  = (0.2) + (wristTargetAngle / 300); //angle in degrees
-
-//        double horizontalWristPosition =  wristTargetAngle / 300; // normalized between 0 and 1
-
-
-
-        return new HorizontalPickupVector(horizontalSlidePosition, turretServoPos, horizontalWristPosition);
     }
 
 
@@ -504,20 +472,28 @@ public class RobotControl
 
     public Action GetPickSampleActionSequence() {
 
-        Action verticalActions = GetVerticalActionsForTransfer();
 
         //THE CONSTANTS BELOW NEED TO COME FROM THE CAMERA
-        HorizontalPickupVector pickupVector = GetHorizontalPickupVectorFromCameraInputs();
+        GetSampleChoicesFromCameraInputs();
+
+        //TODO: THIS SHOULD START A RED LIGHT OR SOMETHING
+        if (sampleChoices.isEmpty()) return new SleepAction(0.05);
+
+        // TODO: NEED TO MAKE SURE WE HAVE A GOOD WAY TO FIND OUT IF WE HAVE A SAMPLE
+        // IF WE DONT, THEN WE NEED TO GO TO OTHER CHOICES.
+        HorizontalPickupVector choice = sampleChoices.get(0);
+
+        Action verticalActions = GetVerticalActionsForTransfer();
 
         Action horizontalActions = new SequentialAction(
-                new HorizontalSlideAction(robotHardware, pickupVector.slidePosition, true, false),
+                new HorizontalSlideAction(robotHardware, choice.slidePosition, true, false),
                 new ParallelAction(
                         new HorizontalClawAction(robotHardware, true, false, false),
                         new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_PICK_SAMPLE, false, false),
-                        new HorizontalTurretAction(robotHardware, pickupVector.turretPosition, false, false),
+                        new HorizontalTurretAction(robotHardware, choice.turretPosition, false, false),
 //                        new HorizontalSlideAction(robotHardware, pickupVector.slidePosition, true, false),
                         new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SAMPLE, true, false),
-                        new HorizontalWristAction(robotHardware, pickupVector.clawOrientation, false,false)
+                        new HorizontalWristAction(robotHardware, choice.clawOrientation, false,false)
                 ),
                 new InstantAction(() -> readyToPickSample = true)
         );
@@ -723,7 +699,7 @@ public class RobotControl
 
         if (gamepad2.dpad_right) {  //turret right
             double turretPos = robotHardware.getHorizontalTurretServoPosition();
-            turretPos = Math.max(turretPos - RobotConstants.HORIZONTAL_TURRET_INCREMENT, RobotConstants.HORIZONTAL_TURRET_MAX_POS);
+            turretPos = Math.max(turretPos - RobotConstants.HORIZONTAL_TURRET_INCREMENT, RobotConstants.HORIZONTAL_TURRET_MIN_POS);
             robotHardware.setHorizontalTurretServoPosition(turretPos);
         }
     }

@@ -6,10 +6,11 @@ import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.AnalogInput;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.teamcode.RobotHardware;
 
 /*
  * This file contains an minimal example of a Linear "OpMode". An OpMode is a 'program' that runs in either
@@ -24,17 +25,21 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  * Remove or comment out the @Disabled line to add this OpMode to the Driver Station OpMode list
  */
 
-
 @Config
-@TeleOp(name="MotorTest", group="Linear OpMode")
-public class MotorTest extends LinearOpMode {
+@TeleOp(name="ServoWithEncoderTest", group="Linear OpMode")
+public class ServoWithEncoderTest extends LinearOpMode {
+    RobotHardware myHardware;
 
     // Declare OpMode members.
-    private ElapsedTime runtime = new ElapsedTime();
-    private DcMotorEx motor;
+    public static double clawServoPosition;
+    public static double wristServoPosition;
 
-    public static int MOTOR_POS = 0;
-    public static int MOTOR_VEL = 0;
+    // Close: 0.42
+    // Open: 0.55
+    private ElapsedTime runtime = new ElapsedTime();
+    private Servo ClawServo;
+    private Servo WristServo;
+
 
     @Override
     public void runOpMode() {
@@ -44,11 +49,10 @@ public class MotorTest extends LinearOpMode {
         // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
-        motor = hardwareMap.get(DcMotorEx.class, "HorizontalSlideMotor");
-        motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        motor.setTargetPosition(0);
-        motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        ClawServo = hardwareMap.get(Servo.class, "VerticalShoulderServo"); //0.1, 0.55
+//        WristServo = hardwareMap.get(Servo.class, "WristServo"); //resting: 0.2, specimen pick: 0.9, before snapping specimen position 0.75, picking sample: 0.83
+
+        AnalogInput analogInput = hardwareMap.get(AnalogInput.class, "AxonEncoder");
 
         // Wait for the game to start (driver presses START)
         waitForStart();
@@ -56,15 +60,20 @@ public class MotorTest extends LinearOpMode {
 
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
-            if (gamepad1.a) {
-                setMotorPositionAndVelocity(MOTOR_POS, MOTOR_VEL);
-            }
-        }
-    }
 
-    public void setMotorPositionAndVelocity(int pos, int velocity) {
-        motor.setTargetPosition(pos);
-        motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        motor.setVelocity(velocity);
+            if(gamepad1.a) {
+                ClawServo.setPosition(clawServoPosition);
+//            WristServo.setPosition(wristServoPosition);
+
+
+            }
+
+            Log.i("ServoTest: direction: ", ClawServo.getDirection().toString());
+            double voltage = analogInput.getVoltage();
+            double position = 1 - (voltage / 3.3);
+            Log.i("ServoTest: voltage: ", Double.toString(voltage));
+            Log.i("ServoTest: position: ", Double.toString(position));
+
+        }
     }
 }

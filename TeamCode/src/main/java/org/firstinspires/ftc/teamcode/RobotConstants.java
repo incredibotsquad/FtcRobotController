@@ -11,12 +11,12 @@ public class RobotConstants {
 
     public static double HORIZONTAL_SLIDE_TICKS_PER_INCH = 538 / (1.575 * Math.PI); //Total ticks to extend slide divided by slide length
 
-    public static int HORIZONTAL_SLIDE_MAX_POS = 200;
+    public static int HORIZONTAL_SLIDE_MAX_POS = 1550;
     public static int HORIZONTAL_SLIDE_INCREMENT = 20;
 
-    public static double HORIZONTAL_TURRET_MAX_POS = 1;
-    public static double HORIZONTAL_TURRET_MIN_POS = 0;
-    public static double HORIZONTAL_TURRET_INCREMENT = 0.01;
+    public static double HORIZONTAL_TURRET_MAX_POS = 0.75;
+    public static double HORIZONTAL_TURRET_MIN_POS = 0.225;
+    public static double HORIZONTAL_TURRET_INCREMENT = 0.05;
 
     public static double PICKUP_ARM_LENGTH = 7; // 8 inches
     public static double TURRET_CENTER_POSITION = 0.475;
@@ -44,20 +44,20 @@ public class RobotConstants {
     // HORIZONTAL PICK SAMPLE STATE VALUES
     public static int HORIZONTAL_SLIDE_PICK_SAMPLE = 0;
     public static double HORIZONTAL_TURRET_PICK_SAMPLE = 0.5;
-    public static double HORIZONTAL_SHOULDER_PICK_SAMPLE = 0.47;
+    public static double HORIZONTAL_SHOULDER_PICK_SAMPLE = 0.465;
     public static double HORIZONTAL_ELBOW_PICK_SAMPLE = 0.1;
     public static double HORIZONTAL_WRIST_PICK_SAMPLE = 0;
 
     //HORIZONTAL ENTER EXIT SUB STATE VALUES
-    public static double HORIZONTAL_ELBOW_ENTER_EXIT_SUB = 0;
-    public static double HORIZONTAL_TURRET_ENTER_EXIT_SUB = 0;
+    public static double HORIZONTAL_ELBOW_ENTER_EXIT_SUB = 0.1;
+    public static double HORIZONTAL_TURRET_ENTER_EXIT_SUB = TURRET_CENTER_POSITION;
     public static int HORIZONTAL_SLIDE_ENTER_EXIT_SUB = 0;
-    public static double HORIZONTAL_SHOULDER_ENTER_EXIT_SUB = 0;
+    public static double HORIZONTAL_SHOULDER_ENTER_EXIT_SUB = 0.43;
     public static double HORIZONTAL_WRIST_ENTER_EXIT_SUB = 0;
 
     // HORIZONTAL TRANSFER STATE VALUES
     public static int HORIZONTAL_SLIDE_TRANSFER = 0;
-    public static double HORIZONTAL_TURRET_TRANSFER = 0.5;
+    public static double HORIZONTAL_TURRET_TRANSFER = TURRET_CENTER_POSITION;
     public static double HORIZONTAL_SHOULDER_TRANSFER = 0.34;
     public static double HORIZONTAL_SHOULDER_AFTER_TRANSFER = 0.4;
     public static double HORIZONTAL_ELBOW_TRANSFER = 0.7;
