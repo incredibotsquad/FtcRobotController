@@ -13,8 +13,17 @@ import com.acmerobotics.dashboard.config.Config;
 
 import org.opencv.android.Utils;
 import android.graphics.Bitmap;
+import apple.laf.JRSUIConstants.Size;
 
 // TensorFlow Lite imports
+import org.tensorflow.lite.Interpreter;
+import org.w3c.dom.css.Rect;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 
 
 @Config
@@ -33,6 +42,16 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
     public static double maxContourArea = 3000;
     public static double minAspectRatio = 0.3;
     public static double maxAspectRatio = 0.9;
+    public static boolean enableHSVEqualization = false;
+    
+    // Camera control settings
+    public static boolean enableManualExposure = false;
+    public static boolean enableManualWhiteBalance = false;
+    public static int manualExposureValue = 50; // Default exposure value (0-100)
+    public static int manualWhiteBalanceValue = 50; // Default white balance value (0-100)
+    
+    // OpenCV camera instance
+    private org.openftc.easyopencv.OpenCvCamera camera;
 
     private static final int MODEL_INPUT_SIZE = 3; // x, y, orientation
     private static final int MODEL_OUTPUT_SIZE = 3; // adjusted_x, adjusted_y, adjusted_orientation
@@ -64,6 +83,75 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
 
     public void setColorMode(GameConstants.GAME_COLORS mode) {
         this.colorMode = mode;
+    }
+    
+    /**
+     * Initialize the camera with manual exposure and white balance settings if enabled
+     * @param camera The OpenCV camera instance
+     */
+    public void initializeCamera(org.openftc.easyopencv.OpenCvCamera camera) {
+        this.camera = camera;
+        updateCameraSettings();
+    }
+    
+    /**
+     * Update camera settings based on dashboard values
+     * This can be called when dashboard values change
+     */
+    public void updateCameraSettings() {
+        if (camera == null) return;
+        
+        try {
+            if (enableManualExposure) {
+                camera.setExposureControl(org.openftc.easyopencv.OpenCvCameraControl.ExposureControl.MANUAL);
+                
+                // Camera exposure is measured in milliseconds (ms)
+                // We map the user-friendly 0-100 scale to a reasonable exposure time range
+                // 0 = shortest exposure (1ms - bright conditions)
+                // 100 = longest exposure (100ms - low light conditions)
+                // This gives more precise control at lower exposure times where small changes matter most
+                //- For values 0-49: Linear scale from 1ms to 20ms (finer control in normal lighting)
+
+                //- For values 50-100: Exponential scale from 20ms to 100ms (for low light conditions)
+
+                int exposureMs;
+                if (manualExposureValue < 50) {
+                    // For 0-49: Linear scale from 1ms to 20ms (finer control in normal lighting)
+                    exposureMs = 1 + (int)(manualExposureValue * 0.4); // 0->1ms, 49->20ms
+                } else {
+                    // For 50-100: Exponential scale from 20ms to 100ms (for low light)
+                    exposureMs = 20 + (int)(Math.pow((manualExposureValue - 50) / 50.0, 2) * 80);
+                }
+                
+                // Note: The exact range may vary by camera model. If needed, adjust the formula:
+                // exposureMs = MIN_MS + (manualExposureValue * (MAX_MS - MIN_MS) / 100);
+                
+                camera.setExposureManual(exposureMs);
+            } else {
+                camera.setExposureControl(org.openftc.easyopencv.OpenCvCameraControl.ExposureControl.AUTO);
+            }
+            
+            if (enableManualWhiteBalance) {
+                camera.setWhiteBalanceControl(org.openftc.easyopencv.OpenCvCameraControl.WhiteBalanceControl.MANUAL);
+                
+                // The white balance value is typically in Kelvin (K) for color temperature
+                // Most cameras support a range from ~2500K (warm/yellowish) to ~9000K (cool/bluish)
+                // We map the 0-100 user-friendly scale to this range
+                // 0 = 2500K (warm/yellowish, like incandescent lighting)
+                // 100 = 9000K (cool/bluish, like shade or overcast sky)
+                int whiteBalanceValue = 2500 + (int)(manualWhiteBalanceValue * 65);
+                
+                // Note: The exact range may vary by camera model. If needed, adjust the formula:
+                // whiteBalanceValue = MIN_KELVIN + (manualWhiteBalanceValue * (MAX_KELVIN - MIN_KELVIN) / 100);
+                
+                camera.setWhiteBalanceManual(whiteBalanceValue);
+            } else {
+                camera.setWhiteBalanceControl(org.openftc.easyopencv.OpenCvCameraControl.WhiteBalanceControl.AUTO);
+            }
+        } catch (Exception e) {
+            // Log error or handle exception
+            System.out.println("Error setting camera parameters: " + e.getMessage());
+        }
     }
 
     /**
@@ -208,6 +296,11 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
 
     @Override
     public Mat processFrame(Mat input) {
+        // Update camera settings if they've changed
+        if (camera != null) {
+            updateCameraSettings();
+        }
+        
         Mat hsv = new Mat();
 
         // Step 1: Convert to HSV
@@ -218,6 +311,14 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
 //        Core.split(hsv, hsvChannels);
 //        Imgproc.equalizeHist(hsvChannels.get(2), hsvChannels.get(2));   // equalize the v channel
 //        Core.merge(hsvChannels, hsv);
+
+        // Step 1.5: Optionally equalize the V channel to normalize brightness
+        if (enableHSVEqualization) {
+            List<Mat> hsvChannels = new ArrayList<>();
+            Core.split(hsv, hsvChannels);
+            Imgproc.equalizeHist(hsvChannels.get(2), hsvChannels.get(2)); // Equalize V channel
+            Core.merge(hsvChannels, hsv);
+        }
 
         // Step 2: Apply Gaussian blur
         Mat blurred = hsv;
@@ -235,6 +336,10 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                 Core.inRange(blurred, redThresh1[0], redThresh1[1], lowerRed);
                 Core.inRange(blurred, redThresh2[0], redThresh2[1], upperRed);
                 Core.bitwise_or(lowerRed, upperRed, mask);
+                
+                //release temporary Mats
+                lowerRed.release();
+                upperRed.release();
                 break;
 
             case BLUE:
@@ -256,8 +361,9 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         ArrayList<RotatedRect> detectedRects = new ArrayList<>();
         ArrayList<double[]> distances = new ArrayList<>();
         ArrayList<MatOfPoint> contours = new ArrayList<>();
-        Imgproc.findContours(mask, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
-
+        Mat hierarchy = new Mat();
+        Imgproc.findContours(mask, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        hierarchy.release();
         // Step 6: Process each contour
         for (MatOfPoint contour : contours) {
             double area = Imgproc.contourArea(contour);
@@ -273,8 +379,11 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                     Mat roi = new Mat(mask, boundingBox);
 
                     List<MatOfPoint> innerContours = new ArrayList<>();
-                    Imgproc.findContours(roi.clone(), innerContours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
-
+                    Mat hierarchyInner = new Mat();
+                    Imgproc.findContours(roi.clone(), innerContours, hierarchyInner, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+                    roi.release();
+                    hierarchyInner.release();
+                    // Filter inner contours based on area and aspect ratio
                     for (MatOfPoint innerContour : innerContours) {
                         double subArea = Imgproc.contourArea(innerContour);
                         if (subArea < minContourArea || subArea > maxContourArea) continue;
@@ -288,6 +397,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
 
                         processDetectedRect(subRect, input, detectedRects, distances);
                     }
+                    
                     continue; // Skip the original blob
                 }
 
@@ -305,7 +415,10 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         // Send image to dashboard
         Bitmap annotatedBitmap = matToBitmap(input);
         FtcDashboard.getInstance().sendImage(annotatedBitmap);
-
+        //release Mats
+        hsv.release();
+        mask.release();
+        blurred.release();
         return input;
     }
 }
