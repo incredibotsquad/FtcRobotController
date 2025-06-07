@@ -102,18 +102,10 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         if (camera == null) return;
         
         try {
+            // For EasyOpenCV, we need to use the camera's gain and exposure controls directly
+            // These methods may vary depending on the camera and EasyOpenCV version
             if (enableManualExposure) {
-                camera.setExposureControl(org.openftc.easyopencv.OpenCvCameraControl.ExposureControl.MANUAL);
-                
-                // Camera exposure is measured in milliseconds (ms)
-                // We map the user-friendly 0-100 scale to a reasonable exposure time range
-                // 0 = shortest exposure (1ms - bright conditions)
-                // 100 = longest exposure (100ms - low light conditions)
-                // This gives more precise control at lower exposure times where small changes matter most
-                //- For values 0-49: Linear scale from 1ms to 20ms (finer control in normal lighting)
-
-                //- For values 50-100: Exponential scale from 20ms to 100ms (for low light conditions)
-
+                // Calculate exposure time in milliseconds
                 int exposureMs;
                 if (manualExposureValue < 50) {
                     // For 0-49: Linear scale from 1ms to 20ms (finer control in normal lighting)
@@ -123,30 +115,58 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                     exposureMs = 20 + (int)(Math.pow((manualExposureValue - 50) / 50.0, 2) * 80);
                 }
                 
-                // Note: The exact range may vary by camera model. If needed, adjust the formula:
-                // exposureMs = MIN_MS + (manualExposureValue * (MAX_MS - MIN_MS) / 100);
-                
-                camera.setExposureManual(exposureMs);
-            } else {
-                camera.setExposureControl(org.openftc.easyopencv.OpenCvCameraControl.ExposureControl.AUTO);
+                // Try to set exposure using the available methods
+                try {
+                    // Method 1: Try using the camera's exposure property directly
+                    camera.setPipeline(null); // Temporarily remove pipeline
+                    camera.setExposure(exposureMs); // Set exposure in milliseconds
+                    camera.setPipeline(this); // Re-add pipeline
+                } catch (Exception e1) {
+                    System.out.println("Error setting exposure directly: " + e1.getMessage());
+                    
+                    // If direct method fails, try alternative approaches
+                    try {
+                        // Method 2: Try using camera controls if available
+                        org.firstinspires.ftc.robotcore.external.hardware.camera.controls.ExposureControl exposureControl = 
+                            camera.getCameraControl(org.firstinspires.ftc.robotcore.external.hardware.camera.controls.ExposureControl.class);
+                        
+                        if (exposureControl != null) {
+                            exposureControl.setMode(org.firstinspires.ftc.robotcore.external.hardware.camera.controls.ExposureControl.Mode.Manual);
+                            exposureControl.setExposure(exposureMs, java.util.concurrent.TimeUnit.MILLISECONDS);
+                        }
+                    } catch (Exception e2) {
+                        System.out.println("Error setting exposure via camera controls: " + e2.getMessage());
+                    }
+                }
             }
             
             if (enableManualWhiteBalance) {
-                camera.setWhiteBalanceControl(org.openftc.easyopencv.OpenCvCameraControl.WhiteBalanceControl.MANUAL);
-                
-                // The white balance value is typically in Kelvin (K) for color temperature
-                // Most cameras support a range from ~2500K (warm/yellowish) to ~9000K (cool/bluish)
-                // We map the 0-100 user-friendly scale to this range
-                // 0 = 2500K (warm/yellowish, like incandescent lighting)
-                // 100 = 9000K (cool/bluish, like shade or overcast sky)
+                // Calculate white balance value (typically in Kelvin)
                 int whiteBalanceValue = 2500 + (int)(manualWhiteBalanceValue * 65);
                 
-                // Note: The exact range may vary by camera model. If needed, adjust the formula:
-                // whiteBalanceValue = MIN_KELVIN + (manualWhiteBalanceValue * (MAX_KELVIN - MIN_KELVIN) / 100);
-                
-                camera.setWhiteBalanceManual(whiteBalanceValue);
-            } else {
-                camera.setWhiteBalanceControl(org.openftc.easyopencv.OpenCvCameraControl.WhiteBalanceControl.AUTO);
+                // Try to set white balance using available methods
+                try {
+                    // Method 1: Try using the camera's white balance property directly
+                    camera.setPipeline(null); // Temporarily remove pipeline
+                    camera.setWhiteBalance(whiteBalanceValue); // Set white balance
+                    camera.setPipeline(this); // Re-add pipeline
+                } catch (Exception e1) {
+                    System.out.println("Error setting white balance directly: " + e1.getMessage());
+                    
+                    // If direct method fails, try alternative approaches
+                    try {
+                        // Method 2: Try using camera controls if available
+                        org.firstinspires.ftc.robotcore.external.hardware.camera.controls.WhiteBalanceControl whiteBalanceControl = 
+                            camera.getCameraControl(org.firstinspires.ftc.robotcore.external.hardware.camera.controls.WhiteBalanceControl.class);
+                        
+                        if (whiteBalanceControl != null) {
+                            whiteBalanceControl.setMode(org.firstinspires.ftc.robotcore.external.hardware.camera.controls.WhiteBalanceControl.Mode.MANUAL);
+                            whiteBalanceControl.setWhiteBalance(whiteBalanceValue);
+                        }
+                    } catch (Exception e2) {
+                        System.out.println("Error setting white balance via camera controls: " + e2.getMessage());
+                    }
+                }
             }
         } catch (Exception e) {
             // Log error or handle exception
