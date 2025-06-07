@@ -90,7 +90,7 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
         // Initialize the hardware variables. Note that the strings used here must correspond
         // to the names assigned during the robot configuration step on the DS or RC devices.
         robotHardware = new RobotHardware(this.hardwareMap);
-        robotControl = new RobotControl(gamepad2, robotHardware);
+        robotControl = new RobotControl(gamepad2, robotHardware, telemetry);
 //
 //        leftFrontDrive  = hardwareMap.get(DcMotor.class, "left_front_drive");
 //        leftBackDrive  = hardwareMap.get(DcMotor.class, "left_back_drive");
@@ -114,7 +114,7 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
 
 
         while (opModeInInit()) {
-            gameColor = GameConstants.GAME_COLORS.BLUE;
+            gameColor = GameConstants.GAME_COLORS.RED;
 
             if (gamepad1.x || gamepad2.x) {
                 gameColor = GameConstants.GAME_COLORS.BLUE;

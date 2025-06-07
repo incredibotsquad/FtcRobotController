@@ -4,6 +4,8 @@ public class GameConstants {
     public enum GAME_COLORS{
         RED,
         BLUE,
-        YELLOW
+        YELLOW,
+        NOT_RED,
+        NOT_BLUE
     }
 }

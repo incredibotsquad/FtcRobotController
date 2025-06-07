@@ -11,8 +11,17 @@ public class RobotConstants {
 
     public static double HORIZONTAL_SLIDE_TICKS_PER_INCH = 538 / (1.575 * Math.PI); //Total ticks to extend slide divided by slide length
 
+    public static int HORIZONTAL_SLIDE_MAX_POS = 200;
+    public static int HORIZONTAL_SLIDE_INCREMENT = 20;
+
+    public static double HORIZONTAL_TURRET_MAX_POS = 1;
+    public static double HORIZONTAL_TURRET_MIN_POS = 0;
+    public static double HORIZONTAL_TURRET_INCREMENT = 0.01;
+
     public static double PICKUP_ARM_LENGTH = 7; // 8 inches
     public static double TURRET_CENTER_POSITION = 0.475;
+
+    public static double TURRET_OFFSET_FROM_CAMERA = 5;
 
     public static int IMAGE_WIDTH = 640;
     public static int IMAGE_HEIGHT = 480;
@@ -23,7 +32,7 @@ public class RobotConstants {
 
     public static double HORIZONTAL_CLAW_OPEN = 1;
     public static double HORIZONTAL_CLAW_CLOSE = 0.8;
-    public static int HORIZONTAL_SLIDE_VELOCITY = 1000;
+    public static int HORIZONTAL_SLIDE_VELOCITY = 2000;
 
     // HORIZONTAL RESTING STATE VALUES
     public static int HORIZONTAL_SLIDE_RESTING = 0;

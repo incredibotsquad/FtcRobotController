@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.drive.opmode;
 
-import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.telemetry;
-
 import android.util.Log;
 
 import com.acmerobotics.dashboard.FtcDashboard;
@@ -31,7 +29,6 @@ import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.VerticalElbowAct
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.VerticalShoulderAction;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.VerticalSlideAction;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.VerticalWristAction;
-import org.opencv.core.RotatedRect;
 import org.openftc.easyopencv.OpenCvCamera;
 import org.openftc.easyopencv.OpenCvCameraFactory;
 import org.openftc.easyopencv.OpenCvCameraRotation;
@@ -53,6 +50,8 @@ public class RobotControl
     OpenCvWebcam webcam;
     SampleDetectionPipelineV2 sampleDetectionPipeline;
 
+    List<HorizontalPickupVector> sampleChoices;
+
     private enum ROBOT_STATE {
         NONE,
         RESTING,
@@ -72,10 +71,13 @@ public class RobotControl
     private ROBOT_STATE targetRobotState;
     private boolean stateTransitionInProgress;
 
+    private Telemetry telemetry;
+
     private boolean readyToPickSample;
 
-    public RobotControl(Gamepad gamepad, RobotHardware robotHardware) {
+    public RobotControl(Gamepad gamepad, RobotHardware robotHardware, Telemetry telemetry) {
         gamepad2 = gamepad;
+        this.telemetry = telemetry;
         this.robotHardware = robotHardware;
         currentRobotState = ROBOT_STATE.NONE;
         targetRobotState = ROBOT_STATE.NONE;
@@ -92,7 +94,6 @@ public class RobotControl
                 robotHardware.hardwareMap.get(WebcamName.class, "Webcam 1"), camMonitorViewId);
 
         sampleDetectionPipeline = new SampleDetectionPipelineV2();
-        sampleDetectionPipeline.setColorMode(GameConstants.GAME_COLORS.RED);
         webcam.setPipeline(sampleDetectionPipeline);
 
         webcam.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener() {
@@ -118,13 +119,10 @@ public class RobotControl
 
 //        ProcessSafetyChecks();
 //
-//        ProcessDPad();
-//
-//        HandleManualOverride();
+        ProcessDPad();
+        ProcessBumpers();
 
         ProcessPickSampleState();
-
-        HandleMotorCurrentProblems();
     }
 
     private void ProcessSafetyChecks() {
@@ -226,50 +224,78 @@ public class RobotControl
 //            }
 //        }
 
-        double YOffset;
-        double XOffset;
-        double sampleOrientation;
+        double calibratedYOffset;
+        double calibratedXOffset;
+        double calibratedSampleOrientation;
 
         if (sampleDetectionPipeline.latestRects != null && sampleDetectionPipeline.latestDistances != null) {
-            TensorFlow.CalibrationResult result = VisionCalibration.calibrate((float) sampleDetectionPipeline.GetRealXinches(0), (float) sampleDetectionPipeline.GetRealYinches(0), (float) sampleDetectionPipeline.GetSampleOrientation(0));
-            RotatedRect rect = sampleDetectionPipeline.latestRects[0];
-            telemetry.addData("GOT CENTER Y: ", rect.center.y);
-            telemetry.addData("GOT CENTER X:", rect.center.x);
 
-            telemetry.addData("GOT VERTICAL DISTANCE FROM ROBOT: ", result.realY);
-            telemetry.addData("GOT HORIONTAL DISTANCE FROM ROBOT: ", result.realX);
-            telemetry.addData("GOT RECTANGLE OREINTATION: ", result.realAngle);
+            double realX;
+            double realY;
+            double realOrientation;
 
-            telemetry.addData("GOT ANGLE FROM ROBOT: ", sampleDetectionPipeline.GetSampleAngleFromRobot(0));
+            realX = sampleDetectionPipeline.GetRealXinches(0);
+            realY = sampleDetectionPipeline.GetRealYinches(0);
+            realOrientation = sampleDetectionPipeline.GetRealSampleOrientation(0);
 
-            YOffset = result.realY;
-            XOffset = result.realX;
-            sampleOrientation = result.realAngle;
+//            TensorFlow.CalibrationResult result = VisionCalibration.calibrate((float) (sampleDetectionPipeline.GetRealXinches(0) - RobotConstants.TURRET_OFFSET_FROM_CAMERA), (float) sampleDetectionPipeline.GetRealYinches(0), (float) sampleDetectionPipeline.GetSampleOrientation(0));
+
+            TensorFlow.CalibrationResult result = VisionCalibration.calibrate((float) (realX - RobotConstants.TURRET_OFFSET_FROM_CAMERA), (float) realY, (float) realOrientation);
+
+            telemetry.addData("GOT VERTICAL DISTANCE FROM ROBOT: ", result.calibratedY);
+            telemetry.addData("GOT HORIZONTAL DISTANCE FROM ROBOT: ", result.calibratedX);
+            telemetry.addData("GOT RECTANGLE ORIENTATION: ", result.calibratedAngle);
+
+            calibratedYOffset = result.calibratedY;
+            calibratedXOffset = result.calibratedX;
+            calibratedSampleOrientation = result.calibratedAngle;
+
+
+            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Real Vertical: " + realY);
+            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Real Horizontal: " + realX);
+            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Real Orientation: " + realOrientation);
+
+            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Calibrated Vertical: " + calibratedYOffset);
+            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Calibrated Horizontal: " + calibratedXOffset);
+            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Calibrated Orientation: " + calibratedSampleOrientation);
+
         }
         else return null;
 
-        double accountForPickupArm = Math.sqrt((RobotConstants.PICKUP_ARM_LENGTH * RobotConstants.PICKUP_ARM_LENGTH) - (XOffset * XOffset));
+        double accountForPickupArm = Math.sqrt((RobotConstants.PICKUP_ARM_LENGTH * RobotConstants.PICKUP_ARM_LENGTH) - (calibratedXOffset * calibratedXOffset));
+        int horizontalSlidePosition = (int)((calibratedYOffset - accountForPickupArm) * RobotConstants.HORIZONTAL_SLIDE_TICKS_PER_INCH);
 
-        int newSlidePosition = (int)((YOffset - accountForPickupArm) * RobotConstants.HORIZONTAL_SLIDE_TICKS_PER_INCH);
+        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. horizontalSlidePosition: " + horizontalSlidePosition);
 
-//        robotHardware.setHorizontalSlidePosition((int) (newSlidePosition * RobotConstants.HORIZONTAL_SLIDE_TICKS_PER_INCH));
+        double turretMovementAngle = Math.toDegrees(Math.atan(calibratedXOffset / accountForPickupArm));
 
-        double turretMovementAngle = Math.toDegrees(Math.atan(XOffset / accountForPickupArm));
+        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. turretMovementAngle: " + turretMovementAngle);
 
-        double turretServoPos = RobotConstants.TURRET_CENTER_POSITION + (turretMovementAngle / 300);
+        double turretServoPos = RobotConstants.TURRET_CENTER_POSITION - (turretMovementAngle / 300);
 
-//        robotHardware.setHorizontalTurretServoPosition(0.5 + (turretMovementAngle/300));
+        double clawParallelOrientation = RobotConstants.HORIZONTAL_WRIST_TRANSFER + (turretMovementAngle / 300);    //this will keep the claw parallel to the robot
 
-        double wristOrientation = sampleOrientation - 90;   //wrist has to be perpendicular to the sample
-        wristOrientation -= turretMovementAngle;    //adjust for turret movement
+        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. clawParallelOrientation: " + clawParallelOrientation);
 
-        wristOrientation = (RobotConstants.HORIZONTAL_WRIST_TRANSFER * 300) + wristOrientation; //angle in degrees
+        double wristTargetAngle = 180 - calibratedSampleOrientation - 90;   //wrist has to be perpendicular to the sample
+        double horizontalWristPosition = clawParallelOrientation + (wristTargetAngle / 300);
 
-        double wristPosition =  wristOrientation / 300; // normalized between 0 and 1
+        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. horizontalWristPosition: " + horizontalWristPosition);
 
-//        robotHardware.setHorizontalWristServoPosition(wristPosition);
+//        double wristTargetAngle = 180 - calibratedSampleOrientation;   //wrist is flipped as compared to the field
 
-        return new HorizontalPickupVector(newSlidePosition, turretServoPos, wristPosition);
+//        wristTargetAngle -= turretMovementAngle > 0? turretMovementAngle : (90 + turretMovementAngle);    //adjust for turret movement
+//        wristTargetAngle -= 90; // perpendicular to the sample
+
+//        double horizontalWristPosition  = (RobotConstants.HORIZONTAL_WRIST_TRANSFER) + (wristTargetAngle / 300); //angle in degrees
+
+//        double horizontalWristPosition  = (0.2) + (wristTargetAngle / 300); //angle in degrees
+
+//        double horizontalWristPosition =  wristTargetAngle / 300; // normalized between 0 and 1
+
+
+
+        return new HorizontalPickupVector(horizontalSlidePosition, turretServoPos, horizontalWristPosition);
     }
 
 
@@ -484,11 +510,12 @@ public class RobotControl
         HorizontalPickupVector pickupVector = GetHorizontalPickupVectorFromCameraInputs();
 
         Action horizontalActions = new SequentialAction(
+                new HorizontalSlideAction(robotHardware, pickupVector.slidePosition, true, false),
                 new ParallelAction(
                         new HorizontalClawAction(robotHardware, true, false, false),
                         new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_PICK_SAMPLE, false, false),
                         new HorizontalTurretAction(robotHardware, pickupVector.turretPosition, false, false),
-                        new HorizontalSlideAction(robotHardware, pickupVector.slidePosition, true, false),
+//                        new HorizontalSlideAction(robotHardware, pickupVector.slidePosition, true, false),
                         new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SAMPLE, true, false),
                         new HorizontalWristAction(robotHardware, pickupVector.clawOrientation, false,false)
                 ),
@@ -509,7 +536,7 @@ public class RobotControl
 //        );
 
         return new ParallelAction(
-                verticalActions,
+//                verticalActions,
                 horizontalActions);
     }
 
@@ -675,188 +702,39 @@ public class RobotControl
         );
     }
 
-
-    private void ProcessBumpers() {
-        // if the right bumper is pressed it opens the claw
-        if (gamepad2.right_bumper) {
-
-//            if (robotHardware.isIntakeOn()) {
-//                robotHardware.operateIntake(false);
-//            }
-//
-//            if (readyToDropHighSample) {
-//                robotHardware.ejectSampleFromIntake();
-//
-//                try {
-//                    Thread.sleep(250);
-//                } catch (InterruptedException e) {
-//                    Thread.currentThread().interrupt();
-//                }
-//
-//                robotHardware.operateClawServo((CLAW_CLOSE_POSITION + CLAW_OPEN_POSITION) / 2);
-//
-//                try {
-//                    Thread.sleep(250);
-//                } catch (InterruptedException e) {
-//                    Thread.currentThread().interrupt();
-//                }
-//
-//                robotHardware.operateClawServo(true);
-//
-//                try {
-//                    Thread.sleep(250);
-//                } catch (InterruptedException e) {
-//                    Thread.currentThread().interrupt();
-//                }
-//                //move the robot arm back
-//                robotState = ROBOT_STATE.CLAW_ARM_AFTER_HIGH_SAMPLE;
-//
-//                readyToDropHighSample = false;
-//            }
-//            else {
-//                robotHardware.operateClawServo(true);
-//            }
-//
-//        }
-//        // if the left bumper is pressed it closes the claw
-//        else if (gamepad2.left_bumper) {
-//            //telemetry.addLine("left bumper pressed");
-//            robotHardware.operateClawServo(false);
-//
-//            if (robotHardware.isIntakeOn()) {
-//                robotHardware.operateIntake(true);
-//            }
-//
-//        }
+    private void ProcessDPad() {
+        if (gamepad2.dpad_up) { //slide out
+            int slidePos = robotHardware.getHorizontalSlidePosition();
+            slidePos = Math.min (slidePos + RobotConstants.HORIZONTAL_SLIDE_INCREMENT, RobotConstants.HORIZONTAL_SLIDE_MAX_POS);
+            robotHardware.setHorizontalSlidePosition(slidePos);
         }
 
-//    private void HandleManualOverride() {
-        // if the back button is pressed it switches manual ovverides value
-//        if (gamepad2.left_stick_button && gamepad2.right_stick_button){
-//            MANUAL_OVERRIDE = !MANUAL_OVERRIDE;
-//            Log.i("=== INCREDIBOTS ===", "Manual Override: " + MANUAL_OVERRIDE);
-//        }
-//
-//
-//        // if manual override is true it will allow the joysticks to control the arms
-//        // allow this only when robot has started (helpful in reset) or when picking samples
-//        if (MANUAL_OVERRIDE && (robotState == ROBOT_STATE.PICK_SAMPLE || robotState == ROBOT_STATE.NONE || robotState == ROBOT_STATE.SNAP_SPECIMEN || robotState == ROBOT_STATE.HANG_SPECIMEN)) {
-//
-//            float leftYSignal = gamepad2.left_stick_y;
-//
-//            // If the left joystick is greater than zero, it moves the left arm up
-//            if (leftYSignal > 0) {
-//                robotHardware.setClawArmPositionAndVelocity(robotHardware.getClawArmMotorPos() + MANUAL_OVERRIDE_ARM_POSITION_DELTA, CLAW_ARM_VELOCITY * 2);
-//            }
-//
-//            // If the left joystick is less than zero, it moves the left arm down
-//            else if (leftYSignal < 0){
-//                robotHardware.setClawArmPositionAndVelocity(robotHardware.getClawArmMotorPos() - MANUAL_OVERRIDE_ARM_POSITION_DELTA, CLAW_ARM_VELOCITY * 2);
-//            }
-//        }
-//    }
+        if (gamepad2.dpad_down) {   //slide in
+            int slidePos = robotHardware.getHorizontalSlidePosition();
+            slidePos = Math.max (slidePos - RobotConstants.HORIZONTAL_SLIDE_INCREMENT, 0);
+            robotHardware.setHorizontalSlidePosition(slidePos);
+        }
 
-//    private int GetMaxSlidePosition()
-//    {
-        //DEPENDING ON HOW THE CLAW ARM IS, THE SLIDE IS PERMITTED TO MOVE CERTAIN MAX DISTANCES.
-//        int maxSlidePosition = -1;
-//
-//        if (robotHardware.getClawArmMotorPos() < DROP_SAMPLE_HIGH_ARM - 100) { //ARM IS BEHIND ROBOT
-//            maxSlidePosition = MAX_SLIDE_POSITION_ARM_BACKWARDS_HIGH;
-//        }
-//        else if (robotHardware.getClawArmMotorPos() > DROP_SAMPLE_HIGH_ARM + 100) {
-//            maxSlidePosition = MAX_SLIDE_POSITION_ARM_FORWARDS_LOW;
-//        }
-//
-//        return maxSlidePosition;
+        if (gamepad2.dpad_left) {   //turret left
+            double turretPos = robotHardware.getHorizontalTurretServoPosition();
+            turretPos = Math.min(turretPos + RobotConstants.HORIZONTAL_TURRET_INCREMENT, RobotConstants.HORIZONTAL_TURRET_MAX_POS);
+            robotHardware.setHorizontalTurretServoPosition(turretPos);
+        }
 
-//    }
-
-//    private void ProcessDPad() {
-
-        //DEPENDING ON HOW THE CLAW ARM IS, THE SLIDE IS PERMITTED TO MOVE CERTAIN MAX DISTANCES.
-//        int maxSlidePosition = GetMaxSlidePosition();
-//        int oldSlidePos = robotHardware.getSlidePos();
-
-//        if (gamepad2.dpad_left) { //move wrist down
-//            robotHardware.operateWristServo(robotHardware.getWristServoPosition() - 0.01);
-//        }
-//
-//        if (gamepad2.dpad_right) { //move wrist up
-//            robotHardware.operateWristServo(robotHardware.getWristServoPosition() + 0.01);
-//        }
-
-//        if (gamepad2.dpad_up){
-//            Log.i("=== INCREDIBOTS ===", "PROCESSING DPAD UP");
-//
-//            //SLIDE CANNOT EXPAND BEYOND THE FAR POSITION FOR IT TO BE UNDER LIMITS
-//            if (maxSlidePosition < 0) { //no max applies
-//                robotHardware.setSlidePosition(robotHardware.getSlidePos() + MANUAL_OVERRIDE_SLIDE_POSITION_DELTA);
-//            }
-//            else {
-//                robotHardware.setSlidePosition(Math.min(robotHardware.getSlidePos() + MANUAL_OVERRIDE_SLIDE_POSITION_DELTA, maxSlidePosition));
-//            }
-//
-//            if (enableArmAdjustmentWithSlide) {
-//
-//                Log.i("=== INCREDIBOTS ===", "PROCESSING DPAD: ADJUSTING ARM POSITION WITH SLIDE POSITION");
-//
-//                if (robotHardware.getSlidePos() > oldSlidePos) {    //slide extended - lower arm, increase wrist position
-//                    robotHardware.setClawArmPositionAndVelocity(robotHardware.getClawArmMotorPos() + ARM_DELTA_WITH_SLIDE_MOTION, CLAW_ARM_VELOCITY / 5);
-//                    robotHardware.operateWristServo(robotHardware.getWristServoPosition() + WRIST_DELTA_WITH_SLIDE_MOTION);
-//                }
-//            }
-//        }
-
-        //process Dpad down input to retract linear slide
-//        if (gamepad2.dpad_down){
-//            Log.i("=== INCREDIBOTS ===", "PROCESSING DPAD DOWN");
-
-        //SLIDE POSITION CANNOT BE LESS THAN 0
-        // EXCEPT IF WE ARE DOING IT TO RESET THE SLIDE IN CASE OF AN ERROR
-        // THAT IS WHEN THE ARM STATE WOULD BE NONE
-//            robotHardware.setSlidePosition(robotHardware.getSlidePos() - MANUAL_OVERRIDE_SLIDE_POSITION_DELTA);
-//
-//            if (enableArmAdjustmentWithSlide) {
-//
-//                Log.i("=== INCREDIBOTS ===", "PROCESSING DPAD: ADJUSTING ARM POSITION WITH SLIDE POSITION");
-//
-//                if (robotHardware.getSlidePos() < oldSlidePos) {    //slide retracted - raise arm, decrease wrist position
-//                    robotHardware.setClawArmPositionAndVelocity(robotHardware.getClawArmMotorPos() - ARM_DELTA_WITH_SLIDE_MOTION, CLAW_ARM_VELOCITY / 5);
-//                    robotHardware.operateWristServo(robotHardware.getWristServoPosition() - WRIST_DELTA_WITH_SLIDE_MOTION);
-//                }
-//            }
-//        }
+        if (gamepad2.dpad_right) {  //turret right
+            double turretPos = robotHardware.getHorizontalTurretServoPosition();
+            turretPos = Math.max(turretPos - RobotConstants.HORIZONTAL_TURRET_INCREMENT, RobotConstants.HORIZONTAL_TURRET_MAX_POS);
+            robotHardware.setHorizontalTurretServoPosition(turretPos);
+        }
     }
 
-    private void HandleColorDetection() {
-//        if (!robotHardware.isIntakeOn()) {
-//            return; //do nothing if intake was not operating
-//        }
-//
-//        if (gameColor == RobotConstants.GAME_COLORS.BLUE && robotHardware.getDetectedColor() == RobotConstants.GAME_COLORS.RED) {
-//            while (robotHardware.getDetectedColor() == RobotConstants.GAME_COLORS.RED) {
-//                robotHardware.operateWristServo(WRIST_SPIT_OUT);
-//                robotHardware.operateIntake(false);
-//            }
-//            robotHardware.operateWristServo(ENTER_SUB_WRIST);
-//            robotHardware.operateIntake(true);
-//        }
-//
-//        if (gameColor == RobotConstants.GAME_COLORS.RED && robotHardware.getDetectedColor() == RobotConstants.GAME_COLORS.BLUE) {
-//            while (robotHardware.getDetectedColor() == RobotConstants.GAME_COLORS.BLUE) {
-//                robotHardware.operateWristServo(WRIST_SPIT_OUT);
-//                robotHardware.operateIntake(false);
-//            }
-//            robotHardware.operateWristServo(ENTER_SUB_WRIST);
-//            robotHardware.operateIntake(true);
-//        }
-    }
+    private void ProcessBumpers(){
+        if (gamepad2.right_bumper) {
+            robotHardware.setHorizontalClawState(true);
+        }
 
-    private void HandleMotorCurrentProblems() {
-//        if (((DcMotorEx) armMotor).isOverCurrent()){
-//            telemetry.addLine("MOTOR EXCEEDED CURRENT LIMIT!");
-//        }
+        if (gamepad2.left_bumper) {
+            robotHardware.setHorizontalClawState(false);
+        }
     }
-
 }

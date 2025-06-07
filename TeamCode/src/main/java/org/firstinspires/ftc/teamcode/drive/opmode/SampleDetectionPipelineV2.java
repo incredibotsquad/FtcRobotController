@@ -6,21 +6,15 @@ import org.opencv.imgproc.Imgproc;
 import org.openftc.easyopencv.OpenCvPipeline;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
-import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.opencv.android.Utils;
 import android.graphics.Bitmap;
 
 // TensorFlow Lite imports
-import org.tensorflow.lite.Interpreter;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
 
 
 @Config
@@ -101,7 +95,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
      * @param index Index of the detected sample
      * @return Orientation angle in degrees, or -1 if index is invalid
      */
-    public double GetSampleOrientation(int index) {
+    public double GetRealSampleOrientation(int index) {
         if (latestDistances != null && index >= 0 && index < latestDistances.length) {
             return latestDistances[index][1];
         }
@@ -118,7 +112,6 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         Utils.matToBitmap(input, bmp);
         return bmp;
     }
-
 
 
     /**
@@ -219,6 +212,12 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
 
         // Step 1: Convert to HSV
         Imgproc.cvtColor(input, hsv, Imgproc.COLOR_RGB2HSV);
+
+        //step 1.5 Equalize the v channel to normalize brightness
+//        List<Mat> hsvChannels = new ArrayList<>();
+//        Core.split(hsv, hsvChannels);
+//        Imgproc.equalizeHist(hsvChannels.get(2), hsvChannels.get(2));   // equalize the v channel
+//        Core.merge(hsvChannels, hsv);
 
         // Step 2: Apply Gaussian blur
         Mat blurred = hsv;

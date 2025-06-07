@@ -16,7 +16,7 @@ public class DoNothing extends BaseAuto{
     @Override
     public void runOpMode() throws InterruptedException {
         robotHardware = new RobotHardware(this.hardwareMap);
-        robotControl = new RobotControl(gamepad2, robotHardware);
+        robotControl = new RobotControl(gamepad2, robotHardware, telemetry);
 
         mecanumDrive = new MecanumDrive(this.hardwareMap, startPose);
 

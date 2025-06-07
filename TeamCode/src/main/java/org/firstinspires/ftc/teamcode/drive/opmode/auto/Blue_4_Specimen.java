@@ -26,7 +26,7 @@ public class Blue_4_Specimen extends BaseAuto{
     @Override
     public void runOpMode() throws InterruptedException {
         robotHardware = new RobotHardware(this.hardwareMap);
-        robotControl = new RobotControl(gamepad2, robotHardware);
+        robotControl = new RobotControl(gamepad2, robotHardware, telemetry);
         mecanumDrive = new MecanumDrive(this.hardwareMap, coordinates.INIT_POS);
 
         //Put all the actions here, but replace the sample pushing with continuous splines below

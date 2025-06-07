@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.drive.opmode;
 
-import android.os.Environment;
 import org.tensorflow.lite.Interpreter;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -10,8 +9,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 
 public class TensorFlow {
     private Interpreter tflite;
@@ -145,19 +142,19 @@ public class TensorFlow {
 
     // Convenience method that returns individual values
     public class CalibrationResult {
-        public float realX;
-        public float realY;
-        public float realAngle;
+        public float calibratedX;
+        public float calibratedY;
+        public float calibratedAngle;
 
         public CalibrationResult(float x, float y, float angle) {
-            this.realX = x;
-            this.realY = y;
-            this.realAngle = angle;
+            this.calibratedX = x;
+            this.calibratedY = y;
+            this.calibratedAngle = angle;
         }
 
         @Override
         public String toString() {
-            return String.format("Real: (%.2f, %.2f, %.2f°)", realX, realY, realAngle);
+            return String.format("Real: (%.2f, %.2f, %.2f°)", calibratedX, calibratedY, calibratedAngle);
         }
     }
 
