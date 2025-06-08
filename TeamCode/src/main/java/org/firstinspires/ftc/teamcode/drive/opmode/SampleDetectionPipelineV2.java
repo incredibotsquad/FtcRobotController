@@ -15,7 +15,7 @@ import org.opencv.android.Utils;
 import android.graphics.Bitmap;
 
 // TensorFlow Lite imports
-import org.tensorflow.lite.Interpreter;
+//import org.tensorflow.lite.Interpreter;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -416,16 +416,6 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         // Step 4: Morphological Open
         Imgproc.morphologyEx(mask, mask, Imgproc.MORPH_OPEN, getMorphKernel());
 
-        // // Step 4.5: Distance Transform + Threshold to extract peaks
-        // Mat dist = new Mat();
-        // Imgproc.distanceTransform(mask, dist, Imgproc.DIST_L2, 5);
-        // Core.normalize(dist, dist, 0, 1.0, Core.NORM_MINMAX);
-
-        // Mat peakMask = new Mat();
-        // Imgproc.threshold(dist, peakMask, DISTANCE_THRESHOLD, 1.0,
-        // Imgproc.THRESH_BINARY);
-        // peakMask.convertTo(peakMask, CvType.CV_8U);
-
         // Step 5: Find contours
         ArrayList<RotatedRect> detectedRects = new ArrayList<>();
         ArrayList<double[]> distances = new ArrayList<>();
@@ -433,6 +423,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         Mat hierarchy = new Mat();
         Imgproc.findContours(mask, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
         hierarchy.release();
+
         // Step 6: Process each contour
         for (MatOfPoint contour : contours) {
             double area = Imgproc.contourArea(contour);
@@ -805,7 +796,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                     // If we have enough points for convexity defects
                     if (hull.size().height >= 4) {
                         MatOfInt4 convexityDefects = new MatOfInt4();
-                        Imgproc.convexityDefects(contour, hull, convexityDefects);
+                        Imgproc.convexityDefects(currentContour, hull, convexityDefects);
 
                         // Get defect points
                         Mat defectMat = convexityDefects.getMat();
@@ -813,9 +804,9 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
 
                         for (int i = 0; i < defectMat.rows(); i++) {
                             double[] defect = defectMat.get(i, 0);
-                            Point startPoint = new Point(contour.get((int) defect[0], 0));
-                            Point endPoint = new Point(contour.get((int) defect[1], 0));
-                            Point depthPoint = new Point(contour.get((int) defect[2], 0));
+                            Point startPoint = new Point(currentContour.get((int) defect[0], 0));
+                            Point endPoint = new Point(currentContour.get((int) defect[1], 0));
+                            Point depthPoint = new Point(currentContour.get((int) defect[2], 0));
                             double depth = defect[3] / 256.0; // Convert to pixels
 
                             // Only consider deep defects
@@ -831,7 +822,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
 
                             // Draw the original contour
                             List<MatOfPoint> contourList = new ArrayList<>();
-                            contourList.add(contour);
+                            contourList.add(currentContour);
                             Imgproc.drawContours(splitMask, contourList, 0, new Scalar(255), -1);
 
                             // Draw lines between defect points to split the contour
