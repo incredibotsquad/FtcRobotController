@@ -127,7 +127,15 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
                 gameColor = GameConstants.GAME_COLORS.RED;
                 robotControl.setGameColor(gameColor);
                 telemetry.addData("Game Color: ", gameColor);
-                telemetry.update();}
+                telemetry.update();
+            }
+
+            if (gamepad1.y || gamepad2.y) {
+                gameColor = GameConstants.GAME_COLORS.YELLOW;
+                robotControl.setGameColor(gameColor);
+                telemetry.addData("Game Color: ", gameColor);
+                telemetry.update();
+            }
         }
 
         // Wait for the game to start (driver presses PLAY)

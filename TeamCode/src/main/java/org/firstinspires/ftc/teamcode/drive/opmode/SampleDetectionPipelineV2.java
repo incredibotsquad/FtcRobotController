@@ -13,11 +13,9 @@ import com.acmerobotics.dashboard.config.Config;
 
 import org.opencv.android.Utils;
 import android.graphics.Bitmap;
-import apple.laf.JRSUIConstants.Size;
 
 // TensorFlow Lite imports
 import org.tensorflow.lite.Interpreter;
-import org.w3c.dom.css.Rect;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -100,78 +98,78 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
      */
     public void updateCameraSettings() {
         if (camera == null) return;
-        
-        try {
-            // For EasyOpenCV, we need to use the camera's gain and exposure controls directly
-            // These methods may vary depending on the camera and EasyOpenCV version
-            if (enableManualExposure) {
-                // Calculate exposure time in milliseconds
-                int exposureMs;
-                if (manualExposureValue < 50) {
-                    // For 0-49: Linear scale from 1ms to 20ms (finer control in normal lighting)
-                    exposureMs = 1 + (int)(manualExposureValue * 0.4); // 0->1ms, 49->20ms
-                } else {
-                    // For 50-100: Exponential scale from 20ms to 100ms (for low light)
-                    exposureMs = 20 + (int)(Math.pow((manualExposureValue - 50) / 50.0, 2) * 80);
-                }
-                
-                // Try to set exposure using the available methods
-                try {
-                    // Method 1: Try using the camera's exposure property directly
-                    camera.setPipeline(null); // Temporarily remove pipeline
-                    camera.setExposure(exposureMs); // Set exposure in milliseconds
-                    camera.setPipeline(this); // Re-add pipeline
-                } catch (Exception e1) {
-                    System.out.println("Error setting exposure directly: " + e1.getMessage());
-                    
-                    // If direct method fails, try alternative approaches
-                    try {
-                        // Method 2: Try using camera controls if available
-                        org.firstinspires.ftc.robotcore.external.hardware.camera.controls.ExposureControl exposureControl = 
-                            camera.getCameraControl(org.firstinspires.ftc.robotcore.external.hardware.camera.controls.ExposureControl.class);
-                        
-                        if (exposureControl != null) {
-                            exposureControl.setMode(org.firstinspires.ftc.robotcore.external.hardware.camera.controls.ExposureControl.Mode.Manual);
-                            exposureControl.setExposure(exposureMs, java.util.concurrent.TimeUnit.MILLISECONDS);
-                        }
-                    } catch (Exception e2) {
-                        System.out.println("Error setting exposure via camera controls: " + e2.getMessage());
-                    }
-                }
-            }
-            
-            if (enableManualWhiteBalance) {
-                // Calculate white balance value (typically in Kelvin)
-                int whiteBalanceValue = 2500 + (int)(manualWhiteBalanceValue * 65);
-                
-                // Try to set white balance using available methods
-                try {
-                    // Method 1: Try using the camera's white balance property directly
-                    camera.setPipeline(null); // Temporarily remove pipeline
-                    camera.setWhiteBalance(whiteBalanceValue); // Set white balance
-                    camera.setPipeline(this); // Re-add pipeline
-                } catch (Exception e1) {
-                    System.out.println("Error setting white balance directly: " + e1.getMessage());
-                    
-                    // If direct method fails, try alternative approaches
-                    try {
-                        // Method 2: Try using camera controls if available
-                        org.firstinspires.ftc.robotcore.external.hardware.camera.controls.WhiteBalanceControl whiteBalanceControl = 
-                            camera.getCameraControl(org.firstinspires.ftc.robotcore.external.hardware.camera.controls.WhiteBalanceControl.class);
-                        
-                        if (whiteBalanceControl != null) {
-                            whiteBalanceControl.setMode(org.firstinspires.ftc.robotcore.external.hardware.camera.controls.WhiteBalanceControl.Mode.MANUAL);
-                            whiteBalanceControl.setWhiteBalance(whiteBalanceValue);
-                        }
-                    } catch (Exception e2) {
-                        System.out.println("Error setting white balance via camera controls: " + e2.getMessage());
-                    }
-                }
-            }
-        } catch (Exception e) {
-            // Log error or handle exception
-            System.out.println("Error setting camera parameters: " + e.getMessage());
-        }
+//
+//        try {
+//            // For EasyOpenCV, we need to use the camera's gain and exposure controls directly
+//            // These methods may vary depending on the camera and EasyOpenCV version
+//            if (enableManualExposure) {
+//                // Calculate exposure time in milliseconds
+//                int exposureMs;
+//                if (manualExposureValue < 50) {
+//                    // For 0-49: Linear scale from 1ms to 20ms (finer control in normal lighting)
+//                    exposureMs = 1 + (int)(manualExposureValue * 0.4); // 0->1ms, 49->20ms
+//                } else {
+//                    // For 50-100: Exponential scale from 20ms to 100ms (for low light)
+//                    exposureMs = 20 + (int)(Math.pow((manualExposureValue - 50) / 50.0, 2) * 80);
+//                }
+//
+//                // Try to set exposure using the available methods
+//                try {
+//                    // Method 1: Try using the camera's exposure property directly
+//                    camera.setPipeline(null); // Temporarily remove pipeline
+//                    camera.setExposure(exposureMs); // Set exposure in milliseconds
+//                    camera.setPipeline(this); // Re-add pipeline
+//                } catch (Exception e1) {
+//                    System.out.println("Error setting exposure directly: " + e1.getMessage());
+//
+//                    // If direct method fails, try alternative approaches
+//                    try {
+//                        // Method 2: Try using camera controls if available
+//                        org.firstinspires.ftc.robotcore.external.hardware.camera.controls.ExposureControl exposureControl =
+//                            camera.getCameraControl(org.firstinspires.ftc.robotcore.external.hardware.camera.controls.ExposureControl.class);
+//
+//                        if (exposureControl != null) {
+//                            exposureControl.setMode(org.firstinspires.ftc.robotcore.external.hardware.camera.controls.ExposureControl.Mode.Manual);
+//                            exposureControl.setExposure(exposureMs, java.util.concurrent.TimeUnit.MILLISECONDS);
+//                        }
+//                    } catch (Exception e2) {
+//                        System.out.println("Error setting exposure via camera controls: " + e2.getMessage());
+//                    }
+//                }
+//            }
+//
+//            if (enableManualWhiteBalance) {
+//                // Calculate white balance value (typically in Kelvin)
+//                int whiteBalanceValue = 2500 + (int)(manualWhiteBalanceValue * 65);
+//
+//                // Try to set white balance using available methods
+//                try {
+//                    // Method 1: Try using the camera's white balance property directly
+//                    camera.setPipeline(null); // Temporarily remove pipeline
+//                    camera.setWhiteBalance(whiteBalanceValue); // Set white balance
+//                    camera.setPipeline(this); // Re-add pipeline
+//                } catch (Exception e1) {
+//                    System.out.println("Error setting white balance directly: " + e1.getMessage());
+//
+//                    // If direct method fails, try alternative approaches
+//                    try {
+//                        // Method 2: Try using camera controls if available
+//                        org.firstinspires.ftc.robotcore.external.hardware.camera.controls.WhiteBalanceControl whiteBalanceControl =
+//                            camera.getCameraControl(org.firstinspires.ftc.robotcore.external.hardware.camera.controls.WhiteBalanceControl.class);
+//
+//                        if (whiteBalanceControl != null) {
+//                            whiteBalanceControl.setMode(org.firstinspires.ftc.robotcore.external.hardware.camera.controls.WhiteBalanceControl.Mode.MANUAL);
+//                            whiteBalanceControl.setWhiteBalance(whiteBalanceValue);
+//                        }
+//                    } catch (Exception e2) {
+//                        System.out.println("Error setting white balance via camera controls: " + e2.getMessage());
+//                    }
+//                }
+//            }
+//        } catch (Exception e) {
+//            // Log error or handle exception
+//            System.out.println("Error setting camera parameters: " + e.getMessage());
+//        }
     }
 
     /**

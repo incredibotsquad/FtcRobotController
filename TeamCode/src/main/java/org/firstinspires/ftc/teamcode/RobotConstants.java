@@ -44,7 +44,7 @@ public class RobotConstants {
     // HORIZONTAL PICK SAMPLE STATE VALUES
     public static int HORIZONTAL_SLIDE_PICK_SAMPLE = 0;
     public static double HORIZONTAL_TURRET_PICK_SAMPLE = 0.5;
-    public static double HORIZONTAL_SHOULDER_PICK_SAMPLE = 0.465;
+    public static double HORIZONTAL_SHOULDER_PICK_SAMPLE = 0.47;
     public static double HORIZONTAL_ELBOW_PICK_SAMPLE = 0.1;
     public static double HORIZONTAL_WRIST_PICK_SAMPLE = 0;
 
@@ -107,15 +107,15 @@ public class RobotConstants {
     public static double VERTICAL_WRIST_SNAP_HIGH_SPECIMEN = 0;
 
     // VERTICAL LOW BASKET VALUES
-    public static int VERTICAL_SLIDE_DROP_LOW_SAMPLE = 300;
-    public static double VERTICAL_SHOULDER_DROP_LOW_SAMPLE = 0.08;
-    public static double VERTICAL_ELBOW_DROP_LOW_SAMPLE = 0;
+    public static int VERTICAL_SLIDE_DROP_LOW_SAMPLE = 150;
+    public static double VERTICAL_SHOULDER_DROP_LOW_SAMPLE = 0.15;
+    public static double VERTICAL_ELBOW_DROP_LOW_SAMPLE = 0.6;
     public static double VERTICAL_WRIST_DROP_LOW_SAMPLE = 0.5;
 
     // VERTICAL HIGH BASKET VALUES
-    public static int VERTICAL_SLIDE_DROP_HIGH_SAMPLE = 500;
-    public static double VERTICAL_SHOULDER_DROP_HIGH_SAMPLE = 0.08;
-    public static double VERTICAL_ELBOW_DROP_HIGH_SAMPLE = 0.5;
+    public static int VERTICAL_SLIDE_DROP_HIGH_SAMPLE = 800;
+    public static double VERTICAL_SHOULDER_DROP_HIGH_SAMPLE = 0.15;
+    public static double VERTICAL_ELBOW_DROP_HIGH_SAMPLE = 0.55;
     public static double VERTICAL_WRIST_DROP_HIGH_SAMPLE = 0.5;
 
 }
