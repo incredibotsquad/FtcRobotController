@@ -79,6 +79,16 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
     private static final int CAMERA_RESOLUTION_HEIGHT = 480;
     private static final double SAMPLE_WIDTH_INCHES = 1.5;
 
+    // Tuning parameters — make these dashboard-tunable if you like
+    public static double DISTANCE_THRESHOLD = 0.3; // 0.2–0.4 is a good range
+    public static int MORPH_KERNEL_SIZE = 7; // must be odd (3,5,7,...)
+
+    // Helper method to get morphology kernel
+    private Mat getMorphKernel() {
+        return Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(MORPH_KERNEL_SIZE, MORPH_KERNEL_SIZE));
+    }
+
+
     public void setColorMode(GameConstants.GAME_COLORS mode) {
         this.colorMode = mode;
     }
@@ -372,15 +382,27 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         }
 
         // Step 4: Morphological operations
-        Imgproc.erode(mask, mask, Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(3, 3)));
-        Imgproc.dilate(mask, mask, Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(5, 5)));
+        // Imgproc.erode(mask, mask, Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(3, 3)));
+        // Imgproc.dilate(mask, mask, Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(5, 5)));
+        // Step 4: Morphological Open
+        Imgproc.morphologyEx(mask, mask, Imgproc.MORPH_OPEN, getMorphKernel());
+
+        // Step 4.5: Distance Transform + Threshold to extract peaks
+        Mat dist = new Mat();
+        Imgproc.distanceTransform(mask, dist, Imgproc.DIST_L2, 5);
+        Core.normalize(dist, dist, 0, 1.0, Core.NORM_MINMAX);
+
+        Mat peakMask = new Mat();
+        Imgproc.threshold(dist, peakMask, DISTANCE_THRESHOLD, 1.0, Imgproc.THRESH_BINARY);
+        peakMask.convertTo(peakMask, CvType.CV_8U);
+
 
         // Step 5: Find contours
         ArrayList<RotatedRect> detectedRects = new ArrayList<>();
         ArrayList<double[]> distances = new ArrayList<>();
         ArrayList<MatOfPoint> contours = new ArrayList<>();
         Mat hierarchy = new Mat();
-        Imgproc.findContours(mask, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        Imgproc.findContours(peakMask, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
         hierarchy.release();
         // Step 6: Process each contour
         for (MatOfPoint contour : contours) {
@@ -394,7 +416,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                 // Possibly merged blob
                 if (aspectRatio > 0.8 && area > 2 * minContourArea) {
                     Rect boundingBox = Imgproc.boundingRect(contour);
-                    Mat roi = new Mat(mask, boundingBox);
+                    Mat roi = new Mat(peakMask, boundingBox);
 
                     List<MatOfPoint> innerContours = new ArrayList<>();
                     Mat hierarchyInner = new Mat();
@@ -437,6 +459,9 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         hsv.release();
         mask.release();
         blurred.release();
+        dist.release();
+        peakMask.release();
+
         return input;
     }
 }
