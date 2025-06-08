@@ -36,11 +36,13 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
     public static double FOCAL_LEGNTH_Y = 600;
     public static double HEIGHT_OF_CAMERA = 10; //Inches
     public static double CENTER_OF_IMAGE = 12; //Inches
-    public static double minContourArea = 300;
-    public static double maxContourArea = 3000;
+    public static double minContourArea = 3000;
+    public static double maxContourArea = 8000;
     public static double minAspectRatio = 0.3;
     public static double maxAspectRatio = 0.9;
     public static boolean enableHSVEqualization = false;
+    public static double BLOB_ASPECT_RATIO = 0.25;
+    public static double BLOB_AREA_THRESHOLD = 8000;
     
     // Camera control settings
     public static boolean enableManualExposure = false;
@@ -280,7 +282,9 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
             RotatedRect rect,
             Mat input,
             ArrayList<RotatedRect> detectedRects,
-            ArrayList<double[]> distances
+            ArrayList<double[]> distances,
+            double contourArea
+
     ) {
         detectedRects.add(rect);
 
@@ -292,7 +296,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
             Imgproc.line(input, vertices[j], vertices[(j + 1) % 4], new Scalar(0, 255, 0), 2);
             Imgproc.putText(
                 input,
-                String.format("A:%.0f", rect.size.area()),
+                String.format("A:%.0f",contourArea),
                 vertices[j],
                 Imgproc.FONT_HERSHEY_SIMPLEX,
                 0.5,
@@ -416,45 +420,39 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         // Step 6: Process each contour
         for (MatOfPoint contour : contours) {
             double area = Imgproc.contourArea(contour);
+
             if (area < minContourArea) continue;
 
             RotatedRect rect = Imgproc.minAreaRect(new MatOfPoint2f(contour.toArray()));
             double aspectRatio = Math.min(rect.size.width, rect.size.height) / Math.max(rect.size.width, rect.size.height);
 
-            if (aspectRatio < minAspectRatio || aspectRatio > maxAspectRatio) {
-                // Possibly merged blob
-                if (aspectRatio > 0.8 && area > 2 * minContourArea) {
-                    Rect boundingBox = Imgproc.boundingRect(contour);
-                    Mat roi = new Mat(mask, boundingBox);
-
-                    List<MatOfPoint> innerContours = new ArrayList<>();
-                    Mat hierarchyInner = new Mat();
-                    Imgproc.findContours(roi.clone(), innerContours, hierarchyInner, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
-                    roi.release();
-                    hierarchyInner.release();
-                    // Filter inner contours based on area and aspect ratio
-                    for (MatOfPoint innerContour : innerContours) {
-                        double subArea = Imgproc.contourArea(innerContour);
-                        if (subArea < minContourArea || subArea > maxContourArea) continue;
-
-                        RotatedRect subRect = Imgproc.minAreaRect(new MatOfPoint2f(innerContour.toArray()));
-                        double subAspectRatio = Math.min(subRect.size.width, subRect.size.height) / Math.max(subRect.size.width, subRect.size.height);
-                        if (subAspectRatio < minAspectRatio || subAspectRatio > maxAspectRatio) continue;
-
-                        subRect.center.x += boundingBox.x;
-                        subRect.center.y += boundingBox.y;
-
-                        processDetectedRect(subRect, input, detectedRects, distances);
-                    }
-                    
-                    continue; // Skip the original blob
-                }
-
-                continue; // Not worth splitting either
+            if (area > minContourArea && area < maxContourArea) {
+                processDetectedRect(rect, input, detectedRects, distances, area);
             }
+            else if (aspectRatio > BLOB_ASPECT_RATIO && area > BLOB_AREA_THRESHOLD) {   //check if they are worth trying
+                Rect boundingBox = Imgproc.boundingRect(contour);
+                Mat roi = new Mat(mask, boundingBox);
 
-            // ✅ Only reach here if valid rect
-            processDetectedRect(rect, input, detectedRects, distances);
+                List<MatOfPoint> innerContours = new ArrayList<>();
+                Mat hierarchyInner = new Mat();
+                Imgproc.findContours(roi.clone(), innerContours, hierarchyInner, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+                roi.release();
+                hierarchyInner.release();
+                // Filter inner contours based on area and aspect ratio
+                for (MatOfPoint innerContour : innerContours) {
+                    double subArea = Imgproc.contourArea(innerContour);
+//                    if (subArea < minContourArea || subArea > maxContourArea) continue;
+
+                    RotatedRect subRect = Imgproc.minAreaRect(new MatOfPoint2f(innerContour.toArray()));
+                    double subAspectRatio = Math.min(subRect.size.width, subRect.size.height) / Math.max(subRect.size.width, subRect.size.height);
+//                    if (subAspectRatio < minAspectRatio || subAspectRatio > maxAspectRatio) continue;
+
+                    subRect.center.x += boundingBox.x;
+                    subRect.center.y += boundingBox.y;
+
+                    processDetectedRect(subRect, input, detectedRects, distances, subArea);
+                }
+            }
         }
 
         latestRects = detectedRects.toArray(new RotatedRect[0]);
@@ -468,8 +466,6 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         hsv.release();
         mask.release();
         blurred.release();
-        dist.release();
-        peakMask.release();
 
         return input;
     }
