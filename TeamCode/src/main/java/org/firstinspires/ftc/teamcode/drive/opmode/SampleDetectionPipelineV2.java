@@ -514,7 +514,9 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         }
 
         // Start with the original contour
-        resultContours.add(contour.clone());
+        resultContours.add(new MatOfPoint(contour.toArray())); // Add a copy of the original contour
+        // resultContours.add(new MatOfPoint(contour.toArray())); // Add a copy of the
+        // original contour
 
         // 1. Watershed Fragmentation
         if (enableWatershedFragmentation) {
