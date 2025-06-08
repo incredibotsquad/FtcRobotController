@@ -40,6 +40,9 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
     public static double minAspectRatio = 0.3;
     public static double maxAspectRatio = 0.9;
     public static boolean enableHSVEqualization = false;
+    public static boolean useCLAHE = true; // Use CLAHE instead of standard histogram equalization
+    public static double claheClipLimit = 4.0; // Default clip limit for CLAHE
+    public static int claheTileSize = 8; // Default tile size for CLAHE (8x8)
     public static double BLOB_ASPECT_RATIO = 0.25;
     public static double BLOB_AREA_THRESHOLD = 8000;
 
@@ -244,6 +247,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
      * @return Bitmap representation of the input Mat
      */
     private Bitmap matToBitmap(Mat input) {
+
         Bitmap bmp = Bitmap.createBitmap(input.cols(), input.rows(), Bitmap.Config.RGB_565);
         Utils.matToBitmap(input, bmp);
         return bmp;
@@ -371,7 +375,24 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         if (enableHSVEqualization) {
             List<Mat> hsvChannels = new ArrayList<>();
             Core.split(hsv, hsvChannels);
-            Imgproc.equalizeHist(hsvChannels.get(2), hsvChannels.get(2)); // Equalize V channel
+
+            if (useCLAHE) {
+                // Use CLAHE for better local contrast enhancement
+                Mat vChannel = hsvChannels.get(2);
+                Mat enhancedV = new Mat();
+
+                // Create CLAHE object with specified clip limit and tile grid size
+                Imgproc.createCLAHE(claheClipLimit, new Size(claheTileSize, claheTileSize))
+                        .apply(vChannel, enhancedV);
+
+                // Replace V channel with enhanced version
+                enhancedV.copyTo(hsvChannels.get(2));
+                enhancedV.release();
+            } else {
+                // Use standard histogram equalization
+                Imgproc.equalizeHist(hsvChannels.get(2), hsvChannels.get(2));
+            }
+
             Core.merge(hsvChannels, hsv);
         }
 
