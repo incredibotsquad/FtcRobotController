@@ -799,11 +799,10 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                         Imgproc.convexityDefects(currentContour, hull, convexityDefects);
 
                         // Get defect points
-                        Mat defectMat = convexityDefects;
                         List<Point> defectPoints = new ArrayList<>();
 
-                        for (int i = 0; i < defectMat.rows(); i++) {
-                            double[] defect = defectMat.get(i, 0);
+                        for (int i = 0; i < convexityDefects.rows(); i++) {
+                            double[] defect = convexityDefects.get(i, 0);
                             Point startPoint = new Point(currentContour.get((int) defect[0], 0));
                             Point endPoint = new Point(currentContour.get((int) defect[1], 0));
                             Point depthPoint = new Point(currentContour.get((int) defect[2], 0));
