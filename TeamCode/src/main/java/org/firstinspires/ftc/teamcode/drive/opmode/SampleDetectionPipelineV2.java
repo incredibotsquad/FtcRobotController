@@ -290,6 +290,15 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         rect.points(vertices);
         for (int j = 0; j < 4; j++) {
             Imgproc.line(input, vertices[j], vertices[(j + 1) % 4], new Scalar(0, 255, 0), 2);
+            Imgproc.putText(
+                input,
+                String.format("A:%.0f", rect.size.area()),
+                vertices[j],
+                Imgproc.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                new Scalar(255, 0, 0),
+                2
+            );
         }
 
         // Distance and angle calculation
@@ -314,7 +323,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         if (rect.size.width < rect.size.height) {
             angle += 90;
         }
-
+        
         double turretAngle = Math.toDegrees(Math.atan(x_inches_x / y_inches_x));
 
         // Use the adjusted values
@@ -416,7 +425,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                 // Possibly merged blob
                 if (aspectRatio > 0.8 && area > 2 * minContourArea) {
                     Rect boundingBox = Imgproc.boundingRect(contour);
-                    Mat roi = new Mat(peakMask, boundingBox);
+                    Mat roi = new Mat(mask, boundingBox);
 
                     List<MatOfPoint> innerContours = new ArrayList<>();
                     Mat hierarchyInner = new Mat();
