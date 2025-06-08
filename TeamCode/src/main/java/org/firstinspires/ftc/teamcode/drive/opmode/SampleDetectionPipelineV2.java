@@ -387,14 +387,14 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         // Step 4: Morphological Open
         Imgproc.morphologyEx(mask, mask, Imgproc.MORPH_OPEN, getMorphKernel());
 
-        // Step 4.5: Distance Transform + Threshold to extract peaks
-        Mat dist = new Mat();
-        Imgproc.distanceTransform(mask, dist, Imgproc.DIST_L2, 5);
-        Core.normalize(dist, dist, 0, 1.0, Core.NORM_MINMAX);
+        // // Step 4.5: Distance Transform + Threshold to extract peaks
+        // Mat dist = new Mat();
+        // Imgproc.distanceTransform(mask, dist, Imgproc.DIST_L2, 5);
+        // Core.normalize(dist, dist, 0, 1.0, Core.NORM_MINMAX);
 
-        Mat peakMask = new Mat();
-        Imgproc.threshold(dist, peakMask, DISTANCE_THRESHOLD, 1.0, Imgproc.THRESH_BINARY);
-        peakMask.convertTo(peakMask, CvType.CV_8U);
+        // Mat peakMask = new Mat();
+        // Imgproc.threshold(dist, peakMask, DISTANCE_THRESHOLD, 1.0, Imgproc.THRESH_BINARY);
+        // peakMask.convertTo(peakMask, CvType.CV_8U);
 
 
         // Step 5: Find contours
@@ -402,7 +402,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         ArrayList<double[]> distances = new ArrayList<>();
         ArrayList<MatOfPoint> contours = new ArrayList<>();
         Mat hierarchy = new Mat();
-        Imgproc.findContours(peakMask, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        Imgproc.findContours(mask, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
         hierarchy.release();
         // Step 6: Process each contour
         for (MatOfPoint contour : contours) {
