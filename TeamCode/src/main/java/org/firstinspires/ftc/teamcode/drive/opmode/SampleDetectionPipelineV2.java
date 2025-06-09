@@ -445,35 +445,25 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         distances.add(new double[] { x_inches_x, angle, ground_distance, turretAngle, confidence });
     }
 
-    @Override
-    public Mat processFrame(Mat input) {
-        // Update camera settings if they've changed
-        if (camera != null) {
-            updateCameraSettings();
-        }
+    /**
+     * Convert input image to HSV color space
+     * 
+     * @param input RGB input image
+     * @param output HSV output image
+     */
+    private void convertToHSV(Mat input, Mat output) {
+        Imgproc.cvtColor(input, output, Imgproc.COLOR_RGB2HSV);
+    }
 
-        // Update color mode from dashboard
-        updateColorModeFromDashboard();
-
-        // Clear reusable Mats
-        hsv.release();
-        mask.release();
-        hierarchy.release();
-
-        // Step 1: Convert to HSV
-        Imgproc.cvtColor(input, hsv, Imgproc.COLOR_RGB2HSV);
-
-        // step 1.5 Equalize the v channel to normalize brightness
-        // List<Mat> hsvChannels = new ArrayList<>();
-        // Core.split(hsv, hsvChannels);
-        // Imgproc.equalizeHist(hsvChannels.get(2), hsvChannels.get(2)); // equalize the
-        // v channel
-        // Core.merge(hsvChannels, hsv);
-
-        // Step 1.5: Optionally equalize the V channel to normalize brightness
+    /**
+     * Equalize the V channel to normalize brightness
+     * 
+     * @param hsvImage HSV image to process
+     */
+    private void equalizeVChannel(Mat hsvImage) {
         if (enableHSVEqualization) {
             List<Mat> hsvChannels = new ArrayList<>();
-            Core.split(hsv, hsvChannels);
+            Core.split(hsvImage, hsvChannels);
 
             if (useCLAHE) {
                 // Use CLAHE for better local contrast enhancement
@@ -492,25 +482,39 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                 Imgproc.equalizeHist(hsvChannels.get(2), hsvChannels.get(2));
             }
 
-            Core.merge(hsvChannels, hsv);
+            Core.merge(hsvChannels, hsvImage);
         }
+    }
 
-        // Step 2: Apply Gaussian blur
-        Mat blurred = hsv;
-        // Imgproc.GaussianBlur(hsv, blurred, new Size(5, 5), 0);
+    /**
+     * Apply Gaussian blur to the image
+     * 
+     * @param input Input image
+     * @param output Output blurred image
+     */
+    private void applyGaussianBlur(Mat input, Mat output) {
+        // Currently not applying blur, just returning the input
+        // Uncomment the following line to apply Gaussian blur
+        // Imgproc.GaussianBlur(input, output, new Size(5, 5), 0);
+    }
 
-        // Step 3: Adaptive Thresholding
-        // Using the reusable mask Mat
+    /**
+     * Apply color thresholding based on the current color mode
+     * 
+     * @param input Input HSV image
+     * @param output Output binary mask
+     */
+    private void applyColorThreshold(Mat input, Mat output) {
         switch (colorMode) {
             case RED:
-                Scalar[] redThresh1 = computeAdaptiveHSVThresholds(blurred, RED_LOW_1, RED_HIGH_1);
-                Scalar[] redThresh2 = computeAdaptiveHSVThresholds(blurred, RED_LOW_2, RED_HIGH_2);
+                Scalar[] redThresh1 = computeAdaptiveHSVThresholds(input, RED_LOW_1, RED_HIGH_1);
+                Scalar[] redThresh2 = computeAdaptiveHSVThresholds(input, RED_LOW_2, RED_HIGH_2);
 
                 Mat lowerRed = new Mat();
                 Mat upperRed = new Mat();
-                Core.inRange(blurred, redThresh1[0], redThresh1[1], lowerRed);
-                Core.inRange(blurred, redThresh2[0], redThresh2[1], upperRed);
-                Core.bitwise_or(lowerRed, upperRed, mask);
+                Core.inRange(input, redThresh1[0], redThresh1[1], lowerRed);
+                Core.inRange(input, redThresh2[0], redThresh2[1], upperRed);
+                Core.bitwise_or(lowerRed, upperRed, output);
 
                 // release temporary Mats
                 lowerRed.release();
@@ -518,33 +522,51 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                 break;
 
             case BLUE:
-                Scalar[] blueThresh = computeAdaptiveHSVThresholds(blurred, BLUE_LOW, BLUE_HIGH);
-                Core.inRange(blurred, blueThresh[0], blueThresh[1], mask);
+                Scalar[] blueThresh = computeAdaptiveHSVThresholds(input, BLUE_LOW, BLUE_HIGH);
+                Core.inRange(input, blueThresh[0], blueThresh[1], output);
                 break;
 
             case YELLOW:
-                Scalar[] yellowThresh = computeAdaptiveHSVThresholds(blurred, YELLOW_LOW, YELLOW_HIGH);
-                Core.inRange(blurred, yellowThresh[0], yellowThresh[1], mask);
+                Scalar[] yellowThresh = computeAdaptiveHSVThresholds(input, YELLOW_LOW, YELLOW_HIGH);
+                Core.inRange(input, yellowThresh[0], yellowThresh[1], output);
                 break;
         }
+    }
 
-        // Step 4: Morphological operations
-        // Imgproc.erode(mask, mask, Imgproc.getStructuringElement(Imgproc.MORPH_RECT,
-        // new Size(3, 3)));
-        // Imgproc.dilate(mask, mask, Imgproc.getStructuringElement(Imgproc.MORPH_RECT,
-        // new Size(5, 5)));
-        // Step 4: Morphological Open
-        Imgproc.morphologyEx(mask, mask, Imgproc.MORPH_OPEN, getMorphKernel());
+    /**
+     * Apply morphological operations to the binary mask
+     * 
+     * @param input Input binary mask
+     * @param output Output processed mask
+     */
+    private void applyMorphologicalOperations(Mat input, Mat output) {
+        Imgproc.morphologyEx(input, output, Imgproc.MORPH_OPEN, getMorphKernel());
+    }
 
-        // Step 5: Find contours
-        ArrayList<RotatedRect> detectedRects = new ArrayList<>();
-        ArrayList<double[]> distances = new ArrayList<>();
-        ArrayList<MatOfPoint> contours = new ArrayList<>();
-        Imgproc.findContours(mask, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
-        // Note: hierarchy is a class member and will be reused, so we don't release it
-        // here
+    /**
+     * Find contours in the binary mask
+     * 
+     * @param input Input binary mask
+     * @param contours Output list to store found contours
+     * @param hierarchyMat Output hierarchy information
+     */
+    private void findImageContours(Mat input, ArrayList<MatOfPoint> contours, Mat hierarchyMat) {
+        Mat tempMat = input.clone();
+        Imgproc.findContours(tempMat, contours, hierarchyMat, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        tempMat.release(); // Release the cloned Mat
+    }
 
-        // Step 6: Process each contour
+    /**
+     * Process contours to detect rectangles and calculate distances
+     * 
+     * @param contours List of contours to process
+     * @param mask Binary mask for ROI extraction
+     * @param input Original input image for visualization
+     * @param detectedRects Output list to store detected rectangles
+     * @param distances Output list to store calculated distances
+     */
+    private void processContours(ArrayList<MatOfPoint> contours, Mat mask, Mat input, 
+                                ArrayList<RotatedRect> detectedRects, ArrayList<double[]> distances) {
         for (MatOfPoint contour : contours) {
             double area = Imgproc.contourArea(contour);
 
@@ -558,596 +580,612 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
             if (area >= minContourArea && area <= maxContourArea) {
                 // Direct path - high confidence (1.0)
                 processDetectedRect(rect, input, detectedRects, distances, area, 1.0);
-            } else if (aspectRatio > BLOB_ASPECT_RATIO && area > BLOB_AREA_THRESHOLD) { // check if they are worth
-                                                                                        // trying
-                Rect boundingBox = Imgproc.boundingRect(contour);
-                Mat roi = new Mat(mask, boundingBox);
-
-                // Call the blob fragmentation function
-                List<MatOfPoint> innerContours = fragmentBlob(contour, roi, mask, boundingBox, input);
-
-                if (innerContours.isEmpty()) {
-                    // If no fragmentation was successful or enabled, use the original approach
-                    innerContours = new ArrayList<>();
-                    Mat hierarchyInner = new Mat();
-                    Imgproc.findContours(roi.clone(), innerContours, hierarchyInner, Imgproc.RETR_EXTERNAL,
-                            Imgproc.CHAIN_APPROX_SIMPLE);
-                    hierarchyInner.release();
-                }
-
-                roi.release();
-                // Filter inner contours based on area and aspect ratio
-                for (MatOfPoint innerContour : innerContours) {
-                    double subArea = Imgproc.contourArea(innerContour);
-                    if (subArea < minContourArea || subArea > maxContourArea) {
-                        Imgproc.putText(
-                                input,
-                                String.format("skipped - Area"),
-                                new Point(boundingBox.x, boundingBox.y),
-                                Imgproc.FONT_HERSHEY_SIMPLEX,
-                                0.5,
-                                new Scalar(255, 0, 0),
-                                2);
-                        continue;
-                    }
-
-                    RotatedRect subRect = Imgproc.minAreaRect(new MatOfPoint2f(innerContour.toArray()));
-                    double subAspectRatio = Math.min(subRect.size.width, subRect.size.height)
-                            / Math.max(subRect.size.width, subRect.size.height);
-                    if (subAspectRatio < minAspectRatio || subAspectRatio > maxAspectRatio) {
-                        Imgproc.putText(
-                                input,
-                                "skipped - Aspect Ratio",
-                                new Point(boundingBox.x, boundingBox.y),
-                                Imgproc.FONT_HERSHEY_SIMPLEX,
-                                0.5,
-                                new Scalar(0, 0, 255),
-                                2);
-                        continue; // Ignore contours with aspect ratio outside the range
-                    }
-                    // continue;
-
-                    // Debug visualization to check if the rectangle is correctly positioned
-                    Imgproc.rectangle(
-                            input,
-                            new Point(boundingBox.x, boundingBox.y),
-                            new Point(boundingBox.x + boundingBox.width, boundingBox.y + boundingBox.height),
-                            new Scalar(255, 255, 255),
-                            1);
-
-                    // The inner contours are found in the ROI coordinate system, which is relative
-                    // to the bounding box
-                    // We need to adjust the center coordinates to the original image coordinate
-                    // system
-                    subRect.center.x += boundingBox.x;
-                    subRect.center.y += boundingBox.y;
-
-                    // Now process the adjusted rectangle with lower confidence (0.8) since it's
-                    // from fragmentation
-                    processDetectedRect(subRect, input, detectedRects, distances, subArea, 0.8);
-
-                    // Release the contour after we're done with it
-                    innerContour.release();
-                }
+            } else if (aspectRatio > BLOB_ASPECT_RATIO && area > BLOB_AREA_THRESHOLD) { // check if they are worth trying
+                processLargeBlob(contour, mask, input, detectedRects, distances);
             }
         }
-
-        // We'll release the contours at the end of the method
-
-        latestRects = detectedRects.toArray(new RotatedRect[0]);
-        latestDistances = distances.toArray(new double[0][]);
-
-        // Push to dashboard for debugging
-        // Send image to dashboard
-        Bitmap annotatedBitmap = matToBitmap(input);
-        FtcDashboard.getInstance().sendImage(annotatedBitmap);
-
-        // No need to release hsv and mask here as they're class members and will be
-        // reused
-        // Only release local Mats
-        if (blurred != hsv) { // Only release if it's not the same as hsv
-            blurred.release();
-        }
-
-        // Release all MatOfPoint objects in contours list
-        for (MatOfPoint c : contours) {
-            c.release();
-        }
-        contours.clear();
-
-        return input;
     }
 
     /**
-     * Fragment a large blob using multiple algorithms controlled by dashboard
-     * settings
+     * Process a large blob that might contain multiple objects
      * 
-     * @param contour     Original contour of the blob
-     * @param roi         Region of interest containing the blob
-     * @param mask        Original binary mask
-     * @param boundingBox Bounding box of the blob
-     * @param input       Original input image for visualization
-     * @return List of contours representing the fragmented blob
+     * @param contour The contour of the large blob
+     * @param mask Binary mask for ROI extraction
+     * @param input Original input image for visualization
+     * @param detectedRects Output list to store detected rectangles
+     * @param distances Output list to store calculated distances
+     */
+    private void processLargeBlob(MatOfPoint contour, Mat mask, Mat input, 
+                                ArrayList<RotatedRect> detectedRects, ArrayList<double[]> distances) {
+        Rect boundingBox = Imgproc.boundingRect(contour);
+        Mat roi = new Mat(mask, boundingBox);
+
+        // Call the blob fragmentation function
+        List<MatOfPoint> innerContours = fragmentBlob(contour, roi, mask, boundingBox, input);
+
+        if (innerContours.isEmpty()) {
+            // If no fragmentation was successful or enabled, use the original approach
+            innerContours = new ArrayList<>();
+            Mat hierarchyInner = new Mat();
+            Mat tempRoi = roi.clone();
+            Imgproc.findContours(tempRoi, innerContours, hierarchyInner, Imgproc.RETR_EXTERNAL,
+                    Imgproc.CHAIN_APPROX_SIMPLE);
+            hierarchyInner.release();
+            tempRoi.release();
+        }
+        
+        // Process inner contours before releasing roi
+        List<MatOfPoint> processedContours = new ArrayList<>();
+        
+        // Filter inner contours based on area and aspect ratio
+        for (MatOfPoint innerContour : innerContours) {
+            double subArea = Imgproc.contourArea(innerContour);
+            if (subArea < minContourArea || subArea > maxContourArea) {
+                Imgproc.putText(
+                        input,
+                        String.format("skipped - Area"),
+                        new Point(boundingBox.x, boundingBox.y),
+                        Imgproc.FONT_HERSHEY_SIMPLEX,
+                        0.5,
+                        new Scalar(255, 0, 0),
+                        2);
+                continue;
+            }
+
+            RotatedRect subRect = Imgproc.minAreaRect(new MatOfPoint2f(innerContour.toArray()));
+            double subAspectRatio = Math.min(subRect.size.width, subRect.size.height)
+                    / Math.max(subRect.size.width, subRect.size.height);
+            if (subAspectRatio < minAspectRatio || subAspectRatio > maxAspectRatio) {
+                Imgproc.putText(
+                        input,
+                        "skipped - Aspect Ratio",
+                        new Point(boundingBox.x, boundingBox.y),
+                        Imgproc.FONT_HERSHEY_SIMPLEX,
+                        0.5,
+                        new Scalar(0, 0, 255),
+                        2);
+                continue; // Ignore contours with aspect ratio outside the range
+            }
+
+            // Debug visualization to check if the rectangle is correctly positioned
+            Imgproc.rectangle(
+                    input,
+                    new Point(boundingBox.x, boundingBox.y),
+                    new Point(boundingBox.x + boundingBox.width, boundingBox.y + boundingBox.height),
+                    new Scalar(255, 255, 255),
+                    1);
+
+            // The inner contours are found in the ROI coordinate system, which is relative
+            // to the bounding box
+            // We need to adjust the center coordinates to the original image coordinate system
+            subRect.center.x += boundingBox.x;
+            subRect.center.y += boundingBox.y;
+
+            // Now process the adjusted rectangle with lower confidence
+            processDetectedRect(subRect, input, detectedRects, distances, subArea, 0.8);
+            
+            // Add to processed contours
+            processedContours.add(innerContour);
+        }
+        
+        // Release resources
+        roi.release();
+        
+        // Release any contours that weren't processed
+        for (MatOfPoint innerContour : innerContours) {
+            if (!processedContours.contains(innerContour)) {
+                innerContour.release();
+            }
+        }
+        
+    }
+
+    /**
+     * Fragment a large blob into smaller contours using multiple algorithms
+     * 
+     * @param contour The original contour to fragment
+     * @param roi Region of interest containing the blob
+     * @param mask Full binary mask
+     * @param boundingBox Bounding box of the contour
+     * @param input Original input image for visualization
+     * @return List of fragmented contours
      */
     private List<MatOfPoint> fragmentBlob(MatOfPoint contour, Mat roi, Mat mask, Rect boundingBox, Mat input) {
         List<MatOfPoint> resultContours = new ArrayList<>();
-        StringBuilder appliedAlgorithms = new StringBuilder();
-
-        // We don't need inputCopy anymore since we're not sending multiple bitmaps to
-        // dashboard
-        // Removing this unnecessary clone improves memory usage
-
-        // If no fragmentation algorithms are enabled, return empty list
-        if (!enableWatershedFragmentation &&
-                !enableDistanceTransformFragmentation &&
-                !enableAdaptiveThresholdFragmentation &&
-                !enableMorphologicalGradientFragmentation &&
-                !enableContourSplittingFragmentation) {
-            return resultContours;
-        }
-
-        // Convert the original contour to ROI coordinates before adding it
-        MatOfPoint roiContour = new MatOfPoint();
-        Point[] points = contour.toArray();
-        Point[] roiPoints = new Point[points.length];
-
-        // Shift all points to ROI coordinates
-        for (int i = 0; i < points.length; i++) {
-            roiPoints[i] = new Point(points[i].x - boundingBox.x, points[i].y - boundingBox.y);
-        }
-
-        roiContour.fromArray(roiPoints);
-        resultContours.add(roiContour);
-
-        // 1. Watershed Fragmentation
+        
+        // Apply each fragmentation algorithm if enabled
         if (enableWatershedFragmentation) {
-            // Use try-with-resources to ensure all Mats are properly released
-            Mat watershedMask = null;
-            Mat watershedInput = null;
-            Mat markers = null;
-            Mat sure_fg = null;
-            Mat sure_bg = null;
-            Mat kernel = null;
-            Mat watershedResult = null;
-            Mat hierarchyWatershed = null;
-
-            try {
-                // Create a copy of the ROI for watershed
-                watershedMask = roi.clone();
-
-                // Convert to BGR for watershed
-                watershedInput = new Mat();
-                Imgproc.cvtColor(watershedMask, watershedInput, Imgproc.COLOR_GRAY2BGR);
-
-                // Create markers (background = 1, foreground = 2)
-                markers = Mat.zeros(watershedMask.size(), CvType.CV_32SC1);
-
-                // Create foreground and background markers
-                sure_fg = new Mat();
-                sure_bg = new Mat();
-
-                // Erode to get sure foreground
-                kernel = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(3, 3));
-                Imgproc.erode(watershedMask, sure_fg, kernel, new Point(-1, -1), 2);
-
-                // Dilate to get sure background
-                Imgproc.dilate(watershedMask, sure_bg, kernel, new Point(-1, -1), 3);
-
-                // Set markers: 1 for background, 2 for foreground
-                for (int i = 0; i < markers.rows(); i++) {
-                    for (int j = 0; j < markers.cols(); j++) {
-                        if (sure_fg.get(i, j)[0] > 0) {
-                            markers.put(i, j, 2); // Foreground
-                        } else if (sure_bg.get(i, j)[0] > 0) {
-                            markers.put(i, j, 1); // Background
-                        } else {
-                            markers.put(i, j, 0); // Unknown
-                        }
-                    }
-                }
-
-                // Apply watershed
-                Imgproc.watershed(watershedInput, markers);
-
-                // Extract contours from watershed result
-                watershedResult = Mat.zeros(markers.size(), CvType.CV_8UC1);
-                for (int i = 0; i < markers.rows(); i++) {
-                    for (int j = 0; j < markers.cols(); j++) {
-                        if (markers.get(i, j)[0] == 2) { // Foreground
-                            watershedResult.put(i, j, 255);
-                        }
-                    }
-                }
-
-                // Find contours in the watershed result
-                List<MatOfPoint> watershedContours = new ArrayList<>();
-                hierarchyWatershed = new Mat();
-                Imgproc.findContours(watershedResult, watershedContours, hierarchyWatershed,
-                        Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
-
-                // Add watershed contours to result
-                for (MatOfPoint watershedContour : watershedContours) {
-                    if (Imgproc.contourArea(watershedContour) > minContourArea) {
-                        resultContours.add(watershedContour);
-                    } else {
-                        // Release contours we don't add to the result
-                        watershedContour.release();
-                    }
-                }
-
-                // Clear the list without releasing the contours we've added to resultContours
-                watershedContours.clear();
-
-                // All Mats will be released in the finally block
-
-                // Draw a label on the input image to show which algorithm was used
-                if (!resultContours.isEmpty()) {
-                    Imgproc.putText(
-                            input,
-                            "Watershed",
-                            new Point(boundingBox.x, boundingBox.y - 5),
-                            Imgproc.FONT_HERSHEY_SIMPLEX,
-                            0.5,
-                            new Scalar(255, 0, 255),
-                            1);
-
-                    // No longer sending additional bitmaps to dashboard
-                }
-            } catch (Exception e) {
-                System.out.println("Error in watershed fragmentation: " + e.getMessage());
-            } finally {
-                // Release all Mats in finally block to ensure they're released even if an
-                // exception occurs
-                if (watershedMask != null)
-                    watershedMask.release();
-                if (watershedInput != null)
-                    watershedInput.release();
-                if (markers != null)
-                    markers.release();
-                if (sure_fg != null)
-                    sure_fg.release();
-                if (sure_bg != null)
-                    sure_bg.release();
-                if (watershedResult != null)
-                    watershedResult.release();
-                if (hierarchyWatershed != null)
-                    hierarchyWatershed.release();
-                if (kernel != null)
-                    kernel.release();
-            }
+            List<MatOfPoint> watershedContours = applyWatershedFragmentation(contour, roi, mask, boundingBox, input, false);
+            resultContours.addAll(watershedContours);
         }
-
-        // 2. Distance Transform Fragmentation
+        
         if (enableDistanceTransformFragmentation) {
-            try {
-                // Create a mask from current contours
-                Mat contourMask = Mat.zeros(roi.size(), CvType.CV_8UC1);
-                Imgproc.drawContours(contourMask, resultContours, -1, new Scalar(255), -1);
-
-                // Apply distance transform
-                Mat dist = new Mat();
-                Imgproc.distanceTransform(contourMask, dist, Imgproc.DIST_L2, 5);
-
-                // Normalize the distance image
-                Core.normalize(dist, dist, 0, 1.0, Core.NORM_MINMAX);
-
-                // Find the maximum value in the distance transform
-                Core.MinMaxLocResult minMaxResult = Core.minMaxLoc(dist);
-                double maxVal = minMaxResult.maxVal;
-
-                // Calculate dynamic threshold as a percentage of the maximum value
-                double dynamicThreshold = maxVal * DISTANCE_THRESHOLD_RATIO;
-
-                // Threshold to get peaks
-                Mat distPeaks = new Mat();
-                Imgproc.threshold(dist, distPeaks, dynamicThreshold, 1.0, Imgproc.THRESH_BINARY);
-
-                // Add a label showing the threshold value used
-                Imgproc.putText(
-                        input,
-                        String.format("Thresh: %.2f", dynamicThreshold),
-                        new Point(boundingBox.x, boundingBox.y + boundingBox.height + 15),
-                        Imgproc.FONT_HERSHEY_SIMPLEX,
-                        0.5,
-                        new Scalar(0, 255, 255),
-                        1);
-
-                // Convert to 8-bit for findContours
-                distPeaks.convertTo(distPeaks, CvType.CV_8U, 255);
-
-                // Find contours in the distance transform result
-                List<MatOfPoint> distContours = new ArrayList<>();
-                Mat hierarchyDist = new Mat();
-                Imgproc.findContours(distPeaks, distContours, hierarchyDist,
-                        Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
-
-                // Add distance transform contours to result
-                for (MatOfPoint distContour : distContours) {
-                    if (Imgproc.contourArea(distContour) > minContourArea) {// why not acount for Max too
-                        resultContours.add(distContour);
-                    } else {
-                        // Release contours we don't add to the result
-                        distContour.release();
-                    }
-                }
-
-                // Clear the list without releasing the contours we've added to resultContours
-                distContours.clear();
-
-                // Release temporary Mats
-                contourMask.release();
-                dist.release();
-                distPeaks.release();
-                hierarchyDist.release();
-
-                // Draw a label on the input image to show which algorithm was used
-                if (!resultContours.isEmpty()) {
-                    Imgproc.putText(
-                            input,
-                            "Distance Transform",
-                            new Point(boundingBox.x, boundingBox.y - 5),
-                            Imgproc.FONT_HERSHEY_SIMPLEX,
-                            0.5,
-                            new Scalar(0, 255, 255),
-                            1);
-
-                    // No longer sending additional bitmaps to dashboard
-                }
-            } catch (Exception e) {
-                System.out.println("Error in distance transform fragmentation: " + e.getMessage());
-            }
+            List<MatOfPoint> distanceTransformContours = applyDistanceTransformFragmentation(contour, roi, mask, boundingBox, input, false);
+            resultContours.addAll(distanceTransformContours);
         }
-
-        // 3. Adaptive Threshold Fragmentation
+        
         if (enableAdaptiveThresholdFragmentation) {
-            try {
-                // Create a mask from current contours
-                Mat adaptiveMask = Mat.zeros(roi.size(), CvType.CV_8UC1);
-                Imgproc.drawContours(adaptiveMask, resultContours, -1, new Scalar(255), -1);
-
-                // Convert to grayscale if needed
-                Mat gray = new Mat();
-                if (adaptiveMask.channels() > 1) {
-                    Imgproc.cvtColor(adaptiveMask, gray, Imgproc.COLOR_BGR2GRAY);
-                } else {
-                    gray = adaptiveMask.clone();
-                }
-
-                // Apply adaptive threshold
-                Mat adaptiveThresh = new Mat();
-                Imgproc.adaptiveThreshold(gray, adaptiveThresh, 255,
-                        Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C,
-                        Imgproc.THRESH_BINARY, 11, 2);
-
-                // Find contours in the adaptive threshold result
-                List<MatOfPoint> adaptiveContours = new ArrayList<>();
-                Mat hierarchyAdaptive = new Mat();
-                Imgproc.findContours(adaptiveThresh, adaptiveContours, hierarchyAdaptive,
-                        Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
-
-                // Add adaptive threshold contours to result
-                for (MatOfPoint adaptiveContour : adaptiveContours) {
-                    if (Imgproc.contourArea(adaptiveContour) > minContourArea) {
-                        resultContours.add(adaptiveContour);
-                    } else {
-                        // Release contours we don't add to the result
-                        adaptiveContour.release();
-                    }
-                }
-
-                // Clear the list without releasing the contours we've added to resultContours
-                adaptiveContours.clear();
-
-                // Release temporary Mats
-                adaptiveMask.release();
-                gray.release();
-                adaptiveThresh.release();
-                hierarchyAdaptive.release();
-
-                // Draw a label on the input image to show which algorithm was used
-                if (!resultContours.isEmpty()) {
-                    Imgproc.putText(
-                            input,
-                            "Adaptive Threshold",
-                            new Point(boundingBox.x, boundingBox.y - 5),
-                            Imgproc.FONT_HERSHEY_SIMPLEX,
-                            0.5,
-                            new Scalar(0, 255, 0),
-                            1);
-
-                    // No longer sending additional bitmaps to dashboard
-                }
-            } catch (Exception e) {
-                System.out.println("Error in adaptive threshold fragmentation: " + e.getMessage());
-            }
+            List<MatOfPoint> adaptiveThresholdContours = applyAdaptiveThresholdFragmentation(contour, roi, mask, boundingBox, input, false);
+            resultContours.addAll(adaptiveThresholdContours);
         }
-
-        // 4. Morphological Gradient Fragmentation
+        
         if (enableMorphologicalGradientFragmentation) {
-            try {
-                // Create a mask from current contours
-                Mat morphMask = Mat.zeros(roi.size(), CvType.CV_8UC1);
-                Imgproc.drawContours(morphMask, resultContours, -1, new Scalar(255), -1);
-
-                // Apply morphological gradient
-                Mat gradient = new Mat();
-                Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(3, 3));
-                Imgproc.morphologyEx(morphMask, gradient, Imgproc.MORPH_GRADIENT, kernel);
-
-                // Threshold the gradient
-                Mat gradThresh = new Mat();
-                Imgproc.threshold(gradient, gradThresh, 50, 255, Imgproc.THRESH_BINARY);
-
-                // Dilate to connect edges
-                Mat dilated = new Mat();
-                Imgproc.dilate(gradThresh, dilated, kernel);
-
-                // Invert to get regions
-                Mat inverted = new Mat();
-                Core.bitwise_not(dilated, inverted);
-
-                // Find contours in the morphological result
-                List<MatOfPoint> morphContours = new ArrayList<>();
-                Mat hierarchyMorph = new Mat();
-                Imgproc.findContours(inverted, morphContours, hierarchyMorph,
-                        Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
-
-                // Add morphological contours to result
-                for (MatOfPoint morphContour : morphContours) {
-                    if (Imgproc.contourArea(morphContour) > minContourArea) {
-                        resultContours.add(morphContour);
-                    } else {
-                        // Release contours we don't add to the result
-                        morphContour.release();
-                    }
-                }
-
-                // Clear the list without releasing the contours we've added to resultContours
-                morphContours.clear();
-
-                // Release temporary Mats
-                morphMask.release();
-                gradient.release();
-                gradThresh.release();
-                dilated.release();
-                inverted.release();
-                hierarchyMorph.release();
-                kernel.release();
-
-                // Draw a label on the input image to show which algorithm was used
-                if (!resultContours.isEmpty()) {
-                    Imgproc.putText(
-                            input,
-                            "Morphological Gradient",
-                            new Point(boundingBox.x, boundingBox.y - 5),
-                            Imgproc.FONT_HERSHEY_SIMPLEX,
-                            0.5,
-                            new Scalar(255, 0, 0),
-                            1);
-
-                    // No longer sending additional bitmaps to dashboard
-                }
-            } catch (Exception e) {
-                System.out.println("Error in morphological gradient fragmentation: " + e.getMessage());
-            }
+            List<MatOfPoint> morphologicalGradientContours = applyMorphologicalGradientFragmentation(contour, roi, mask, boundingBox, input, false);
+            resultContours.addAll(morphologicalGradientContours);
         }
-
-        // 5. Contour Splitting Fragmentation
+        
         if (enableContourSplittingFragmentation) {
-            try {
-                // Create a temporary list to hold original contours we'll process
-                List<MatOfPoint> contoursToProcess = new ArrayList<>(resultContours);
+            List<MatOfPoint> contourSplittingContours = applyContourSplittingFragmentation(contour, roi, mask, boundingBox, input, false);
+            resultContours.addAll(contourSplittingContours);
+        }
+        
+        return resultContours;
+    }
 
-                // Create a list to hold new contours we'll generate
-                List<MatOfPoint> newContours = new ArrayList<>();
+    /**
+     * Apply watershed algorithm to fragment a blob
+     * 
+     * @param contour The original contour to fragment
+     * @param roi Region of interest containing the blob
+     * @param mask Full binary mask
+     * @param boundingBox Bounding box of the contour
+     * @param input Original input image for visualization
+     * @param keepOriginal Whether to keep the original contour in the output list
+     * @return List of fragmented contours
+     */
+    private List<MatOfPoint> applyWatershedFragmentation(MatOfPoint contour, Mat roi, Mat mask, Rect boundingBox, Mat input, boolean keepOriginal) {
+        List<MatOfPoint> resultContours = new ArrayList<>();
+        
+        // Add the original contour if requested
+        if (keepOriginal) {
+            resultContours.add(contour);
+        }
+        
+        try {
+            // Create a markers image
+            Mat markers = new Mat(roi.size(), CvType.CV_32SC1, new Scalar(0));
+            
+            // Background markers
+            Rect innerRect = new Rect(
+                new Point(roi.cols() * 0.05, roi.rows() * 0.05),
+                new Point(roi.cols() * 0.95, roi.rows() * 0.95)
+            );
+            
+            // Draw background (outer) marker
+            Imgproc.rectangle(
+                markers,
+                new Point(0, 0),
+                new Point(roi.cols(), roi.rows()),
+                new Scalar(1),
+                -1
+            );
+            
+            // Draw foreground markers
+            Mat distanceTransform = new Mat();
+            Imgproc.distanceTransform(roi, distanceTransform, Imgproc.DIST_L2, 3);
+            
+            // Threshold to find peaks (potential object centers)
+            Mat peaks = new Mat();
+            Core.normalize(distanceTransform, distanceTransform, 0, 1.0, Core.NORM_MINMAX);
+            Imgproc.threshold(distanceTransform, peaks, 0.7, 1.0, Imgproc.THRESH_BINARY);
+            
+            // Convert to 8-bit for findContours
+            Mat peaksU8 = new Mat();
+            peaks.convertTo(peaksU8, CvType.CV_8U, 255);
+            
+            // Find contours of peaks
+            List<MatOfPoint> peakContours = new ArrayList<>();
+            Mat peakHierarchy = new Mat();
+            Imgproc.findContours(peaksU8, peakContours, peakHierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+            
+            // Mark each peak with a unique label
+            for (int i = 0; i < peakContours.size(); i++) {
+                Moments moments = Imgproc.moments(peakContours.get(i));
+                int cx = (int) (moments.get_m10() / moments.get_m00());
+                int cy = (int) (moments.get_m01() / moments.get_m00());
+                
+                // Mark with a unique label (i+2) - 0 is background, 1 is boundary
+                Imgproc.circle(markers, new Point(cx, cy), 2, new Scalar(i + 2), -1);
+            }
+            
+            // Apply watershed
+            Mat roiRGB = new Mat();
+            Imgproc.cvtColor(roi, roiRGB, Imgproc.COLOR_GRAY2BGR);
+            Imgproc.watershed(roiRGB, markers);
+            
+            // Extract each segment
+            for (int i = 2; i < peakContours.size() + 2; i++) {
+                Mat segment = new Mat(roi.size(), CvType.CV_8UC1, new Scalar(0));
+                Core.compare(markers, new Scalar(i), segment, Core.CMP_EQ);
+                
+                // Convert to 8-bit for findContours
+                segment.convertTo(segment, CvType.CV_8U, 255);
+                
+                // Find contours of the segment
+                List<MatOfPoint> segmentContours = new ArrayList<>();
+                Mat segmentHierarchy = new Mat();
+                Imgproc.findContours(segment, segmentContours, segmentHierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+                
+                // Add to result
+                resultContours.addAll(segmentContours);
+                
+                // Release resources
+                segment.release();
+            }
+            
+            // Release resources
+            markers.release();
+            distanceTransform.release();
+            peaks.release();
+            peaksU8.release();
+            peakHierarchy.release();
+            roiRGB.release();
+            
+        } catch (Exception e) {
+            System.out.println("Error in watershed fragmentation: " + e.getMessage());
+        }
+        
+        return resultContours;
+    }
 
-                for (MatOfPoint currentContour : contoursToProcess) {
-                    // Create a copy of the contour for splitting
-                    MatOfPoint2f contour2f = new MatOfPoint2f(currentContour.toArray());
+    /**
+     * Apply distance transform algorithm to fragment a blob
+     * 
+     * @param contour The original contour to fragment
+     * @param roi Region of interest containing the blob
+     * @param mask Full binary mask
+     * @param boundingBox Bounding box of the contour
+     * @param input Original input image for visualization
+     * @param keepOriginal Whether to keep the original contour in the output list
+     * @return List of fragmented contours
+     */
+    private List<MatOfPoint> applyDistanceTransformFragmentation(MatOfPoint contour, Mat roi, Mat mask, Rect boundingBox, Mat input, boolean keepOriginal) {
+        List<MatOfPoint> resultContours = new ArrayList<>();
+        
+        // Add the original contour if requested
+        if (keepOriginal) {
+            resultContours.add(contour);
+        }
+        
+        try {
+            // Apply distance transform
+            Mat distanceTransform = new Mat();
+            Imgproc.distanceTransform(roi, distanceTransform, Imgproc.DIST_L2, 5);
+            
+            // Normalize and threshold to find peaks
+            Core.normalize(distanceTransform, distanceTransform, 0, 1.0, Core.NORM_MINMAX);
+            
+            // Apply adaptive threshold to find peaks
+            Mat thresholded = new Mat();
+            Core.MinMaxLocResult mm = Core.minMaxLoc(distanceTransform);
+            double thresh = mm.maxVal * DISTANCE_THRESHOLD_RATIO;
+            Imgproc.threshold(distanceTransform, thresholded, thresh, 1.0, Imgproc.THRESH_BINARY);
+            
+            // Convert to 8-bit for findContours
+            Mat thresholdedU8 = new Mat();
+            thresholded.convertTo(thresholdedU8, CvType.CV_8U, 255);
+            
+            // Find contours of the thresholded image
+            List<MatOfPoint> dtContours = new ArrayList<>();
+            Mat dtHierarchy = new Mat();
+            Imgproc.findContours(thresholdedU8, dtContours, dtHierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+            
+            // Add to result
+            resultContours.addAll(dtContours);
+            
+            // Release resources
+            distanceTransform.release();
+            thresholded.release();
+            thresholdedU8.release();
+            dtHierarchy.release();
+            
+        } catch (Exception e) {
+            System.out.println("Error in distance transform fragmentation: " + e.getMessage());
+        }
+        
+        return resultContours;
+    }
 
-                    // Find convexity defects
-                    MatOfInt hull = new MatOfInt();
-                    Imgproc.convexHull(currentContour, hull, false);
+    /**
+     * Apply adaptive threshold algorithm to fragment a blob
+     * 
+     * @param contour The original contour to fragment
+     * @param roi Region of interest containing the blob
+     * @param mask Full binary mask
+     * @param boundingBox Bounding box of the contour
+     * @param input Original input image for visualization
+     * @param keepOriginal Whether to keep the original contour in the output list
+     * @return List of fragmented contours
+     */
+    private List<MatOfPoint> applyAdaptiveThresholdFragmentation(MatOfPoint contour, Mat roi, Mat mask, Rect boundingBox, Mat input, boolean keepOriginal) {
+        List<MatOfPoint> resultContours = new ArrayList<>();
+        
+        // Add the original contour if requested
+        if (keepOriginal) {
+            resultContours.add(contour);
+        }
+        
+        try {
+            // Apply Gaussian blur to smooth the image
+            Mat blurred = new Mat();
+            Imgproc.GaussianBlur(roi, blurred, new Size(5, 5), 0);
+            
+            // Apply adaptive threshold
+            Mat adaptiveThresh = new Mat();
+            Imgproc.adaptiveThreshold(
+                blurred,
+                adaptiveThresh,
+                255,
+                Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C,
+                Imgproc.THRESH_BINARY,
+                11,
+                2
+            );
+            
+            // Find contours of the adaptive threshold result
+            List<MatOfPoint> atContours = new ArrayList<>();
+            Mat atHierarchy = new Mat();
+            Imgproc.findContours(adaptiveThresh, atContours, atHierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+            
+            // Add to result
+            resultContours.addAll(atContours);
+            
+            // Release resources
+            blurred.release();
+            adaptiveThresh.release();
+            atHierarchy.release();
+            
+        } catch (Exception e) {
+            System.out.println("Error in adaptive threshold fragmentation: " + e.getMessage());
+        }
+        
+        return resultContours;
+    }
 
-                    // If we have enough points for convexity defects
-                    if (hull.size().height >= 4) {
-                        MatOfInt4 convexityDefects = new MatOfInt4();
-                        Imgproc.convexityDefects(currentContour, hull, convexityDefects);
+    /**
+     * Apply morphological gradient algorithm to fragment a blob
+     * 
+     * @param contour The original contour to fragment
+     * @param roi Region of interest containing the blob
+     * @param mask Full binary mask
+     * @param boundingBox Bounding box of the contour
+     * @param input Original input image for visualization
+     * @param keepOriginal Whether to keep the original contour in the output list
+     * @return List of fragmented contours
+     */
+    private List<MatOfPoint> applyMorphologicalGradientFragmentation(MatOfPoint contour, Mat roi, Mat mask, Rect boundingBox, Mat input, boolean keepOriginal) {
+        List<MatOfPoint> resultContours = new ArrayList<>();
+        
+        // Add the original contour if requested
+        if (keepOriginal) {
+            resultContours.add(contour);
+        }
+        
+        try {
+            // Apply morphological gradient
+            Mat gradient = new Mat();
+            Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(3, 3));
+            Imgproc.morphologyEx(roi, gradient, Imgproc.MORPH_GRADIENT, kernel);
+            
+            // Threshold the gradient
+            Mat thresholded = new Mat();
+            Imgproc.threshold(gradient, thresholded, 50, 255, Imgproc.THRESH_BINARY);
+            
+            // Invert the gradient to get the regions
+            Mat inverted = new Mat();
+            Core.bitwise_not(thresholded, inverted);
+            
+            // Find contours of the inverted gradient
+            List<MatOfPoint> mgContours = new ArrayList<>();
+            Mat mgHierarchy = new Mat();
+            Imgproc.findContours(inverted, mgContours, mgHierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+            
+            // Add to result
+            resultContours.addAll(mgContours);
+            
+            // Release resources
+            gradient.release();
+            kernel.release();
+            thresholded.release();
+            inverted.release();
+            mgHierarchy.release();
+            
+        } catch (Exception e) {
+            System.out.println("Error in morphological gradient fragmentation: " + e.getMessage());
+        }
+        
+        return resultContours;
+    }
 
-                        // Get defect points
-                        List<Point> defectPoints = new ArrayList<>();
-
-                        for (int i = 0; i < convexityDefects.rows(); i++) {
-                            double[] defect = convexityDefects.get(i, 0);
-                            Point startPoint = new Point(currentContour.get((int) defect[0], 0));
-                            Point endPoint = new Point(currentContour.get((int) defect[1], 0));
-                            Point depthPoint = new Point(currentContour.get((int) defect[2], 0));
-                            double depth = defect[3] / 256.0; // Convert to pixels
-
-                            // Only consider deep defects
-                            if (depth > 10) {
-                                defectPoints.add(depthPoint);
+    /**
+     * Apply contour splitting algorithm to fragment a blob
+     * 
+     * @param contour The original contour to fragment
+     * @param roi Region of interest containing the blob
+     * @param mask Full binary mask
+     * @param boundingBox Bounding box of the contour
+     * @param input Original input image for visualization
+     * @param keepOriginal Whether to keep the original contour in the output list
+     * @return List of fragmented contours
+     */
+    private List<MatOfPoint> applyContourSplittingFragmentation(MatOfPoint contour, Mat roi, Mat mask, Rect boundingBox, Mat input, boolean keepOriginal) {
+        List<MatOfPoint> resultContours = new ArrayList<>();
+        
+        // Add the original contour if requested
+        if (keepOriginal) {
+            resultContours.add(contour);
+        }
+        
+        try {
+            // Convert contour to MatOfPoint2f for approxPolyDP
+            MatOfPoint2f contour2f = new MatOfPoint2f(contour.toArray());
+            
+            // Approximate the contour to simplify it
+            MatOfPoint2f approxCurve = new MatOfPoint2f();
+            double epsilon = 0.02 * Imgproc.arcLength(contour2f, true);
+            Imgproc.approxPolyDP(contour2f, approxCurve, epsilon, true);
+            
+            // Convert back to MatOfPoint
+            MatOfPoint approxContour = new MatOfPoint(approxCurve.toArray());
+            
+            // Find convexity defects
+            MatOfInt hull = new MatOfInt();
+            Imgproc.convexHull(approxContour, hull, false);
+            
+            // If we have enough points in the hull, try to split the contour
+            if (hull.size().height >= 4) {
+                // Create a mask for the contour
+                Mat contourMask = Mat.zeros(roi.size(), CvType.CV_8UC1);
+                Imgproc.drawContours(
+                    contourMask,
+                    Arrays.asList(approxContour),
+                    0,
+                    new Scalar(255),
+                    -1
+                );
+                
+                // Find potential split points
+                List<Point> splitPoints = new ArrayList<>();
+                Point[] points = approxContour.toArray();
+                
+                // Look for concave regions
+                for (int i = 0; i < points.length; i++) {
+                    int prev = (i - 1 + points.length) % points.length;
+                    int next = (i + 1) % points.length;
+                    
+                    // Calculate vectors
+                    Point v1 = new Point(points[prev].x - points[i].x, points[prev].y - points[i].y);
+                    Point v2 = new Point(points[next].x - points[i].x, points[next].y - points[i].y);
+                    
+                    // Calculate cross product to determine concavity
+                    double crossProduct = v1.x * v2.y - v1.y * v2.x;
+                    
+                    // If cross product is positive, the point is concave
+                    if (crossProduct > 0) {
+                        splitPoints.add(points[i]);
+                    }
+                }
+                
+                // If we have at least 2 split points, try to split the contour
+                if (splitPoints.size() >= 2) {
+                    // Find the two most distant split points
+                    double maxDist = 0;
+                    Point p1 = null, p2 = null;
+                    
+                    for (int i = 0; i < splitPoints.size(); i++) {
+                        for (int j = i + 1; j < splitPoints.size(); j++) {
+                            double dist = Math.sqrt(
+                                Math.pow(splitPoints.get(i).x - splitPoints.get(j).x, 2) +
+                                Math.pow(splitPoints.get(i).y - splitPoints.get(j).y, 2)
+                            );
+                            
+                            if (dist > maxDist) {
+                                maxDist = dist;
+                                p1 = splitPoints.get(i);
+                                p2 = splitPoints.get(j);
                             }
-                        }
-
-                        // If we have defect points, use them to split the contour
-                        if (defectPoints.size() >= 2) {
-                            // Create a mask for the split contours
-                            Mat splitMask = Mat.zeros(roi.size(), CvType.CV_8UC1);
-
-                            // Draw the original contour
-                            List<MatOfPoint> contourList = new ArrayList<>();
-                            contourList.add(currentContour);
-                            Imgproc.drawContours(splitMask, contourList, 0, new Scalar(255), -1);
-
-                            // Draw lines between defect points to split the contour
-                            // Since currentContour is already in ROI coordinates, the defect points are
-                            // also in ROI coordinates
-                            for (int i = 0; i < defectPoints.size() - 1; i++) {
-                                // Use defect points directly since they're already in ROI coordinates
-                                Point p1 = defectPoints.get(i);
-                                Point p2 = defectPoints.get(i + 1);
-                                Imgproc.line(splitMask, p1, p2, new Scalar(0), 2);
-                            }
-
-                            // Find contours in the split mask
-                            List<MatOfPoint> splitContours = new ArrayList<>();
-                            Mat hierarchySplit = new Mat();
-                            Imgproc.findContours(splitMask, splitContours, hierarchySplit,
-                                    Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
-
-                            // Add split contours to our new contours list (not directly to resultContours)
-                            for (MatOfPoint splitContour : splitContours) {
-                                if (Imgproc.contourArea(splitContour) > minContourArea) {
-                                    newContours.add(splitContour);
-                                } else {
-                                    // Release contours we don't add to the result
-                                    splitContour.release();
-                                }
-                            }
-
-                            // Clear the list without releasing the contours we've added to newContours
-                            splitContours.clear();
-
-                            // Release temporary Mats
-                            splitMask.release();
-                            hierarchySplit.release();
                         }
                     }
-
-                    // Release temporary Mats
-                    contour2f.release();
-                    hull.release();
+                    
+                    // Draw a line to split the contour
+                    if (p1 != null && p2 != null) {
+                        Imgproc.line(
+                            contourMask,
+                            p1,
+                            p2,
+                            new Scalar(0),
+                            2
+                        );
+                        
+                        // Find contours of the split mask
+                        List<MatOfPoint> splitContours = new ArrayList<>();
+                        Mat splitHierarchy = new Mat();
+                        Imgproc.findContours(
+                            contourMask,
+                            splitContours,
+                            splitHierarchy,
+                            Imgproc.RETR_EXTERNAL,
+                            Imgproc.CHAIN_APPROX_SIMPLE
+                        );
+                        
+                        // Add to result
+                        resultContours.addAll(splitContours);
+                        
+                        // Release resources
+                        splitHierarchy.release();
+                    }
                 }
-
-                // After processing all original contours, add all the new contours to
-                // resultContours
-                resultContours.addAll(newContours);
-
-                // Draw a label on the input image to show which algorithm was used
-                if (!resultContours.isEmpty()) {
-                    Imgproc.putText(
-                            input,
-                            "Contour Splitting",
-                            new Point(boundingBox.x, boundingBox.y - 5),
-                            Imgproc.FONT_HERSHEY_SIMPLEX,
-                            0.5,
-                            new Scalar(255, 255, 0),
-                            1);
-
-                    // No longer sending additional bitmaps to dashboard
-                }
-            } catch (Exception e) {
-                System.out.println("Error in contour splitting fragmentation: " + e.getMessage());
+                
+                // Release resources
+                contourMask.release();
             }
+            
+            // Release resources
+            contour2f.release();
+            approxCurve.release();
+            hull.release();
+            
+        } catch (Exception e) {
+            System.out.println("Error in contour splitting fragmentation: " + e.getMessage());
         }
-
-        // No need to release inputCopy as we no longer create it
-
-        // Note: We don't release the MatOfPoint objects in resultContours here
-        // because they will be used by the caller. The caller is responsible for
-        // releasing them when done.
-
+        
         return resultContours;
+    }
+    
+    /**
+     * Process the input frame to detect samples
+     * 
+     * @param input Input frame from the camera
+     * @return Processed frame with detected samples highlighted
+     */
+    @Override
+    public Mat processFrame(Mat input) {
+        // Update color mode from dashboard if needed
+        updateColorModeFromDashboard();
+        
+        // Initialize result containers
+        ArrayList<RotatedRect> detectedRects = new ArrayList<>();
+        ArrayList<double[]> distances = new ArrayList<>();
+        
+        // Clear previous data but don't release the Mat objects
+        // Add guards to ensure the Mat objects are not empty
+        if (!hsv.empty()) hsv.setTo(new Scalar(0, 0, 0));
+        if (!mask.empty()) mask.setTo(new Scalar(0));
+        if (!hierarchy.empty()) hierarchy.setTo(new Scalar(0));
+        
+        // Convert to HSV color space
+        convertToHSV(input, hsv);
+        
+        // Equalize V channel if enabled
+        equalizeVChannel(hsv);
+        
+        // Apply color thresholding
+        applyColorThreshold(hsv, mask);
+        
+        // Apply morphological operations
+        applyMorphologicalOperations(mask, mask);
+        
+        // Find contours
+        ArrayList<MatOfPoint> contours = new ArrayList<>();
+        findImageContours(mask, contours, hierarchy);
+        
+        // Process contours to detect rectangles and calculate distances
+        processContours(contours, mask, input, detectedRects, distances);
+        
+        // Store results for external access
+        if (!detectedRects.isEmpty()) {
+            latestRects = detectedRects.toArray(new RotatedRect[0]);
+            latestDistances = distances.toArray(new double[0][0]);
+        } else {
+            latestRects = new RotatedRect[0];
+            latestDistances = new double[0][0];
+        }
+        
+        // Release all contours
+        for (MatOfPoint contour : contours) {
+            contour.release();
+        }
+        
+        return input;
     }
 }
