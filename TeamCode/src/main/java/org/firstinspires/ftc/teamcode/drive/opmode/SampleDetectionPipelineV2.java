@@ -3,7 +3,10 @@ package org.firstinspires.ftc.teamcode.drive.opmode;
 import org.firstinspires.ftc.teamcode.GameConstants;
 import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.photo.Photo;
 import org.openftc.easyopencv.OpenCvPipeline;
+//import org.w3c.dom.css.Rect;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -13,6 +16,8 @@ import com.acmerobotics.dashboard.config.Config;
 
 import org.opencv.android.Utils;
 import android.graphics.Bitmap;
+//import apple.laf.JRSUIConstants.Size;
+//import javafx.scene.effect.Light.Point;
 
 // TensorFlow Lite imports
 //import org.tensorflow.lite.Interpreter;
@@ -26,8 +31,16 @@ import java.nio.channels.FileChannel;
 @Config
 public class SampleDetectionPipelineV2 extends OpenCvPipeline {
     private GameConstants.GAME_COLORS colorMode = GameConstants.GAME_COLORS.RED;
+    public static GameConstants.GAME_COLORS dashboardColorMode = GameConstants.GAME_COLORS.RED; // Dashboard-controlled
+                                                                                                // color mode
     public RotatedRect[] latestRects;
     public double[][] latestDistances;
+
+    // Reusable Mat objects to avoid repeated allocation/deallocation
+    private Mat hsv = new Mat();
+    private Mat mask = new Mat();
+    private Mat hierarchy = new Mat();
+    private Mat resizedMat = new Mat(); // For bitmap conversion
     public double REAL_SAMPLE_LENGTH = 3.5;
     public double REAL_SAMPLE_WIDTH = 1.5;
     public double REAL_SAMPLE_HEIGHT = 1.5;
@@ -90,7 +103,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
     private static final double SAMPLE_WIDTH_INCHES = 1.5;
 
     // Tuning parameters — make these dashboard-tunable if you like
-    public static double DISTANCE_THRESHOLD = 0.3; // 0.2–0.4 is a good range
+    public static double DISTANCE_THRESHOLD_RATIO = 0.6; // Percentage of max distance to use as threshold
     public static int MORPH_KERNEL_SIZE = 7; // must be odd (3,5,7,...)
 
     // Helper method to get morphology kernel
@@ -100,6 +113,17 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
 
     public void setColorMode(GameConstants.GAME_COLORS mode) {
         this.colorMode = mode;
+        dashboardColorMode = mode; // Sync dashboard color mode with instance color mode
+    }
+
+    /**
+     * Update the color mode from the dashboard value
+     * This should be called at the beginning of processFrame
+     */
+    private void updateColorModeFromDashboard() {
+        if (this.colorMode != dashboardColorMode) {
+            this.colorMode = dashboardColorMode;
+        }
     }
 
     /**
@@ -241,16 +265,73 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
     }
 
     /**
-     * Convert a Mat to a Bitmap for visualization
+     * Convert a Mat to a Bitmap for visualization at original resolution
      * 
      * @param input Input Mat image
-     * @return Bitmap representation of the input Mat
+     * @return Bitmap representation of the input Mat at original resolution
      */
     private Bitmap matToBitmap(Mat input) {
-
+        // Convert directly to Bitmap without resizing
         Bitmap bmp = Bitmap.createBitmap(input.cols(), input.rows(), Bitmap.Config.RGB_565);
         Utils.matToBitmap(input, bmp);
         return bmp;
+    }
+
+    /**
+     * Combine two Mat objects side by side into a single Mat
+     * 
+     * @param mat1 First Mat (left side)
+     * @param mat2 Second Mat (right side)
+     * @return Combined Mat
+     */
+    private Mat combineMats(Mat mat1, Mat mat2) {
+        // Ensure both mats have the same height
+        int height = Math.max(mat1.rows(), mat2.rows());
+        Mat resizedMat1 = new Mat();
+        Mat resizedMat2 = new Mat();
+
+        // Resize mats to have the same height
+        if (mat1.rows() != height) {
+            double scale = (double) height / mat1.rows();
+            Imgproc.resize(mat1, resizedMat1, new Size(mat1.cols() * scale, height));
+        } else {
+            resizedMat1 = mat1.clone();
+        }
+
+        if (mat2.rows() != height) {
+            double scale = (double) height / mat2.rows();
+            Imgproc.resize(mat2, resizedMat2, new Size(mat2.cols() * scale, height));
+        } else {
+            resizedMat2 = mat2.clone();
+        }
+
+        // Create a new mat to hold the combined image
+        Mat combined = new Mat(height, resizedMat1.cols() + resizedMat2.cols(), resizedMat1.type());
+
+        // Copy the two mats side by side
+        resizedMat1.copyTo(combined.submat(0, height, 0, resizedMat1.cols()));
+
+        // Convert mat2 to the same type as mat1 if needed
+        if (resizedMat1.type() != resizedMat2.type()) {
+            Mat convertedMat2 = new Mat();
+            if (resizedMat1.channels() == 3 && resizedMat2.channels() == 1) {
+                Imgproc.cvtColor(resizedMat2, convertedMat2, Imgproc.COLOR_GRAY2BGR);
+            } else if (resizedMat1.channels() == 1 && resizedMat2.channels() == 3) {
+                Imgproc.cvtColor(resizedMat2, convertedMat2, Imgproc.COLOR_BGR2GRAY);
+            } else {
+                convertedMat2 = resizedMat2.clone();
+            }
+            convertedMat2.copyTo(combined.submat(0, height, resizedMat1.cols(), combined.cols()));
+            convertedMat2.release();
+        } else {
+            resizedMat2.copyTo(combined.submat(0, height, resizedMat1.cols(), combined.cols()));
+        }
+
+        // Release temporary mats
+        resizedMat1.release();
+        resizedMat2.release();
+
+        return combined;
     }
 
     /**
@@ -262,6 +343,19 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
     public double GetSampleAngleFromRobot(int index) {
         if (latestDistances != null && index >= 0 && index < latestDistances.length) {
             return latestDistances[index][3];
+        }
+        return -1;
+    }
+
+    /**
+     * Get the confidence value of the detected sample
+     * 
+     * @param index Index of the detected sample
+     * @return Confidence value from 0 to 1, or -1 if index is invalid
+     */
+    public double GetSampleConfidence(int index) {
+        if (latestDistances != null && index >= 0 && index < latestDistances.length) {
+            return latestDistances[index][4];
         }
         return -1;
     }
@@ -302,9 +396,8 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
             Mat input,
             ArrayList<RotatedRect> detectedRects,
             ArrayList<double[]> distances,
-            double contourArea
-
-    ) {
+            double contourArea,
+            double confidence) {
         detectedRects.add(rect);
 
         // Draw rectangle
@@ -348,8 +441,8 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
 
         double turretAngle = Math.toDegrees(Math.atan(x_inches_x / y_inches_x));
 
-        // Use the adjusted values
-        distances.add(new double[] { x_inches_x, angle, ground_distance, turretAngle });
+        // Use the adjusted values with the provided confidence
+        distances.add(new double[] { x_inches_x, angle, ground_distance, turretAngle, confidence });
     }
 
     @Override
@@ -359,7 +452,13 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
             updateCameraSettings();
         }
 
-        Mat hsv = new Mat();
+        // Update color mode from dashboard
+        updateColorModeFromDashboard();
+
+        // Clear reusable Mats
+        hsv.release();
+        mask.release();
+        hierarchy.release();
 
         // Step 1: Convert to HSV
         Imgproc.cvtColor(input, hsv, Imgproc.COLOR_RGB2HSV);
@@ -382,7 +481,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                 Mat enhancedV = new Mat();
 
                 // Create CLAHE object with specified clip limit and tile grid size
-                Imgproc.createCLAHE(claheClipLimit, new Size(claheTileSize, claheTileSize))
+                Photo.createCLAHE(claheClipLimit, new Size(claheTileSize, claheTileSize))
                         .apply(vChannel, enhancedV);
 
                 // Replace V channel with enhanced version
@@ -401,7 +500,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         // Imgproc.GaussianBlur(hsv, blurred, new Size(5, 5), 0);
 
         // Step 3: Adaptive Thresholding
-        Mat mask = new Mat();
+        // Using the reusable mask Mat
         switch (colorMode) {
             case RED:
                 Scalar[] redThresh1 = computeAdaptiveHSVThresholds(blurred, RED_LOW_1, RED_HIGH_1);
@@ -441,9 +540,9 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         ArrayList<RotatedRect> detectedRects = new ArrayList<>();
         ArrayList<double[]> distances = new ArrayList<>();
         ArrayList<MatOfPoint> contours = new ArrayList<>();
-        Mat hierarchy = new Mat();
         Imgproc.findContours(mask, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
-        hierarchy.release();
+        // Note: hierarchy is a class member and will be reused, so we don't release it
+        // here
 
         // Step 6: Process each contour
         for (MatOfPoint contour : contours) {
@@ -457,7 +556,8 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                     / Math.max(rect.size.width, rect.size.height);
 
             if (area >= minContourArea && area <= maxContourArea) {
-                processDetectedRect(rect, input, detectedRects, distances, area);
+                // Direct path - high confidence (1.0)
+                processDetectedRect(rect, input, detectedRects, distances, area, 1.0);
             } else if (aspectRatio > BLOB_ASPECT_RATIO && area > BLOB_AREA_THRESHOLD) { // check if they are worth
                                                                                         // trying
                 Rect boundingBox = Imgproc.boundingRect(contour);
@@ -479,21 +579,60 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                 // Filter inner contours based on area and aspect ratio
                 for (MatOfPoint innerContour : innerContours) {
                     double subArea = Imgproc.contourArea(innerContour);
-                    // if (subArea < minContourArea || subArea > maxContourArea) continue;
+                    if (subArea < minContourArea || subArea > maxContourArea) {
+                        Imgproc.putText(
+                                input,
+                                String.format("skipped - Area"),
+                                new Point(boundingBox.x, boundingBox.y),
+                                Imgproc.FONT_HERSHEY_SIMPLEX,
+                                0.5,
+                                new Scalar(255, 0, 0),
+                                2);
+                        continue;
+                    }
 
                     RotatedRect subRect = Imgproc.minAreaRect(new MatOfPoint2f(innerContour.toArray()));
                     double subAspectRatio = Math.min(subRect.size.width, subRect.size.height)
                             / Math.max(subRect.size.width, subRect.size.height);
-                    // if (subAspectRatio < minAspectRatio || subAspectRatio > maxAspectRatio)
+                    if (subAspectRatio < minAspectRatio || subAspectRatio > maxAspectRatio) {
+                        Imgproc.putText(
+                                input,
+                                "skipped - Aspect Ratio",
+                                new Point(boundingBox.x, boundingBox.y),
+                                Imgproc.FONT_HERSHEY_SIMPLEX,
+                                0.5,
+                                new Scalar(0, 0, 255),
+                                2);
+                        continue; // Ignore contours with aspect ratio outside the range
+                    }
                     // continue;
 
+                    // Debug visualization to check if the rectangle is correctly positioned
+                    Imgproc.rectangle(
+                            input,
+                            new Point(boundingBox.x, boundingBox.y),
+                            new Point(boundingBox.x + boundingBox.width, boundingBox.y + boundingBox.height),
+                            new Scalar(255, 255, 255),
+                            1);
+
+                    // The inner contours are found in the ROI coordinate system, which is relative
+                    // to the bounding box
+                    // We need to adjust the center coordinates to the original image coordinate
+                    // system
                     subRect.center.x += boundingBox.x;
                     subRect.center.y += boundingBox.y;
 
-                    processDetectedRect(subRect, input, detectedRects, distances, subArea);
+                    // Now process the adjusted rectangle with lower confidence (0.8) since it's
+                    // from fragmentation
+                    processDetectedRect(subRect, input, detectedRects, distances, subArea, 0.8);
+
+                    // Release the contour after we're done with it
+                    innerContour.release();
                 }
             }
         }
+
+        // We'll release the contours at the end of the method
 
         latestRects = detectedRects.toArray(new RotatedRect[0]);
         latestDistances = distances.toArray(new double[0][]);
@@ -502,10 +641,19 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         // Send image to dashboard
         Bitmap annotatedBitmap = matToBitmap(input);
         FtcDashboard.getInstance().sendImage(annotatedBitmap);
-        // release Mats
-        hsv.release();
-        mask.release();
-        blurred.release();
+
+        // No need to release hsv and mask here as they're class members and will be
+        // reused
+        // Only release local Mats
+        if (blurred != hsv) { // Only release if it's not the same as hsv
+            blurred.release();
+        }
+
+        // Release all MatOfPoint objects in contours list
+        for (MatOfPoint c : contours) {
+            c.release();
+        }
+        contours.clear();
 
         return input;
     }
@@ -525,6 +673,10 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         List<MatOfPoint> resultContours = new ArrayList<>();
         StringBuilder appliedAlgorithms = new StringBuilder();
 
+        // We don't need inputCopy anymore since we're not sending multiple bitmaps to
+        // dashboard
+        // Removing this unnecessary clone improves memory usage
+
         // If no fragmentation algorithms are enabled, return empty list
         if (!enableWatershedFragmentation &&
                 !enableDistanceTransformFragmentation &&
@@ -534,30 +686,48 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
             return resultContours;
         }
 
-        // Start with the original contour
-        resultContours.add(new MatOfPoint(contour.toArray())); // Add a copy of the original contour
-        // resultContours.add(new MatOfPoint(contour.toArray())); // Add a copy of the
-        // original contour
+        // Convert the original contour to ROI coordinates before adding it
+        MatOfPoint roiContour = new MatOfPoint();
+        Point[] points = contour.toArray();
+        Point[] roiPoints = new Point[points.length];
+
+        // Shift all points to ROI coordinates
+        for (int i = 0; i < points.length; i++) {
+            roiPoints[i] = new Point(points[i].x - boundingBox.x, points[i].y - boundingBox.y);
+        }
+
+        roiContour.fromArray(roiPoints);
+        resultContours.add(roiContour);
 
         // 1. Watershed Fragmentation
         if (enableWatershedFragmentation) {
+            // Use try-with-resources to ensure all Mats are properly released
+            Mat watershedMask = null;
+            Mat watershedInput = null;
+            Mat markers = null;
+            Mat sure_fg = null;
+            Mat sure_bg = null;
+            Mat kernel = null;
+            Mat watershedResult = null;
+            Mat hierarchyWatershed = null;
+
             try {
                 // Create a copy of the ROI for watershed
-                Mat watershedMask = roi.clone();
+                watershedMask = roi.clone();
 
                 // Convert to BGR for watershed
-                Mat watershedInput = new Mat();
+                watershedInput = new Mat();
                 Imgproc.cvtColor(watershedMask, watershedInput, Imgproc.COLOR_GRAY2BGR);
 
                 // Create markers (background = 1, foreground = 2)
-                Mat markers = Mat.zeros(watershedMask.size(), CvType.CV_32SC1);
+                markers = Mat.zeros(watershedMask.size(), CvType.CV_32SC1);
 
                 // Create foreground and background markers
-                Mat sure_fg = new Mat();
-                Mat sure_bg = new Mat();
+                sure_fg = new Mat();
+                sure_bg = new Mat();
 
                 // Erode to get sure foreground
-                Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(3, 3));
+                kernel = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(3, 3));
                 Imgproc.erode(watershedMask, sure_fg, kernel, new Point(-1, -1), 2);
 
                 // Dilate to get sure background
@@ -580,7 +750,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                 Imgproc.watershed(watershedInput, markers);
 
                 // Extract contours from watershed result
-                Mat watershedResult = Mat.zeros(markers.size(), CvType.CV_8UC1);
+                watershedResult = Mat.zeros(markers.size(), CvType.CV_8UC1);
                 for (int i = 0; i < markers.rows(); i++) {
                     for (int j = 0; j < markers.cols(); j++) {
                         if (markers.get(i, j)[0] == 2) { // Foreground
@@ -591,7 +761,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
 
                 // Find contours in the watershed result
                 List<MatOfPoint> watershedContours = new ArrayList<>();
-                Mat hierarchyWatershed = new Mat();
+                hierarchyWatershed = new Mat();
                 Imgproc.findContours(watershedResult, watershedContours, hierarchyWatershed,
                         Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
 
@@ -599,18 +769,16 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                 for (MatOfPoint watershedContour : watershedContours) {
                     if (Imgproc.contourArea(watershedContour) > minContourArea) {
                         resultContours.add(watershedContour);
+                    } else {
+                        // Release contours we don't add to the result
+                        watershedContour.release();
                     }
                 }
 
-                // Release temporary Mats
-                watershedMask.release();
-                watershedInput.release();
-                markers.release();
-                sure_fg.release();
-                sure_bg.release();
-                watershedResult.release();
-                hierarchyWatershed.release();
-                kernel.release();
+                // Clear the list without releasing the contours we've added to resultContours
+                watershedContours.clear();
+
+                // All Mats will be released in the finally block
 
                 // Draw a label on the input image to show which algorithm was used
                 if (!resultContours.isEmpty()) {
@@ -622,9 +790,30 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                             0.5,
                             new Scalar(255, 0, 255),
                             1);
+
+                    // No longer sending additional bitmaps to dashboard
                 }
             } catch (Exception e) {
                 System.out.println("Error in watershed fragmentation: " + e.getMessage());
+            } finally {
+                // Release all Mats in finally block to ensure they're released even if an
+                // exception occurs
+                if (watershedMask != null)
+                    watershedMask.release();
+                if (watershedInput != null)
+                    watershedInput.release();
+                if (markers != null)
+                    markers.release();
+                if (sure_fg != null)
+                    sure_fg.release();
+                if (sure_bg != null)
+                    sure_bg.release();
+                if (watershedResult != null)
+                    watershedResult.release();
+                if (hierarchyWatershed != null)
+                    hierarchyWatershed.release();
+                if (kernel != null)
+                    kernel.release();
             }
         }
 
@@ -642,9 +831,26 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                 // Normalize the distance image
                 Core.normalize(dist, dist, 0, 1.0, Core.NORM_MINMAX);
 
+                // Find the maximum value in the distance transform
+                Core.MinMaxLocResult minMaxResult = Core.minMaxLoc(dist);
+                double maxVal = minMaxResult.maxVal;
+
+                // Calculate dynamic threshold as a percentage of the maximum value
+                double dynamicThreshold = maxVal * DISTANCE_THRESHOLD_RATIO;
+
                 // Threshold to get peaks
                 Mat distPeaks = new Mat();
-                Imgproc.threshold(dist, distPeaks, 0.5, 1.0, Imgproc.THRESH_BINARY);
+                Imgproc.threshold(dist, distPeaks, dynamicThreshold, 1.0, Imgproc.THRESH_BINARY);
+
+                // Add a label showing the threshold value used
+                Imgproc.putText(
+                        input,
+                        String.format("Thresh: %.2f", dynamicThreshold),
+                        new Point(boundingBox.x, boundingBox.y + boundingBox.height + 15),
+                        Imgproc.FONT_HERSHEY_SIMPLEX,
+                        0.5,
+                        new Scalar(0, 255, 255),
+                        1);
 
                 // Convert to 8-bit for findContours
                 distPeaks.convertTo(distPeaks, CvType.CV_8U, 255);
@@ -657,10 +863,16 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
 
                 // Add distance transform contours to result
                 for (MatOfPoint distContour : distContours) {
-                    if (Imgproc.contourArea(distContour) > minContourArea) {
+                    if (Imgproc.contourArea(distContour) > minContourArea) {// why not acount for Max too
                         resultContours.add(distContour);
+                    } else {
+                        // Release contours we don't add to the result
+                        distContour.release();
                     }
                 }
+
+                // Clear the list without releasing the contours we've added to resultContours
+                distContours.clear();
 
                 // Release temporary Mats
                 contourMask.release();
@@ -678,6 +890,8 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                             0.5,
                             new Scalar(0, 255, 255),
                             1);
+
+                    // No longer sending additional bitmaps to dashboard
                 }
             } catch (Exception e) {
                 System.out.println("Error in distance transform fragmentation: " + e.getMessage());
@@ -715,8 +929,14 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                 for (MatOfPoint adaptiveContour : adaptiveContours) {
                     if (Imgproc.contourArea(adaptiveContour) > minContourArea) {
                         resultContours.add(adaptiveContour);
+                    } else {
+                        // Release contours we don't add to the result
+                        adaptiveContour.release();
                     }
                 }
+
+                // Clear the list without releasing the contours we've added to resultContours
+                adaptiveContours.clear();
 
                 // Release temporary Mats
                 adaptiveMask.release();
@@ -734,6 +954,8 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                             0.5,
                             new Scalar(0, 255, 0),
                             1);
+
+                    // No longer sending additional bitmaps to dashboard
                 }
             } catch (Exception e) {
                 System.out.println("Error in adaptive threshold fragmentation: " + e.getMessage());
@@ -774,8 +996,14 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                 for (MatOfPoint morphContour : morphContours) {
                     if (Imgproc.contourArea(morphContour) > minContourArea) {
                         resultContours.add(morphContour);
+                    } else {
+                        // Release contours we don't add to the result
+                        morphContour.release();
                     }
                 }
+
+                // Clear the list without releasing the contours we've added to resultContours
+                morphContours.clear();
 
                 // Release temporary Mats
                 morphMask.release();
@@ -796,6 +1024,8 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                             0.5,
                             new Scalar(255, 0, 0),
                             1);
+
+                    // No longer sending additional bitmaps to dashboard
                 }
             } catch (Exception e) {
                 System.out.println("Error in morphological gradient fragmentation: " + e.getMessage());
@@ -805,10 +1035,13 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         // 5. Contour Splitting Fragmentation
         if (enableContourSplittingFragmentation) {
             try {
-                // Process each contour in the current result set
+                // Create a temporary list to hold original contours we'll process
+                List<MatOfPoint> contoursToProcess = new ArrayList<>(resultContours);
+
+                // Create a list to hold new contours we'll generate
                 List<MatOfPoint> newContours = new ArrayList<>();
 
-                for (MatOfPoint currentContour : resultContours) {
+                for (MatOfPoint currentContour : contoursToProcess) {
                     // Create a copy of the contour for splitting
                     MatOfPoint2f contour2f = new MatOfPoint2f(currentContour.toArray());
 
@@ -848,11 +1081,12 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                             Imgproc.drawContours(splitMask, contourList, 0, new Scalar(255), -1);
 
                             // Draw lines between defect points to split the contour
+                            // Since currentContour is already in ROI coordinates, the defect points are
+                            // also in ROI coordinates
                             for (int i = 0; i < defectPoints.size() - 1; i++) {
-                                Point p1 = new Point(defectPoints.get(i).x - boundingBox.x,
-                                        defectPoints.get(i).y - boundingBox.y);
-                                Point p2 = new Point(defectPoints.get(i + 1).x - boundingBox.x,
-                                        defectPoints.get(i + 1).y - boundingBox.y);
+                                // Use defect points directly since they're already in ROI coordinates
+                                Point p1 = defectPoints.get(i);
+                                Point p2 = defectPoints.get(i + 1);
                                 Imgproc.line(splitMask, p1, p2, new Scalar(0), 2);
                             }
 
@@ -862,12 +1096,18 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                             Imgproc.findContours(splitMask, splitContours, hierarchySplit,
                                     Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
 
-                            // Add split contours to result
+                            // Add split contours to our new contours list (not directly to resultContours)
                             for (MatOfPoint splitContour : splitContours) {
                                 if (Imgproc.contourArea(splitContour) > minContourArea) {
-                                    resultContours.add(splitContour);
+                                    newContours.add(splitContour);
+                                } else {
+                                    // Release contours we don't add to the result
+                                    splitContour.release();
                                 }
                             }
+
+                            // Clear the list without releasing the contours we've added to newContours
+                            splitContours.clear();
 
                             // Release temporary Mats
                             splitMask.release();
@@ -880,6 +1120,10 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                     hull.release();
                 }
 
+                // After processing all original contours, add all the new contours to
+                // resultContours
+                resultContours.addAll(newContours);
+
                 // Draw a label on the input image to show which algorithm was used
                 if (!resultContours.isEmpty()) {
                     Imgproc.putText(
@@ -890,11 +1134,19 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                             0.5,
                             new Scalar(255, 255, 0),
                             1);
+
+                    // No longer sending additional bitmaps to dashboard
                 }
             } catch (Exception e) {
                 System.out.println("Error in contour splitting fragmentation: " + e.getMessage());
             }
         }
+
+        // No need to release inputCopy as we no longer create it
+
+        // Note: We don't release the MatOfPoint objects in resultContours here
+        // because they will be used by the caller. The caller is responsible for
+        // releasing them when done.
 
         return resultContours;
     }
