@@ -557,6 +557,172 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
     }
 
     /**
+     * Calculate the confidence score of a blob being a sample
+     * 
+     * @param contour The contour to evaluate
+     * @param mask Binary mask for ROI extraction
+     * @param input Original input image
+     * @return Confidence score between 0 and 1
+     */
+    private double isBlobSampleConfidence(MatOfPoint contour, Mat mask, Mat input) {
+        // Weights for different metrics (should sum to 1.0)
+        final double ASPECT_RATIO_WEIGHT = 0.2;
+        final double AREA_WEIGHT = 0.15;
+        final double SOLIDITY_WEIGHT = 0.15;
+        final double CIRCULARITY_WEIGHT = 0.1;
+        final double COLOR_CONSISTENCY_WEIGHT = 0.1;
+        final double RECTANGULARITY_WEIGHT = 0.15;
+        final double EDGE_STRAIGHTNESS_WEIGHT = 0.15;
+        
+        // Calculate metrics
+        double confidence = 0.0;
+        
+        // 1. Aspect Ratio Score
+        RotatedRect rect = Imgproc.minAreaRect(new MatOfPoint2f(contour.toArray()));
+        double aspectRatio = Math.min(rect.size.width, rect.size.height) / Math.max(rect.size.width, rect.size.height);
+        
+        // Score is highest when aspectRatio is close to expected value (e.g., 0.5 for a typical sample)
+        // Using a Gaussian-like function centered at the ideal aspect ratio
+        double idealAspectRatio = 0.43; // Adjust based on your samples
+        double aspectRatioScore = Math.exp(-Math.pow(aspectRatio - idealAspectRatio, 2) / 0.1);
+        
+        // 2. Area Score
+        double area = Imgproc.contourArea(contour);
+        double idealArea = (minContourArea + maxContourArea) / 2.0;
+        double areaTolerance = (maxContourArea - minContourArea) / 2.0;
+        
+        // Score is highest when area is close to ideal area
+        double areaScore = 1.0 - Math.min(1.0, Math.abs(area - idealArea) / areaTolerance);
+        
+        // 3. Solidity Score (Area / Convex Hull Area)
+        MatOfInt hullIndices = new MatOfInt();
+        Imgproc.convexHull(contour, hullIndices);
+        
+        // Convert hull indices to points
+        Point[] contourPoints = contour.toArray();
+        List<Point> hullPoints = new ArrayList<>();
+        for (int index : hullIndices.toArray()) {
+            hullPoints.add(contourPoints[index]);
+        }
+        
+        MatOfPoint hull = new MatOfPoint();
+        hull.fromList(hullPoints);
+        
+        double hullArea = Imgproc.contourArea(hull);
+        double solidity = (hullArea > 0) ? area / hullArea : 0;
+        
+        // Score is highest when solidity is close to expected value (e.g., 0.85 for a typical sample)
+        double idealSolidity = 0.85; // Adjust based on your samples
+        double solidityScore = Math.exp(-Math.pow(solidity - idealSolidity, 2) / 0.1);
+        
+        // 4. Circularity Score (4π × area / perimeter²)
+        double perimeter = Imgproc.arcLength(new MatOfPoint2f(contour.toArray()), true);
+        double circularity = (perimeter > 0) ? 4 * Math.PI * area / (perimeter * perimeter) : 0;
+        
+        // Score is highest when circularity is close to expected value
+        double idealCircularity = 0.7; // Adjust based on your samples
+        double circularityScore = Math.exp(-Math.pow(circularity - idealCircularity, 2) / 0.1);
+        
+        // 5. Color Consistency Score
+        // Create a mask for this contour
+        Rect boundingBox = Imgproc.boundingRect(contour);
+        Mat contourMask = Mat.zeros(mask.size(), CvType.CV_8UC1);
+        Imgproc.drawContours(contourMask, Arrays.asList(contour), 0, new Scalar(255), -1);
+        
+        // Extract the region from the original image
+        Mat roi = new Mat();
+        input.copyTo(roi, contourMask);
+        
+        // Calculate color standard deviation as a measure of consistency
+        Mat mean = new Mat();
+        Mat stdDev = new Mat();
+        Core.meanStdDev(roi, mean, stdDev, contourMask);
+        
+        // Average the standard deviations of all channels
+        double avgStdDev = 0;
+        for (int i = 0; i < stdDev.rows(); i++) {
+            avgStdDev += stdDev.get(i, 0)[0];
+        }
+        avgStdDev /= stdDev.rows();
+        
+        // Score is highest when standard deviation is low (consistent color)
+        double colorConsistencyScore = Math.exp(-avgStdDev / 50.0); // Scale factor may need adjustment
+        
+        // Clean up
+        contourMask.release();
+        roi.release();
+        mean.release();
+        stdDev.release();
+        hull.release();
+        hullIndices.release();
+        
+        // 6. Rectangularity Score (contourArea / boxArea)
+        Rect boundingRect = Imgproc.boundingRect(contour);
+        double boxArea = boundingRect.width * boundingRect.height;
+        double rectangularity = (boxArea > 0) ? area / boxArea : 0;
+        
+        // Score is highest when rectangularity is close to 1 (more rectangular)
+        // L-shapes and U-shapes will have lower rectangularity
+        double rectangularityScore = Math.min(1.0, rectangularity);
+        
+        // 7. Edge Straightness Score
+        double edgeStraightnessScore = 0.0;
+        try {
+            // Convert contour to MatOfPoint2f for fitLine
+            MatOfPoint2f contour2f = new MatOfPoint2f(contour.toArray());
+            
+            // Fit a line to the contour
+            Mat lineParams = new Mat();
+            Imgproc.fitLine(contour2f, lineParams, Imgproc.DIST_L2, 0, 0.01, 0.01);
+            
+            // Extract line parameters (vx, vy, x0, y0)
+            float vx = (float) lineParams.get(0, 0)[0];
+            float vy = (float) lineParams.get(1, 0)[0];
+            float x0 = (float) lineParams.get(2, 0)[0];
+            float y0 = (float) lineParams.get(3, 0)[0];
+            
+            // Calculate RMSE (Root Mean Square Error) of points to the fitted line
+            double sumSquaredError = 0.0;
+            Point[] points = contour.toArray();
+            for (Point point : points) {
+                // Calculate distance from point to line
+                // Line equation: (x-x0)*vy - (y-y0)*vx = 0
+                double distance = Math.abs((point.x - x0) * vy - (point.y - y0) * vx) / 
+                                  Math.sqrt(vx * vx + vy * vy);
+                sumSquaredError += distance * distance;
+            }
+            
+            double rmse = Math.sqrt(sumSquaredError / points.length);
+            
+            // Normalize RMSE to a score between 0 and 1
+            // Lower RMSE means straighter edges, so we want a higher score
+            double maxRmse = 10.0; // Adjust based on your expected range
+            edgeStraightnessScore = 1.0 - Math.min(1.0, rmse / maxRmse);
+            
+            // Release resources
+            contour2f.release();
+            lineParams.release();
+        } catch (Exception e) {
+            System.out.println("Error calculating edge straightness: " + e.getMessage());
+            edgeStraightnessScore = 0.5; // Default value if calculation fails
+        }
+        
+        // Calculate weighted average
+        confidence = aspectRatioScore * ASPECT_RATIO_WEIGHT +
+                     areaScore * AREA_WEIGHT +
+                     solidityScore * SOLIDITY_WEIGHT +
+                     circularityScore * CIRCULARITY_WEIGHT +
+                     colorConsistencyScore * COLOR_CONSISTENCY_WEIGHT +
+                     rectangularityScore * RECTANGULARITY_WEIGHT +
+                     edgeStraightnessScore * EDGE_STRAIGHTNESS_WEIGHT;
+        
+        // Ensure confidence is between 0 and 1
+        confidence = Math.max(0.0, Math.min(1.0, confidence));
+        
+        return confidence;
+    }
+
+    /**
      * Process contours to detect rectangles and calculate distances
      * 
      * @param contours List of contours to process
@@ -578,8 +744,10 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                     / Math.max(rect.size.width, rect.size.height);
 
             if (area >= minContourArea && area <= maxContourArea) {
-                // Direct path - high confidence (1.0)
-                processDetectedRect(rect, input, detectedRects, distances, area, 1.0);
+                // Calculate confidence using the new function
+                double confidence = isBlobSampleConfidence(contour, mask, input);
+                // Process with calculated confidence
+                processDetectedRect(rect, input, detectedRects, distances, area, confidence);
             } else if (aspectRatio > BLOB_ASPECT_RATIO && area > BLOB_AREA_THRESHOLD) { // check if they are worth trying
                 processLargeBlob(contour, mask, input, detectedRects, distances);
             }
