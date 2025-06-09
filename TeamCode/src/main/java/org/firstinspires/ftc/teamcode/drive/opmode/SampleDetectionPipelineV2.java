@@ -58,6 +58,10 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
     public static int claheTileSize = 8; // Default tile size for CLAHE (8x8)
     public static double BLOB_ASPECT_RATIO = 0.25;
     public static double BLOB_AREA_THRESHOLD = 8000;
+    
+    // New tunable constants for distance-normalized area
+    public static double MIN_NORM_AREA = 4.0e6;   // pixel·inch², tune in dashboard
+    public static double MAX_NORM_AREA = 2.0e7;   // pixel·inch², tune in dashboard
 
     // Blob fragmentation algorithm controls
     public static boolean enableWatershedFragmentation = false;
@@ -586,12 +590,23 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         double idealAspectRatio = 0.43; // Adjust based on your samples
         double aspectRatioScore = Math.exp(-Math.pow(aspectRatio - idealAspectRatio, 2) / 0.1);
         
-        // 2. Area Score
+        // 2. Area Score - using distance-based expected area range
         double area = Imgproc.contourArea(contour);
-        double idealArea = (minContourArea + maxContourArea) / 2.0;
-        double areaTolerance = (maxContourArea - minContourArea) / 2.0;
         
-        // Score is highest when area is close to ideal area
+        // Calculate distance based on the rectangle size
+        double zInches = (REAL_SAMPLE_LENGTH * FOCAL_LEGNTH_X) /
+                       Math.max(rect.size.width, rect.size.height);
+        
+        // Get expected area range for this distance
+        double[] expectedAreaRange = calculateExpectedAreaRange(zInches);
+        double minAreaForDistance = expectedAreaRange[0];
+        double maxAreaForDistance = expectedAreaRange[1];
+        
+        // Calculate ideal area and tolerance for this distance
+        double idealArea = (minAreaForDistance + maxAreaForDistance) / 2.0;
+        double areaTolerance = (maxAreaForDistance - minAreaForDistance) / 2.0;
+        
+        // Score is highest when area is close to ideal area for this distance
         double areaScore = 1.0 - Math.min(1.0, Math.abs(area - idealArea) / areaTolerance);
         
         // 3. Solidity Score (Area / Convex Hull Area)
@@ -723,6 +738,20 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
     }
 
     /**
+     * Calculate the expected min and max contour area for a specific distance
+     * 
+     * @param zInches Distance in inches
+     * @return Array with [minArea, maxArea] in pixels
+     */
+    private double[] calculateExpectedAreaRange(double zInches) {
+        // Convert normalized area thresholds to pixel area for this specific distance
+        double minAreaForDistance = MIN_NORM_AREA / (zInches * zInches);
+        double maxAreaForDistance = MAX_NORM_AREA / (zInches * zInches);
+        
+        return new double[] { minAreaForDistance, maxAreaForDistance };
+    }
+
+    /**
      * Process contours to detect rectangles and calculate distances
      * 
      * @param contours List of contours to process
@@ -734,21 +763,37 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
     private void processContours(ArrayList<MatOfPoint> contours, Mat mask, Mat input, 
                                 ArrayList<RotatedRect> detectedRects, ArrayList<double[]> distances) {
         for (MatOfPoint contour : contours) {
-            double area = Imgproc.contourArea(contour);
+            double areaPx = Imgproc.contourArea(contour);
 
-            if (area < minContourArea)
-                continue; // Ignore small contours
-
+            // Get the rotated rectangle for this contour
             RotatedRect rect = Imgproc.minAreaRect(new MatOfPoint2f(contour.toArray()));
+            
+            // Calculate distance based on the rectangle size
+            double zInches = (REAL_SAMPLE_LENGTH * FOCAL_LEGNTH_X) /
+                           Math.max(rect.size.width, rect.size.height);
+            
+            // Calculate expected area range for this distance
+            double[] expectedAreaRange = calculateExpectedAreaRange(zInches);
+            double minAreaForDistance = expectedAreaRange[0];
+            double maxAreaForDistance = expectedAreaRange[1];
+            
+            // Filter based on area for this specific distance
+            if (areaPx < minAreaForDistance || areaPx > maxAreaForDistance) {
+                // Reject contour – too small or too big *for its distance*
+                continue;
+            }
+            
+            // Calculate aspect ratio
             double aspectRatio = Math.min(rect.size.width, rect.size.height)
                     / Math.max(rect.size.width, rect.size.height);
 
-            if (area >= minContourArea && area <= maxContourArea) {
+            // For backward compatibility, still check the raw area
+            if (areaPx >= minContourArea && areaPx <= maxContourArea) {
                 // Calculate confidence using the new function
                 double confidence = isBlobSampleConfidence(contour, mask, input);
-                // Process with calculated confidence
-                processDetectedRect(rect, input, detectedRects, distances, area, confidence);
-            } else if (aspectRatio > BLOB_ASPECT_RATIO && area > BLOB_AREA_THRESHOLD) { // check if they are worth trying
+                // Process with calculated confidence. Shall we just pass 1 here?
+                processDetectedRect(rect, input, detectedRects, distances, areaPx, confidence);
+            } else if (aspectRatio > BLOB_ASPECT_RATIO && areaPx > BLOB_AREA_THRESHOLD) { // check if they are worth trying
                 processLargeBlob(contour, mask, input, detectedRects, distances);
             }
         }
