@@ -31,22 +31,23 @@ public class ServoTest extends LinearOpMode {
 
     // Declare OpMode members.
     public static double servoPosition;
+    public static String servoName = "HorizontalShoulderServo";
 
     // Close: 0.42
     // Open: 0.55
     private ElapsedTime runtime = new ElapsedTime();
     private Servo Servo;
 
-
     @Override
     public void runOpMode() {
+
+        while (opModeInInit()) {
+            Servo = hardwareMap.get(Servo.class, servoName);
+        }
+
         telemetry.addData("Status", "Initialized");
         telemetry.update();
 
-        // Initialize the hardware variables. Note that the strings used here as parameters
-        // to 'get' must correspond to the names assigned during the robot configuration
-        // step (using the FTC Robot Controller app on the phone).
-        Servo = hardwareMap.get(Servo.class, "HorizontalShoulderServo");
 
         // Wait for the game to start (driver presses START)
         waitForStart();

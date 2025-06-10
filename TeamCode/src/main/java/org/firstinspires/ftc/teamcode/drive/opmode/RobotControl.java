@@ -536,6 +536,7 @@ public class RobotControl
         Action verticalActions = GetVerticalActionsForTransfer();
 
         Action horizontalActions = new ParallelAction(
+                new HorizontalClawAction(robotHardware, false, false, false),
                 new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_TRANSFER, true, false),
                 new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_TRANSFER, false, false),
                 new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_TRANSFER, false, false),
@@ -553,6 +554,7 @@ public class RobotControl
                 new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_AFTER_TRANSFER, false, false),
                 new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_AFTER_TRANSFER, false, false)
         );
+
     }
 
     private Action GetTransferToObZoneActionSequence() {
@@ -654,20 +656,23 @@ public class RobotControl
                 new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_PICK_SPECIMEN, false, false)
         );
 
-        Action verticalActions = new ParallelAction(
-                new VerticalClawAction(robotHardware, false, false, false), //close the claw to make sure we pass thru the slides
-                new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_PICK_SPECIMEN, true, false),
-                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_PICK_SPECIMEN, false, false),
-                new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_PICK_SPECIMEN, false, false),
-                new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_PICK_SPECIMEN, false, false)
-        );
-
-        return new SequentialAction(
+        Action verticalActions = new SequentialAction(
                 new ParallelAction(
-                    horizontalActions,
-                    verticalActions),
+                        new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_PICK_SPECIMEN, true, false),
+                        new VerticalClawAction(robotHardware, false, false, false) //close the claw to make sure we pass thru the slides
+                ),
+                new ParallelAction(
+                        new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_PICK_SPECIMEN, true, false),
+                        new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_PICK_SPECIMEN, true, false),
+                        new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_PICK_SPECIMEN, false, false)
+                ),
                 new VerticalClawAction(robotHardware, true, false, false)
         );
+
+//        return new ParallelAction(
+//                    horizontalActions,
+//                    verticalActions);
+        return verticalActions;
     }
 
     private Action GetSnapSpecimenActionSequence() {
