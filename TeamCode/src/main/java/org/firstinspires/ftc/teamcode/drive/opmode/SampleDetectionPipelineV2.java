@@ -281,62 +281,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         return bmp;
     }
 
-    /**
-     * Combine two Mat objects side by side into a single Mat
-     * 
-     * @param mat1 First Mat (left side)
-     * @param mat2 Second Mat (right side)
-     * @return Combined Mat
-     */
-    private Mat combineMats(Mat mat1, Mat mat2) {
-        // Ensure both mats have the same height
-        int height = Math.max(mat1.rows(), mat2.rows());
-        Mat resizedMat1 = new Mat();
-        Mat resizedMat2 = new Mat();
-
-        // Resize mats to have the same height
-        if (mat1.rows() != height) {
-            double scale = (double) height / mat1.rows();
-            Imgproc.resize(mat1, resizedMat1, new Size(mat1.cols() * scale, height));
-        } else {
-            resizedMat1 = mat1.clone();
-        }
-
-        if (mat2.rows() != height) {
-            double scale = (double) height / mat2.rows();
-            Imgproc.resize(mat2, resizedMat2, new Size(mat2.cols() * scale, height));
-        } else {
-            resizedMat2 = mat2.clone();
-        }
-
-        // Create a new mat to hold the combined image
-        Mat combined = new Mat(height, resizedMat1.cols() + resizedMat2.cols(), resizedMat1.type());
-
-        // Copy the two mats side by side
-        resizedMat1.copyTo(combined.submat(0, height, 0, resizedMat1.cols()));
-
-        // Convert mat2 to the same type as mat1 if needed
-        if (resizedMat1.type() != resizedMat2.type()) {
-            Mat convertedMat2 = new Mat();
-            if (resizedMat1.channels() == 3 && resizedMat2.channels() == 1) {
-                Imgproc.cvtColor(resizedMat2, convertedMat2, Imgproc.COLOR_GRAY2BGR);
-            } else if (resizedMat1.channels() == 1 && resizedMat2.channels() == 3) {
-                Imgproc.cvtColor(resizedMat2, convertedMat2, Imgproc.COLOR_BGR2GRAY);
-            } else {
-                convertedMat2 = resizedMat2.clone();
-            }
-            convertedMat2.copyTo(combined.submat(0, height, resizedMat1.cols(), combined.cols()));
-            convertedMat2.release();
-        } else {
-            resizedMat2.copyTo(combined.submat(0, height, resizedMat1.cols(), combined.cols()));
-        }
-
-        // Release temporary mats
-        resizedMat1.release();
-        resizedMat2.release();
-
-        return combined;
-    }
+   
 
     /**
      * Get the angle from the robot to the sample in degrees
@@ -823,6 +768,11 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         
         // Apply each fragmentation algorithm if enabled (watershed removed)
         
+        if (enableCannyEdgeFragmentation) {
+            List<MatOfPoint> cannyEdgeContours = applyCannyEdgeFragmentation(contour, roi, mask, boundingBox, input, false);
+            resultContours.addAll(cannyEdgeContours);
+        }
+
         if (enableDistanceTransformFragmentation) {
             List<MatOfPoint> distanceTransformContours = applyDistanceTransformFragmentation(contour, roi, mask, boundingBox, input, false);
             resultContours.addAll(distanceTransformContours);
@@ -843,10 +793,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
             resultContours.addAll(contourSplittingContours);
         }
         
-        if (enableCannyEdgeFragmentation) {
-            List<MatOfPoint> cannyEdgeContours = applyCannyEdgeFragmentation(contour, roi, mask, boundingBox, input, false);
-            resultContours.addAll(cannyEdgeContours);
-        }
+    
         
         return resultContours;
     }
