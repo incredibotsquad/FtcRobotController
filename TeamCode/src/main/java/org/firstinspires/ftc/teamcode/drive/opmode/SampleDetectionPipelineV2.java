@@ -5,8 +5,7 @@ import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.photo.Photo;
 import org.openftc.easyopencv.OpenCvPipeline;
-//import org.w3c.dom.css.Rect;
-import org.w3c.dom.css.Rect;
+
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -18,13 +17,8 @@ import com.acmerobotics.dashboard.config.Config;
 
 import org.opencv.android.Utils;
 import android.graphics.Bitmap;
-//import apple.laf.JRSUIConstants.Size;
-//import javafx.scene.effect.Light.Point;
-import apple.laf.JRSUIConstants.Size;
-import javafx.scene.effect.Light.Point;
 
-// TensorFlow Lite imports
-//import org.tensorflow.lite.Interpreter;
+
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -719,7 +713,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                     huMoments[i] = huMomentsMat.get(i, 0)[0];
             }
                 huMomentsMat.release();    
-        Imgproc.HuMoments(moments, huMoments);
+  
             
             // The second Hu moment relates to elongation/symmetry
             // Lower values indicate more elongated shapes (rectangles)
