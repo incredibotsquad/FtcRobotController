@@ -6,8 +6,10 @@ import org.opencv.imgproc.Imgproc;
 import org.opencv.photo.Photo;
 import org.openftc.easyopencv.OpenCvPipeline;
 //import org.w3c.dom.css.Rect;
+import org.w3c.dom.css.Rect;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -18,6 +20,8 @@ import org.opencv.android.Utils;
 import android.graphics.Bitmap;
 //import apple.laf.JRSUIConstants.Size;
 //import javafx.scene.effect.Light.Point;
+import apple.laf.JRSUIConstants.Size;
+import javafx.scene.effect.Light.Point;
 
 // TensorFlow Lite imports
 //import org.tensorflow.lite.Interpreter;
@@ -412,13 +416,22 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
             Imgproc.line(input, vertices[j], vertices[(j + 1) % 4], new Scalar(0, 255, 0), 2);
             Imgproc.putText(
                     input,
-                    String.format("A:%.0f", contourArea),
+                    String.format("pxA:%.0f", contourArea),
                     vertices[j],
                     Imgproc.FONT_HERSHEY_SIMPLEX,
                     0.5,
                     new Scalar(255, 0, 0),
                     2);
         }
+
+         Imgproc.putText(
+                    input,
+                    String.format("A:%.2f", confidence),
+                    rect.center,
+                    Imgproc.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    new Scalar(0, 255, 0),
+                    2);
 
         // Distance and angle calculation
         double distance3D = (REAL_SAMPLE_LENGTH * FOCAL_LEGNTH_X) / Math.max(rect.size.width, rect.size.height);
@@ -475,7 +488,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                 Mat enhancedV = new Mat();
 
                 // Create CLAHE object with specified clip limit and tile grid size
-                Photo.createCLAHE(claheClipLimit, new Size(claheTileSize, claheTileSize))
+                Imgproc.createCLAHE(claheClipLimit, new Size(claheTileSize, claheTileSize))
                         .apply(vChannel, enhancedV);
 
                 // Replace V channel with enhanced version
@@ -499,7 +512,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
     private void applyGaussianBlur(Mat input, Mat output) {
         // Currently not applying blur, just returning the input
         // Uncomment the following line to apply Gaussian blur
-        // Imgproc.GaussianBlur(input, output, new Size(5, 5), 0);
+        // Imgproc.GaussianBlur(input, output, new Size(3, 3), 0);
     }
 
     /**
@@ -581,18 +594,18 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         // Calculate metrics
         double confidence = 0.0;
         
-        // 1. Aspect Ratio Score
+        // Get basic properties - these are cheap to calculate
         RotatedRect rect = Imgproc.minAreaRect(new MatOfPoint2f(contour.toArray()));
-        double aspectRatio = Math.min(rect.size.width, rect.size.height) / Math.max(rect.size.width, rect.size.height);
+        double area = Imgproc.contourArea(contour);
+        Rect boundingRect = Imgproc.boundingRect(contour);
+        double boxArea = boundingRect.width * boundingRect.height;
         
-        // Score is highest when aspectRatio is close to expected value (e.g., 0.5 for a typical sample)
-        // Using a Gaussian-like function centered at the ideal aspect ratio
+        // 1. Aspect Ratio Score - CHEAP
+        double aspectRatio = Math.min(rect.size.width, rect.size.height) / Math.max(rect.size.width, rect.size.height);
         double idealAspectRatio = 0.43; // Adjust based on your samples
         double aspectRatioScore = Math.exp(-Math.pow(aspectRatio - idealAspectRatio, 2) / 0.1);
         
-        // 2. Area Score - using distance-based expected area range
-        double area = Imgproc.contourArea(contour);
-        
+        // 2. Area Score - CHEAP
         // Calculate distance based on the rectangle size
         double zInches = (REAL_SAMPLE_LENGTH * FOCAL_LEGNTH_X) /
                        Math.max(rect.size.width, rect.size.height);
@@ -609,7 +622,26 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         // Score is highest when area is close to ideal area for this distance
         double areaScore = 1.0 - Math.min(1.0, Math.abs(area - idealArea) / areaTolerance);
         
-        // 3. Solidity Score (Area / Convex Hull Area)
+        // 6. Rectangularity Score - CHEAP
+        double rectangularity = (boxArea > 0) ? area / boxArea : 0;
+        double rectangularityScore = Math.min(1.0, rectangularity);
+        
+        // Early rejection based on cheap tests
+        // Calculate partial confidence from cheap metrics
+        double cheapMetricsWeight = ASPECT_RATIO_WEIGHT + AREA_WEIGHT + RECTANGULARITY_WEIGHT;
+        double cheapConfidence = (aspectRatioScore * ASPECT_RATIO_WEIGHT +
+                                 areaScore * AREA_WEIGHT +
+                                 rectangularityScore * RECTANGULARITY_WEIGHT) / cheapMetricsWeight;
+        
+        // If cheap tests indicate a very low confidence, skip expensive calculations
+        final double EARLY_REJECT_THRESHOLD = 0.3; // Adjust as needed
+        if (cheapConfidence < EARLY_REJECT_THRESHOLD) {
+            return cheapConfidence * 0.5; // Return a reduced confidence score
+        }
+        
+        // Continue with more expensive calculations
+        
+        // 3. Solidity Score - MODERATE COST
         MatOfInt hullIndices = new MatOfInt();
         Imgproc.convexHull(contour, hullIndices);
         
@@ -626,11 +658,11 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         double hullArea = Imgproc.contourArea(hull);
         double solidity = (hullArea > 0) ? area / hullArea : 0;
         
-        // Score is highest when solidity is close to expected value (e.g., 0.85 for a typical sample)
+        // Score is highest when solidity is close to expected value
         double idealSolidity = 0.85; // Adjust based on your samples
         double solidityScore = Math.exp(-Math.pow(solidity - idealSolidity, 2) / 0.1);
         
-        // 4. Circularity Score (4π × area / perimeter²)
+        // 4. Circularity Score - MODERATE COST
         double perimeter = Imgproc.arcLength(new MatOfPoint2f(contour.toArray()), true);
         double circularity = (perimeter > 0) ? 4 * Math.PI * area / (perimeter * perimeter) : 0;
         
@@ -638,19 +670,30 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         double idealCircularity = 0.7; // Adjust based on your samples
         double circularityScore = Math.exp(-Math.pow(circularity - idealCircularity, 2) / 0.1);
         
-        // 5. Color Consistency Score
-        // Create a mask for this contour
-        Rect boundingBox = Imgproc.boundingRect(contour);
+        // 5. Color Consistency Score - EXPENSIVE
+        // Create a mask for a shrunken rotated rectangle to avoid border pixels
         Mat contourMask = Mat.zeros(mask.size(), CvType.CV_8UC1);
-        Imgproc.drawContours(contourMask, Arrays.asList(contour), 0, new Scalar(255), -1);
+        
+        // Create a slightly smaller rotated rectangle (80% of original size)
+        RotatedRect shrunkRect = new RotatedRect(
+            rect.center,
+            new Size(rect.size.width * 0.8, rect.size.height * 0.8),
+            rect.angle
+        );
+        
+        // Draw the shrunken rotated rectangle on the mask
+        Point[] shrunkVertices = new Point[4];
+        shrunkRect.points(shrunkVertices);
+        MatOfPoint shrunkContour = new MatOfPoint(shrunkVertices);
+        Imgproc.fillPoly(contourMask, Arrays.asList(shrunkContour), new Scalar(255));
         
         // Extract the region from the original image
         Mat roi = new Mat();
         input.copyTo(roi, contourMask);
         
         // Calculate color standard deviation as a measure of consistency
-        Mat mean = new Mat();
-        Mat stdDev = new Mat();
+        MatOfDouble mean = new MatOfDouble();
+        MatOfDouble stdDev = new MatOfDouble();
         Core.meanStdDev(roi, mean, stdDev, contourMask);
         
         // Average the standard deviations of all channels
@@ -663,64 +706,43 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         // Score is highest when standard deviation is low (consistent color)
         double colorConsistencyScore = Math.exp(-avgStdDev / 50.0); // Scale factor may need adjustment
         
-        // Clean up
+        // 7. Edge Straightness Score - EXPENSIVE
+        // Use Hu Moments instead of fitLine for efficiency
+        double edgeStraightnessScore = 0.0;
+        try {
+            // Calculate Hu Moments
+            Moments moments = Imgproc.moments(contour);
+                Mat huMomentsMat = new Mat();
+                Imgproc.HuMoments(moments, huMomentsMat);
+                double[] huMoments = new double[7];
+                for (int i = 0; i < 7; i++) {
+                    huMoments[i] = huMomentsMat.get(i, 0)[0];
+            }
+                huMomentsMat.release();    
+        Imgproc.HuMoments(moments, huMoments);
+            
+            // The second Hu moment relates to elongation/symmetry
+            // Lower values indicate more elongated shapes (rectangles)
+            double elongation = huMoments[1];
+            
+            // Convert to a score (higher is better)
+            // For rectangles, this value is typically very small
+            double maxElongation = 0.2; // Adjust based on your expected range
+            edgeStraightnessScore = 1.0 - Math.min(1.0, elongation / maxElongation);
+            
+        } catch (Exception e) {
+            System.out.println("Error calculating edge straightness: " + e.getMessage());
+            edgeStraightnessScore = 0.5; // Default value if calculation fails
+        }
+        
+        // Clean up resources
         contourMask.release();
         roi.release();
         mean.release();
         stdDev.release();
         hull.release();
         hullIndices.release();
-        
-        // 6. Rectangularity Score (contourArea / boxArea)
-        Rect boundingRect = Imgproc.boundingRect(contour);
-        double boxArea = boundingRect.width * boundingRect.height;
-        double rectangularity = (boxArea > 0) ? area / boxArea : 0;
-        
-        // Score is highest when rectangularity is close to 1 (more rectangular)
-        // L-shapes and U-shapes will have lower rectangularity
-        double rectangularityScore = Math.min(1.0, rectangularity);
-        
-        // 7. Edge Straightness Score
-        double edgeStraightnessScore = 0.0;
-        try {
-            // Convert contour to MatOfPoint2f for fitLine
-            MatOfPoint2f contour2f = new MatOfPoint2f(contour.toArray());
-            
-            // Fit a line to the contour
-            Mat lineParams = new Mat();
-            Imgproc.fitLine(contour2f, lineParams, Imgproc.DIST_L2, 0, 0.01, 0.01);
-            
-            // Extract line parameters (vx, vy, x0, y0)
-            float vx = (float) lineParams.get(0, 0)[0];
-            float vy = (float) lineParams.get(1, 0)[0];
-            float x0 = (float) lineParams.get(2, 0)[0];
-            float y0 = (float) lineParams.get(3, 0)[0];
-            
-            // Calculate RMSE (Root Mean Square Error) of points to the fitted line
-            double sumSquaredError = 0.0;
-            Point[] points = contour.toArray();
-            for (Point point : points) {
-                // Calculate distance from point to line
-                // Line equation: (x-x0)*vy - (y-y0)*vx = 0
-                double distance = Math.abs((point.x - x0) * vy - (point.y - y0) * vx) / 
-                                  Math.sqrt(vx * vx + vy * vy);
-                sumSquaredError += distance * distance;
-            }
-            
-            double rmse = Math.sqrt(sumSquaredError / points.length);
-            
-            // Normalize RMSE to a score between 0 and 1
-            // Lower RMSE means straighter edges, so we want a higher score
-            double maxRmse = 10.0; // Adjust based on your expected range
-            edgeStraightnessScore = 1.0 - Math.min(1.0, rmse / maxRmse);
-            
-            // Release resources
-            contour2f.release();
-            lineParams.release();
-        } catch (Exception e) {
-            System.out.println("Error calculating edge straightness: " + e.getMessage());
-            edgeStraightnessScore = 0.5; // Default value if calculation fails
-        }
+        shrunkContour.release();
         
         // Calculate weighted average
         confidence = aspectRatioScore * ASPECT_RATIO_WEIGHT +
@@ -778,7 +800,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
             double maxAreaForDistance = expectedAreaRange[1];
             
             // Filter based on area for this specific distance
-            if (areaPx < minAreaForDistance || areaPx > maxAreaForDistance) {
+            if (areaPx < minAreaForDistance) {
                 // Reject contour – too small or too big *for its distance*
                 continue;
             }
@@ -792,7 +814,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                 // Calculate confidence using the new function
                 double confidence = isBlobSampleConfidence(contour, mask, input);
                 // Process with calculated confidence. Shall we just pass 1 here?
-                processDetectedRect(rect, input, detectedRects, distances, areaPx, confidence);
+                processDetectedRect(rect, input, detectedRects, distances, areaPx, 0.99);
             } else if (aspectRatio > BLOB_ASPECT_RATIO && areaPx > BLOB_AREA_THRESHOLD) { // check if they are worth trying
                 processLargeBlob(contour, mask, input, detectedRects, distances);
             }
@@ -836,7 +858,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
             if (subArea < minContourArea || subArea > maxContourArea) {
                 Imgproc.putText(
                         input,
-                        String.format("skipped - Area"),
+                        String.format("skipped - Area: :%.0f", subArea),
                         new Point(boundingBox.x, boundingBox.y),
                         Imgproc.FONT_HERSHEY_SIMPLEX,
                         0.5,
@@ -851,7 +873,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
             if (subAspectRatio < minAspectRatio || subAspectRatio > maxAspectRatio) {
                 Imgproc.putText(
                         input,
-                        "skipped - Aspect Ratio",
+                         String.format("skipped - Aspect Ratio: :%.2f", subAspectRatio),
                         new Point(boundingBox.x, boundingBox.y),
                         Imgproc.FONT_HERSHEY_SIMPLEX,
                         0.5,
@@ -1399,6 +1421,10 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
             contour.release();
         }
         
+        Bitmap bmp = matToBitmap(input);
+        FtcDashboard.getInstance().sendImage(bmp);
+
+
         return input;
     }
 }
