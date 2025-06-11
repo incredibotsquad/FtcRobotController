@@ -116,13 +116,15 @@ public class RobotControl
 
         CreateStateFromButtonPress();
 
-        ProcessState();
+        TranslateStateIntoActions();
+
+        ProcessActions();
 
 //        ProcessSafetyChecks();
 //
         ProcessDPad();
         ProcessBumpers();
-
+        ProcessJoystick();
         ProcessPickSampleState();
     }
 
@@ -203,6 +205,7 @@ public class RobotControl
 
                 robotHardware.stopRobotAndMechanisms();
                 runningActions.clear();
+                stateTransitionInProgress = false;
             }
 
             targetRobotState = newTargetRobotState;
@@ -210,7 +213,7 @@ public class RobotControl
     }
 
 
-    public void GetSampleChoicesFromCameraInputs() {
+    private void GetSampleChoicesFromCameraInputs() {
 
         sampleChoices.clear();  //remove any previous choices
 
@@ -279,9 +282,9 @@ public class RobotControl
 
 
     //function to take the new target state and turn it into robot movements
-    private void ProcessState() {
+    private void TranslateStateIntoActions() {
 
-        if (currentRobotState == targetRobotState) return;
+//        if (currentRobotState == targetRobotState) return;
 
         if (!stateTransitionInProgress) {
 
@@ -363,26 +366,6 @@ public class RobotControl
                     break;
             }
 
-            stateTransitionInProgress = true;
-        }
-
-        ProcessActions();
-
-        if (runningActions.isEmpty()) {
-            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "DONE RUNNING ACTIONS");
-            currentRobotState = targetRobotState;
-            stateTransitionInProgress = false;
-
-            //set new state based on older target
-            switch (targetRobotState) {
-                case LOW_BASKET:
-                case HIGH_BASKET:
-//                    targetRobotState = ROBOT_STATE.PICK_SAMPLE;
-                    break;
-                case SNAP_SPECIMEN:
-                    targetRobotState = ROBOT_STATE.PICK_SPECIMEN;
-                    break;
-            }
         }
     }
 
@@ -390,7 +373,12 @@ public class RobotControl
     {
         TelemetryPacket packet = new TelemetryPacket();
 
-        // update running actions
+        // we have actions to run, state transition in proogress
+        if (!runningActions.isEmpty()) {
+            stateTransitionInProgress = true;
+        }
+
+        // run actions and add pending ones to new list
         List<Action> newActions = new ArrayList<>();
         for (Action action : runningActions) {
             action.preview(packet.fieldOverlay());
@@ -401,6 +389,32 @@ public class RobotControl
         }
         runningActions = newActions;
         dashboard.sendTelemetryPacket(packet);
+
+        if (runningActions.isEmpty()) {
+            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "DONE RUNNING ACTIONS");
+            currentRobotState = targetRobotState;
+            targetRobotState = ROBOT_STATE.NONE;
+            stateTransitionInProgress = false;
+
+            //NOTE: CAREFUL NOT TO CONSTRUCT LOOPS HERE
+            // STATE A -> STATE B -> STATE A
+            //set new state based on older target
+
+            //TODO: IF WE GO FROM ENTER SUB TO PICK SAMPLE, GO BACK TO ENTER SUB
+            //TODO: IF WE GO FROM RESTING TO PICK SAMPLE
+
+            switch (targetRobotState) {
+                case LOW_BASKET:
+                case HIGH_BASKET:
+//                    targetRobotState = ROBOT_STATE.PICK_SAMPLE;
+                    break;
+                case SNAP_SPECIMEN:
+//                    targetRobotState = ROBOT_STATE.PICK_SPECIMEN;
+                    break;
+                default:
+                    targetRobotState = ROBOT_STATE.NONE;
+            }
+        }
     }
 
     public void ProcessPickSampleState() {
@@ -669,10 +683,9 @@ public class RobotControl
                 new VerticalClawAction(robotHardware, true, false, false)
         );
 
-//        return new ParallelAction(
-//                    horizontalActions,
-//                    verticalActions);
-        return verticalActions;
+        return new ParallelAction(
+                    horizontalActions,
+                    verticalActions);
     }
 
     private Action GetSnapSpecimenActionSequence() {
@@ -687,11 +700,17 @@ public class RobotControl
                 new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_PICK_SPECIMEN, false, false)
         );
 
-        Action verticalActions = new ParallelAction(
-                new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_SNAP_HIGH_SPECIMEN, false, false),
-                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_SNAP_HIGH_SPECIMEN, false, false),
-                new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_SNAP_HIGH_SPECIMEN, false, false),
-                new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_SNAP_HIGH_SPECIMEN, false, false)
+        Action verticalActions = new SequentialAction(
+                new ParallelAction(
+                        new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_SNAP_HIGH_SPECIMEN, true, false),
+                        new VerticalClawAction(robotHardware, false, false, false) //close the claw to make sure we pass thru the slides
+                ),
+                new ParallelAction(
+                        new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_SNAP_HIGH_SPECIMEN, true, false),
+                        new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_SNAP_HIGH_SPECIMEN, true, false),
+                        new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_SNAP_HIGH_SPECIMEN, false, false)
+                ),
+                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_RESTING, true, false)
         );
 
         return new ParallelAction(
@@ -700,6 +719,7 @@ public class RobotControl
         );
     }
 
+    /// Function to move the slide and turret in response to DPAD presses
     private void ProcessDPad() {
         if (gamepad2.dpad_up) { //slide out
             int slidePos = robotHardware.getHorizontalSlidePosition();
@@ -726,6 +746,7 @@ public class RobotControl
         }
     }
 
+    /// Function to open / close the horizontal claw in response to bumper buttons
     private void ProcessBumpers(){
         if (gamepad2.right_bumper) {
             robotHardware.setHorizontalClawState(true);
@@ -734,5 +755,20 @@ public class RobotControl
         if (gamepad2.left_bumper) {
             robotHardware.setHorizontalClawState(false);
         }
+    }
+
+
+    ///Function to move the horizontal wrist in response to the left joystick movement
+    private void ProcessJoystick() {
+        if (gamepad2.left_stick_x < 0) {
+            double wristPos = robotHardware.getHorizontalWristServoPosition();
+            wristPos = Math.max(wristPos - RobotConstants.HORIZONTAL_WRIST_INCREMENT, 0);
+            robotHardware.setHorizontalWristServoPosition(wristPos);
+        } else if (gamepad2.left_stick_x > 0) {
+            double wristPos = robotHardware.getHorizontalWristServoPosition();
+            wristPos = Math.min(wristPos + RobotConstants.HORIZONTAL_WRIST_INCREMENT, 1);
+            robotHardware.setHorizontalWristServoPosition(wristPos);
+        }
+
     }
 }
