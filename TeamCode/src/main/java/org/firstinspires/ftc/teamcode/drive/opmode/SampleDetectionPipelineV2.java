@@ -5,7 +5,7 @@ import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.photo.Photo;
 import org.openftc.easyopencv.OpenCvPipeline;
-
+import org.w3c.dom.css.Rect;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -17,8 +17,8 @@ import com.acmerobotics.dashboard.config.Config;
 
 import org.opencv.android.Utils;
 import android.graphics.Bitmap;
-
-
+import apple.laf.JRSUIConstants.Size;
+import javafx.scene.effect.Light.Point;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -76,6 +76,9 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
     public static double MIN_AREA_RATIO = 0.15; // Minimum area ratio for valid sub-contours in distance transform
     public static double MIN_BRIGHTNESS_THRESHOLD = 50.0; // Minimum brightness threshold (0-255)
     public static double BRIGHTNESS_WEIGHT = 0.2; // Weight for brightness in confidence calculation
+    
+    // Tuning mode for displaying HSV values of detected blobs
+    public static boolean tuningMode = false; // Toggle this in the dashboard to enable tuning mode
 
     // // Camera control settings
     // public static boolean enableManualExposure = false;
@@ -668,6 +671,34 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
     }
 
     /**
+     * Calculate the mean HSV values for a contour
+     * 
+     * @param contour The contour to analyze
+     * @param hsvImage The HSV image
+     * @return Scalar containing mean H, S, V values
+     */
+    private Scalar calculateMeanHSV(MatOfPoint contour, Mat hsvImage) {
+        try {
+            // Create a mask for just this contour
+            Mat contourMask = Mat.zeros(hsvImage.size(), CvType.CV_8UC1);
+            List<MatOfPoint> contourList = new ArrayList<>();
+            contourList.add(contour);
+            Imgproc.drawContours(contourMask, contourList, 0, new Scalar(255), -1);
+            
+            // Calculate mean HSV values
+            Scalar meanHSV = Core.mean(hsvImage, contourMask);
+            
+            // Release the mask
+            contourMask.release();
+            
+            return meanHSV;
+        } catch (Exception e) {
+            System.out.println("Error calculating mean HSV: " + e.getMessage());
+            return new Scalar(0, 0, 0);
+        }
+    }
+    
+    /**
      * Process contours to detect rectangles and calculate distances
      * 
      * @param contours List of contours to process
@@ -715,8 +746,36 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
             if (areaPx >= minContourArea && areaPx <= maxContourArea) {
                 // Calculate confidence using the new function
                 double confidence = isBlobSampleConfidence(contour, mask, input);
-                // Process with calculated confidence. Shall we just pass 1 here?
-                processDetectedRect(rect, input, detectedRects, distances, areaPx, 0.99);
+                
+                // If tuning mode is enabled, calculate and display HSV values
+                if (tuningMode) {
+                    // Calculate mean HSV values for this contour
+                    Scalar meanHSV = calculateMeanHSV(contour, hsv);
+                    
+                    // Display HSV values on the image
+                    String hsvText = String.format("H:%.0f S:%.0f V:%.0f", 
+                                                  meanHSV.val[0], meanHSV.val[1], meanHSV.val[2]);
+                    
+                    // Position the text above the contour
+                    Point textPosition = new Point(rect.center.x, rect.center.y - 20);
+                    
+                    // Draw the HSV values on the image
+                    Imgproc.putText(
+                        input,
+                        hsvText,
+                        textPosition,
+                        Imgproc.FONT_HERSHEY_SIMPLEX,
+                        0.5,
+                        new Scalar(255, 255, 0), // Yellow color
+                        1
+                    );
+                    
+                    // Log the values to the console as well
+                    System.out.println("Blob HSV values: " + hsvText);
+                }
+                
+                // Process with calculated confidence
+                processDetectedRect(rect, input, detectedRects, distances, areaPx, confidence);
             } else if (aspectRatio > BLOB_ASPECT_RATIO && areaPx > BLOB_AREA_THRESHOLD) { // check if they are worth trying
                 processLargeBlob(contour, mask, input, detectedRects, distances);
             }
@@ -1354,9 +1413,14 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         input.copyTo(leftSide);
         
         // Convert mask to BGR for display (mask is single-channel)
-        Mat maskBGR = new Mat();
-        Imgproc.cvtColor(mask, maskBGR, Imgproc.COLOR_GRAY2BGR);
         
+        Mat maskDisplay = new Mat();
+        Imgproc.threshold(mask, maskDisplay, 1, 255, Imgproc.THRESH_BINARY);
+        Mat maskBGR = new Mat();
+        Imgproc.cvtColor(maskDisplay, maskBGR, Imgproc.COLOR_GRAY2BGR);
+        maskDisplay.release();
+
+
         // Copy mask to right side
         Mat rightSide = combinedImage.submat(rightROI);
         maskBGR.copyTo(rightSide);
