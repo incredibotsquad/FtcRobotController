@@ -66,15 +66,22 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
     // Watershed fragmentation has been removed
     public static boolean enableDistanceTransformFragmentation = false;
     public static boolean enableAdaptiveThresholdFragmentation = false;
-    public static boolean enableMorphologicalGradientFragmentation = false;
-    public static boolean enableContourSplittingFragmentation = false;
+    //public static boolean enableMorphologicalGradientFragmentation = false;
+    //public static boolean enableContourSplittingFragmentation = false;
     public static boolean enableCannyEdgeFragmentation = false; // Added Canny edge detection
+    
+    // Morphological operation controls
+    public static boolean enableDilationAfterOpening = false; // Optional dilation after opening
+    public static int dilationKernelSize = 3; // Kernel size for dilation (must be odd)
+    public static double MIN_AREA_RATIO = 0.15; // Minimum area ratio for valid sub-contours in distance transform
+    public static double MIN_BRIGHTNESS_THRESHOLD = 50.0; // Minimum brightness threshold (0-255)
+    public static double BRIGHTNESS_WEIGHT = 0.2; // Weight for brightness in confidence calculation
 
-    // Camera control settings
-    public static boolean enableManualExposure = false;
-    public static boolean enableManualWhiteBalance = false;
-    public static int manualExposureValue = 50; // Default exposure value (0-100)
-    public static int manualWhiteBalanceValue = 50; // Default white balance value (0-100)
+    // // Camera control settings
+    // public static boolean enableManualExposure = false;
+    // public static boolean enableManualWhiteBalance = false;
+    // public static int manualExposureValue = 50; // Default exposure value (0-100)
+    // public static int manualWhiteBalanceValue = 50; // Default white balance value (0-100)
 
     // OpenCV camera instance
     private org.openftc.easyopencv.OpenCvCamera camera;
@@ -449,11 +456,20 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
      * 
      * @param input Input image
      * @param output Output blurred image
+     * @param kernelSize Size of the blur kernel
+     */
+    private void applyGaussianBlur(Mat input, Mat output, Size kernelSize) {
+        Imgproc.GaussianBlur(input, output, kernelSize, 0);
+    }
+    
+    /**
+     * Apply Gaussian blur to the image with default kernel size (3x3)
+     * 
+     * @param input Input image
+     * @param output Output blurred image
      */
     private void applyGaussianBlur(Mat input, Mat output) {
-        // Currently not applying blur, just returning the input
-        // Uncomment the following line to apply Gaussian blur
-        // Imgproc.GaussianBlur(input, output, new Size(3, 3), 0);
+        applyGaussianBlur(input, output, new Size(3, 3));
     }
 
     /**
@@ -498,7 +514,23 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
      * @param output Output processed mask
      */
     private void applyMorphologicalOperations(Mat input, Mat output) {
+        // Apply opening operation (erosion followed by dilation)
         Imgproc.morphologyEx(input, output, Imgproc.MORPH_OPEN, getMorphKernel());
+        
+        // Apply optional dilation after opening if enabled
+        if (enableDilationAfterOpening) {
+            // Create dilation kernel with the specified size
+            Mat dilationKernel = Imgproc.getStructuringElement(
+                Imgproc.MORPH_RECT, 
+                new Size(dilationKernelSize, dilationKernelSize)
+            );
+            
+            // Apply dilation to the output of the opening operation
+            Imgproc.dilate(output, output, dilationKernel);
+            
+            // Release the kernel
+            dilationKernel.release();
+        }
     }
 
     /**
@@ -523,10 +555,11 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
      * @return Confidence score between 0 and 1
      */
     private double isBlobSampleConfidence(MatOfPoint contour, Mat mask, Mat input) {
-        // Weights for different metrics (should sum to 1.0)
-        final double ASPECT_RATIO_WEIGHT = 0.4;
-        final double AREA_WEIGHT = 0.3;
-        final double RECTANGULARITY_WEIGHT = 0.3;
+        // Weights for different metrics (should sum to 1.0 - BRIGHTNESS_WEIGHT)
+        final double ASPECT_RATIO_WEIGHT = 0.35;
+        final double AREA_WEIGHT = 0.25;
+        final double RECTANGULARITY_WEIGHT = 0.2;
+        // BRIGHTNESS_WEIGHT is defined as a static variable (0.2)
         
         // Calculate metrics
         double confidence = 0.0;
@@ -573,10 +606,44 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         double rectangularity = (boxArea > 0) ? area / boxArea : 0;
         double rectangularityScore = Math.min(1.0, rectangularity);
         
-        // Calculate weighted average of the three metrics
+        // 4. Brightness Score - NEW
+        double brightnessScore = 1.0; // Default to full score
+        
+        try {
+            // Create a mask for just this contour
+            Mat contourMask = Mat.zeros(mask.size(), CvType.CV_8UC1);
+            List<MatOfPoint> contourList = new ArrayList<>();
+            contourList.add(contour);
+            Imgproc.drawContours(contourMask, contourList, 0, new Scalar(255), -1);
+            
+            // Extract the region from the input image
+            Mat gray = new Mat();
+            Imgproc.cvtColor(input, gray, Imgproc.COLOR_RGB2GRAY);
+            
+            // Calculate mean brightness of the contour region
+            Scalar meanScalar = Core.mean(gray, contourMask);
+            double meanBrightness = meanScalar.val[0]; // Grayscale has one channel
+            
+            // Calculate brightness score
+            if (meanBrightness < MIN_BRIGHTNESS_THRESHOLD) {
+                // Linear scaling from 0 to 1 based on brightness
+                brightnessScore = meanBrightness / MIN_BRIGHTNESS_THRESHOLD;
+            }
+            
+            // Release temporary Mats
+            contourMask.release();
+            gray.release();
+            
+        } catch (Exception e) {
+            System.out.println("Error calculating brightness: " + e.getMessage());
+            // Keep default brightness score on error
+        }
+        
+        // Calculate weighted average of all metrics
         confidence = aspectRatioScore * ASPECT_RATIO_WEIGHT +
                      areaScore * AREA_WEIGHT +
-                     rectangularityScore * RECTANGULARITY_WEIGHT;
+                     rectangularityScore * RECTANGULARITY_WEIGHT +
+                     brightnessScore * BRIGHTNESS_WEIGHT;
         
         // Ensure confidence is between 0 and 1
         confidence = Math.max(0.0, Math.min(1.0, confidence));
@@ -783,23 +850,22 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
             resultContours.addAll(adaptiveThresholdContours);
         }
         
-        if (enableMorphologicalGradientFragmentation) {
-            List<MatOfPoint> morphologicalGradientContours = applyMorphologicalGradientFragmentation(contour, roi, mask, boundingBox, input, false);
-            resultContours.addAll(morphologicalGradientContours);
-        }
+        // if (enableMorphologicalGradientFragmentation) {
+        //     List<MatOfPoint> morphologicalGradientContours = applyMorphologicalGradientFragmentation(contour, roi, mask, boundingBox, input, false);
+        //     resultContours.addAll(morphologicalGradientContours);
+        // }
         
-        if (enableContourSplittingFragmentation) {
-            List<MatOfPoint> contourSplittingContours = applyContourSplittingFragmentation(contour, roi, mask, boundingBox, input, false);
-            resultContours.addAll(contourSplittingContours);
-        }
+        // if (enableContourSplittingFragmentation) {
+        //     List<MatOfPoint> contourSplittingContours = applyContourSplittingFragmentation(contour, roi, mask, boundingBox, input, false);
+        //     resultContours.addAll(contourSplittingContours);
+        // }
         
     
         
         return resultContours;
     }
 
-    // Watershed fragmentation method has been removed
-
+    
     /**
      * Apply distance transform algorithm to fragment a blob
      * 
@@ -827,29 +893,74 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
             // Normalize and threshold to find peaks
             Core.normalize(distanceTransform, distanceTransform, 0, 1.0, Core.NORM_MINMAX);
             
-            // Apply adaptive threshold to find peaks
-            Mat thresholded = new Mat();
+            // Get the maximum value for thresholding
             Core.MinMaxLocResult mm = Core.minMaxLoc(distanceTransform);
-            double thresh = mm.maxVal * DISTANCE_THRESHOLD_RATIO;
-            Imgproc.threshold(distanceTransform, thresholded, thresh, 1.0, Imgproc.THRESH_BINARY);
+            double maxVal = mm.maxVal;
             
-            // Convert to 8-bit for findContours
-            Mat thresholdedU8 = new Mat();
-            thresholded.convertTo(thresholdedU8, CvType.CV_8U, 255);
+            // Try multiple threshold values and keep the best result
+            List<MatOfPoint> bestContours = new ArrayList<>();
+            int maxValidContours = 0;
             
-            // Find contours of the thresholded image
-            List<MatOfPoint> dtContours = new ArrayList<>();
-            Mat dtHierarchy = new Mat();
-            Imgproc.findContours(thresholdedU8, dtContours, dtHierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+            // Original contour area for comparison
+            double originalArea = Imgproc.contourArea(contour);
             
-            // Add to result
-            resultContours.addAll(dtContours);
+            // Try different threshold values from 0.2 to 0.8 of max value
+            for (double t = 0.2; t <= 0.8; t += 0.2) {
+                // Apply threshold at this level
+                Mat thresholded = new Mat();
+                Imgproc.threshold(distanceTransform, thresholded, t * maxVal, 1.0, Imgproc.THRESH_BINARY);
+                
+                // Convert to 8-bit for findContours
+                Mat thresholdedU8 = new Mat();
+                thresholded.convertTo(thresholdedU8, CvType.CV_8U, 255);
+                
+                // Find contours at this threshold
+                List<MatOfPoint> currentContours = new ArrayList<>();
+                Mat hierarchy = new Mat();
+                Imgproc.findContours(thresholdedU8, currentContours, hierarchy, 
+                                    Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+                
+                // Count valid contours (area ratio >= MIN_AREA_RATIO)
+                int validContours = 0;
+                for (MatOfPoint c : currentContours) {
+                    double area = Imgproc.contourArea(c);
+                    double areaRatio = area / originalArea;
+                    
+                    if (areaRatio >= MIN_AREA_RATIO) {
+                        validContours++;
+                    }
+                }
+                
+                // If this threshold produced more valid contours, keep it as the best
+                if (validContours > maxValidContours) {
+                    maxValidContours = validContours;
+                    
+                    // Clear previous best contours and release them
+                    for (MatOfPoint c : bestContours) {
+                        c.release();
+                    }
+                    bestContours.clear();
+                    
+                    // Add all contours from this threshold to best contours
+                    bestContours.addAll(currentContours);
+                } else {
+                    // Release contours that aren't the best
+                    for (MatOfPoint c : currentContours) {
+                        c.release();
+                    }
+                }
+                
+                // Release resources for this iteration
+                thresholded.release();
+                thresholdedU8.release();
+                hierarchy.release();
+            }
             
-            // Release resources
+            // Add the best contours to the result
+            resultContours.addAll(bestContours);
+            
+            // Release the distance transform
             distanceTransform.release();
-            thresholded.release();
-            thresholdedU8.release();
-            dtHierarchy.release();
             
         } catch (Exception e) {
             System.out.println("Error in distance transform fragmentation: " + e.getMessage());
@@ -880,7 +991,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         try {
             // Apply Gaussian blur to smooth the image
             Mat blurred = new Mat();
-            Imgproc.GaussianBlur(roi, blurred, new Size(5, 5), 0);
+            applyGaussianBlur(roi, blurred, new Size(5, 5));
             
             // Apply adaptive threshold
             Mat adaptiveThresh = new Mat();
@@ -1005,7 +1116,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
             Mat maskSplit = new Mat();
 
             // 1. Slight blur suppresses salt-and-pepper noise
-            Imgproc.GaussianBlur(roi, edges, new Size(3, 3), 0);
+            applyGaussianBlur(roi, edges);
 
             // 2. Canny on the binary image (roi is 0/255 already)
             Imgproc.Canny(edges, edges, 50, 150);
@@ -1199,6 +1310,9 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         
         // Apply color thresholding
         applyColorThreshold(hsv, mask);
+
+        //Apply gaussian blur to the mask
+        applyGaussianBlur(mask, mask, new Size(5, 5));
         
         // Apply morphological operations
         applyMorphologicalOperations(mask, mask);
@@ -1224,9 +1338,60 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
             contour.release();
         }
         
-        Bitmap bmp = matToBitmap(input);
+        // Create a combined image for dashboard display (input + mask side by side)
+        // Use full resolution for both images
+        int fullWidth = input.cols() * 2;  // Double width to fit both images
+        int fullHeight = input.rows();     // Keep original height
+        
+        Mat combinedImage = new Mat(fullHeight, fullWidth, input.type());
+        
+        // Define regions for input and mask
+        Rect leftROI = new Rect(0, 0, input.cols(), input.rows());
+        Rect rightROI = new Rect(input.cols(), 0, input.cols(), input.rows());
+        
+        // Copy input to left side
+        Mat leftSide = combinedImage.submat(leftROI);
+        input.copyTo(leftSide);
+        
+        // Convert mask to BGR for display (mask is single-channel)
+        Mat maskBGR = new Mat();
+        Imgproc.cvtColor(mask, maskBGR, Imgproc.COLOR_GRAY2BGR);
+        
+        // Copy mask to right side
+        Mat rightSide = combinedImage.submat(rightROI);
+        maskBGR.copyTo(rightSide);
+        
+        // Add labels to the images
+        Imgproc.putText(
+            combinedImage, 
+            "Input with Detections", 
+            new Point(10, 30), 
+            Imgproc.FONT_HERSHEY_SIMPLEX, 
+            0.8, 
+            new Scalar(0, 255, 0), 
+            2
+        );
+        
+        Imgproc.putText(
+            combinedImage, 
+            "Binary Mask", 
+            new Point(input.cols() + 10, 30), 
+            Imgproc.FONT_HERSHEY_SIMPLEX, 
+            0.8, 
+            new Scalar(0, 255, 0), 
+            2
+        );
+        
+        // Convert to bitmap and send to dashboard
+        // Note: This will maintain the full resolution of both images side by side
+        Bitmap bmp = matToBitmap(combinedImage);
         FtcDashboard.getInstance().sendImage(bmp);
-
+        
+        // Release temporary Mats
+        leftSide.release();
+        rightSide.release();
+        maskBGR.release();
+        combinedImage.release();
 
         return input;
     }
