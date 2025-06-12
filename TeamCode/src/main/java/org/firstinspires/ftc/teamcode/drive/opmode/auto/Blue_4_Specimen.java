@@ -35,6 +35,18 @@ public class Blue_4_Specimen extends BaseAuto{
                 .strafeToConstantHeading(coordinates.BRACE_RUNGS_FOR_SPECIMEN_ONE.position)
                 .build();
 
+        Action moveBetweenSamplesOneAndTwo = mecanumDrive.actionBuilder(coordinates.BRACE_RUNGS_FOR_SPECIMEN_ONE)
+                .setTangent(coordinates.reverseHeading)
+                .splineToConstantHeading(coordinates.SLIDE_BETWEEN_SAMP1_SAMP2, coordinates.heading, new TranslationalVelConstraint(coordinates.minTransVelocity), new ProfileAccelConstraint(coordinates.minAccel, coordinates.maxAccel))
+                .build();
+
+        Action moveBetweenSamplesTwoAndThree = mecanumDrive.actionBuilder(coordinates.BRACE_RUNGS_FOR_SPECIMEN_ONE)
+                .setTangent(coordinates.reverseHeading)
+                .strafeToConstantHeading(coordinates.SLIDE_BETWEEN_SAMP2_SAMP3, new TranslationalVelConstraint(coordinates.minTransVelocity), new ProfileAccelConstraint(coordinates.minAccel, coordinates.maxAccel))
+                .build();
+
+
+
 //        Action SamplePushingWithSplines = mecanumDrive.actionBuilder(coordinates.BRACE_RUNGS_FOR_SPECIMEN_ONE)
 //                .setTangent(coordinates.reverseHeading)
 //                .splineToConstantHeading(coordinates.SLIDE_NEXT_TO_SAMP_1, coordinates.heading, new TranslationalVelConstraint(coordinates.minTransVelocity), new ProfileAccelConstraint(coordinates.minAccel, coordinates.maxAccel))
@@ -81,10 +93,24 @@ public class Blue_4_Specimen extends BaseAuto{
 //                .splineToConstantHeading(PARK.position, PARK.heading)
 //                .build();
 //
-//        waitForStart();
+        waitForStart();
 //
-//        while (opModeIsActive()) {
-//            ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+        while (opModeIsActive()) {
+            ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+
+            //snap preloaded specimen
+            Actions.runBlocking(
+                    new SequentialAction(
+                            new ParallelAction(
+                                    robotPreloadedSpecimen,
+                                    robotControl.GetHangSpecimenActionSequence()
+                            ),
+                            robotControl.GetSnapSpecimenActionSequence()
+                    )
+            );
+
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "ELAPSED TIME AFTER PRELOADED SNAP: " + timer.milliseconds());
+
 //
 //            //snap preloaded specimen
 //            Actions.runBlocking(
@@ -186,5 +212,5 @@ public class Blue_4_Specimen extends BaseAuto{
 //
 //            break;
 //        }
-//    }
+    }
 }}

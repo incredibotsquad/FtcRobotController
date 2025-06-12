@@ -64,6 +64,7 @@ public class RobotControl
         LOW_BASKET,
         HIGH_BASKET,
         PICK_SPECIMEN,
+        HANG_SPECIMEN,
         SNAP_SPECIMEN,
         ROBOT_HANG
     }
@@ -190,7 +191,10 @@ public class RobotControl
         }
 
         if (gamepad2.y) {
-            if (gamepad2.right_trigger > 0) {
+            if (gamepad2.left_trigger > 0) {
+                newTargetRobotState = ROBOT_STATE.HANG_SPECIMEN;
+            }
+            else if (gamepad2.right_trigger > 0) {
                 newTargetRobotState = ROBOT_STATE.HIGH_BASKET;
             }
         }
@@ -275,7 +279,7 @@ public class RobotControl
         for (HorizontalPickupVector choice: sampleChoices) {
             Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. horizontalSlidePosition: " + choice.slidePosition);
             Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. turretMovementAngle: " + choice.turretPosition);
-            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. horizontalWristPosition: " + choice.clawOrientation);
+            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. horizontalWristPosition: " + choice.wristOrientation);
             Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "==================================================================");
         }
     }
@@ -313,6 +317,18 @@ public class RobotControl
                 case PICK_SAMPLE:   //PICK SAMPLE
                     Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: PICK SAMPLE");
 
+                    //NOTE: if we are going through enter/exit sub, operators are manually adjusting positions
+                    //in such a case, the onlu choice should be the current position
+                    if (currentRobotState == ROBOT_STATE.ENTER_EXIT_SUB){
+                        //use current slide / turret / wrist position
+                        sampleChoices.clear();
+                        sampleChoices.add(new HorizontalPickupVector(robotHardware.getHorizontalSlidePosition(), robotHardware.getHorizontalTurretServoPosition(), robotHardware.getHorizontalWristServoPosition()));
+                    }
+                    else {
+                        //get slide / turret / wrist from camera
+                        GetSampleChoicesFromCameraInputs();
+                    }
+
                     runningActions.add(GetPickSampleActionSequence());
 
                     break;
@@ -348,6 +364,13 @@ public class RobotControl
                     Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: PICK SPECIMEN");
 
                     runningActions.add(GetPickSpecimenActionSequence());
+
+                    break;
+
+                case HANG_SPECIMEN:
+                    Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: HANG SPECIMEN");
+
+                    runningActions.add(GetHangSpecimenActionSequence());
 
                     break;
 
@@ -497,20 +520,16 @@ public class RobotControl
 
     public Action GetPickSampleActionSequence() {
 
-
-        //THE CONSTANTS BELOW NEED TO COME FROM THE CAMERA
-        GetSampleChoicesFromCameraInputs();
-
         //TODO: THIS SHOULD START A RED LIGHT OR SOMETHING
         if (sampleChoices.isEmpty()) return new SleepAction(0.05);
 
         // TODO: NEED TO MAKE SURE WE HAVE A GOOD WAY TO FIND OUT IF WE HAVE A SAMPLE
-        // IF WE DONT, THEN WE NEED TO GO TO OTHER CHOICES.
+        // IF WE DON'T, THEN WE NEED TO GO TO OTHER CHOICES.
         HorizontalPickupVector choice = sampleChoices.get(0);
 
         Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetPickSampleActionSequence: SampleChoice: Slide: " + choice.slidePosition);
         Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetPickSampleActionSequence: SampleChoice: Turret: " + choice.turretPosition);
-        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetPickSampleActionSequence: SampleChoice: Claw: " + choice.clawOrientation);
+        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetPickSampleActionSequence: SampleChoice: Claw: " + choice.wristOrientation);
 
         Action verticalActions = GetVerticalActionsForTransfer();
 
@@ -522,7 +541,7 @@ public class RobotControl
                         new HorizontalTurretAction(robotHardware, choice.turretPosition, false, false),
                         new HorizontalSlideAction(robotHardware, choice.slidePosition, true, false),
                         new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SAMPLE, true, false),
-                        new HorizontalWristAction(robotHardware, choice.clawOrientation, false,false)
+                        new HorizontalWristAction(robotHardware, choice.wristOrientation, false,false)
                 ),
                 new InstantAction(() -> readyToPickSample = true)
         );
@@ -571,7 +590,7 @@ public class RobotControl
 
     }
 
-    private Action GetTransferToObZoneActionSequence() {
+    public Action GetTransferToObZoneActionSequence() {
 
         //TODO: MOVE ROBOT TO OB ZONE ??
 
@@ -597,7 +616,7 @@ public class RobotControl
         );
     }
 
-    private Action GetLowBasketActionSequence() {
+    public Action GetLowBasketActionSequence() {
 
         // TODO: MOVE ROBOT TO BASKET COORDINATES
 
@@ -627,7 +646,7 @@ public class RobotControl
         );
     }
 
-    private Action GetHighBasketActionSequence() {
+    public Action GetHighBasketActionSequence() {
 
         // TODO: MOVE ROBOT TO BASKET COORDINATES
 
@@ -658,7 +677,7 @@ public class RobotControl
         );
     }
 
-    private Action GetPickSpecimenActionSequence() {
+    public Action GetPickSpecimenActionSequence() {
         //TODO: MOVE ROBOT TO PICK SPECIMEN
 
         // HORIZONTAL STATE SHOULD HAVE ALREADY BEEN DONE DURING TRANSFER
@@ -688,7 +707,7 @@ public class RobotControl
                     verticalActions);
     }
 
-    private Action GetSnapSpecimenActionSequence() {
+    public Action GetHangSpecimenActionSequence() {
         //TODO: MOVE ROBOT TO SNAP SPECIMEN
 
         // HORIZONTAL STATE SHOULD HAVE ALREADY BEEN DONE DURING PICK SPECIMEN
@@ -709,13 +728,21 @@ public class RobotControl
                         new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_SNAP_HIGH_SPECIMEN, true, false),
                         new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_SNAP_HIGH_SPECIMEN, true, false),
                         new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_SNAP_HIGH_SPECIMEN, false, false)
-                ),
-                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_RESTING, true, false)
+                )
         );
 
         return new ParallelAction(
                 horizontalActions,
                 verticalActions
+        );
+    }
+
+    public Action GetSnapSpecimenActionSequence() {
+        //TODO: MOVE ROBOT TO SNAP SPECIMEN
+
+        return new SequentialAction(
+                GetHangSpecimenActionSequence(),
+                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_RESTING, true, false)
         );
     }
 
@@ -757,14 +784,15 @@ public class RobotControl
         }
     }
 
-
     ///Function to move the horizontal wrist in response to the left joystick movement
     private void ProcessJoystick() {
         if (gamepad2.left_stick_x < 0) {
             double wristPos = robotHardware.getHorizontalWristServoPosition();
             wristPos = Math.max(wristPos - RobotConstants.HORIZONTAL_WRIST_INCREMENT, 0);
             robotHardware.setHorizontalWristServoPosition(wristPos);
-        } else if (gamepad2.left_stick_x > 0) {
+        }
+
+        if (gamepad2.left_stick_x > 0) {
             double wristPos = robotHardware.getHorizontalWristServoPosition();
             wristPos = Math.min(wristPos + RobotConstants.HORIZONTAL_WRIST_INCREMENT, 1);
             robotHardware.setHorizontalWristServoPosition(wristPos);
