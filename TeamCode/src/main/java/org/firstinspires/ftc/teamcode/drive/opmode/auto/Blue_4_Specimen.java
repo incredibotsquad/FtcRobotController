@@ -45,56 +45,26 @@ public class Blue_4_Specimen extends BaseAuto{
                 .strafeToConstantHeading(coordinates.SLIDE_BETWEEN_SAMP2_SAMP3, new TranslationalVelConstraint(coordinates.minTransVelocity), new ProfileAccelConstraint(coordinates.minAccel, coordinates.maxAccel))
                 .build();
 
+        Action pickAndSnapSpecimenTwo = mecanumDrive.actionBuilder(new Pose2d(coordinates.PICK_SPECIMEN, coordinates.heading))
+                .strafeToConstantHeading(coordinates.BRACE_RUNGS_FOR_SPECIMEN_TWO.position)
+                .build();
 
+        Action pickAndSnapSpecimenThree = mecanumDrive.actionBuilder(new Pose2d(coordinates.PICK_SPECIMEN, coordinates.heading))
+                .strafeToConstantHeading(coordinates.BRACE_RUNGS_FOR_SPECIMEN_THREE.position)
+                .build();
 
-//        Action SamplePushingWithSplines = mecanumDrive.actionBuilder(coordinates.BRACE_RUNGS_FOR_SPECIMEN_ONE)
-//                .setTangent(coordinates.reverseHeading)
-//                .splineToConstantHeading(coordinates.SLIDE_NEXT_TO_SAMP_1, coordinates.heading, new TranslationalVelConstraint(coordinates.minTransVelocity), new ProfileAccelConstraint(coordinates.minAccel, coordinates.maxAccel))
-//                .splineToConstantHeading(coordinates.SLIDE_BEHIND_SAMP_1, coordinates.reverseHeading, new TranslationalVelConstraint(coordinates.minTransVelocity), new ProfileAccelConstraint(coordinates.minAccel, coordinates.maxAccel))
-//                .splineToConstantHeading(coordinates.PUSH_SAMP_1, coordinates.reverseHeading, new TranslationalVelConstraint(coordinates.minTransVelocity), new ProfileAccelConstraint(coordinates.minAccel, coordinates.maxAccel))
-//                .splineToConstantHeading(coordinates.SLIDE_BEHIND_SAMP_1, coordinates.heading, new TranslationalVelConstraint(coordinates.minTransVelocity), new ProfileAccelConstraint(coordinates.minAccel, coordinates.maxAccel))
-//                .splineToConstantHeading(coordinates.SLIDE_BEHIND_SAMP_2, coordinates.reverseHeading, new TranslationalVelConstraint(coordinates.minTransVelocity), new ProfileAccelConstraint(coordinates.minAccel, coordinates.maxAccel))
-//                .splineToConstantHeading(coordinates.PUSH_SAMP_2, coordinates.reverseHeading, new TranslationalVelConstraint(coordinates.minTransVelocity), new ProfileAccelConstraint(coordinates.minAccel, coordinates.maxAccel))
-//                .build();
-//
-//        Action moveToPickSpecimenTwo = mecanumDrive.actionBuilder(new Pose2d(coordinates.PUSH_SAMP_2, coordinates.heading))
-//                .setTangent(coordinates.heading)
-//                .splineToConstantHeading(coordinates.PICK_SPECIMEN_SLOW, coordinates.reverseHeading, new TranslationalVelConstraint(20), new ProfileAccelConstraint(coordinates.minAccel, 20))
-//                .stopAndAdd(GetClawControlAction(false, true, false))
-//                .build();
-//
-//        Action pickAndSnapSpecimenTwo = mecanumDrive.actionBuilder(new Pose2d(coordinates.PICK_SPECIMEN, coordinates.heading))
-//                .strafeToConstantHeading(BRACE_RUNGS_FOR_SPECIMEN_TWO.position)
-//                .build();
-//
-//        Action moveToPickSpecimenThree = mecanumDrive.actionBuilder(BRACE_RUNGS_FOR_SPECIMEN_TWO)
-//                .setTangent(reverseHeading)
-//                .splineToConstantHeading(PICK_SPECIMEN, reverseHeading, new TranslationalVelConstraint(minTransVelocity + 20), new ProfileAccelConstraint(minAccel - 5 , maxAccel + 5))
-//                .stopAndAdd(GetClawControlAction(false, true, false))
-//                .build();
-//
-//        Action pickAndSnapSpecimenThree = mecanumDrive.actionBuilder(new Pose2d(PICK_SPECIMEN, heading))
-//                .strafeToConstantHeading(BRACE_RUNGS_FOR_SPECIMEN_THREE.position)
-//                .build();
-//
-//        Action moveToPickSpecimenFour = mecanumDrive.actionBuilder(BRACE_RUNGS_FOR_SPECIMEN_THREE)
-//                .setTangent(reverseHeading)
-//                .splineToConstantHeading(PICK_SPECIMEN, reverseHeading, new TranslationalVelConstraint(minTransVelocity + 20), new ProfileAccelConstraint(minAccel - 5, maxAccel + 5))
-//                .stopAndAdd(GetClawControlAction(false, true, false))
-//                .build();
-//
-//        Action pickAndSnapSpecimenFour = mecanumDrive.actionBuilder(new Pose2d(PICK_SPECIMEN, heading))
-//                .setTangent(Math.toRadians(-90 * multiplier + 90))
-//                .splineToConstantHeading(BRACE_RUNGS_FOR_SPECIMEN_FOUR.position, heading, new TranslationalVelConstraint(minTransVelocity + 20), new ProfileAccelConstraint(minAccel-10, maxAccel + 10))
-//                .build();
-//
-//        Action park = mecanumDrive.actionBuilder(BRACE_RUNGS_FOR_SPECIMEN_FOUR)
-//                .setTangent(reverseHeading)
-//                .splineToConstantHeading(PARK.position, PARK.heading)
-//                .build();
-//
+        Action pickAndSnapSpecimenFour = mecanumDrive.actionBuilder(new Pose2d(coordinates.PICK_SPECIMEN, coordinates.heading))
+                .setTangent(Math.toRadians(-90 * multiplier + 90))
+                .splineToConstantHeading(coordinates.BRACE_RUNGS_FOR_SPECIMEN_FOUR.position, coordinates.heading, new TranslationalVelConstraint(coordinates.minTransVelocity + 20), new ProfileAccelConstraint(coordinates.minAccel-10, coordinates.maxAccel + 10))
+                .build();
+
+        Action park = mecanumDrive.actionBuilder(coordinates.BRACE_RUNGS_FOR_SPECIMEN_FOUR)
+                .setTangent(coordinates.reverseHeading)
+                .splineToConstantHeading(coordinates.PARK.position, coordinates.PARK.heading)
+                .build();
+
         waitForStart();
-//
+
         while (opModeIsActive()) {
             ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 

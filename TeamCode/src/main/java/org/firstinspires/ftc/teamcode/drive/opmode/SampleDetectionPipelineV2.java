@@ -17,6 +17,7 @@ import com.acmerobotics.dashboard.config.Config;
 
 import org.opencv.android.Utils;
 import android.graphics.Bitmap;
+import android.util.Log;
 
 
 import java.io.File;
@@ -636,7 +637,14 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
             double[] expectedAreaRange = calculateExpectedAreaRange(zInches);
             double minAreaForDistance = expectedAreaRange[0];
             double maxAreaForDistance = expectedAreaRange[1];
-            
+
+            FtcDashboard.getInstance().getTelemetry().addData("contourArea: ", areaPx);
+            FtcDashboard.getInstance().getTelemetry().addData("minAreaForDistance: ", minAreaForDistance);
+            FtcDashboard.getInstance().getTelemetry().addData("maxAreaForDistance: ", maxAreaForDistance);
+            FtcDashboard.getInstance().getTelemetry().update();
+
+            minAreaForDistance = Math.max(minAreaForDistance, minContourArea);
+
             // Filter based on area for this specific distance
             if (areaPx < minAreaForDistance) {
                 // Reject contour – too small or too big *for its distance*
@@ -648,7 +656,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                     / Math.max(rect.size.width, rect.size.height);
 
             // For backward compatibility, still check the raw area
-            if (areaPx >= minContourArea && areaPx <= maxContourArea) {
+            if (areaPx <= maxAreaForDistance) {
                 // Calculate confidence using the new function
                 double confidence = isBlobSampleConfidence(contour, mask, input);
                 
@@ -694,12 +702,16 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                     // Log the values to the console as well
                     System.out.println("Blob HSV values: " + hsvText);
                     System.out.println("Blob Aspect Ratio: " + aspectRatio + ", Area: " + areaPx);
+                    FtcDashboard.getInstance().getTelemetry().addData("Blob HSV values: ", hsvText);
+                    FtcDashboard.getInstance().getTelemetry().addData("Blob Aspect Ratio: ", aspectRatio);
+                    FtcDashboard.getInstance().getTelemetry().addData(" Area: " , areaPx);
+                    FtcDashboard.getInstance().getTelemetry().update();
                 }
                 
                 // Process with calculated confidence
                 processDetectedRect(rect, input, detectedRects, distances, areaPx, confidence);
             } else if (aspectRatio > BLOB_ASPECT_RATIO && areaPx > BLOB_AREA_THRESHOLD) { // check if they are worth trying
-                processLargeBlob(contour, mask, input, detectedRects, distances);
+//                processLargeBlob(contour, mask, input, detectedRects, distances);
             }
         }
     }
@@ -748,10 +760,19 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                 // Use contour area
                 subArea = Imgproc.contourArea(innerContour);
             }
-            
+
+            // Calculate distance based on the rectangle size
+            double zInches = (REAL_SAMPLE_LENGTH * FOCAL_LEGNTH_X) /
+                    Math.max(subRect.size.width, subRect.size.height);
+
+            // Calculate expected area range for this distance
+            double[] expectedAreaRange = calculateExpectedAreaRange(zInches);
+            double minAreaForDistance = expectedAreaRange[0];
+            double maxAreaForDistance = expectedAreaRange[1];
+
             //TODO: Add distance normalization logic here if needed
             
-            if (subArea < minContourArea || subArea > maxContourArea) {
+            if (subArea < minAreaForDistance || subArea > maxAreaForDistance) {
                 Imgproc.putText(
                         input,
                         String.format("skipped - Area: :%.0f", subArea),
@@ -889,61 +910,61 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
      */
     private List<MatOfPoint> fragmentBlob(MatOfPoint contour, Mat roi, Mat mask, Rect boundingBox, Mat input) {
         // Define the confidence threshold
-        double confidenceThreshold = 0.7;
-        
-        // Define all 6 possible orderings of the 3 algorithms
-        // 0 = Canny Edge, 1 = Distance Transform, 2 = Adaptive Threshold
-        int[][] allOrders = {
-            {0, 1, 2}, // CDA
-            {0, 2, 1}, // CAD
-            {1, 0, 2}, // DCA
-            {1, 2, 0}, // DAC
-            {2, 0, 1}, // ACD
-            {2, 1, 0}  // ADC
-        };
-        
-        // Try each ordering and count high confidence contours
+//        double confidenceThreshold = 0.7;
+//
+//        // Define all 6 possible orderings of the 3 algorithms
+//        // 0 = Canny Edge, 1 = Distance Transform, 2 = Adaptive Threshold
+//        int[][] allOrders = {
+//            {0, 1, 2}, // CDA
+//            {0, 2, 1}, // CAD
+//            {1, 0, 2}, // DCA
+//            {1, 2, 0}, // DAC
+//            {2, 0, 1}, // ACD
+//            {2, 1, 0}  // ADC
+//        };
+//
+//        // Try each ordering and count high confidence contours
         List<MatOfPoint> bestContours = new ArrayList<>();
-        int maxHighConfCount = -1;
-        int bestOrderIndex = -1;
-        
-        for (int i = 0; i < allOrders.length; i++) {
-            // Apply this ordering of algorithms
-            List<MatOfPoint> currentContours = applyFragmentationSequence(contour, roi, mask, boundingBox, input, allOrders[i]);
-            
-            // Count high confidence contours
-            int highConfCount = countHighConfidenceContours(currentContours, mask, input, confidenceThreshold);
-            
-            // If this is better than our previous best, update
-            if (highConfCount > maxHighConfCount) {
-                // Release previous best contours
-                for (MatOfPoint c : bestContours) {
-                    c.release();
-                }
-                bestContours.clear();
-                
-                // Save this as our new best
-                bestContours.addAll(currentContours);
-                maxHighConfCount = highConfCount;
-                bestOrderIndex = i;
-            } else {
-                // Release these contours since we're not using them
-                for (MatOfPoint c : currentContours) {
-                    c.release();
-                }
-            }
-        }
-        
+//        int maxHighConfCount = -1;
+//        int bestOrderIndex = -1;
+//
+//        for (int i = 0; i < allOrders.length; i++) {
+//            // Apply this ordering of algorithms
+//            List<MatOfPoint> currentContours = applyFragmentationSequence(contour, roi, mask, boundingBox, input, allOrders[i]);
+//
+//            // Count high confidence contours
+//            int highConfCount = countHighConfidenceContours(currentContours, mask, input, confidenceThreshold);
+//
+//            // If this is better than our previous best, update
+//            if (highConfCount > maxHighConfCount) {
+//                // Release previous best contours
+//                for (MatOfPoint c : bestContours) {
+//                    c.release();
+//                }
+//                bestContours.clear();
+//
+//                // Save this as our new best
+//                bestContours.addAll(currentContours);
+//                maxHighConfCount = highConfCount;
+//                bestOrderIndex = i;
+//            } else {
+//                // Release these contours since we're not using them
+//                for (MatOfPoint c : currentContours) {
+//                    c.release();
+//                }
+//            }
+//        }
+//
         // If we didn't find any good contours with any method, fall back to the default approach
-        if (bestContours.isEmpty()) {
+//        if (bestContours.isEmpty()) {
             // Try each algorithm individually
             if (enableCannyEdgeFragmentation) {
-                List<MatOfPoint> cannyEdgeContours = applyCannyEdgeFragmentation(contour, roi, mask, boundingBox, input, false);
+                List<MatOfPoint> cannyEdgeContours = applyCannyEdgeFragmentation(contour, roi, mask, boundingBox, input, true);
                 bestContours.addAll(cannyEdgeContours);
             }
 
             if (enableDistanceTransformFragmentation) {
-                List<MatOfPoint> distanceTransformContours = applyDistanceTransformFragmentation(contour, roi, mask, boundingBox, input, false);
+                List<MatOfPoint> distanceTransformContours = applyDistanceTransformFragmentation(contour, roi, mask, boundingBox, input, true);
                 bestContours.addAll(distanceTransformContours);
             }
             
@@ -951,35 +972,35 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
                 List<MatOfPoint> adaptiveThresholdContours = applyAdaptiveThresholdFragmentation(contour, roi, mask, boundingBox, input, false);
                 bestContours.addAll(adaptiveThresholdContours);
             }
-        } else {
-            // Log which ordering was best
-            String[] algoNames = {"Canny", "Distance", "Adaptive"};
-            StringBuilder orderStr = new StringBuilder();
-            for (int algo : allOrders[bestOrderIndex]) {
-                orderStr.append(algoNames[algo]).append(" → ");
-            }
-            if (orderStr.length() > 0) {
-                orderStr.setLength(orderStr.length() - 3); // Remove the last arrow
-            }
-            
-            System.out.println("Best fragmentation order: " + orderStr.toString() + 
-                              " with " + maxHighConfCount + " high confidence contours");
-            FtcDashboard.getInstance().getTelemetry().addData("Best fragmentation order", orderStr.toString() + " with " + maxHighConfCount + " high confidence contours");
-            FtcDashboard.getInstance().getTelemetry().update();
-            
+//        } else {
+//            // Log which ordering was best
+//            String[] algoNames = {"Canny", "Distance", "Adaptive"};
+//            StringBuilder orderStr = new StringBuilder();
+//            for (int algo : allOrders[bestOrderIndex]) {
+//                orderStr.append(algoNames[algo]).append(" → ");
+//            }
+//            if (orderStr.length() > 0) {
+//                orderStr.setLength(orderStr.length() - 3); // Remove the last arrow
+//            }
+//
+//            System.out.println("Best fragmentation order: " + orderStr.toString() +
+//                              " with " + maxHighConfCount + " high confidence contours");
+//            FtcDashboard.getInstance().getTelemetry().addData("Best fragmentation order", orderStr.toString() + " with " + maxHighConfCount + " high confidence contours");
+//            FtcDashboard.getInstance().getTelemetry().update();
+//
             // Optionally, draw this information on the image
-            if (tuningMode) {
-                Imgproc.putText(
-                    input,
-                    "Best order: " + orderStr.toString(),
-                    new Point(10, 30),
-                    Imgproc.FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    new Scalar(0, 255, 255),
-                    1
-                );
-            }
-        }
+//            if (tuningMode) {
+//                Imgproc.putText(
+//                    input,
+//                    "Best order: " + orderStr.toString(),
+//                    new Point(10, 30),
+//                    Imgproc.FONT_HERSHEY_SIMPLEX,
+//                    0.5,
+//                    new Scalar(0, 255, 255),
+//                    1
+//                );
+//            }
+//        }
         
         return bestContours;
     }
