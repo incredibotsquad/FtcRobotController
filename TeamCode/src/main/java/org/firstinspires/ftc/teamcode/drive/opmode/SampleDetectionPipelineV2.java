@@ -51,7 +51,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
     public static double minAspectRatio = 0.3;
     public static double maxAspectRatio = 0.9;
     public static boolean useRectangleArea = false; // Flag to switch between contour area and rectangle area
-    public static boolean enableHSVEqualization = false;
+    public static boolean enableHSVEqualization = true;
     public static boolean useCLAHE = true; // Use CLAHE instead of standard histogram equalization
     public static double claheClipLimit = 4.0; // Default clip limit for CLAHE
     public static int claheTileSize = 8; // Default tile size for CLAHE (8x8)
@@ -93,20 +93,36 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
     private static final int MODEL_OUTPUT_SIZE = 3; // adjusted_x, adjusted_y, adjusted_orientation
 
     // HSV Thresholds for color detection
-    // RED (2 ranges)
-    public static Scalar RED_LOW_1 = new Scalar(0, 100, 100);
-    public static Scalar RED_HIGH_1 = new Scalar(10, 255, 255);
+    // RED (multiple ranges)
+    public static Scalar[] RED_LOW = {
+        new Scalar(0, 100, 100),    // RED_LOW_1
+        new Scalar(160, 100, 100)   // RED_LOW_2
+    };
+    public static Scalar[] RED_HIGH = {
+        new Scalar(10, 255, 255),   // RED_HIGH_1
+        new Scalar(180, 255, 255)   // RED_HIGH_2
+    };
 
-    public static Scalar RED_LOW_2 = new Scalar(160, 100, 100);
-    public static Scalar RED_HIGH_2 = new Scalar(180, 255, 255);
+    // BLUE (multiple ranges)
+    public static Scalar[] BLUE_LOW = {
+        new Scalar(100, 50, 100), // BLUE_LOW_1
+        new Scalar(100, 100, 150) //Blue_LOW_2
+            
+    };
+    public static Scalar[] BLUE_HIGH = {
+        new Scalar(130, 255, 255),
+        new Scalar(130,255,255)   // BLUE_HIGH_1
+    };
 
-    // BLUE
-    public static Scalar BLUE_LOW = new Scalar(100, 100, 100);
-    public static Scalar BLUE_HIGH = new Scalar(130, 255, 255);
-
-    // YELLOW
-    public static Scalar YELLOW_LOW = new Scalar(20, 100, 100);
-    public static Scalar YELLOW_HIGH = new Scalar(40, 255, 255);
+    // YELLOW (multiple ranges)
+    public static Scalar[] YELLOW_LOW = {
+        new Scalar(20, 155, 175) ,
+         new Scalar(20, 190, 180)   // YELLOW_LOW_1
+    };
+    public static Scalar[] YELLOW_HIGH = {
+        new Scalar(40, 255, 255) ,
+         new Scalar(40, 255, 2555)   // YELLOW_HIGH_1
+    };
 
     public static final double CAMERA_ANGLE = 40;
 
@@ -388,31 +404,80 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
      * @param output Output binary mask
      */
     private void applyColorThreshold(Mat input, Mat output) {
+        // Initialize output to zeros
+        output.setTo(new Scalar(0));
+        
+        // Temporary mask for each range
+        Mat tempMask = new Mat();
+        
         switch (colorMode) {
             case RED:
-                Scalar[] redThresh1 = computeAdaptiveHSVThresholds(input, RED_LOW_1, RED_HIGH_1);
-                Scalar[] redThresh2 = computeAdaptiveHSVThresholds(input, RED_LOW_2, RED_HIGH_2);
-
-                Mat lowerRed = new Mat();
-                Mat upperRed = new Mat();
-                Core.inRange(input, redThresh1[0], redThresh1[1], lowerRed);
-                Core.inRange(input, redThresh2[0], redThresh2[1], upperRed);
-                Core.bitwise_or(lowerRed, upperRed, output);
-
-                // release temporary Mats
-                lowerRed.release();
-                upperRed.release();
+                applyMultipleThresholds(input, output, RED_LOW, RED_HIGH);
                 break;
 
             case BLUE:
-                Scalar[] blueThresh = computeAdaptiveHSVThresholds(input, BLUE_LOW, BLUE_HIGH);
-                Core.inRange(input, blueThresh[0], blueThresh[1], output);
+                applyMultipleThresholds(input, output, BLUE_LOW, BLUE_HIGH);
                 break;
 
             case YELLOW:
-                Scalar[] yellowThresh = computeAdaptiveHSVThresholds(input, YELLOW_LOW, YELLOW_HIGH);
-                Core.inRange(input, yellowThresh[0], yellowThresh[1], output);
+                applyMultipleThresholds(input, output, YELLOW_LOW, YELLOW_HIGH);
                 break;
+        }
+        
+        // Release temporary mask
+        tempMask.release();
+    }
+    
+    /**
+     * Apply multiple HSV thresholds and combine results with bitwise OR
+     * 
+     * @param input Input HSV image
+     * @param output Output binary mask (will be modified)
+     * @param lowThresholds Array of low threshold Scalars
+     * @param highThresholds Array of high threshold Scalars
+     */
+    private void applyMultipleThresholds(Mat input, Mat output, Scalar[] lowThresholds, Scalar[] highThresholds) {
+        // Ensure arrays have the same length
+        if (lowThresholds.length != highThresholds.length) {
+            Log.e("SampleDetectionPipeline", "Low and high threshold arrays must have the same length");
+            return;
+        }
+        
+        // Apply each threshold range and combine with bitwise OR
+        for (int i = 0; i < lowThresholds.length; i++) {
+            // Compute adaptive thresholds if needed
+            Scalar[] adaptiveThresh = computeAdaptiveHSVThresholds(input, lowThresholds[i], highThresholds[i]);
+            
+            // Create temporary mask for this range
+            Mat rangeMask = new Mat();
+            Core.inRange(input, adaptiveThresh[0], adaptiveThresh[1], rangeMask);
+            
+            // If this is the first range, copy to output, otherwise OR with output
+            if (i == 0) {
+                rangeMask.copyTo(output);
+            } else {
+                Core.bitwise_or(output, rangeMask, output);
+            }
+            
+            // Release temporary mask
+            rangeMask.release();
+            
+            // Log the threshold values if in tuning mode
+            if (tuningMode) {
+                String colorName = "";
+                switch (colorMode) {
+                    case RED: colorName = "RED"; break;
+                    case BLUE: colorName = "BLUE"; break;
+                    case YELLOW: colorName = "YELLOW"; break;
+                }
+                
+                Log.d("SampleDetectionPipeline", String.format(
+                    "%s Range %d: Low(%.0f,%.0f,%.0f) High(%.0f,%.0f,%.0f)",
+                    colorName, i+1,
+                    adaptiveThresh[0].val[0], adaptiveThresh[0].val[1], adaptiveThresh[0].val[2],
+                    adaptiveThresh[1].val[0], adaptiveThresh[1].val[1], adaptiveThresh[1].val[2]
+                ));
+            }
         }
     }
 
