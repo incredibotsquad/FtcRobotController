@@ -162,32 +162,32 @@ public class SampleDetectionPipelineV2 implements VisionProcessor {
     }
 
     /**
-     * Initialize the VisionPortal with this processor
+     * Set the VisionPortal instance
+     * This method is called by RobotControl after creating the VisionPortal
      * 
-     * @param webcamName The webcam to use
+     * @param visionPortal The VisionPortal instance
      */
-    public void initializeVision(WebcamName webcamName) {
-        // Create a VisionPortal.Builder and set this processor
-        VisionPortal.Builder builder = new VisionPortal.Builder();
-        
-        // Configure the builder
-        builder.setCamera(webcamName)
-               .addProcessor(this)
-               .enableLiveView(true)
-               .setAutoStopLiveView(true);
-        
-        // Build the VisionPortal
-        visionPortal = builder.build();
-        
-        // Update camera settings after initialization
-        updateCameraSettings();
+    public void setVisionPortal(VisionPortal visionPortal) {
+        this.visionPortal = visionPortal;
     }
+    
+    // Flag to track if camera settings have been applied
+    private boolean cameraSettingsApplied = false;
     
     /**
      * Update camera settings including exposure, white balance, and white temperature
      * This function disables auto settings and applies manual values
+     * 
+     * @param visionPortal The VisionPortal instance to update settings for
+     * @param forceUpdate If true, update settings even if they've been applied before
+     * @return True if settings were successfully applied, false otherwise
      */
-    public void updateCameraSettings() {
+    public boolean updateCameraSettings(VisionPortal visionPortal, boolean forceUpdate) {
+        // If settings have already been applied and we're not forcing an update, skip
+        if (cameraSettingsApplied && !forceUpdate) {
+            return true;
+        }
+        
         if (visionPortal != null && visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING) {
             try {
                 // Set exposure
@@ -233,11 +233,28 @@ public class SampleDetectionPipelineV2 implements VisionProcessor {
                     whiteBalanceControl.setWhiteBalanceTemperature(manualWhiteTemperatureValue);
                     sleep(20); // Small delay to let the setting take effect
                 }
+                
+                // Mark settings as applied
+                cameraSettingsApplied = true;
+                return true;
             } catch (Exception e) {
                 // Log any errors that occur during camera settings update
                 System.out.println("Error updating camera settings: " + e.getMessage());
+                return false;
             }
         }
+        return false;
+    }
+    
+    /**
+     * Update camera settings including exposure, white balance, and white temperature
+     * This is a convenience method that calls updateCameraSettings(visionPortal, false)
+     * 
+     * @param visionPortal The VisionPortal instance to update settings for
+     * @return True if settings were successfully applied, false otherwise
+     */
+    public boolean updateCameraSettings(VisionPortal visionPortal) {
+        return updateCameraSettings(visionPortal, false);
     }
     
     /**
@@ -251,40 +268,6 @@ public class SampleDetectionPipelineV2 implements VisionProcessor {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
-    }
-    
-    /**
-     * Stop and close the VisionPortal
-     */
-    public void stopVision() {
-        if (visionPortal != null) {
-            visionPortal.close();
-            visionPortal = null;
-        }
-    }
-    
-    /**
-     * Pause or resume vision processing
-     * 
-     * @param pause True to pause, false to resume
-     */
-    public void pauseVision(boolean pause) {
-        if (visionPortal != null) {
-            if (pause) {
-                visionPortal.stopStreaming();
-            } else {
-                visionPortal.resumeStreaming();
-            }
-        }
-    }
-    
-    /**
-     * Get the current VisionPortal instance
-     * 
-     * @return The VisionPortal instance
-     */
-    public VisionPortal getVisionPortal() {
-        return visionPortal;
     }
 
     /**
@@ -376,6 +359,111 @@ public class SampleDetectionPipelineV2 implements VisionProcessor {
             return latestDistances[index][4];
         }
         return -1;
+    }
+    
+    /**
+     * Process a rectangular bounding box from Limelight to get detailed information
+     * 
+     * @param points Array of 4 points representing the corners of a rectangular bounding box
+     * @return Array of results containing [x, y, orientation, distance] for the detected object
+     */
+    public double[][] postLimelightProcessing(Point[] points) {
+        if (points == null || points.length != 4) {
+            System.out.println("Error: postLimelightProcessing requires exactly 4 points");
+            return new double[0][0];
+        }
+        
+        // Initialize results array - we'll return one result with [x, y, orientation, distance]
+        double[][] results = new double[1][4];
+        
+        // Get the current frame if available
+        if (visionPortal == null || visionPortal.getCameraState() != VisionPortal.CameraState.STREAMING) {
+            System.out.println("Error: Camera not streaming for postLimelightProcessing");
+            return results;
+        }
+        
+        // Create a mask with just this rectangle
+        Mat rectMask = Mat.zeros(mask.size(), CvType.CV_8UC1);
+        
+        // Convert the 4 points to a contour format
+        MatOfPoint contour = new MatOfPoint();
+        contour.fromArray(points);
+        
+        // Draw the filled rectangle on the mask
+        List<MatOfPoint> contours = new ArrayList<>();
+        contours.add(contour);
+        Imgproc.fillPoly(rectMask, contours, new Scalar(255));
+        
+        // Create a temporary input frame with just this rectangle
+        Mat tempInput = new Mat();
+        Mat currentFrame = new Mat(); // This would be the current camera frame
+        
+        try {
+            // We'll use the last processed frame as our base
+            // In a real implementation, you might want to capture a new frame
+            currentFrame = mask.clone();
+            
+            // Apply the mask to the current frame
+            Core.bitwise_and(currentFrame, currentFrame, tempInput, rectMask);
+            
+            // Process this masked region
+            // Create temporary containers for results
+            ArrayList<RotatedRect> tempRects = new ArrayList<>();
+            ArrayList<double[]> tempDistances = new ArrayList<>();
+            
+            // Convert to HSV
+            Mat tempHsv = new Mat();
+            convertToHSV(tempInput, tempHsv);
+            
+            // Equalize V channel
+            equalizeVChannel(tempHsv);
+            
+            // Apply color thresholding
+            Mat tempMask = new Mat();
+            applyColorThreshold(tempHsv, tempMask);
+            
+            // Apply morphological operations
+            applyMorphologicalOperations(tempMask, tempMask);
+            
+            // Find contours
+            ArrayList<MatOfPoint> tempContours = new ArrayList<>();
+            Mat tempHierarchy = new Mat();
+            findImageContours(tempMask, tempContours, tempHierarchy);
+            
+            // Process contours
+            processContours(tempContours, tempMask, tempInput, tempRects, tempDistances);
+            
+            // Get results if any were found
+            if (!tempDistances.isEmpty()) {
+                // Use the first detected object's data
+                double[] distanceData = tempDistances.get(0);
+                
+                // Store results: [x, y, orientation, distance]
+                results[0][0] = distanceData[0]; // X
+                results[0][1] = distanceData[2]; // Y
+                results[0][2] = distanceData[1]; // Orientation
+                results[0][3] = Math.sqrt(distanceData[0]*distanceData[0] + distanceData[2]*distanceData[2]); // Distance
+            }
+            
+            // Release resources
+            for (MatOfPoint tempContour : tempContours) {
+                tempContour.release();
+            }
+            tempHsv.release();
+            tempMask.release();
+            tempHierarchy.release();
+            
+        } catch (Exception e) {
+            System.out.println("Error processing rectangle: " + e.getMessage());
+        } finally {
+            // Release resources
+            tempInput.release();
+            currentFrame.release();
+            rectMask.release();
+            contour.release();
+        }
+        
+        return results;
     }
 
     public static Scalar[] computeAdaptiveHSVThresholds(Mat inputFrame, Scalar baseMin, Scalar baseMax) {
@@ -1499,6 +1587,6 @@ public class SampleDetectionPipelineV2 implements VisionProcessor {
     @Override
     public void onDrawFrame(Canvas canvas, int onscreenWidth, int onscreenHeight, float scaleBmpPxToCanvasPx, float scaleCanvasDensity, Object userContext) {
         // This method is called when the VisionPortal wants to draw on the screen
-        // We don't need to implement this for our use case
+       
     }
 }

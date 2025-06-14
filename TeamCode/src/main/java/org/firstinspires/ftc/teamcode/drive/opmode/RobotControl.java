@@ -47,7 +47,7 @@ public class RobotControl
     private List<Action> runningActions;
 
     public TensorFlow VisionCalibration;
-    OpenCvWebcam webcam;
+    VisionPortal visionPortal;
     SampleDetectionPipelineV2 sampleDetectionPipeline;
 
     List<HorizontalPickupVector> sampleChoices;
@@ -72,6 +72,7 @@ public class RobotControl
     private ROBOT_STATE currentRobotState;
     private ROBOT_STATE targetRobotState;
     private boolean stateTransitionInProgress;
+    private boolean cameraSettingsApplied = false;
 
     private Telemetry telemetry;
 
@@ -87,30 +88,34 @@ public class RobotControl
         sampleChoices = new ArrayList<>();
 
         VisionCalibration = new TensorFlow();
-        int camMonitorViewId = robotHardware.hardwareMap.appContext.getResources()
-                .getIdentifier("cameraMonitorViewId", "id", robotHardware.hardwareMap.appContext.getPackageName());
-
-        webcam = OpenCvCameraFactory.getInstance().createWebcam(
-                robotHardware.hardwareMap.get(WebcamName.class, "Webcam 1"), camMonitorViewId);
-
+        
+        // Create the sample detection pipeline
         sampleDetectionPipeline = new SampleDetectionPipelineV2();
-//        webcam.setPipeline(sampleDetectionPipeline);
-
-        webcam.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener() {
-            //override onOpened to start streaming
-            @Override
-            public void onOpened() {
-                webcam.startStreaming(RobotConstants.IMAGE_WIDTH, RobotConstants.IMAGE_HEIGHT, OpenCvCameraRotation.UPRIGHT);
-            }
-            //Handle error handling
-            @Override
-            public void onError(int errorCode) {
-                telemetry.addData("Got error number: ", errorCode);
-            }
-        });
+        
+        // Create a VisionPortal with the pipeline
+        VisionPortal.Builder builder = new VisionPortal.Builder();
+        
+        // Configure the builder
+        builder.setCamera(robotHardware.hardwareMap.get(WebcamName.class, "Webcam 1"))
+               .addProcessor(sampleDetectionPipeline)
+               .enableLiveView(true)
+               .setAutoStopLiveView(true);
+        
+        // Build the VisionPortal
+        visionPortal = builder.build();
+        
+        // Set the VisionPortal in the pipeline
+        sampleDetectionPipeline.setVisionPortal(visionPortal);
+        
+        // Update camera settings
+        sampleDetectionPipeline.updateCameraSettings(visionPortal);
     }
 
     public void ProcessInputs(Telemetry telemetry) {
+        // Check if camera settings need to be applied
+        if (!cameraSettingsApplied) {
+            tryApplyCameraSettings();
+        }
 
         CreateStateFromButtonPress();
 
@@ -125,6 +130,22 @@ public class RobotControl
         ProcessJoystickForHorizontalWrist();
 //        ProcessPickSampleState();
     }
+    
+    /**
+     * Try to apply camera settings if the VisionPortal is streaming
+     * This is called periodically from ProcessInputs until settings are successfully applied
+     */
+    private void tryApplyCameraSettings() {
+        if (visionPortal != null && visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING) {
+            // Apply camera settings - don't force update if already applied in the pipeline
+            if (sampleDetectionPipeline.updateCameraSettings(visionPortal)) {
+                cameraSettingsApplied = true;
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "Camera settings successfully applied");
+            }
+        } else {
+            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "Waiting for camera to start streaming before applying settings...");
+        }
+    }
 
     private void ProcessSafetyChecks() {
         robotHardware.horizontalSlideSafetyChecks();
@@ -134,6 +155,31 @@ public class RobotControl
     public void setGameColor(GameConstants.GAME_COLORS gameColor) {
         sampleDetectionPipeline.setColorMode(gameColor);
         this.gameColor = gameColor;
+    }
+    
+    /**
+     * Stop and close the VisionPortal when no longer needed
+     */
+    public void stopVision() {
+        if (visionPortal != null) {
+            visionPortal.close();
+            visionPortal = null;
+        }
+    }
+    
+    /**
+     * Pause or resume vision processing
+     * 
+     * @param pause True to pause, false to resume
+     */
+    public void pauseVision(boolean pause) {
+        if (visionPortal != null) {
+            if (pause) {
+                visionPortal.stopStreaming();
+            } else {
+                visionPortal.resumeStreaming();
+            }
+        }
     }
 
     //Function to create a state from Gamepad inputs
