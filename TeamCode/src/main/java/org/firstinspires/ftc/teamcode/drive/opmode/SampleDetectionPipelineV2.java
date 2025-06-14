@@ -5,12 +5,16 @@ import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.photo.Photo;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.CameraControl;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.ExposureControl;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.WhiteBalanceControl;
 import org.firstinspires.ftc.vision.VisionProcessor;
 import org.firstinspires.ftc.vision.VisionPortal;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.acmerobotics.dashboard.FtcDashboard;
@@ -79,11 +83,12 @@ public class SampleDetectionPipelineV2 implements VisionProcessor {
     // Tuning mode for displaying HSV values of detected blobs
     public static boolean tuningMode = false; // Toggle this in the dashboard to enable tuning mode
 
-    // // Camera control settings
-    // public static boolean enableManualExposure = false;
-    // public static boolean enableManualWhiteBalance = false;
-    // public static int manualExposureValue = 50; // Default exposure value (0-100)
-    // public static int manualWhiteBalanceValue = 50; // Default white balance value (0-100)
+    // Camera control settings
+    public static boolean enableManualExposure = false;
+    public static boolean enableManualWhiteBalance = false;
+    public static int manualExposureValue = 50; // Default exposure value (0-100)
+    public static int manualWhiteBalanceValue = 50; // Default white balance value (0-100)
+    public static int manualWhiteTemperatureValue = 4500; // Default white temperature value (typically 2800-6500K)
 
     // VisionPortal instance
     private VisionPortal visionPortal;
@@ -172,6 +177,38 @@ public class SampleDetectionPipelineV2 implements VisionProcessor {
         
         // Build the VisionPortal
         visionPortal = builder.build();
+        
+        // Update camera settings after initialization
+        updateCameraSettings();
+    }
+    
+    /**
+     * Update camera settings including exposure, white balance, and white temperature
+     * This function disables auto settings and applies manual values
+     */
+    public void updateCameraSettings() {
+        if (visionPortal != null && visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING) {
+            // Get camera control
+            CameraControl cameraControl = visionPortal.getCameraControl();
+            
+            if (cameraControl != null) {
+                // Set exposure
+                if (enableManualExposure) {
+                    // Disable auto exposure
+                    cameraControl.setExposureControl(ExposureControl.Mode.Manual);
+                    // Set manual exposure value
+                    cameraControl.setExposure(manualExposureValue, TimeUnit.MILLISECONDS);
+                }
+                
+                // Set white balance
+                if (enableManualWhiteBalance) {
+                    // Disable auto white balance
+                    cameraControl.setWhiteBalanceControl(WhiteBalanceControl.Mode.Manual);
+                    // Set manual white balance value
+                    cameraControl.setWhiteBalanceTemperature(manualWhiteTemperatureValue);
+                }
+            }
+        }
     }
     
     /**
