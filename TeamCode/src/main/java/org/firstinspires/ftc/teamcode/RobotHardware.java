@@ -221,6 +221,7 @@ public class RobotHardware {
     }
 
     public int getHorizontalSlidePosition() {
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getHorizontalSlidePosition");
         return horizontalSlideMotor.getCurrentPosition();
     }
 

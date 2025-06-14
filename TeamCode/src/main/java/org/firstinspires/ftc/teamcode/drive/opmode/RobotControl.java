@@ -5,7 +5,6 @@ import android.util.Log;
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
-import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.SleepAction;
@@ -66,7 +65,8 @@ public class RobotControl
         PICK_SPECIMEN,
         HANG_SPECIMEN,
         SNAP_SPECIMEN,
-        ROBOT_HANG
+        ROBOT_HANG,
+        CAMERA_READY
     }
 
     private ROBOT_STATE currentRobotState;
@@ -74,8 +74,6 @@ public class RobotControl
     private boolean stateTransitionInProgress;
 
     private Telemetry telemetry;
-
-    private boolean readyToPickSample;
 
     public RobotControl(Gamepad gamepad, RobotHardware robotHardware, Telemetry telemetry) {
         gamepad2 = gamepad;
@@ -86,7 +84,6 @@ public class RobotControl
         stateTransitionInProgress = false;
         dashboard = FtcDashboard.getInstance();
         runningActions = new ArrayList<>();
-        readyToPickSample = false;
         sampleChoices = new ArrayList<>();
 
         VisionCalibration = new TensorFlow();
@@ -122,11 +119,11 @@ public class RobotControl
         ProcessActions();
 
 //        ProcessSafetyChecks();
-//
+
         ProcessDPad();
         ProcessBumpers();
-        ProcessJoystick();
-        ProcessPickSampleState();
+        ProcessJoystickForHorizontalWrist();
+//        ProcessPickSampleState();
     }
 
     private void ProcessSafetyChecks() {
@@ -142,7 +139,7 @@ public class RobotControl
     //Function to create a state from Gamepad inputs
     private void CreateStateFromButtonPress() {
 
-        ROBOT_STATE newTargetRobotState =  targetRobotState;
+        ROBOT_STATE newTargetRobotState =  ROBOT_STATE.NONE;
 
         //Back button maps to resting
         if (gamepad2.back) {
@@ -157,6 +154,10 @@ public class RobotControl
         //Hang the robot with start + left/right triggers
         if (gamepad2.start && gamepad2.left_trigger > 0 && gamepad2.right_trigger > 0) {
             newTargetRobotState = ROBOT_STATE.ROBOT_HANG;
+        }
+
+        if (gamepad2.left_trigger > 0 && gamepad2.right_trigger > 0) {
+            newTargetRobotState = ROBOT_STATE.TRANSFER_TO_OB_ZONE;
         }
 
         if (gamepad2.a){
@@ -183,7 +184,7 @@ public class RobotControl
 
         if (gamepad2.x) {
             if (gamepad2.left_trigger > 0) {
-                newTargetRobotState = ROBOT_STATE.TRANSFER_TO_OB_ZONE;
+                newTargetRobotState = ROBOT_STATE.CAMERA_READY;
             }
             else if (gamepad2.right_trigger > 0) {
                 newTargetRobotState = ROBOT_STATE.ENTER_EXIT_SUB;
@@ -199,11 +200,11 @@ public class RobotControl
             }
         }
 
-        if (newTargetRobotState != currentRobotState) {
+        if (newTargetRobotState != ROBOT_STATE.NONE && newTargetRobotState != currentRobotState) {
 
             Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "TRANSITIONING STATE CURRENT: " + currentRobotState + " TARGET: " + newTargetRobotState);
 
-            if (newTargetRobotState != targetRobotState) {
+            if (targetRobotState != ROBOT_STATE.NONE && newTargetRobotState != targetRobotState) {
                 //STOP ALL PROCESSING - STATE TRANSITION WAS GOING ON WHEN NEW STATE WAS CALLED IN
                 Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "STOPPING! STATE TRANSITION WAS GOING ON WHEN NEW TARGET WAS CALLED IN. OLD TARGET: " + targetRobotState + " NEW TARGET: " + newTargetRobotState);
 
@@ -234,9 +235,13 @@ public class RobotControl
 
                 TensorFlow.CalibrationResult result = VisionCalibration.calibrate((float) (realX - RobotConstants.TURRET_OFFSET_FROM_CAMERA), (float) realY, (float) realOrientation);
 
-                double calibratedYOffset = result.calibratedY;
-                double calibratedXOffset = result.calibratedX;
-                double calibratedSampleOrientation = result.calibratedAngle;
+//                double calibratedYOffset = result.calibratedY;
+//                double calibratedXOffset = result.calibratedX;
+//                double calibratedSampleOrientation = result.calibratedAngle;
+
+                double calibratedYOffset = realY;
+                double calibratedXOffset = realX;
+                double calibratedSampleOrientation = realOrientation;
 
                 Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Calibrated Vertical: " + calibratedYOffset);
                 Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Calibrated Horizontal: " + calibratedXOffset);
@@ -308,10 +313,20 @@ public class RobotControl
                     runningActions.add(GetResetEncodersActionSequence());
                     break;
 
+                case CAMERA_READY:
+                    Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: CAMERA READY SUB");
+
+                    runningActions.add(GetCameraReadyActionSequence());
+                    break;
                 case ENTER_EXIT_SUB:
                     Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: ENTER EXIT SUB");
 
-                    runningActions.add(GetEnterExitSubActionSequence());
+                    if (currentRobotState == ROBOT_STATE.PICK_SAMPLE) {
+                        runningActions.add(GetEnterExitSubActionSequence(false));
+                    } else {
+                        runningActions.add(GetEnterExitSubActionSequence(true));
+                    }
+
                     break;
 
                 case PICK_SAMPLE:   //PICK SAMPLE
@@ -396,46 +411,54 @@ public class RobotControl
     {
         TelemetryPacket packet = new TelemetryPacket();
 
-        // we have actions to run, state transition in proogress
+        // we have actions to run, state transition in progress
         if (!runningActions.isEmpty()) {
             stateTransitionInProgress = true;
-        }
 
-        // run actions and add pending ones to new list
-        List<Action> newActions = new ArrayList<>();
-        for (Action action : runningActions) {
-            action.preview(packet.fieldOverlay());
+            // run actions and add pending ones to new list
+            List<Action> newActions = new ArrayList<>();
+            for (Action action : runningActions) {
+                action.preview(packet.fieldOverlay());
 
-            if (action.run(packet)) {
-                newActions.add(action); //add if action indicates it needs to run again
+                if (action.run(packet)) {
+                    newActions.add(action); //add if action indicates it needs to run again
+                }
             }
-        }
-        runningActions = newActions;
-        dashboard.sendTelemetryPacket(packet);
+            dashboard.sendTelemetryPacket(packet);
+            runningActions = newActions;
 
-        if (runningActions.isEmpty()) {
-            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "DONE RUNNING ACTIONS");
-            currentRobotState = targetRobotState;
-            targetRobotState = ROBOT_STATE.NONE;
-            stateTransitionInProgress = false;
+            //this has to be inside the outer if, else the current robot state
+            //will get wiped out - the next big loop will check that runningactions
+            //is empty and will set the current state to NONE since we would have set
+            //the target state to NONE in the previous big loop when we finished
+            //running actions.
+            if (runningActions.isEmpty()) {
+                currentRobotState = targetRobotState;
+                targetRobotState = ROBOT_STATE.NONE;
+                stateTransitionInProgress = false;
 
-            //NOTE: CAREFUL NOT TO CONSTRUCT LOOPS HERE
-            // STATE A -> STATE B -> STATE A
-            //set new state based on older target
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "ProcessActions: DONE RUNNING ACTIONS");
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "ProcessActions: CURRENT ROBOT STATE: " + currentRobotState);
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "ProcessActions: TARGET ROBOT STATE: " + targetRobotState);
 
-            //TODO: IF WE GO FROM ENTER SUB TO PICK SAMPLE, GO BACK TO ENTER SUB
-            //TODO: IF WE GO FROM RESTING TO PICK SAMPLE
+                //NOTE: CAREFUL NOT TO CONSTRUCT LOOPS HERE
+                // STATE A -> STATE B -> STATE A
+                //set new state based on older target
 
-            switch (targetRobotState) {
-                case LOW_BASKET:
-                case HIGH_BASKET:
-//                    targetRobotState = ROBOT_STATE.PICK_SAMPLE;
-                    break;
-                case SNAP_SPECIMEN:
-//                    targetRobotState = ROBOT_STATE.PICK_SPECIMEN;
-                    break;
-                default:
-                    targetRobotState = ROBOT_STATE.NONE;
+                //TODO: IF WE GO FROM ENTER SUB TO PICK SAMPLE, GO BACK TO ENTER SUB
+                //TODO: IF WE GO FROM RESTING TO PICK SAMPLE
+
+//            switch (currentRobotState) {
+//                case LOW_BASKET:
+//                case HIGH_BASKET:
+////                    targetRobotState = ROBOT_STATE.PICK_SAMPLE;
+//                    break;
+//                case SNAP_SPECIMEN:
+////                    targetRobotState = ROBOT_STATE.PICK_SPECIMEN;
+//                    break;
+//                default:
+//                    targetRobotState = ROBOT_STATE.NONE;
+//            }
             }
         }
     }
@@ -499,12 +522,29 @@ public class RobotControl
         return verticalActions;
     }
 
-    public Action GetEnterExitSubActionSequence() {
+    public Action GetCameraReadyActionSequence(){
+        Action verticalActions = GetVerticalActionsForTransfer();
+
+        Action horizontalActions = new ParallelAction(
+                new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_CAMERA_READY, false, false),
+                new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_CAMERA_READY, false, false),
+                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_CAMERA_READY, true, false),
+                new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_CAMERA_READY, false, false),
+                new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_CAMERA_READY, false,false)
+        );
+
+        return new ParallelAction(
+                verticalActions,
+                horizontalActions
+        );
+    }
+
+    public Action GetEnterExitSubActionSequence(boolean openClaw) {
 
         Action verticalActions = GetVerticalActionsForTransfer();
 
         Action horizontalActions = new ParallelAction(
-                new HorizontalClawAction(robotHardware, true, false, false),
+                new HorizontalClawAction(robotHardware, openClaw, false, false),
                 new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_ENTER_EXIT_SUB, false, false),
                 new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_ENTER_EXIT_SUB, false, false),
                 new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_ENTER_EXIT_SUB, true, false),
@@ -534,33 +574,20 @@ public class RobotControl
         Action verticalActions = GetVerticalActionsForTransfer();
 
         Action horizontalActions = new SequentialAction(
-                new HorizontalSlideAction(robotHardware, choice.slidePosition, true, false),
+                new HorizontalSlideAction(robotHardware, choice.slidePosition, true, true),
                 new ParallelAction(
                         new HorizontalClawAction(robotHardware, true, false, false),
                         new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_PICK_SAMPLE, false, false),
                         new HorizontalTurretAction(robotHardware, choice.turretPosition, false, false),
-                        new HorizontalSlideAction(robotHardware, choice.slidePosition, true, false),
+                        new HorizontalSlideAction(robotHardware, choice.slidePosition, false, true),
                         new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SAMPLE, true, false),
                         new HorizontalWristAction(robotHardware, choice.wristOrientation, false,false)
                 ),
-                new InstantAction(() -> readyToPickSample = true)
+                new HorizontalClawAction(robotHardware, false, true, false)
         );
 
-        //uncomment below to go back to state before integrating camera input
-//        Action horizontalActions = new SequentialAction(
-//                new ParallelAction(
-//                    new HorizontalClawAction(robotHardware, true, false, false),
-//                    new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_PICK_SAMPLE, false, false),
-//                    new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_PICK_SAMPLE, false, false),
-//                    new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_PICK_SAMPLE, true, false),
-//                    new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SAMPLE, true, false),
-//                    new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_PICK_SAMPLE, false,false)
-//            ),
-//                new InstantAction(() -> readyToPickSample = true)
-//        );
-
         return new ParallelAction(
-//                verticalActions,
+                verticalActions,
                 horizontalActions);
     }
 
@@ -587,7 +614,6 @@ public class RobotControl
                 new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_AFTER_TRANSFER, false, false),
                 new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_AFTER_TRANSFER, false, false)
         );
-
     }
 
     public Action GetTransferToObZoneActionSequence() {
@@ -637,6 +663,7 @@ public class RobotControl
         );
 
         return new SequentialAction(
+                GetTransferSampleActionSequence(),
                 new ParallelAction(
                         horizontalActions,
                         verticalActions
@@ -668,6 +695,7 @@ public class RobotControl
         );
 
         return new SequentialAction(
+                GetTransferSampleActionSequence(),
                 new ParallelAction(
                         horizontalActions,
                         verticalActions
@@ -785,14 +813,14 @@ public class RobotControl
     }
 
     ///Function to move the horizontal wrist in response to the left joystick movement
-    private void ProcessJoystick() {
-        if (gamepad2.left_stick_x < 0) {
+    private void ProcessJoystickForHorizontalWrist() {
+        if (gamepad2.right_stick_x < 0) {
             double wristPos = robotHardware.getHorizontalWristServoPosition();
             wristPos = Math.max(wristPos - RobotConstants.HORIZONTAL_WRIST_INCREMENT, 0);
             robotHardware.setHorizontalWristServoPosition(wristPos);
         }
 
-        if (gamepad2.left_stick_x > 0) {
+        if (gamepad2.right_stick_x > 0) {
             double wristPos = robotHardware.getHorizontalWristServoPosition();
             wristPos = Math.min(wristPos + RobotConstants.HORIZONTAL_WRIST_INCREMENT, 1);
             robotHardware.setHorizontalWristServoPosition(wristPos);
