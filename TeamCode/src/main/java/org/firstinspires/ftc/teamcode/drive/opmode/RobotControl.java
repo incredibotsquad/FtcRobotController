@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.drive.opmode;
 
 import android.util.Log;
+import apple.laf.JRSUIConstants.Size;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
@@ -96,10 +97,15 @@ public class RobotControl
         VisionPortal.Builder builder = new VisionPortal.Builder();
         
         // Configure the builder
-        builder.setCamera(robotHardware.hardwareMap.get(WebcamName.class, "Webcam 1"))
-               .addProcessor(sampleDetectionPipeline)
-               .enableLiveView(true)
-               .setAutoStopLiveView(true);
+            builder.setCamera(robotHardware.hardwareMap.get(WebcamName.class, "Webcam 1"))
+                .setCameraResolution(new Size(640, 480))
+                .addProcessor(sampleDetectionPipeline)
+                .enableLiveView(true)
+                .setAutoStopLiveView(true);
+
+
+            visionPortal = builder.build();
+        
         
         // Build the VisionPortal
         visionPortal = builder.build();
