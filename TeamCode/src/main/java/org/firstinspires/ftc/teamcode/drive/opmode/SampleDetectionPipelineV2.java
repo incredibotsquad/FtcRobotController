@@ -4,8 +4,9 @@ import org.firstinspires.ftc.teamcode.GameConstants;
 import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.photo.Photo;
-import org.openftc.easyopencv.OpenCvPipeline;
-
+import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.vision.VisionProcessor;
+import org.firstinspires.ftc.vision.VisionPortal;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -19,7 +20,6 @@ import org.opencv.android.Utils;
 import android.graphics.Bitmap;
 import android.util.Log;
 
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -27,7 +27,7 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
 @Config
-public class SampleDetectionPipelineV2 extends OpenCvPipeline {
+public class SampleDetectionPipelineV2 implements VisionProcessor {
     private GameConstants.GAME_COLORS colorMode = GameConstants.GAME_COLORS.RED;
     public static GameConstants.GAME_COLORS dashboardColorMode = GameConstants.GAME_COLORS.RED; // Dashboard-controlled
                                                                                                 // color mode
@@ -58,16 +58,10 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
     public static double BLOB_ASPECT_RATIO = 0.25;
     public static double BLOB_AREA_THRESHOLD = 8000;
     
-    // New tunable constants for distance-normalized area
-    public static double MIN_NORM_AREA = 4.0e6;   // pixel·inch², tune in dashboard
-    public static double MAX_NORM_AREA = 2.0e7;   // pixel·inch², tune in dashboard
 
     // Blob fragmentation algorithm controls
-    // Watershed fragmentation has been removed
     public static boolean enableDistanceTransformFragmentation = false;
     public static boolean enableAdaptiveThresholdFragmentation = false;
-    //public static boolean enableMorphologicalGradientFragmentation = false;
-    //public static boolean enableContourSplittingFragmentation = false;
     public static boolean enableCannyEdgeFragmentation = false; // Added Canny edge detection
     
     // Morphological operation controls
@@ -75,6 +69,11 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
     public static int dilationKernelSize = 3; // Kernel size for dilation (must be odd)
     public static double MIN_AREA_RATIO = 0.15; // Minimum area ratio for valid sub-contours in distance transform
     public static double MIN_BRIGHTNESS_THRESHOLD = 50.0; // Minimum brightness threshold (0-255)
+
+    // Weights for different metrics (should sum to 1.0 - BRIGHTNESS_WEIGHT)
+    public static double ASPECT_RATIO_WEIGHT = 0.35;
+    public static double AREA_WEIGHT = 0.25;
+    public static double RECTANGULARITY_WEIGHT = 0.2;
     public static double BRIGHTNESS_WEIGHT = 0.2; // Weight for brightness in confidence calculation
     
     // Tuning mode for displaying HSV values of detected blobs
@@ -86,8 +85,8 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
     // public static int manualExposureValue = 50; // Default exposure value (0-100)
     // public static int manualWhiteBalanceValue = 50; // Default white balance value (0-100)
 
-    // OpenCV camera instance
-    private org.openftc.easyopencv.OpenCvCamera camera;
+    // VisionPortal instance
+    private VisionPortal visionPortal;
 
     private static final int MODEL_INPUT_SIZE = 3; // x, y, orientation
     private static final int MODEL_OUTPUT_SIZE = 3; // adjusted_x, adjusted_y, adjusted_orientation
@@ -157,23 +156,56 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
     }
 
     /**
-     * Initialize the camera with manual exposure and white balance settings if
-     * enabled
+     * Initialize the VisionPortal with this processor
      * 
-     * @param camera The OpenCV camera instance
+     * @param webcamName The webcam to use
      */
-    public void initializeCamera(org.openftc.easyopencv.OpenCvCamera camera) {
-        this.camera = camera;
-        updateCameraSettings();
+    public void initializeVision(WebcamName webcamName) {
+        // Create a VisionPortal.Builder and set this processor
+        VisionPortal.Builder builder = new VisionPortal.Builder();
+        
+        // Configure the builder
+        builder.setCamera(webcamName)
+               .addProcessor(this)
+               .enableLiveView(true)
+               .setAutoStopLiveView(true);
+        
+        // Build the VisionPortal
+        visionPortal = builder.build();
     }
-
+    
     /**
-     * Update camera settings based on dashboard values
-     * This can be called when dashboard values change
+     * Stop and close the VisionPortal
      */
-    public void updateCameraSettings() {
-        if (camera == null)
-            return;
+    public void stopVision() {
+        if (visionPortal != null) {
+            visionPortal.close();
+            visionPortal = null;
+        }
+    }
+    
+    /**
+     * Pause or resume vision processing
+     * 
+     * @param pause True to pause, false to resume
+     */
+    public void pauseVision(boolean pause) {
+        if (visionPortal != null) {
+            if (pause) {
+                visionPortal.stopStreaming();
+            } else {
+                visionPortal.resumeStreaming();
+            }
+        }
+    }
+    
+    /**
+     * Get the current VisionPortal instance
+     * 
+     * @return The VisionPortal instance
+     */
+    public VisionPortal getVisionPortal() {
+        return visionPortal;
     }
 
     /**
@@ -529,11 +561,7 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
      * @return Confidence score between 0 and 1
      */
     private double isBlobSampleConfidence(MatOfPoint contour, Mat mask, Mat input) {
-        // Weights for different metrics (should sum to 1.0 - BRIGHTNESS_WEIGHT)
-        final double ASPECT_RATIO_WEIGHT = 0.35;
-        final double AREA_WEIGHT = 0.25;
-        final double RECTANGULARITY_WEIGHT = 0.2;
-        // BRIGHTNESS_WEIGHT is defined as a static variable (0.2)
+     
         
         // Calculate metrics
         double confidence = 0.0;
@@ -1309,13 +1337,27 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
     
     
     /**
+     * Initialize method required by VisionProcessor interface
+     */
+    @Override
+    public void init(int width, int height, CameraCalibration calibration) {
+        // Initialize Mat objects with the correct size
+        hsv = new Mat(height, width, CvType.CV_8UC3);
+        mask = new Mat(height, width, CvType.CV_8UC1);
+        hierarchy = new Mat();
+        resizedMat = new Mat();
+    }
+    
+    /**
      * Process the input frame to detect samples
+     * Required by VisionProcessor interface
      * 
      * @param input Input frame from the camera
+     * @param timestamp Timestamp of the frame
      * @return Processed frame with detected samples highlighted
      */
     @Override
-    public Mat processFrame(Mat input) {
+    public Object processFrame(Mat input, long timestamp) {
         // Update color mode from dashboard if needed
         updateColorModeFromDashboard();
         
@@ -1369,5 +1411,15 @@ public class SampleDetectionPipelineV2 extends OpenCvPipeline {
         showOnDashboard(input);
      
         return input;
+    }
+    
+    /**
+     * Called when the VisionPortal is stopped
+     * Required by VisionProcessor interface
+     */
+    @Override
+    public void onDrawFrame(Canvas canvas, int onscreenWidth, int onscreenHeight, float scaleBmpPxToCanvasPx, float scaleCanvasDensity, Object userContext) {
+        // This method is called when the VisionPortal wants to draw on the screen
+        // We don't need to implement this for our use case
     }
 }
