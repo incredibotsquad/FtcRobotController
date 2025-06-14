@@ -5,8 +5,8 @@ import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.photo.Photo;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
-import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.CameraControl;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.ExposureControl;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.GainControl;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.WhiteBalanceControl;
 import org.firstinspires.ftc.vision.VisionProcessor;
 import org.firstinspires.ftc.vision.VisionPortal;
@@ -86,9 +86,10 @@ public class SampleDetectionPipelineV2 implements VisionProcessor {
     // Camera control settings
     public static boolean enableManualExposure = false;
     public static boolean enableManualWhiteBalance = false;
-    public static int manualExposureValue = 50; // Default exposure value (0-100)
+    public static int manualExposureValue = 50; // Default exposure value in milliseconds
     public static int manualWhiteBalanceValue = 50; // Default white balance value (0-100)
     public static int manualWhiteTemperatureValue = 4500; // Default white temperature value (typically 2800-6500K)
+    public static int manualGainValue = 100; // Default gain value
 
     // VisionPortal instance
     private VisionPortal visionPortal;
@@ -188,26 +189,67 @@ public class SampleDetectionPipelineV2 implements VisionProcessor {
      */
     public void updateCameraSettings() {
         if (visionPortal != null && visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING) {
-            // Get camera control
-            CameraControl cameraControl = visionPortal.getCameraControl();
-            
-            if (cameraControl != null) {
+            try {
                 // Set exposure
                 if (enableManualExposure) {
-                    // Disable auto exposure
-                    cameraControl.setExposureControl(ExposureControl.Mode.Manual);
+                    // Get exposure control
+                    ExposureControl exposureControl = visionPortal.getCameraControl(ExposureControl.class);
+                    
+                    // Check if we need to change the mode
+                    if (exposureControl.getMode() != ExposureControl.Mode.Manual) {
+                        exposureControl.setMode(ExposureControl.Mode.Manual);
+                        sleep(50); // Small delay to let the setting take effect
+                    }
+                    
                     // Set manual exposure value
-                    cameraControl.setExposure(manualExposureValue, TimeUnit.MILLISECONDS);
+                    exposureControl.setExposure((long)manualExposureValue, TimeUnit.MILLISECONDS);
+                    sleep(20); // Small delay to let the setting take effect
                 }
+                
+                // Set gain
+                GainControl gainControl = visionPortal.getCameraControl(GainControl.class);
+                
+                // Check if we need to change the mode
+                if (gainControl.getMode() != GainControl.Mode.Manual) {
+                    gainControl.setMode(GainControl.Mode.Manual);
+                    sleep(50); // Small delay to let the setting take effect
+                }
+                
+                gainControl.setGain(manualGainValue);
+                sleep(20); // Small delay to let the setting take effect
                 
                 // Set white balance
                 if (enableManualWhiteBalance) {
-                    // Disable auto white balance
-                    cameraControl.setWhiteBalanceControl(WhiteBalanceControl.Mode.Manual);
-                    // Set manual white balance value
-                    cameraControl.setWhiteBalanceTemperature(manualWhiteTemperatureValue);
+                    // Get white balance control
+                    WhiteBalanceControl whiteBalanceControl = visionPortal.getCameraControl(WhiteBalanceControl.class);
+                    
+                    // Check if we need to change the mode
+                    if (whiteBalanceControl.getMode() != WhiteBalanceControl.Mode.Manual) {
+                        whiteBalanceControl.setMode(WhiteBalanceControl.Mode.Manual);
+                        sleep(50); // Small delay to let the setting take effect
+                    }
+                    
+                    // Set manual white balance temperature
+                    whiteBalanceControl.setWhiteBalanceTemperature(manualWhiteTemperatureValue);
+                    sleep(20); // Small delay to let the setting take effect
                 }
+            } catch (Exception e) {
+                // Log any errors that occur during camera settings update
+                System.out.println("Error updating camera settings: " + e.getMessage());
             }
+        }
+    }
+    
+    /**
+     * Sleep for the specified number of milliseconds
+     * 
+     * @param milliseconds Time to sleep in milliseconds
+     */
+    private void sleep(long milliseconds) {
+        try {
+            Thread.sleep(milliseconds);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
     
