@@ -94,7 +94,7 @@ public class RobotControl
                 robotHardware.hardwareMap.get(WebcamName.class, "Webcam 1"), camMonitorViewId);
 
         sampleDetectionPipeline = new SampleDetectionPipelineV2();
-        webcam.setPipeline(sampleDetectionPipeline);
+//        webcam.setPipeline(sampleDetectionPipeline);
 
         webcam.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener() {
             //override onOpened to start streaming
@@ -200,7 +200,7 @@ public class RobotControl
             }
         }
 
-        if (newTargetRobotState != ROBOT_STATE.NONE && newTargetRobotState != currentRobotState) {
+        if (newTargetRobotState != ROBOT_STATE.NONE) {
 
             Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "TRANSITIONING STATE CURRENT: " + currentRobotState + " TARGET: " + newTargetRobotState);
 
@@ -510,9 +510,9 @@ public class RobotControl
     public Action GetVerticalActionsForTransfer() {
         Action verticalActions = new SequentialAction(
                 new ParallelAction(
-                        new VerticalClawAction(robotHardware, false, false, false),
+                        new VerticalClawAction(robotHardware, false, true, false),
                         new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_TRANSFER, false, false),
-                        new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_TRANSFER, false, false),
+                        new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_TRANSFER, true, false),
                         new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_TRANSFER, false, false),
                         new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_TRANSFER, false, false)
                 ),
@@ -533,8 +533,8 @@ public class RobotControl
                 new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_CAMERA_READY, false,false)
         );
 
-        return new ParallelAction(
-                verticalActions,
+        return new SequentialAction(
+                 verticalActions,
                 horizontalActions
         );
     }
@@ -636,9 +636,11 @@ public class RobotControl
 //                new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_DROP_SAMPLE_OBZONE, false, false)
         );
 
-        return new ParallelAction(
-                horizontalActions,
-                verticalActions
+        return new SequentialAction(
+                GetTransferSampleActionSequence(),
+                new ParallelAction(
+                    horizontalActions,
+                    verticalActions)
         );
     }
 
@@ -740,28 +742,30 @@ public class RobotControl
 
         // HORIZONTAL STATE SHOULD HAVE ALREADY BEEN DONE DURING PICK SPECIMEN
         Action horizontalActions = new ParallelAction(
+                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_HANG_SPECIMEN, false, false),
                 new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_PICK_SPECIMEN, false, false),
                 new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SPECIMEN, false, false),
                 new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_PICK_SPECIMEN, false, false),
-                new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_PICK_SPECIMEN, false, false),
-                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_PICK_SPECIMEN, false, false)
+                new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_PICK_SPECIMEN, false, false)
         );
 
         Action verticalActions = new SequentialAction(
+                new VerticalClawAction(robotHardware, false, true, false), //close the claw to make sure we pass thru the slides
+                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_HANG_SPECIMEN_HIGH, true, false),
                 new ParallelAction(
-                        new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_SNAP_HIGH_SPECIMEN, true, false),
-                        new VerticalClawAction(robotHardware, false, false, false) //close the claw to make sure we pass thru the slides
+                        new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_HANG_SPECIMEN, true, false),
+                        new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_HANG_SPECIMEN, true, false),
+                        new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_HANG_SPECIMEN, false, false)
                 ),
-                new ParallelAction(
-                        new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_SNAP_HIGH_SPECIMEN, true, false),
-                        new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_SNAP_HIGH_SPECIMEN, true, false),
-                        new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_SNAP_HIGH_SPECIMEN, false, false)
-                )
+                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_HANG_SPECIMEN_LOW, false, false)
         );
 
         return new ParallelAction(
                 horizontalActions,
-                verticalActions
+                new SequentialAction(
+                        verticalActions,
+                        new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_RESTING, false, false)
+                )
         );
     }
 
