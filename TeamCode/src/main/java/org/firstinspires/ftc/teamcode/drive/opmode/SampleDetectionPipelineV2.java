@@ -125,7 +125,7 @@ public class SampleDetectionPipelineV2 implements VisionProcessor {
     };
     public static Scalar[] YELLOW_HIGH = {
         new Scalar(40, 255, 255) ,
-         new Scalar(40, 255, 2555)   // YELLOW_HIGH_1
+         new Scalar(40, 255, 255)   // YELLOW_HIGH_1
     };
 
     public static final double CAMERA_ANGLE = 40;
