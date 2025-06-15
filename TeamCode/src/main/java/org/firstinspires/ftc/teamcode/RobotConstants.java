@@ -14,6 +14,9 @@ public class RobotConstants {
     public static int HORIZONTAL_SLIDE_MAX_POS = 1550;
     public static int HORIZONTAL_SLIDE_INCREMENT = 200;
 
+    public static int VERTICAL_SLIDE_MAX_POS = 2350;
+    public static int VERTICAL_SLIDE_INCREMENT = 150;
+
     public static double HORIZONTAL_TURRET_MAX_POS = 0.75;
     public static double HORIZONTAL_TURRET_MIN_POS = 0.225;
     public static double HORIZONTAL_TURRET_INCREMENT = 0.001;
@@ -30,6 +33,7 @@ public class RobotConstants {
     public static double COLOR_SENSOR_DISTANCE_THRESHOLD = 2;   // in cm.
 
     public static int SLIDE_POSITION_TOLERANCE = 50;
+    public static double VERTICAL_SHOULDER_POSITION_TOLERANCE = 0.05;
 
     public static double HORIZONTAL_CLAW_OPEN = 0.85;
     public static double HORIZONTAL_CLAW_CLOSE = 0.57;
@@ -65,7 +69,7 @@ public class RobotConstants {
     public static int HORIZONTAL_SLIDE_TRANSFER = 0;
     public static double HORIZONTAL_TURRET_TRANSFER = TURRET_CENTER_POSITION;
     public static double HORIZONTAL_SHOULDER_TRANSFER = 0.36;
-    public static double HORIZONTAL_SHOULDER_AFTER_TRANSFER = 0.4;
+    public static double HORIZONTAL_SHOULDER_AFTER_TRANSFER = 0.42;
     public static double HORIZONTAL_ELBOW_TRANSFER = 0.8;
     public static double HORIZONTAL_ELBOW_AFTER_TRANSFER = 0.5;
     public static double HORIZONTAL_WRIST_TRANSFER = 0.52;
@@ -79,10 +83,10 @@ public class RobotConstants {
 
     // HORIZONTAL PICK SPECIMEN STATE VALUES
     public static int HORIZONTAL_SLIDE_PICK_SPECIMEN = HORIZONTAL_SLIDE_TRANSFER;
-    public static double HORIZONTAL_TURRET_PICK_SPECIMEN = HORIZONTAL_TURRET_TRANSFER;
-    public static double HORIZONTAL_SHOULDER_PICK_SPECIMEN = HORIZONTAL_SHOULDER_AFTER_TRANSFER;
-    public static double HORIZONTAL_ELBOW_PICK_SPECIMEN = HORIZONTAL_ELBOW_AFTER_TRANSFER;
-    public static double HORIZONTAL_WRIST_PICK_SPECIMEN = HORIZONTAL_WRIST_TRANSFER;
+    public static double HORIZONTAL_TURRET_PICK_SPECIMEN = 0.1;
+    public static double HORIZONTAL_SHOULDER_PICK_SPECIMEN = 0.46;
+    public static double HORIZONTAL_ELBOW_PICK_SPECIMEN = 0.75;
+    public static double HORIZONTAL_WRIST_PICK_SPECIMEN = 0.18;
 
     public static double VERTICAL_CLAW_OPEN = 0.95;
     public static double VERTICAL_CLAW_CLOSE = 0.55;
@@ -107,17 +111,19 @@ public class RobotConstants {
     public static double VERTICAL_WRIST_TRANSFER = 0.82;
 
     // VERTICAL PICK SPECIMEN VALUES
-    public static int VERTICAL_SLIDE_PICK_SPECIMEN = 450;
-    public static double VERTICAL_SHOULDER_PICK_SPECIMEN = 0.78;
-    public static double VERTICAL_ELBOW_PICK_SPECIMEN = 0.14;
-    public static double VERTICAL_WRIST_PICK_SPECIMEN = VERTICAL_WRIST_TRANSFER;
+    public static int VERTICAL_SLIDE_PICK_SPECIMEN = 600;
+    public static double VERTICAL_SHOULDER_PICK_SPECIMEN = 0.58;
+    public static double VERTICAL_ELBOW_PICK_SPECIMEN = 0.64;
+    public static double VERTICAL_WRIST_PICK_SPECIMEN = 0.15;
 
     // VERTICAL HANG HIGH SPECIMEN VALUES
-    public static int VERTICAL_SLIDE_HANG_SPECIMEN_HIGH = 900;
-    public static int VERTICAL_SLIDE_HANG_SPECIMEN_LOW = 500;
-    public static double VERTICAL_SHOULDER_HANG_SPECIMEN = 0.26;
-    public static double VERTICAL_ELBOW_HANG_SPECIMEN = 0.3;
-    public static double VERTICAL_WRIST_HANG_SPECIMEN = VERTICAL_WRIST_TRANSFER;
+    public static int VERTICAL_SLIDE_HANG_SPECIMEN = 200;
+    public static double VERTICAL_SHOULDER_HANG_SPECIMEN = 0.2;
+    public static double VERTICAL_ELBOW_HANG_SPECIMEN = 0.8;
+    public static double VERTICAL_WRIST_HANG_SPECIMEN = VERTICAL_WRIST_PICK_SPECIMEN;
+
+    // VERTICAL SNAP HIGH SPECIMEN VALUES
+    public static int VERTICAL_SLIDE_SNAP_SPECIMEN = 600;
 
     // VERTICAL LOW BASKET VALUES
     public static int VERTICAL_SLIDE_DROP_LOW_SAMPLE = 440;

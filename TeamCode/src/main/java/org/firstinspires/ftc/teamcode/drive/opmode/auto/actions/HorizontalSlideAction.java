@@ -50,6 +50,10 @@ public class HorizontalSlideAction implements Action {
         if (waitForAction) {
 
             if (shortWait) {
+                //if slide is already at target, immediately return
+                if (Math.abs(robotHardware.getHorizontalSlidePosition() - slidePosition) < RobotConstants.SLIDE_POSITION_TOLERANCE)
+                    return false;
+
                 return (timer.milliseconds() < 400);
             }
 

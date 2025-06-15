@@ -5,6 +5,8 @@ import android.util.Log;
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
+import com.acmerobotics.roadrunner.InstantAction;
+import com.acmerobotics.roadrunner.NullAction;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.SleepAction;
@@ -210,6 +212,9 @@ public class RobotControl
 
                 robotHardware.stopRobotAndMechanisms();
                 runningActions.clear();
+                //we partially achieved the transition - while actions were not completed, it is important to
+                //update the current state since behavior depends on current state.
+                currentRobotState = targetRobotState;
                 stateTransitionInProgress = false;
             }
 
@@ -332,16 +337,16 @@ public class RobotControl
                 case PICK_SAMPLE:   //PICK SAMPLE
                     Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: PICK SAMPLE");
 
-                    //NOTE: if we are going through enter/exit sub, operators are manually adjusting positions
-                    //in such a case, the onlu choice should be the current position
-                    if (currentRobotState == ROBOT_STATE.ENTER_EXIT_SUB){
-                        //use current slide / turret / wrist position
-                        sampleChoices.clear();
-                        sampleChoices.add(new HorizontalPickupVector(robotHardware.getHorizontalSlidePosition(), robotHardware.getHorizontalTurretServoPosition(), robotHardware.getHorizontalWristServoPosition()));
+                    if (currentRobotState == ROBOT_STATE.CAMERA_READY){
+                        //get slide / turret / wrist from camera
+                        GetSampleChoicesFromCameraInputs();//use current slide / turret / wrist position
                     }
                     else {
-                        //get slide / turret / wrist from camera
-                        GetSampleChoicesFromCameraInputs();
+                        //NOTE: if we are going through enter/exit sub, operators are manually adjusting positions
+                        //in such a case, the only choice should be the current position
+
+                        sampleChoices.clear();
+                        sampleChoices.add(new HorizontalPickupVector(robotHardware.getHorizontalSlidePosition(), robotHardware.getHorizontalTurretServoPosition(), robotHardware.getHorizontalWristServoPosition()));
                     }
 
                     runningActions.add(GetPickSampleActionSequence());
@@ -463,17 +468,18 @@ public class RobotControl
         }
     }
 
-    public void ProcessPickSampleState() {
-        if (currentRobotState != ROBOT_STATE.PICK_SAMPLE || targetRobotState == ROBOT_STATE.TRANSFER_SAMPLE) return;
+    public void ProcessColorForPickedSample() {
 
-        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "ProcessPickSampleState");
+        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "ProcessColorForPickedSample");
 
         ColorSenorOutput colorSenorOutput = robotHardware.getDetectedColorAndDistance();
 
-        if (colorSenorOutput.detectedColor == this.gameColor || colorSenorOutput.detectedColor == GameConstants.GAME_COLORS.YELLOW) {
+        if (colorSenorOutput.detectedColor != this.gameColor && colorSenorOutput.detectedColor != GameConstants.GAME_COLORS.YELLOW) {
             if (colorSenorOutput.distance < RobotConstants.COLOR_SENSOR_DISTANCE_THRESHOLD) {
-                robotHardware.setHorizontalClawState(false);
-                this.targetRobotState = ROBOT_STATE.TRANSFER_SAMPLE;
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "ProcessColorForPickedSample - EJECTING BAD SAMPLE");
+
+                robotHardware.setHorizontalShoulderServoPosition(RobotConstants.HORIZONTAL_SHOULDER_ENTER_EXIT_SUB);
+                robotHardware.setHorizontalClawState(true);
             }
         }
     }
@@ -508,15 +514,24 @@ public class RobotControl
     }
 
     public Action GetVerticalActionsForTransfer() {
+
+        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetVerticalActionsForTransfer: Vertical Shoulder Position: " + robotHardware.getVerticalShoulderServoPosition());
+
         Action verticalActions = new SequentialAction(
+                //only close the claw if the shoulder is not at its target position
+                ((robotHardware.getVerticalShoulderServoPosition() - RobotConstants.VERTICAL_SHOULDER_TRANSFER) > 0.01)?
+                        new VerticalClawAction(robotHardware, false, true, false) : new NullAction(),
                 new ParallelAction(
-                        new VerticalClawAction(robotHardware, false, true, false),
-                        new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_TRANSFER, false, false),
                         new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_TRANSFER, true, false),
                         new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_TRANSFER, false, false),
                         new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_TRANSFER, false, false)
                 ),
-                new VerticalClawAction(robotHardware, true, false, false)
+                //need to wait for a bit to let the wrist move to the other side when changing from observation zone
+                (currentRobotState == ROBOT_STATE.TRANSFER_TO_OB_ZONE)? new SleepAction(0.5) : new NullAction(),
+                new ParallelAction(
+                        new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_TRANSFER, false, false),
+                        new VerticalClawAction(robotHardware, true, false, false)
+                )
         );
 
         return verticalActions;
@@ -530,7 +545,8 @@ public class RobotControl
                 new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_CAMERA_READY, false, false),
                 new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_CAMERA_READY, true, false),
                 new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_CAMERA_READY, false, false),
-                new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_CAMERA_READY, false,false)
+                new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_CAMERA_READY, false,false),
+                new InstantAction(() -> robotHardware.setColorSensorLEDState(true))
         );
 
         return new SequentialAction(
@@ -549,7 +565,8 @@ public class RobotControl
                 new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_ENTER_EXIT_SUB, false, false),
                 new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_ENTER_EXIT_SUB, true, false),
                 new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_ENTER_EXIT_SUB, true, false),
-                new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_ENTER_EXIT_SUB, false,false)
+                new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_ENTER_EXIT_SUB, false,false),
+                new InstantAction(() -> robotHardware.setColorSensorLEDState(true))
         );
 
         return new ParallelAction(
@@ -580,10 +597,12 @@ public class RobotControl
                         new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_PICK_SAMPLE, false, false),
                         new HorizontalTurretAction(robotHardware, choice.turretPosition, false, false),
                         new HorizontalSlideAction(robotHardware, choice.slidePosition, false, true),
-                        new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SAMPLE, true, false),
-                        new HorizontalWristAction(robotHardware, choice.wristOrientation, false,false)
+                        new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SAMPLE, true, true),
+                        new HorizontalWristAction(robotHardware, choice.wristOrientation, false,false),
+                        new InstantAction(() -> robotHardware.setColorSensorLEDState(true))
                 ),
-                new HorizontalClawAction(robotHardware, false, true, false)
+                new HorizontalClawAction(robotHardware, false, true, false),
+                new InstantAction(this::ProcessColorForPickedSample)
         );
 
         return new ParallelAction(
@@ -601,7 +620,8 @@ public class RobotControl
                 new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_TRANSFER, false, false),
                 new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_TRANSFER, false, false),
                 new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_TRANSFER, false, false),
-                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_TRANSFER, false, false)
+                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_TRANSFER, false, false),
+                new InstantAction(() -> robotHardware.setColorSensorLEDState(true))
         );
 
         return new SequentialAction(
@@ -625,7 +645,8 @@ public class RobotControl
                 new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_AFTER_TRANSFER, false, false),
                 new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_AFTER_TRANSFER, false, false),
                 new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_TRANSFER, false, false),
-                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_TRANSFER, false, false)
+                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_TRANSFER, false, false),
+                new InstantAction(() -> robotHardware.setColorSensorLEDState(true))
         );
 
         Action verticalActions = new SequentialAction(
@@ -653,7 +674,8 @@ public class RobotControl
                 new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_AFTER_TRANSFER, false, false),
                 new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_AFTER_TRANSFER, false, false),
                 new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_TRANSFER, false, false),
-                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_TRANSFER, false, false)
+                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_TRANSFER, false, false),
+                new InstantAction(() -> robotHardware.setColorSensorLEDState(true))
         );
 
         Action verticalActions = new ParallelAction(
@@ -685,7 +707,8 @@ public class RobotControl
                 new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_AFTER_TRANSFER, false, false),
                 new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_AFTER_TRANSFER, false, false),
                 new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_TRANSFER, false, false),
-                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_TRANSFER, false, false)
+                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_TRANSFER, false, false),
+                new InstantAction(() -> robotHardware.setColorSensorLEDState(true))
         );
 
         Action verticalActions = new ParallelAction(
@@ -707,32 +730,38 @@ public class RobotControl
         );
     }
 
+    private Action GetHorizontalActionsForSpecimen() {
+        Action horizontalActions = new SequentialAction(
+                new ParallelAction(
+                        new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_PICK_SPECIMEN, false, false),
+                        new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_PICK_SPECIMEN, false, false),
+                        new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_PICK_SPECIMEN, false, false),
+                        new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_PICK_SPECIMEN, false, false),
+                        new InstantAction(()-> robotHardware.setColorSensorLEDState(false))
+                ),
+                new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SPECIMEN, false, false)
+        );
+
+        return horizontalActions;
+    }
+
     public Action GetPickSpecimenActionSequence() {
         //TODO: MOVE ROBOT TO PICK SPECIMEN
-
-        // HORIZONTAL STATE SHOULD HAVE ALREADY BEEN DONE DURING TRANSFER
-        Action horizontalActions = new ParallelAction(
-                new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_PICK_SPECIMEN, false, false),
-                new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SPECIMEN, false, false),
-                new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_PICK_SPECIMEN, false, false),
-                new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_PICK_SPECIMEN, false, false),
-                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_PICK_SPECIMEN, false, false)
-        );
+        Action horizontalActions = GetHorizontalActionsForSpecimen();
 
         Action verticalActions = new SequentialAction(
+                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_PICK_SPECIMEN, true, false),
                 new ParallelAction(
-                        new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_PICK_SPECIMEN, true, false),
-                        new VerticalClawAction(robotHardware, false, false, false) //close the claw to make sure we pass thru the slides
-                ),
-                new ParallelAction(
-                        new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_PICK_SPECIMEN, true, false),
-                        new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_PICK_SPECIMEN, true, false),
+                        new VerticalClawAction(robotHardware, false, false, false), //close the claw to make sure we pass thru the slides
+                        new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_PICK_SPECIMEN, false, false),
                         new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_PICK_SPECIMEN, false, false)
                 ),
-                new VerticalClawAction(robotHardware, true, false, false)
+                new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_PICK_SPECIMEN, true, false),
+                new VerticalClawAction(robotHardware, true, false, false),
+                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_RESTING, false, false)
         );
 
-        return new ParallelAction(
+        return new SequentialAction(
                     horizontalActions,
                     verticalActions);
     }
@@ -741,31 +770,21 @@ public class RobotControl
         //TODO: MOVE ROBOT TO SNAP SPECIMEN
 
         // HORIZONTAL STATE SHOULD HAVE ALREADY BEEN DONE DURING PICK SPECIMEN
-        Action horizontalActions = new ParallelAction(
-                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_HANG_SPECIMEN, false, false),
-                new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_PICK_SPECIMEN, false, false),
-                new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SPECIMEN, false, false),
-                new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_PICK_SPECIMEN, false, false),
-                new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_PICK_SPECIMEN, false, false)
-        );
+        Action horizontalActions = GetHorizontalActionsForSpecimen();
 
         Action verticalActions = new SequentialAction(
                 new VerticalClawAction(robotHardware, false, true, false), //close the claw to make sure we pass thru the slides
-                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_HANG_SPECIMEN_HIGH, true, false),
+                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_HANG_SPECIMEN, true, true),
                 new ParallelAction(
-                        new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_HANG_SPECIMEN, true, false),
-                        new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_HANG_SPECIMEN, true, false),
+                        new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_HANG_SPECIMEN, false, false),
+                        new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_HANG_SPECIMEN, false, false),
                         new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_HANG_SPECIMEN, false, false)
-                ),
-                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_HANG_SPECIMEN_LOW, false, false)
+                )
         );
 
         return new ParallelAction(
                 horizontalActions,
-                new SequentialAction(
-                        verticalActions,
-                        new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_RESTING, false, false)
-                )
+                verticalActions
         );
     }
 
@@ -774,31 +793,63 @@ public class RobotControl
 
         return new SequentialAction(
                 GetHangSpecimenActionSequence(),
-                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_RESTING, true, false)
+                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_SNAP_SPECIMEN, true, false),
+                new VerticalClawAction(robotHardware, true, false, false)
         );
     }
 
     /// Function to move the slide and turret in response to DPAD presses
     private void ProcessDPad() {
         if (gamepad2.dpad_up) { //slide out
-            int slidePos = robotHardware.getHorizontalSlidePosition();
-            slidePos = Math.min (slidePos + RobotConstants.HORIZONTAL_SLIDE_INCREMENT, RobotConstants.HORIZONTAL_SLIDE_MAX_POS);
-            robotHardware.setHorizontalSlidePosition(slidePos);
+
+            if (currentRobotState == ROBOT_STATE.PICK_SPECIMEN ||
+            currentRobotState == ROBOT_STATE.HANG_SPECIMEN ||
+            currentRobotState == ROBOT_STATE.SNAP_SPECIMEN) {
+
+                int slidePos = robotHardware.getVerticalSlidePosition();
+                slidePos = Math.min(slidePos + RobotConstants.VERTICAL_SLIDE_INCREMENT, RobotConstants.VERTICAL_SLIDE_MAX_POS);
+                robotHardware.setVerticalSlidePosition(slidePos);
+
+            } else {
+                int slidePos = robotHardware.getHorizontalSlidePosition();
+                slidePos = Math.min(slidePos + RobotConstants.HORIZONTAL_SLIDE_INCREMENT, RobotConstants.HORIZONTAL_SLIDE_MAX_POS);
+                robotHardware.setHorizontalSlidePosition(slidePos);
+            }
         }
 
         if (gamepad2.dpad_down) {   //slide in
-            int slidePos = robotHardware.getHorizontalSlidePosition();
-            slidePos = Math.max (slidePos - RobotConstants.HORIZONTAL_SLIDE_INCREMENT, 0);
-            robotHardware.setHorizontalSlidePosition(slidePos);
+            if (currentRobotState == ROBOT_STATE.PICK_SPECIMEN ||
+                    currentRobotState == ROBOT_STATE.HANG_SPECIMEN ||
+                    currentRobotState == ROBOT_STATE.SNAP_SPECIMEN) {
+
+                int slidePos = robotHardware.getVerticalSlidePosition();
+                slidePos = Math.max(slidePos - RobotConstants.VERTICAL_SLIDE_INCREMENT, 0);
+                robotHardware.setVerticalSlidePosition(slidePos);
+
+            } else {
+                int slidePos = robotHardware.getHorizontalSlidePosition();
+                slidePos = Math.max(slidePos - RobotConstants.HORIZONTAL_SLIDE_INCREMENT, 0);
+                robotHardware.setHorizontalSlidePosition(slidePos);
+            }
         }
 
         if (gamepad2.dpad_left) {   //turret left
+            //nothing to do when working with specimen
+            if (currentRobotState == ROBOT_STATE.PICK_SPECIMEN ||
+                    currentRobotState == ROBOT_STATE.HANG_SPECIMEN ||
+                    currentRobotState == ROBOT_STATE.SNAP_SPECIMEN) { return; }
+
             double turretPos = robotHardware.getHorizontalTurretServoPosition();
             turretPos = Math.min(turretPos + RobotConstants.HORIZONTAL_TURRET_INCREMENT, RobotConstants.HORIZONTAL_TURRET_MAX_POS);
             robotHardware.setHorizontalTurretServoPosition(turretPos);
         }
 
         if (gamepad2.dpad_right) {  //turret right
+            //nothing to do when working with specimen
+            if (currentRobotState == ROBOT_STATE.PICK_SPECIMEN ||
+                    currentRobotState == ROBOT_STATE.HANG_SPECIMEN ||
+                    currentRobotState == ROBOT_STATE.SNAP_SPECIMEN) { return; }
+
             double turretPos = robotHardware.getHorizontalTurretServoPosition();
             turretPos = Math.max(turretPos - RobotConstants.HORIZONTAL_TURRET_INCREMENT, RobotConstants.HORIZONTAL_TURRET_MIN_POS);
             robotHardware.setHorizontalTurretServoPosition(turretPos);
@@ -808,11 +859,21 @@ public class RobotControl
     /// Function to open / close the horizontal claw in response to bumper buttons
     private void ProcessBumpers(){
         if (gamepad2.right_bumper) {
-            robotHardware.setHorizontalClawState(true);
+            if (currentRobotState == ROBOT_STATE.PICK_SPECIMEN) {
+                robotHardware.setVerticalClawState(true);
+            }
+            else {
+                robotHardware.setHorizontalClawState(true);
+            }
         }
 
         if (gamepad2.left_bumper) {
-            robotHardware.setHorizontalClawState(false);
+            if (currentRobotState == ROBOT_STATE.PICK_SPECIMEN) {
+                robotHardware.setVerticalClawState(false);
+            }
+            else {
+                robotHardware.setHorizontalClawState(false);
+            }
         }
     }
 

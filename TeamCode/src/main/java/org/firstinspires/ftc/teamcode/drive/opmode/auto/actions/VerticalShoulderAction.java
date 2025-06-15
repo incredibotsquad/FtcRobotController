@@ -6,6 +6,7 @@ import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.teamcode.RobotConstants;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 
 public class VerticalShoulderAction implements Action {
@@ -34,11 +35,15 @@ public class VerticalShoulderAction implements Action {
 
         if (waitForAction) {
             if (shortWait) {
+                //return immediately if shoulder is already at position
+                if (Math.abs(robotHardware.getVerticalShoulderServoPosition() - position) < RobotConstants.VERTICAL_SHOULDER_POSITION_TOLERANCE)
+                    return false;
+
                 return (timer.milliseconds() < 250);
             }
 
             //tell RR we need to keep running if shoulder is not in the right position yet
-            return (Math.abs(robotHardware.getVerticalShoulderServoPosition() - position) > 0.05);
+            return (Math.abs(robotHardware.getVerticalShoulderServoPosition() - position) > RobotConstants.VERTICAL_SHOULDER_POSITION_TOLERANCE);
         }
 
         return false;
