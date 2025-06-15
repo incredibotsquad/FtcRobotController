@@ -112,8 +112,10 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
 //        rightFrontDrive.setDirection(DcMotor.Direction.FORWARD);
 //        rightBackDrive.setDirection(DcMotor.Direction.FORWARD);
 
+        robotHardware.startLimelight();
 
         while (opModeInInit()) {
+
             gameColor = GameConstants.GAME_COLORS.RED;
 
             if (gamepad1.x || gamepad2.x) {
@@ -132,6 +134,20 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
 
             if (gamepad1.y || gamepad2.y) {
                 gameColor = GameConstants.GAME_COLORS.YELLOW;
+                robotControl.setGameColor(gameColor);
+                telemetry.addData("Game Color: ", gameColor);
+                telemetry.update();
+            }
+
+            if ((gamepad1.x && gamepad1.y) || (gamepad2.x && gamepad2.y)) {
+                gameColor = GameConstants.GAME_COLORS.BLUE_AND_YELLOW;
+                robotControl.setGameColor(gameColor);
+                telemetry.addData("Game Color: ", gameColor);
+                telemetry.update();
+            }
+
+            if ((gamepad1.b && gamepad1.y) || (gamepad2.b && gamepad2.y)) {
+                gameColor = GameConstants.GAME_COLORS.RED_AND_YELLOW;
                 robotControl.setGameColor(gameColor);
                 telemetry.addData("Game Color: ", gameColor);
                 telemetry.update();
@@ -217,4 +233,6 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
 
             idle();
         }
+
+        robotHardware.stopLimelight();
     }}

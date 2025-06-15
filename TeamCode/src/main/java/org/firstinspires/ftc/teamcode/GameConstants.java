@@ -5,7 +5,7 @@ public class GameConstants {
         RED,
         BLUE,
         YELLOW,
-        NOT_RED,
-        NOT_BLUE
+        BLUE_AND_YELLOW,
+        RED_AND_YELLOW
     }
 }

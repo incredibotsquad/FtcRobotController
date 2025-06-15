@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode.drive.opmode;
 
 import android.util.Log;
-import apple.laf.JRSUIConstants.Size;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
@@ -14,10 +13,11 @@ import com.acmerobotics.roadrunner.SleepAction;
 import com.qualcomm.robotcore.hardware.Gamepad;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.teamcode.ColorSenorOutput;
 import org.firstinspires.ftc.teamcode.GameConstants;
 import org.firstinspires.ftc.teamcode.HorizontalPickupVector;
+import org.firstinspires.ftc.teamcode.LimelightHelper;
+import org.firstinspires.ftc.teamcode.LimelightLocation;
 import org.firstinspires.ftc.teamcode.RobotConstants;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.HorizontalClawAction;
@@ -31,13 +31,9 @@ import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.VerticalElbowAct
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.VerticalShoulderAction;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.VerticalSlideAction;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.VerticalWristAction;
-import org.openftc.easyopencv.OpenCvCamera;
-import org.openftc.easyopencv.OpenCvCameraFactory;
-import org.openftc.easyopencv.OpenCvCameraRotation;
-import org.openftc.easyopencv.OpenCvWebcam;
+import org.firstinspires.ftc.vision.VisionPortal;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 public class RobotControl
@@ -51,7 +47,7 @@ public class RobotControl
 
     public TensorFlow VisionCalibration;
     VisionPortal visionPortal;
-    SampleDetectionPipelineV2 sampleDetectionPipeline;
+//    SampleDetectionPipelineV2 sampleDetectionPipeline;
 
     List<HorizontalPickupVector> sampleChoices;
 
@@ -79,6 +75,8 @@ public class RobotControl
 
     private Telemetry telemetry;
 
+    private LimelightHelper limelightHelper;
+
     public RobotControl(Gamepad gamepad, RobotHardware robotHardware, Telemetry telemetry) {
         gamepad2 = gamepad;
         this.telemetry = telemetry;
@@ -89,41 +87,39 @@ public class RobotControl
         dashboard = FtcDashboard.getInstance();
         runningActions = new ArrayList<>();
         sampleChoices = new ArrayList<>();
-
-        VisionCalibration = new TensorFlow();
-        
-        // Create the sample detection pipeline
-        sampleDetectionPipeline = new SampleDetectionPipelineV2();
-        
-        // Create a VisionPortal with the pipeline
-        VisionPortal.Builder builder = new VisionPortal.Builder();
-        
-        // Configure the builder
-            builder.setCamera(robotHardware.hardwareMap.get(WebcamName.class, "Webcam 1"))
-                .setCameraResolution(new Size(640, 480))
-                .addProcessor(sampleDetectionPipeline)
-                .enableLiveView(true)
-                .setAutoStopLiveView(true);
+        limelightHelper = new LimelightHelper(robotHardware, telemetry);
 
 
-            visionPortal = builder.build();
-        
-        
-        // Build the VisionPortal
-        visionPortal = builder.build();
-        
-        // Set the VisionPortal in the pipeline
-        sampleDetectionPipeline.setVisionPortal(visionPortal);
-        
-        // Update camera settings
-        sampleDetectionPipeline.updateCameraSettings(visionPortal);
+//        VisionCalibration = new TensorFlow();
+//
+//        // Create the sample detection pipeline
+//        sampleDetectionPipeline = new SampleDetectionPipelineV2();
+//
+//        // Create a VisionPortal with the pipeline
+//        VisionPortal.Builder builder = new VisionPortal.Builder();
+//
+//        // Configure the builder
+//        builder.setCamera(robotHardware.hardwareMap.get(WebcamName.class, "Webcam 1"))
+//            .setCameraResolution(new Size(640, 480))
+//            .addProcessor(sampleDetectionPipeline)
+//            .enableLiveView(true)
+//            .setAutoStopLiveView(true);
+//
+//        // Build the VisionPortal
+//        visionPortal = builder.build();
+//
+//        // Set the VisionPortal in the pipeline
+//        sampleDetectionPipeline.setVisionPortal(visionPortal);
+//
+//        // Update camera settings
+//        sampleDetectionPipeline.updateCameraSettings(visionPortal);
     }
 
     public void ProcessInputs(Telemetry telemetry) {
         // Check if camera settings need to be applied
-        if (!cameraSettingsApplied) {
-            tryApplyCameraSettings();
-        }
+//        if (!cameraSettingsApplied) {
+//            tryApplyCameraSettings();
+//        }
 
         CreateStateFromButtonPress();
 
@@ -136,24 +132,24 @@ public class RobotControl
         ProcessDPad();
         ProcessBumpers();
         ProcessJoystickForHorizontalWrist();
-//        ProcessPickSampleState();
+
     }
     
     /**
      * Try to apply camera settings if the VisionPortal is streaming
      * This is called periodically from ProcessInputs until settings are successfully applied
      */
-    private void tryApplyCameraSettings() {
-        if (visionPortal != null && visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING) {
-            // Apply camera settings - don't force update if already applied in the pipeline
-            if (sampleDetectionPipeline.updateCameraSettings(visionPortal)) {
-                cameraSettingsApplied = true;
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "Camera settings successfully applied");
-            }
-        } else {
-            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "Waiting for camera to start streaming before applying settings...");
-        }
-    }
+//    private void tryApplyCameraSettings() {
+//        if (visionPortal != null && visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING) {
+//            // Apply camera settings - don't force update if already applied in the pipeline
+//            if (sampleDetectionPipeline.updateCameraSettings(visionPortal)) {
+//                cameraSettingsApplied = true;
+//                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "Camera settings successfully applied");
+//            }
+//        } else {
+//            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "Waiting for camera to start streaming before applying settings...");
+//        }
+//    }
 
     private void ProcessSafetyChecks() {
         robotHardware.horizontalSlideSafetyChecks();
@@ -161,7 +157,7 @@ public class RobotControl
     }
 
     public void setGameColor(GameConstants.GAME_COLORS gameColor) {
-        sampleDetectionPipeline.setColorMode(gameColor);
+//        sampleDetectionPipeline.setColorMode(gameColor);
         this.gameColor = gameColor;
     }
     
@@ -274,77 +270,136 @@ public class RobotControl
         }
     }
 
-
     private void GetSampleChoicesFromCameraInputs() {
 
-        sampleChoices.clear();  //remove any previous choices
+        sampleChoices.clear();
 
-        if (sampleDetectionPipeline.latestRects != null && sampleDetectionPipeline.latestDistances != null) {
+        try {
+            // Get detections from Limelight using appropriate pipelines
+            List<LimelightLocation> allLocations = limelightHelper.getDetectionsForMode(this.gameColor);
 
-            for (int loop = 0; loop < sampleDetectionPipeline.latestRects.length; loop++) {
-                double realX = sampleDetectionPipeline.GetRealXinches(loop);
-                double realY = sampleDetectionPipeline.GetRealYinches(loop);
-                double realOrientation = sampleDetectionPipeline.GetRealSampleOrientation(loop);
+            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: allLocations count: " + allLocations.size());
 
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Real Vertical: " + realY);
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Real Horizontal: " + realX);
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Real Orientation: " + realOrientation);
 
-                TensorFlow.CalibrationResult result = VisionCalibration.calibrate((float) (realX - RobotConstants.TURRET_OFFSET_FROM_CAMERA), (float) realY, (float) realOrientation);
+            for (int i =0; i < allLocations.size(); i++) {
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "==============================================");
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: Location : " + (i + 1));
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: X: " + allLocations.get(i).translation);
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: Y: " + allLocations.get(i).extension);
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: Angle: " + allLocations.get(i).orientationAngle);
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: Color: " + allLocations.get(i).color);
+            }
 
-//                double calibratedYOffset = result.calibratedY;
-//                double calibratedXOffset = result.calibratedX;
-//                double calibratedSampleOrientation = result.calibratedAngle;
+            if (!allLocations.isEmpty()) {
+                LimelightLocation best = limelightHelper.getBest(allLocations, this.gameColor);
 
-                double calibratedYOffset = realY;
-                double calibratedXOffset = realX;
-                double calibratedSampleOrientation = realOrientation;
 
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Calibrated Vertical: " + calibratedYOffset);
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Calibrated Horizontal: " + calibratedXOffset);
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Calibrated Orientation: " + calibratedSampleOrientation);
+                double accountForPickupArm = Math.sqrt((RobotConstants.PICKUP_ARM_LENGTH * RobotConstants.PICKUP_ARM_LENGTH) - (best.translation * best.translation));
+                int horizontalSlidePosition = (int) ((best.extension - accountForPickupArm) * RobotConstants.HORIZONTAL_SLIDE_TICKS_PER_INCH);
 
-                double accountForPickupArm = Math.sqrt((RobotConstants.PICKUP_ARM_LENGTH * RobotConstants.PICKUP_ARM_LENGTH) - (calibratedXOffset * calibratedXOffset));
-                int horizontalSlidePosition = (int) ((calibratedYOffset - accountForPickupArm) * RobotConstants.HORIZONTAL_SLIDE_TICKS_PER_INCH);
+//                if (horizontalSlidePosition < 0 || horizontalSlidePosition > RobotConstants.HORIZONTAL_SLIDE_MAX_POS) continue; // no need to add an option which we cannot reach
+//                if (Math.abs(best.translation) >= RobotConstants.PICKUP_ARM_LENGTH) continue;    // cannot reach beyond pickup arm length
 
-                if (horizontalSlidePosition < 0 || horizontalSlidePosition > RobotConstants.HORIZONTAL_SLIDE_MAX_POS) continue; // no need to add an option which we cannot reach
-                if (Math.abs(calibratedXOffset) >= RobotConstants.PICKUP_ARM_LENGTH) continue;    // cannot reach beyond pickup arm length
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs. horizontalSlidePosition: " + horizontalSlidePosition);
 
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. horizontalSlidePosition: " + horizontalSlidePosition);
+                double turretMovementAngle = Math.toDegrees(Math.atan(best.translation / accountForPickupArm));
 
-                double turretMovementAngle = Math.toDegrees(Math.atan(calibratedXOffset / accountForPickupArm));
-
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. turretMovementAngle: " + turretMovementAngle);
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs. turretMovementAngle: " + turretMovementAngle);
 
                 double turretServoPos = RobotConstants.TURRET_CENTER_POSITION - (turretMovementAngle / 300);
 
                 double clawParallelOrientation = RobotConstants.HORIZONTAL_WRIST_TRANSFER + (turretMovementAngle / 300);    //this will keep the claw parallel to the robot
 
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. clawParallelOrientation: " + clawParallelOrientation);
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs. clawParallelOrientation: " + clawParallelOrientation);
 
-                double wristTargetAngle = 180 - calibratedSampleOrientation - 90;   //wrist has to be perpendicular to the sample
+                double wristTargetAngle = 180 - best.orientationAngle - 90;   //wrist has to be perpendicular to the sample
                 double horizontalWristPosition = clawParallelOrientation + (wristTargetAngle / 300);
 
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. horizontalWristPosition: " + horizontalWristPosition);
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs. horizontalWristPosition: " + horizontalWristPosition);
 
                 sampleChoices.add(new HorizontalPickupVector(horizontalSlidePosition, turretServoPos, horizontalWristPosition));
+
+                displayLimelightTelemetry(best, allLocations);
+            } else {
+                displayLimelightTelemetry(null, null);
             }
 
-            //sort by vertical distance
-            sampleChoices.sort(Comparator.comparingInt(choice -> choice.slidePosition));
-        }
-
-        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "==================================================================");
-        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Choice Count: " + sampleChoices.size());
-        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "==================================================================");
-
-        for (HorizontalPickupVector choice: sampleChoices) {
-            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. horizontalSlidePosition: " + choice.slidePosition);
-            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. turretMovementAngle: " + choice.turretPosition);
-            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. horizontalWristPosition: " + choice.wristOrientation);
-            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "==================================================================");
+        } catch (Exception e) {
+            telemetry.addData("Error", e.getMessage());
+            telemetry.update();
         }
     }
+
+//    private void GetSampleChoicesFromCameraInputs() {
+//
+//        sampleChoices.clear();  //remove any previous choices
+//
+//        if (sampleDetectionPipeline.latestRects != null && sampleDetectionPipeline.latestDistances != null) {
+//
+//            for (int loop = 0; loop < sampleDetectionPipeline.latestRects.length; loop++) {
+//                double realX = sampleDetectionPipeline.GetRealXinches(loop);
+//                double realY = sampleDetectionPipeline.GetRealYinches(loop);
+//                double realOrientation = sampleDetectionPipeline.GetRealSampleOrientation(loop);
+//
+//                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Real Vertical: " + realY);
+//                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Real Horizontal: " + realX);
+//                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Real Orientation: " + realOrientation);
+//
+//                TensorFlow.CalibrationResult result = VisionCalibration.calibrate((float) (realX - RobotConstants.TURRET_OFFSET_FROM_CAMERA), (float) realY, (float) realOrientation);
+//
+////                double calibratedYOffset = result.calibratedY;
+////                double calibratedXOffset = result.calibratedX;
+////                double calibratedSampleOrientation = result.calibratedAngle;
+//
+//                double calibratedYOffset = realY;
+//                double calibratedXOffset = realX;
+//                double calibratedSampleOrientation = realOrientation;
+//
+//                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Calibrated Vertical: " + calibratedYOffset);
+//                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Calibrated Horizontal: " + calibratedXOffset);
+//                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Calibrated Orientation: " + calibratedSampleOrientation);
+//
+//                double accountForPickupArm = Math.sqrt((RobotConstants.PICKUP_ARM_LENGTH * RobotConstants.PICKUP_ARM_LENGTH) - (calibratedXOffset * calibratedXOffset));
+//                int horizontalSlidePosition = (int) ((calibratedYOffset - accountForPickupArm) * RobotConstants.HORIZONTAL_SLIDE_TICKS_PER_INCH);
+//
+//                if (horizontalSlidePosition < 0 || horizontalSlidePosition > RobotConstants.HORIZONTAL_SLIDE_MAX_POS) continue; // no need to add an option which we cannot reach
+//                if (Math.abs(calibratedXOffset) >= RobotConstants.PICKUP_ARM_LENGTH) continue;    // cannot reach beyond pickup arm length
+//
+//                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. horizontalSlidePosition: " + horizontalSlidePosition);
+//
+//                double turretMovementAngle = Math.toDegrees(Math.atan(calibratedXOffset / accountForPickupArm));
+//
+//                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. turretMovementAngle: " + turretMovementAngle);
+//
+//                double turretServoPos = RobotConstants.TURRET_CENTER_POSITION - (turretMovementAngle / 300);
+//
+//                double clawParallelOrientation = RobotConstants.HORIZONTAL_WRIST_TRANSFER + (turretMovementAngle / 300);    //this will keep the claw parallel to the robot
+//
+//                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. clawParallelOrientation: " + clawParallelOrientation);
+//
+//                double wristTargetAngle = 180 - calibratedSampleOrientation - 90;   //wrist has to be perpendicular to the sample
+//                double horizontalWristPosition = clawParallelOrientation + (wristTargetAngle / 300);
+//
+//                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. horizontalWristPosition: " + horizontalWristPosition);
+//
+//                sampleChoices.add(new HorizontalPickupVector(horizontalSlidePosition, turretServoPos, horizontalWristPosition));
+//            }
+//
+//            //sort by vertical distance
+//            sampleChoices.sort(Comparator.comparingInt(choice -> choice.slidePosition));
+//        }
+//
+//        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "==================================================================");
+//        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. Choice Count: " + sampleChoices.size());
+//        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "==================================================================");
+//
+//        for (HorizontalPickupVector choice: sampleChoices) {
+//            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. horizontalSlidePosition: " + choice.slidePosition);
+//            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. turretMovementAngle: " + choice.turretPosition);
+//            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetHorizontalPickupVectorFromCameraInputs. horizontalWristPosition: " + choice.wristOrientation);
+//            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "==================================================================");
+//        }
+//    }
 
 
     //function to take the new target state and turn it into robot movements
@@ -396,7 +451,6 @@ public class RobotControl
                     else {
                         //NOTE: if we are going through enter/exit sub, operators are manually adjusting positions
                         //in such a case, the only choice should be the current position
-
                         sampleChoices.clear();
                         sampleChoices.add(new HorizontalPickupVector(robotHardware.getHorizontalSlidePosition(), robotHardware.getHorizontalTurretServoPosition(), robotHardware.getHorizontalWristServoPosition()));
                     }
@@ -943,5 +997,43 @@ public class RobotControl
             robotHardware.setHorizontalWristServoPosition(wristPos);
         }
 
+    }
+
+    private void displayLimelightTelemetry(LimelightLocation best, List<LimelightLocation> locations) {
+        int totalDetections = (locations != null)? locations.size(): 0;
+
+        telemetry.addData("Status", "Running");
+        telemetry.addData("Detection Mode", gameColor.toString());
+        telemetry.addData("Total Detections", totalDetections);
+
+        // Show controls
+        telemetry.addLine("Controls:");
+        telemetry.addLine("A=Red, B=Blue, Y=Yellow, X=Red+Yellow, RB=Blue+Yellow");
+
+        // Debug: Show all detected colors
+        if (locations != null && !locations.isEmpty()) {
+            telemetry.addLine("=== ALL DETECTIONS ===");
+            for (int i = 0; i < Math.min(locations.size(), 3); i++) {
+                LimelightLocation loc = locations.get(i);
+                telemetry.addData("Detection " + (i+1),
+                        String.format("%s: X=%.1f Y=%.1f", loc.color, loc.translation, loc.extension));
+            }
+        }
+
+        if (best != null && totalDetections > 0 &&
+                !(best.translation == 0 && best.extension == 0 && best.rotation == 0)) {
+            telemetry.addLine("=== BEST TARGET ===");
+            telemetry.addData("X Position", String.format("%.2f", best.translation));
+            telemetry.addData("Y Position", String.format("%.2f", best.extension));
+            telemetry.addData("Orientation", String.format("%.1f°", best.orientationAngle));
+            telemetry.addData("Color", best.color.toString());
+            telemetry.addData("Raw X", String.format("%.2f", best.rawTranslation));
+            telemetry.addData("Raw Y", String.format("%.2f", best.rawExtension));
+            telemetry.addData("Rotation Score", String.format("%.2f", best.rotation));
+        } else {
+            telemetry.addLine("No valid targets found for " + gameColor);
+        }
+
+        telemetry.update();
     }
 }

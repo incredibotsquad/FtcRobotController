@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.drive.opmode;
 
+import org.firstinspires.ftc.robotcore.internal.camera.calibration.CameraCalibration;
 import org.firstinspires.ftc.teamcode.GameConstants;
 import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
@@ -22,6 +23,7 @@ import com.acmerobotics.dashboard.config.Config;
 
 import org.opencv.android.Utils;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.util.Log;
 
 import java.io.File;
@@ -210,10 +212,10 @@ public class SampleDetectionPipelineV2 implements VisionProcessor {
                 GainControl gainControl = visionPortal.getCameraControl(GainControl.class);
                 
                 // Check if we need to change the mode
-                if (gainControl.getMode() != GainControl.Mode.Manual) {
-                    gainControl.setMode(GainControl.Mode.Manual);
-                    sleep(50); // Small delay to let the setting take effect
-                }
+//                if (gainControl.getMode() != GainControl.Mode.Manual) {
+//                    gainControl.setMode(GainControl.Mode.Manual);
+//                    sleep(50); // Small delay to let the setting take effect
+//                }
                 
                 gainControl.setGain(manualGainValue);
                 sleep(20); // Small delay to let the setting take effect
@@ -224,8 +226,8 @@ public class SampleDetectionPipelineV2 implements VisionProcessor {
                     WhiteBalanceControl whiteBalanceControl = visionPortal.getCameraControl(WhiteBalanceControl.class);
                     
                     // Check if we need to change the mode
-                    if (whiteBalanceControl.getMode() != WhiteBalanceControl.Mode.Manual) {
-                        whiteBalanceControl.setMode(WhiteBalanceControl.Mode.Manual);
+                    if (whiteBalanceControl.getMode() != WhiteBalanceControl.Mode.MANUAL) {
+                        whiteBalanceControl.setMode(WhiteBalanceControl.Mode.MANUAL);
                         sleep(50); // Small delay to let the setting take effect
                     }
                     

@@ -4,6 +4,8 @@ import android.util.Log;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
+import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.ColorRangeSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -48,6 +50,7 @@ public class RobotHardware {
     private Servo verticalShoulderServo;
     private AnalogInput verticalShoulderServoEncoder;
     private TouchSensor verticalLimitSwitch;
+    private Limelight3A limelight;
 
 
      //making constructor
@@ -117,30 +120,67 @@ public class RobotHardware {
 
 //         verticalLimitSwitch = hardwareMap.get(TouchSensor.class, "VerticalLimitSwitch");
 
+         limelight = hardwareMap.get(Limelight3A.class, "limelight");
+
          imu = hardwareMap.get(IMU.class, "imu");
      }
 
+    public LLResult GetLatestLimelightResults() {
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " GetLatestLimelightResults");
+
+        LLResult result = null;
+        if (limelight != null) {
+            result = limelight.getLatestResult();
+        }
+
+        return result;
+    }
+
+    public void setLimelightPipeline(int pipeline) {
+        if (limelight != null) {
+            limelight.pipelineSwitch(pipeline);
+        }
+    }
+
+    public void startLimelight() {
+        if (limelight != null) {
+            limelight.start();
+        }
+    }
+
+    public void stopLimelight() {
+        if (limelight != null) {
+            limelight.stop();
+        }
+    }
 
      public void stopAllMechanisms()
      {
+         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " stopAllMechanisms");
          horizontalSlideMotor.setPower(0);
          verticalSlideMotor1.setPower(0);
          verticalSlideMotor2.setPower(0);
      }
 
     public void stopRobotChassis() {
-         rightFrontDriveMotor.setPower(0);
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " stopRobotChassis");
+
+        rightFrontDriveMotor.setPower(0);
          leftFrontDriveMotor.setPower(0);
          rightBackDriveMotor.setPower(0);
          leftBackDriveMotor.setPower(0);
     }
 
     public void stopRobotAndMechanisms() {
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " stopRobotAndMechanisms");
+
         stopRobotChassis();
         stopAllMechanisms();
     }
 
      public boolean getHorizontalClawState () {
+         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getHorizontalClawState");
+
          return horizontalClawServo.getPosition() == RobotConstants.HORIZONTAL_CLAW_OPEN;
      }
 
