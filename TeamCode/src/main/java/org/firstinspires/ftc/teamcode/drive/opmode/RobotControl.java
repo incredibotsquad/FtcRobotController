@@ -252,7 +252,7 @@ public class RobotControl
 
         if (newTargetRobotState != ROBOT_STATE.NONE) {
 
-            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "TRANSITIONING STATE CURRENT: " + currentRobotState + " TARGET: " + newTargetRobotState);
+            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GAMEPAD INPUTS RECEIVED FOR STATE CHANGE CURRENT: " + currentRobotState + " TARGET: " + newTargetRobotState);
 
             if (targetRobotState != ROBOT_STATE.NONE && newTargetRobotState != targetRobotState) {
                 //STOP ALL PROCESSING - STATE TRANSITION WAS GOING ON WHEN NEW STATE WAS CALLED IN
@@ -296,6 +296,8 @@ public class RobotControl
 
                 double accountForPickupArm = Math.sqrt((RobotConstants.PICKUP_ARM_LENGTH * RobotConstants.PICKUP_ARM_LENGTH) - (best.translation * best.translation));
                 int horizontalSlidePosition = (int) ((best.extension - accountForPickupArm) * RobotConstants.HORIZONTAL_SLIDE_TICKS_PER_INCH);
+
+                if (horizontalSlidePosition > RobotConstants.HORIZONTAL_SLIDE_MAX_POS) return;
 
 //                if (horizontalSlidePosition < 0 || horizontalSlidePosition > RobotConstants.HORIZONTAL_SLIDE_MAX_POS) continue; // no need to add an option which we cannot reach
 //                if (Math.abs(best.translation) >= RobotConstants.PICKUP_ARM_LENGTH) continue;    // cannot reach beyond pickup arm length
@@ -627,9 +629,10 @@ public class RobotControl
                 //only close the claw if the shoulder is not at its target position
                 ((robotHardware.getVerticalShoulderServoPosition() - RobotConstants.VERTICAL_SHOULDER_TRANSFER) > 0.01)?
                         new VerticalClawAction(robotHardware, false, true, false) : new NullAction(),
+                //wait for elbow to move over if coming from dropping in ob zone.
+                new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_TRANSFER, (currentRobotState == ROBOT_STATE.TRANSFER_TO_OB_ZONE), false),
                 new ParallelAction(
                         new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_TRANSFER, true, false),
-                        new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_TRANSFER, false, false),
                         new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_TRANSFER, false, false)
                 ),
                 //need to wait for a bit to let the wrist move to the other side when changing from observation zone
@@ -703,7 +706,8 @@ public class RobotControl
                         new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_PICK_SAMPLE, false, false),
                         new HorizontalTurretAction(robotHardware, choice.turretPosition, false, false),
                         new HorizontalSlideAction(robotHardware, choice.slidePosition, false, true),
-                        new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SAMPLE, true, true),
+                        //short wait if coming from enter exit sub, longer otherwise.
+                        new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SAMPLE, true, (currentRobotState == ROBOT_STATE.ENTER_EXIT_SUB)),
                         new HorizontalWristAction(robotHardware, choice.wristOrientation, false,false),
                         new InstantAction(() -> robotHardware.setColorSensorLEDState(true))
                 ),

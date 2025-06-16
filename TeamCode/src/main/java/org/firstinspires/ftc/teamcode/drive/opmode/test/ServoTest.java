@@ -1,11 +1,8 @@
 package org.firstinspires.ftc.teamcode.drive.opmode.test;
 
-import android.util.Log;
-
 import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -30,19 +27,27 @@ public class ServoTest extends LinearOpMode {
     RobotHardware myHardware;
 
     // Declare OpMode members.
-    public static double servoPosition;
-    public static String servoName = "HorizontalShoulderServo";
+    public static double servo1Position = 0.35;
+    public static String servo1Name = "HorizontalShoulderServo";
+
+    public static boolean enableServo2 = true;
+    public static double servo2Position = 0.475;
+    public static String servo2Name = "HorizontalTurretServo";
 
     // Close: 0.42
     // Open: 0.55
     private ElapsedTime runtime = new ElapsedTime();
-    private Servo Servo;
+    private Servo Servo1;
+    private Servo Servo2;
 
     @Override
     public void runOpMode() {
 
         while (opModeInInit()) {
-            Servo = hardwareMap.get(Servo.class, servoName);
+            Servo1 = hardwareMap.get(Servo.class, servo1Name);
+            if (enableServo2) {
+                Servo2 = hardwareMap.get(Servo.class, servo2Name);
+            }
         }
 
         telemetry.addData("Status", "Initialized");
@@ -56,7 +61,11 @@ public class ServoTest extends LinearOpMode {
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
             if(gamepad1.a) {
-                Servo.setPosition(servoPosition);
+                Servo1.setPosition(servo1Position);
+
+                if (enableServo2) {
+                    Servo2.setPosition(servo2Position);
+                }
             }
         }
     }

@@ -165,7 +165,7 @@ public class RobotHardware {
     public void stopRobotChassis() {
         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " stopRobotChassis");
 
-        rightFrontDriveMotor.setPower(0);
+         rightFrontDriveMotor.setPower(0);
          leftFrontDriveMotor.setPower(0);
          rightBackDriveMotor.setPower(0);
          leftBackDriveMotor.setPower(0);
@@ -333,8 +333,7 @@ public class RobotHardware {
     public double getVerticalShoulderServoPosition() {
         double voltage = verticalShoulderServoEncoder.getVoltage();
         double position = 1 - (voltage / 3.3);  //position via encoder seems to be flipped
-//        double position = verticalShoulderServoEncoder.getVoltage() / 3.3;
-        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getVerticalShoulderServo Voltage: " + voltage);
+
         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getVerticalShoulderServo Position: " + position);
         return position;
     }

@@ -9,11 +9,11 @@ public class LimelightConstants {
     public static int YELLOW_PIPELINE = 3;
     public static int BLUE_PIPELINE = 4;
 
-    public static double LIME_LIGHT_MOUNT_ANGLE = 30; // a1
-    public static double LIME_LIGHT_LENS_HEIGHT_INCHES = 7.5; // h1
-    public static double LIME_LIGHT_OFFSET = -3; // h1
-    public static double SAMPLE_HEIGHT_INCHES = 0; // h2
-    public static double TELESCOPE_OFFSET = 0; // Set to 0 for camera-only testing
+    public static double LIME_LIGHT_MOUNT_ANGLE = 35; // a1
+    public static double LIME_LIGHT_LENS_HEIGHT_INCHES = 10; // h1
+    public static double LIME_LIGHT_OFFSET = 0; // h1
+    public static double SAMPLE_HEIGHT_INCHES = 0.75; // h2
+    public static double TELESCOPE_OFFSET = 2.5; // Set to 0 for camera-only testing
     public static double X_WEIGHT = 2;
     public static double Y_WEIGHT = 3;
     public static double ROT_WEIGHT = 20;
