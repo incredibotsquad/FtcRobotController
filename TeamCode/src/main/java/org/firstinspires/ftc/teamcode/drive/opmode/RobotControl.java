@@ -13,7 +13,7 @@ import com.acmerobotics.roadrunner.SleepAction;
 import com.qualcomm.robotcore.hardware.Gamepad;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.teamcode.ColorSenorOutput;
+import org.firstinspires.ftc.teamcode.ColorSensorOutput;
 import org.firstinspires.ftc.teamcode.GameConstants;
 import org.firstinspires.ftc.teamcode.HorizontalPickupVector;
 import org.firstinspires.ftc.teamcode.LimelightHelper;
@@ -287,17 +287,30 @@ public class RobotControl
                 Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: X: " + allLocations.get(i).translation);
                 Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: Y: " + allLocations.get(i).extension);
                 Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: Angle: " + allLocations.get(i).orientationAngle);
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: Aspect Ratio: " + allLocations.get(i).aspectRatio);
                 Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: Color: " + allLocations.get(i).color);
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: PipelineIndex: " + allLocations.get(i).pipelineIndex);
             }
 
             if (!allLocations.isEmpty()) {
                 LimelightLocation best = limelightHelper.getBest(allLocations, this.gameColor);
 
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "==============================================");
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: BEST: X: " + best.translation);
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: BEST: Y: " + best.extension);
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: BEST: Angle: " + best.orientationAngle);
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: BEST: Aspect Ratio: " + best.aspectRatio);
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: BEST: Color: " + best.color);
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: BEST: PipelineIndex: " + best.pipelineIndex);
 
                 double accountForPickupArm = Math.sqrt((RobotConstants.PICKUP_ARM_LENGTH * RobotConstants.PICKUP_ARM_LENGTH) - (best.translation * best.translation));
                 int horizontalSlidePosition = (int) ((best.extension - accountForPickupArm) * RobotConstants.HORIZONTAL_SLIDE_TICKS_PER_INCH);
 
-                if (horizontalSlidePosition > RobotConstants.HORIZONTAL_SLIDE_MAX_POS) return;
+                if (horizontalSlidePosition > RobotConstants.HORIZONTAL_SLIDE_MAX_POS) {
+                    Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs. horizontalSlide MAX Exceeded: " + horizontalSlidePosition);
+
+                    return;
+                }
 
 //                if (horizontalSlidePosition < 0 || horizontalSlidePosition > RobotConstants.HORIZONTAL_SLIDE_MAX_POS) continue; // no need to add an option which we cannot reach
 //                if (Math.abs(best.translation) >= RobotConstants.PICKUP_ARM_LENGTH) continue;    // cannot reach beyond pickup arm length
@@ -308,9 +321,9 @@ public class RobotControl
 
                 Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs. turretMovementAngle: " + turretMovementAngle);
 
-                double turretServoPos = RobotConstants.TURRET_CENTER_POSITION - (turretMovementAngle / 300);
+                double turretServoPos = RobotConstants.HORIZONTAL_TURRET_CENTER + (turretMovementAngle / 355);
 
-                double clawParallelOrientation = RobotConstants.HORIZONTAL_WRIST_TRANSFER + (turretMovementAngle / 300);    //this will keep the claw parallel to the robot
+                double clawParallelOrientation = RobotConstants.HORIZONTAL_WRIST_TRANSFER + (turretMovementAngle / 355);    //this will keep the claw parallel to the robot
 
                 Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs. clawParallelOrientation: " + clawParallelOrientation);
 
@@ -446,7 +459,8 @@ public class RobotControl
                 case PICK_SAMPLE:   //PICK SAMPLE
                     Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: PICK SAMPLE");
 
-                    if (currentRobotState == ROBOT_STATE.CAMERA_READY){
+                    if (currentRobotState == ROBOT_STATE.CAMERA_READY ||
+                    currentRobotState == ROBOT_STATE.PICK_SAMPLE){
                         //get slide / turret / wrist from camera
                         GetSampleChoicesFromCameraInputs();//use current slide / turret / wrist position
                     }
@@ -580,12 +594,11 @@ public class RobotControl
 
         Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "ProcessColorForPickedSample");
 
-        ColorSenorOutput colorSenorOutput = robotHardware.getDetectedColorAndDistance();
+        ColorSensorOutput colorSensorOutput = robotHardware.getDetectedColorAndDistance();
 
-        if (colorSenorOutput.detectedColor != this.gameColor && colorSenorOutput.detectedColor != GameConstants.GAME_COLORS.YELLOW) {
-            if (colorSenorOutput.distance < RobotConstants.COLOR_SENSOR_DISTANCE_THRESHOLD) {
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "ProcessColorForPickedSample - EJECTING BAD SAMPLE");
-
+        if (colorSensorOutput.detectedColor != this.gameColor && colorSensorOutput.detectedColor != GameConstants.GAME_COLORS.YELLOW) {
+            if (colorSensorOutput.distance < RobotConstants.COLOR_SENSOR_DISTANCE_THRESHOLD) {
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "ProcessColorForPickedSample - EJECTING BAD COLOR: " + colorSensorOutput.detectedColor);
                 robotHardware.setHorizontalShoulderServoPosition(RobotConstants.HORIZONTAL_SHOULDER_ENTER_EXIT_SUB);
                 robotHardware.setHorizontalClawState(true);
             }
@@ -904,6 +917,7 @@ public class RobotControl
         return new SequentialAction(
                 GetHangSpecimenActionSequence(),
                 new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_SNAP_SPECIMEN, true, false),
+                new SleepAction(0.2),
                 new VerticalClawAction(robotHardware, true, false, false)
         );
     }
@@ -950,7 +964,7 @@ public class RobotControl
                     currentRobotState == ROBOT_STATE.SNAP_SPECIMEN) { return; }
 
             double turretPos = robotHardware.getHorizontalTurretServoPosition();
-            turretPos = Math.min(turretPos + RobotConstants.HORIZONTAL_TURRET_INCREMENT, RobotConstants.HORIZONTAL_TURRET_MAX_POS);
+            turretPos = Math.max(turretPos - RobotConstants.HORIZONTAL_TURRET_INCREMENT, RobotConstants.HORIZONTAL_TURRET_MIN_POS);
             robotHardware.setHorizontalTurretServoPosition(turretPos);
         }
 
@@ -961,7 +975,7 @@ public class RobotControl
                     currentRobotState == ROBOT_STATE.SNAP_SPECIMEN) { return; }
 
             double turretPos = robotHardware.getHorizontalTurretServoPosition();
-            turretPos = Math.max(turretPos - RobotConstants.HORIZONTAL_TURRET_INCREMENT, RobotConstants.HORIZONTAL_TURRET_MIN_POS);
+            turretPos = Math.min(turretPos + RobotConstants.HORIZONTAL_TURRET_INCREMENT, RobotConstants.HORIZONTAL_TURRET_MAX_POS);
             robotHardware.setHorizontalTurretServoPosition(turretPos);
         }
     }
@@ -969,7 +983,9 @@ public class RobotControl
     /// Function to open / close the horizontal claw in response to bumper buttons
     private void ProcessBumpers(){
         if (gamepad2.right_bumper) {
-            if (currentRobotState == ROBOT_STATE.PICK_SPECIMEN) {
+            if (currentRobotState == ROBOT_STATE.PICK_SPECIMEN ||
+            currentRobotState == ROBOT_STATE.HANG_SPECIMEN ||
+            currentRobotState == ROBOT_STATE.SNAP_SPECIMEN) {
                 robotHardware.setVerticalClawState(true);
             }
             else {
@@ -978,7 +994,9 @@ public class RobotControl
         }
 
         if (gamepad2.left_bumper) {
-            if (currentRobotState == ROBOT_STATE.PICK_SPECIMEN) {
+            if (currentRobotState == ROBOT_STATE.PICK_SPECIMEN ||
+            currentRobotState == ROBOT_STATE.HANG_SPECIMEN ||
+            currentRobotState == ROBOT_STATE.SNAP_SPECIMEN) {
                 robotHardware.setVerticalClawState(false);
             }
             else {

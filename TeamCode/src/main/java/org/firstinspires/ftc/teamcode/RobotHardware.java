@@ -252,12 +252,12 @@ public class RobotHardware {
          return detectedColor;
     }
 
-    public ColorSenorOutput getDetectedColorAndDistance() {
-         ColorSenorOutput colorSenorOutput = new ColorSenorOutput(getDetectedColor(),  colorSensor.getDistance(DistanceUnit.CM));
+    public ColorSensorOutput getDetectedColorAndDistance() {
+         ColorSensorOutput colorSensorOutput = new ColorSensorOutput(getDetectedColor(),  colorSensor.getDistance(DistanceUnit.CM));
 
-        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getDetectedColorAndDistance: " + colorSenorOutput.detectedColor.toString() + " Distance: " + colorSenorOutput.distance);
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getDetectedColorAndDistance: " + colorSensorOutput.detectedColor.toString() + " Distance: " + colorSensorOutput.distance);
 
-         return colorSenorOutput;
+         return colorSensorOutput;
     }
 
     public void setColorSensorLEDState(boolean on) {

@@ -27,12 +27,12 @@ public class ServoTest extends LinearOpMode {
     RobotHardware myHardware;
 
     // Declare OpMode members.
-    public static double servo1Position = 0.35;
-    public static String servo1Name = "HorizontalShoulderServo";
+    public static double servo1Position = 0.5;
+    public static String servo1Name = "HorizontalTurretServo";
 
     public static boolean enableServo2 = true;
-    public static double servo2Position = 0.475;
-    public static String servo2Name = "HorizontalTurretServo";
+    public static double servo2Position = 0.5;
+    public static String servo2Name = "HorizontalShoulderServo";
 
     // Close: 0.42
     // Open: 0.55
@@ -60,13 +60,13 @@ public class ServoTest extends LinearOpMode {
 
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
-            if(gamepad1.a) {
+//            if(gamepad1.a) {
                 Servo1.setPosition(servo1Position);
 
                 if (enableServo2) {
                     Servo2.setPosition(servo2Position);
                 }
-            }
+//            }
         }
     }
 }

@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode;
 import static org.firstinspires.ftc.teamcode.RobotConstants.PICKUP_ARM_LENGTH;
 import static java.lang.Thread.sleep;
 
+import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 
@@ -11,10 +12,13 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 import java.util.ArrayList;
 import java.util.List;
 
+@Config
 public class LimelightHelper {
 
     RobotHardware robotHardware;
     Telemetry telemetry;
+
+    public static double DETECTION_ASPECT_RATIO = 1.1;
 
     public LimelightHelper(RobotHardware robotHardware, Telemetry telemetry) {
         this.robotHardware = robotHardware;
@@ -150,7 +154,7 @@ public class LimelightHelper {
                     double correctedX = 0.0358 * observedY + 1.2005 * observedX - 0.3771;
 
                     // Create location with corrected position values
-                    LimelightLocation loc = new LimelightLocation(correctedX, correctedY, rotationScore, color);
+                    LimelightLocation loc = new LimelightLocation(correctedX, correctedY, rotationScore, aspectRatio, color, result.getPipelineIndex());
                     // Store the raw (uncorrected) values for debugging
                     loc.rawTranslation = observedX;
                     loc.rawExtension = observedY;
@@ -170,7 +174,7 @@ public class LimelightHelper {
         // High aspect ratio (wide) = 0° (horizontal)
         // Low aspect ratio (tall) = 90° (vertical)
 
-        if (aspectRatio > 2.0) {
+        if (aspectRatio > DETECTION_ASPECT_RATIO) {
             return 0;    // Horizontal
         }
 //        else if (aspectRatio > 1.0) {
