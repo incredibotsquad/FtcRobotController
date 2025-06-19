@@ -18,9 +18,9 @@ import org.firstinspires.ftc.teamcode.drive.opmode.RobotControl;
 import java.util.ArrayList;
 import java.util.List;
 
-@Autonomous(name = "Blue_Sample", group = "Autonomous")
-public class Blue_Sample extends BaseAuto{
-    private static final int multiplier = 1;    //used to flip coordinates between blue (1) and red (-1)
+@Autonomous(name = "Red_Sample", group = "Autonomous")
+public class Red_Sample extends BaseAuto{
+    private static final int multiplier = -1;    //used to flip coordinates between blue (1) and red (-1)
 
     private final SampleAutoCoordinates coordinates = new SampleAutoCoordinates(multiplier);
 
@@ -30,7 +30,7 @@ public class Blue_Sample extends BaseAuto{
         robotControl = new RobotControl(gamepad2, robotHardware, telemetry);
         mecanumDrive = new MecanumDrive(this.hardwareMap, coordinates.INIT_POS);
 
-        robotControl.setGameColor(GameConstants.GAME_COLORS.BLUE);
+        robotControl.setGameColor(GameConstants.GAME_COLORS.RED);
         robotHardware.startLimelight();
 
         //Put all the actions here, but replace the sample pushing with continuous splines below
@@ -94,9 +94,8 @@ public class Blue_Sample extends BaseAuto{
                                 choices.add(robotControl.GetHorizontalPickupVectorFromLimelightLocation(coordinates.SAMPLE1_LIMELIGHT_LOCATION));
                                 robotControl.SetSampleChoices(choices);
                             }),
-                            moveToPickSample1,
-                            robotControl.GetEnterExitSubActionSequence(true)
-                     )
+                            moveToPickSample1
+                    )
             );
 
             Actions.runBlocking(
@@ -122,8 +121,7 @@ public class Blue_Sample extends BaseAuto{
                                         choices.add(robotControl.GetHorizontalPickupVectorFromLimelightLocation(coordinates.SAMPLE2_LIMELIGHT_LOCATION));
                                         robotControl.SetSampleChoices(choices);
                                     }),
-                            moveToPickSample2,
-                            robotControl.GetEnterExitSubActionSequence(true)
+                            moveToPickSample2
                     )
             );
 
@@ -148,8 +146,7 @@ public class Blue_Sample extends BaseAuto{
                                 choices.add(robotControl.GetHorizontalPickupVectorFromLimelightLocation(coordinates.SAMPLE3_LIMELIGHT_LOCATION));
                                 robotControl.SetSampleChoices(choices);
                             }),
-                        moveToPickSample3,
-                        robotControl.GetEnterExitSubActionSequence(true)
+                            moveToPickSample3
                     )
             );
 

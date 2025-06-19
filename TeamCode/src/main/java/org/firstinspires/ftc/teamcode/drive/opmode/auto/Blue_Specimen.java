@@ -17,7 +17,7 @@ import org.firstinspires.ftc.teamcode.RobotHardware;
 import org.firstinspires.ftc.teamcode.drive.opmode.RobotControl;
 
 @Autonomous(name = "Blue_4_Specimen", group = "Autonomous")
-public class Blue_4_Specimen extends BaseAuto{
+public class Blue_Specimen extends BaseAuto{
     private static final int multiplier = 1;    //used to flip coordinates between blue (1) and red (-1)
 
     private final SpecimenAutoCoordinates coordinates = new SpecimenAutoCoordinates(multiplier);

@@ -154,11 +154,10 @@ public class LimelightHelper {
                     double correctedX = 0.0358 * observedY + 1.2005 * observedX - 0.3771;
 
                     // Create location with corrected position values
-                    LimelightLocation loc = new LimelightLocation(correctedX, correctedY, rotationScore, aspectRatio, color, result.getPipelineIndex());
+                    LimelightLocation loc = new LimelightLocation(correctedX, correctedY, orientationAngle, rotationScore, aspectRatio, color, result.getPipelineIndex());
                     // Store the raw (uncorrected) values for debugging
                     loc.rawTranslation = observedX;
                     loc.rawExtension = observedY;
-                    loc.orientationAngle = orientationAngle;
                     locations.add(loc);
                 }
             }

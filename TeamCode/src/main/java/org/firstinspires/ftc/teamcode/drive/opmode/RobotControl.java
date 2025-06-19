@@ -121,7 +121,7 @@ public class RobotControl
 
     public void SetSampleChoices(List<HorizontalPickupVector> sampleChoices) {
         this.sampleChoices.clear();
-        this.sampleChoices = sampleChoices;
+        this.sampleChoices.addAll(sampleChoices);
     }
 
     public void ProcessInputs(Telemetry telemetry) {
@@ -312,7 +312,7 @@ public class RobotControl
                 Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: BEST: Color: " + best.color);
                 Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: BEST: PipelineIndex: " + best.pipelineIndex);
 
-                HorizontalPickupVector choice = GetRobotMotionValuesFromLimelightLocation(best);
+                HorizontalPickupVector choice = GetHorizontalPickupVectorFromLimelightLocation(best);
 
                 if (choice != null) {
                     sampleChoices.add(choice);
@@ -329,7 +329,7 @@ public class RobotControl
         }
     }
 
-    public HorizontalPickupVector GetRobotMotionValuesFromLimelightLocation(LimelightLocation location) {
+    public HorizontalPickupVector GetHorizontalPickupVectorFromLimelightLocation(LimelightLocation location) {
         double accountForPickupArm = Math.sqrt((RobotConstants.PICKUP_ARM_LENGTH * RobotConstants.PICKUP_ARM_LENGTH) - (location.translation * location.translation));
         int horizontalSlidePosition = (int) ((location.extension - accountForPickupArm) * RobotConstants.HORIZONTAL_SLIDE_TICKS_PER_INCH);
 
@@ -512,7 +512,7 @@ public class RobotControl
                 case HIGH_BASKET:   //HIGH BASKET
                     Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: HIGH BASKET");
 
-                    runningActions.add(GetHighBasketActionSequence());
+                    runningActions.add(GetHighBasketActionSequence(true));
 
                     break;
 
@@ -725,15 +725,17 @@ public class RobotControl
         Action verticalActions = GetVerticalActionsForTransfer();
 
         Action horizontalActions = new SequentialAction(
-                new HorizontalSlideAction(robotHardware, choice.slidePosition, true, false),
                 new ParallelAction(
+                        new HorizontalSlideAction(robotHardware, choice.slidePosition, true, false),
+                        new HorizontalTurretAction(robotHardware, choice.turretPosition, false, false),
                         new HorizontalClawAction(robotHardware, true, false, false),
                         new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_PICK_SAMPLE, false, false),
-                        new HorizontalTurretAction(robotHardware, choice.turretPosition, false, false),
-                        //short wait if coming from enter exit sub, longer otherwise.
-                        new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SAMPLE, true, (currentRobotState == ROBOT_STATE.ENTER_EXIT_SUB)),
-                        new HorizontalWristAction(robotHardware, choice.wristOrientation, false,false)
+                        new HorizontalWristAction(robotHardware, choice.wristOrientation, false,false),
+                        //get the shoulder moving so the complete motion to sample is shortened
+                        new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_ENTER_EXIT_SUB, false, true)
                 ),
+                //short wait if coming from enter exit sub, longer otherwise.
+                new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SAMPLE, true, (currentRobotState == ROBOT_STATE.ENTER_EXIT_SUB)),
                 new HorizontalClawAction(robotHardware, false, true, false),
                 new InstantAction(this::ProcessColorForPickedSample)
         );
@@ -822,12 +824,12 @@ public class RobotControl
                         horizontalActions,
                         verticalActions
                 ),
-                new SleepAction(0.5),
+                new SleepAction(0.4),
                 new VerticalClawAction(robotHardware, true, true, false)
         );
     }
 
-    public Action GetHighBasketActionSequence() {
+    public Action GetHighBasketActionSequence(boolean includeTransfer) {
 
         // TODO: MOVE ROBOT TO BASKET COORDINATES
 
@@ -849,12 +851,12 @@ public class RobotControl
         );
 
         return new SequentialAction(
-                GetTransferSampleActionSequence(),
+                includeTransfer? GetTransferSampleActionSequence() : new NullAction(),
                 new ParallelAction(
                         horizontalActions,
                         verticalActions
                 ),
-                new SleepAction(0.4),
+                new SleepAction(0.4),   //small wait before opening the claw
                 new VerticalClawAction(robotHardware, true, true, false)
         );
     }
@@ -1048,7 +1050,7 @@ public class RobotControl
         }
 
         if (best != null && totalDetections > 0 &&
-                !(best.translation == 0 && best.extension == 0 && best.rotation == 0)) {
+                !(best.translation == 0 && best.extension == 0 && best.rotationScore == 0)) {
             telemetry.addLine("=== BEST TARGET ===");
             telemetry.addData("X Position", String.format("%.2f", best.translation));
             telemetry.addData("Y Position", String.format("%.2f", best.extension));
@@ -1056,7 +1058,7 @@ public class RobotControl
             telemetry.addData("Color", best.color.toString());
             telemetry.addData("Raw X", String.format("%.2f", best.rawTranslation));
             telemetry.addData("Raw Y", String.format("%.2f", best.rawExtension));
-            telemetry.addData("Rotation Score", String.format("%.2f", best.rotation));
+            telemetry.addData("Rotation Score", String.format("%.2f", best.rotationScore));
         } else {
             telemetry.addLine("No valid targets found for " + gameColor);
         }

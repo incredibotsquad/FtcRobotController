@@ -90,7 +90,7 @@ public class RobotConstants {
 
     public static double VERTICAL_CLAW_OPEN = 0.95;
     public static double VERTICAL_CLAW_CLOSE = 0.55;
-    public static int VERTICAL_SLIDE_VELOCITY = 3000;
+    public static int VERTICAL_SLIDE_VELOCITY = 3500;
 
     // VERTICAL RESTING STATE VALUES
     public static int VERTICAL_SLIDE_RESTING = 0;
