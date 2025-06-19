@@ -8,7 +8,6 @@ import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.ProfileAccelConstraint;
 import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.TranslationalVelConstraint;
-import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -21,7 +20,7 @@ import org.firstinspires.ftc.teamcode.drive.opmode.RobotControl;
 public class Blue_4_Specimen extends BaseAuto{
     private static final int multiplier = 1;    //used to flip coordinates between blue (1) and red (-1)
 
-    private SpecimenCoordinates coordinates = new SpecimenCoordinates(multiplier);
+    private final SpecimenAutoCoordinates coordinates = new SpecimenAutoCoordinates(multiplier);
 
     @Override
     public void runOpMode() throws InterruptedException {

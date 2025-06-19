@@ -115,6 +115,15 @@ public class RobotControl
 //        sampleDetectionPipeline.updateCameraSettings(visionPortal);
     }
 
+    public List<HorizontalPickupVector> GetSampleChoices() {
+        return this.sampleChoices;
+    }
+
+    public void SetSampleChoices(List<HorizontalPickupVector> sampleChoices) {
+        this.sampleChoices.clear();
+        this.sampleChoices = sampleChoices;
+    }
+
     public void ProcessInputs(Telemetry telemetry) {
         // Check if camera settings need to be applied
 //        if (!cameraSettingsApplied) {
@@ -303,36 +312,11 @@ public class RobotControl
                 Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: BEST: Color: " + best.color);
                 Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: BEST: PipelineIndex: " + best.pipelineIndex);
 
-                double accountForPickupArm = Math.sqrt((RobotConstants.PICKUP_ARM_LENGTH * RobotConstants.PICKUP_ARM_LENGTH) - (best.translation * best.translation));
-                int horizontalSlidePosition = (int) ((best.extension - accountForPickupArm) * RobotConstants.HORIZONTAL_SLIDE_TICKS_PER_INCH);
+                HorizontalPickupVector choice = GetRobotMotionValuesFromLimelightLocation(best);
 
-                if (horizontalSlidePosition > RobotConstants.HORIZONTAL_SLIDE_MAX_POS) {
-                    Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs. horizontalSlide MAX Exceeded: " + horizontalSlidePosition);
-
-                    return;
+                if (choice != null) {
+                    sampleChoices.add(choice);
                 }
-
-//                if (horizontalSlidePosition < 0 || horizontalSlidePosition > RobotConstants.HORIZONTAL_SLIDE_MAX_POS) continue; // no need to add an option which we cannot reach
-//                if (Math.abs(best.translation) >= RobotConstants.PICKUP_ARM_LENGTH) continue;    // cannot reach beyond pickup arm length
-
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs. horizontalSlidePosition: " + horizontalSlidePosition);
-
-                double turretMovementAngle = Math.toDegrees(Math.atan(best.translation / accountForPickupArm));
-
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs. turretMovementAngle: " + turretMovementAngle);
-
-                double turretServoPos = RobotConstants.HORIZONTAL_TURRET_CENTER + (turretMovementAngle / 355);
-
-                double clawParallelOrientation = RobotConstants.HORIZONTAL_WRIST_TRANSFER + (turretMovementAngle / 355);    //this will keep the claw parallel to the robot
-
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs. clawParallelOrientation: " + clawParallelOrientation);
-
-                double wristTargetAngle = 180 - best.orientationAngle - 90;   //wrist has to be perpendicular to the sample
-                double horizontalWristPosition = clawParallelOrientation + (wristTargetAngle / 300);
-
-                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs. horizontalWristPosition: " + horizontalWristPosition);
-
-                sampleChoices.add(new HorizontalPickupVector(horizontalSlidePosition, turretServoPos, horizontalWristPosition));
 
                 displayLimelightTelemetry(best, allLocations);
             } else {
@@ -343,6 +327,36 @@ public class RobotControl
             telemetry.addData("Error", e.getMessage());
             telemetry.update();
         }
+    }
+
+    public HorizontalPickupVector GetRobotMotionValuesFromLimelightLocation(LimelightLocation location) {
+        double accountForPickupArm = Math.sqrt((RobotConstants.PICKUP_ARM_LENGTH * RobotConstants.PICKUP_ARM_LENGTH) - (location.translation * location.translation));
+        int horizontalSlidePosition = (int) ((location.extension - accountForPickupArm) * RobotConstants.HORIZONTAL_SLIDE_TICKS_PER_INCH);
+
+        if (horizontalSlidePosition > RobotConstants.HORIZONTAL_SLIDE_MAX_POS) {
+            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetRobotMotionValuesFromLimelightLocation. horizontalSlide MAX Exceeded: " + horizontalSlidePosition);
+
+            return null;
+        }
+
+        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetRobotMotionValuesFromLimelightLocation. horizontalSlidePosition: " + horizontalSlidePosition);
+
+        double turretMovementAngle = Math.toDegrees(Math.atan(location.translation / accountForPickupArm));
+
+        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetRobotMotionValuesFromLimelightLocation. turretMovementAngle: " + turretMovementAngle);
+
+        double turretServoPos = RobotConstants.HORIZONTAL_TURRET_CENTER + (turretMovementAngle / 355);
+
+        double clawParallelOrientation = RobotConstants.HORIZONTAL_WRIST_TRANSFER + (turretMovementAngle / 355);    //this will keep the claw parallel to the robot
+
+        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetRobotMotionValuesFromLimelightLocation. clawParallelOrientation: " + clawParallelOrientation);
+
+        double wristTargetAngle = 180 - location.orientationAngle - 90;   //wrist has to be perpendicular to the sample
+        double horizontalWristPosition = clawParallelOrientation + (wristTargetAngle / 300);
+
+        Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetRobotMotionValuesFromLimelightLocation. horizontalWristPosition: " + horizontalWristPosition);
+
+        return new HorizontalPickupVector(horizontalSlidePosition, turretServoPos, horizontalWristPosition);
     }
 
 //    private void GetSampleChoicesFromCameraInputs() {
@@ -667,8 +681,7 @@ public class RobotControl
                 new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_CAMERA_READY, false, false),
                 new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_CAMERA_READY, true, false),
                 new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_CAMERA_READY, false, false),
-                new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_CAMERA_READY, false,false),
-                new InstantAction(() -> robotHardware.setColorSensorLEDState(true))
+                new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_CAMERA_READY, false,false)
         );
 
         return new SequentialAction(
@@ -687,8 +700,7 @@ public class RobotControl
                 new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_ENTER_EXIT_SUB, false, false),
                 new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_ENTER_EXIT_SUB, true, false),
                 new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_ENTER_EXIT_SUB, true, false),
-                new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_ENTER_EXIT_SUB, false,false),
-                new InstantAction(() -> robotHardware.setColorSensorLEDState(true))
+                new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_ENTER_EXIT_SUB, false,false)
         );
 
         return new ParallelAction(
@@ -700,7 +712,7 @@ public class RobotControl
     public Action GetPickSampleActionSequence() {
 
         //TODO: THIS SHOULD START A RED LIGHT OR SOMETHING
-        if (sampleChoices.isEmpty()) return new SleepAction(0.05);
+        if (sampleChoices.isEmpty()) return new NullAction();
 
         // TODO: NEED TO MAKE SURE WE HAVE A GOOD WAY TO FIND OUT IF WE HAVE A SAMPLE
         // IF WE DON'T, THEN WE NEED TO GO TO OTHER CHOICES.
@@ -713,16 +725,14 @@ public class RobotControl
         Action verticalActions = GetVerticalActionsForTransfer();
 
         Action horizontalActions = new SequentialAction(
-                new HorizontalSlideAction(robotHardware, choice.slidePosition, true, true),
+                new HorizontalSlideAction(robotHardware, choice.slidePosition, true, false),
                 new ParallelAction(
                         new HorizontalClawAction(robotHardware, true, false, false),
                         new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_PICK_SAMPLE, false, false),
                         new HorizontalTurretAction(robotHardware, choice.turretPosition, false, false),
-                        new HorizontalSlideAction(robotHardware, choice.slidePosition, false, true),
                         //short wait if coming from enter exit sub, longer otherwise.
                         new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SAMPLE, true, (currentRobotState == ROBOT_STATE.ENTER_EXIT_SUB)),
-                        new HorizontalWristAction(robotHardware, choice.wristOrientation, false,false),
-                        new InstantAction(() -> robotHardware.setColorSensorLEDState(true))
+                        new HorizontalWristAction(robotHardware, choice.wristOrientation, false,false)
                 ),
                 new HorizontalClawAction(robotHardware, false, true, false),
                 new InstantAction(this::ProcessColorForPickedSample)
@@ -743,8 +753,7 @@ public class RobotControl
                 new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_TRANSFER, false, false),
                 new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_TRANSFER, false, false),
                 new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_TRANSFER, false, false),
-                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_TRANSFER, false, false),
-                new InstantAction(() -> robotHardware.setColorSensorLEDState(true))
+                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_TRANSFER, false, false)
         );
 
         return new SequentialAction(
@@ -768,8 +777,7 @@ public class RobotControl
                 new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_AFTER_TRANSFER, false, false),
                 new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_AFTER_TRANSFER, false, false),
                 new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_TRANSFER, false, false),
-                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_TRANSFER, false, false),
-                new InstantAction(() -> robotHardware.setColorSensorLEDState(true))
+                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_TRANSFER, false, false)
         );
 
         Action verticalActions = new SequentialAction(
@@ -797,8 +805,7 @@ public class RobotControl
                 new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_AFTER_TRANSFER, false, false),
                 new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_AFTER_TRANSFER, false, false),
                 new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_TRANSFER, false, false),
-                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_TRANSFER, false, false),
-                new InstantAction(() -> robotHardware.setColorSensorLEDState(true))
+                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_TRANSFER, false, false)
         );
 
         Action verticalActions = new ParallelAction(
@@ -830,8 +837,7 @@ public class RobotControl
                 new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_AFTER_TRANSFER, false, false),
                 new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_AFTER_TRANSFER, false, false),
                 new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_TRANSFER, false, false),
-                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_TRANSFER, false, false),
-                new InstantAction(() -> robotHardware.setColorSensorLEDState(true))
+                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_TRANSFER, false, false)
         );
 
         Action verticalActions = new ParallelAction(
@@ -848,7 +854,7 @@ public class RobotControl
                         horizontalActions,
                         verticalActions
                 ),
-                new SleepAction(0.5),
+                new SleepAction(0.4),
                 new VerticalClawAction(robotHardware, true, true, false)
         );
     }
@@ -859,8 +865,7 @@ public class RobotControl
                         new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_PICK_SPECIMEN, false, false),
                         new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_PICK_SPECIMEN, false, false),
                         new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_PICK_SPECIMEN, false, false),
-                        new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_PICK_SPECIMEN, false, false),
-                        new InstantAction(()-> robotHardware.setColorSensorLEDState(false))
+                        new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_PICK_SPECIMEN, false, false)
                 ),
                 new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SPECIMEN, false, false)
         );

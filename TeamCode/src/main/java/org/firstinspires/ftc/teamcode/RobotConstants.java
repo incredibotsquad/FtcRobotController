@@ -36,7 +36,7 @@ public class RobotConstants {
     public static double VERTICAL_SHOULDER_POSITION_TOLERANCE = 0.05;
 
     public static double HORIZONTAL_CLAW_OPEN = 0.85;
-    public static double HORIZONTAL_CLAW_CLOSE = 0.57;
+    public static double HORIZONTAL_CLAW_CLOSE = 0.61;
     public static int HORIZONTAL_SLIDE_VELOCITY = 2000;
 
     // HORIZONTAL RESTING STATE VALUES
@@ -69,7 +69,7 @@ public class RobotConstants {
     public static int HORIZONTAL_SLIDE_TRANSFER = 0;
     public static double HORIZONTAL_TURRET_TRANSFER = HORIZONTAL_TURRET_CENTER;
     public static double HORIZONTAL_SHOULDER_TRANSFER = 0.36;
-    public static double HORIZONTAL_SHOULDER_AFTER_TRANSFER = 0.42;
+    public static double HORIZONTAL_SHOULDER_AFTER_TRANSFER = 0.44;
     public static double HORIZONTAL_ELBOW_TRANSFER = 0.8;
     public static double HORIZONTAL_ELBOW_AFTER_TRANSFER = 0.5;
     public static double HORIZONTAL_WRIST_TRANSFER = 0.52;

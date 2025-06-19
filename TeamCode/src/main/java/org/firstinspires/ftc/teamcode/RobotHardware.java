@@ -260,11 +260,6 @@ public class RobotHardware {
          return colorSensorOutput;
     }
 
-    public void setColorSensorLEDState(boolean on) {
-        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " setColorSensorLEDState: " + on);
-         colorSensor.enableLed(on);
-    }
-
     public int getHorizontalSlidePosition() {
         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getHorizontalSlidePosition");
         return horizontalSlideMotor.getCurrentPosition();

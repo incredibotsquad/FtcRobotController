@@ -3,7 +3,7 @@ package org.firstinspires.ftc.teamcode.drive.opmode.auto;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.Vector2d;
 
-public class SpecimenCoordinates {
+public class SpecimenAutoCoordinates {
     private int multiplier = 1;    //used to flip coordinates between blue (1) and red (-1)
 
     public double heading;
@@ -26,7 +26,7 @@ public class SpecimenCoordinates {
     public Pose2d BRACE_RUNGS_FOR_SPECIMEN_FOUR;
     public Pose2d PARK;
 
-    public SpecimenCoordinates(int multiplier) {
+    public SpecimenAutoCoordinates(int multiplier) {
         this.multiplier = multiplier;    //used to flip coordinates between blue (1) and red (-1)
 
         minTransVelocity = 30;
