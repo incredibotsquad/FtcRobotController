@@ -3,6 +3,9 @@ package org.firstinspires.ftc.teamcode.drive.opmode.auto;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.Vector2d;
 
+import org.firstinspires.ftc.teamcode.GameConstants;
+import org.firstinspires.ftc.teamcode.LimelightLocation;
+
 public class SpecimenAutoCoordinates {
     private int multiplier = 1;    //used to flip coordinates between blue (1) and red (-1)
 
@@ -14,11 +17,17 @@ public class SpecimenAutoCoordinates {
     public double maxAccel;
 
     public Pose2d INIT_POS;
-    public Vector2d SLIDE_BETWEEN_SAMP1_SAMP2;
-    public Vector2d SLIDE_BETWEEN_SAMP2_SAMP3;
+    public Pose2d PICK_SAMPLE_1;
+    LimelightLocation SAMPLE1_LIMELIGHT_LOCATION;
 
-    public Vector2d PICK_SPECIMEN;
-    public Vector2d PICK_SPECIMEN_SLOW;
+    public Pose2d PICK_SAMPLE_2;
+    LimelightLocation SAMPLE2_LIMELIGHT_LOCATION;
+
+    public Pose2d PICK_SAMPLE_3;
+    LimelightLocation SAMPLE3_LIMELIGHT_LOCATION;
+
+    public Pose2d PICK_SPECIMEN;
+    public Pose2d PICK_SPECIMEN_SLOW;
 
     public Pose2d BRACE_RUNGS_FOR_SPECIMEN_ONE;
     public Pose2d BRACE_RUNGS_FOR_SPECIMEN_TWO;
@@ -36,19 +45,25 @@ public class SpecimenAutoCoordinates {
         heading = Math.toRadians(-90 * multiplier);
         reverseHeading = Math.toRadians(90 * multiplier);
 
-        INIT_POS = new Pose2d(-16 * multiplier, 60.75 * multiplier, heading);
+        INIT_POS = new Pose2d(-15.25 * multiplier, 63.5 * multiplier, heading);
 
-        SLIDE_BETWEEN_SAMP1_SAMP2 = new Vector2d(-37 * multiplier, 25 * multiplier);
+        PICK_SAMPLE_1 = new Pose2d(-50 * multiplier, 46 * multiplier, heading);
+        SAMPLE1_LIMELIGHT_LOCATION = new LimelightLocation(0, 13, 90, 0,0, GameConstants.GAME_COLORS.YELLOW, 0);
 
-        SLIDE_BETWEEN_SAMP2_SAMP3 = new Vector2d(-55 * multiplier, 15 * multiplier);
+        PICK_SAMPLE_2 = new Pose2d(-60 * multiplier, 46 * multiplier, heading);
+        SAMPLE2_LIMELIGHT_LOCATION = new LimelightLocation(0, 13, 90, 0, 0, GameConstants.GAME_COLORS.YELLOW, 0);
 
-        PICK_SPECIMEN = new Vector2d(-43 * multiplier, 56 * multiplier);
-        PICK_SPECIMEN_SLOW = new Vector2d(PICK_SPECIMEN.x, 57 * multiplier);
+        PICK_SAMPLE_3 = new Pose2d(-65 * multiplier, 46 * multiplier, heading);
+        SAMPLE3_LIMELIGHT_LOCATION = new LimelightLocation(5, 13, 90, 0, 0, GameConstants.GAME_COLORS.YELLOW, 0);
 
-        BRACE_RUNGS_FOR_SPECIMEN_ONE = new Pose2d(6 * multiplier, 30 * multiplier, heading);
-        BRACE_RUNGS_FOR_SPECIMEN_TWO = new Pose2d(2.5 * multiplier, 30 * multiplier, heading);
-        BRACE_RUNGS_FOR_SPECIMEN_THREE = new Pose2d(0.5 * multiplier, 30 * multiplier, heading);
-        BRACE_RUNGS_FOR_SPECIMEN_FOUR = new Pose2d(-4 * multiplier, 30 * multiplier, heading);
+        PICK_SPECIMEN = new Pose2d(-42 * multiplier, 50 * multiplier, reverseHeading);
+        PICK_SPECIMEN_SLOW = new Pose2d(-42 * multiplier, 60 * multiplier, reverseHeading);
+
+        BRACE_RUNGS_FOR_SPECIMEN_ONE = new Pose2d(5 * multiplier, 29 * multiplier, heading);
+        BRACE_RUNGS_FOR_SPECIMEN_TWO = new Pose2d(2.5 * multiplier, 29 * multiplier, heading);
+
+        BRACE_RUNGS_FOR_SPECIMEN_THREE = new Pose2d(0.5 * multiplier, 29 * multiplier, heading);
+        BRACE_RUNGS_FOR_SPECIMEN_FOUR = new Pose2d(-4 * multiplier, 29 * multiplier, heading);
 
         PARK = new Pose2d(-50*multiplier, -50*multiplier, Math.toRadians((-90 * multiplier) + 270));
     }

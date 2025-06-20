@@ -84,7 +84,7 @@ public class RobotConstants {
     // HORIZONTAL PICK SPECIMEN STATE VALUES
     public static int HORIZONTAL_SLIDE_PICK_SPECIMEN = HORIZONTAL_SLIDE_TRANSFER;
     public static double HORIZONTAL_TURRET_PICK_SPECIMEN = 0.75;
-    public static double HORIZONTAL_SHOULDER_PICK_SPECIMEN = 0.445;
+    public static double HORIZONTAL_SHOULDER_PICK_SPECIMEN = 0.443;
     public static double HORIZONTAL_ELBOW_PICK_SPECIMEN = 0.75;
     public static double HORIZONTAL_WRIST_PICK_SPECIMEN = 0.18;
 
@@ -99,8 +99,8 @@ public class RobotConstants {
     public static double VERTICAL_WRIST_RESTING = 0.82;
 
     // VERTICAL DROP SAMPLE OB-ZONE VALUES
-    public static int VERTICAL_SLIDE_DROP_SAMPLE_OBZONE = 440;
-    public static double VERTICAL_SHOULDER_DROP_SAMPLE_OBZONE = 0.85;
+    public static int VERTICAL_SLIDE_DROP_SAMPLE_OBZONE = 500;
+    public static double VERTICAL_SHOULDER_DROP_SAMPLE_OBZONE = 0.88;
     public static double VERTICAL_ELBOW_DROP_SAMPLE_OBZONE = 0;
     public static double VERTICAL_WRIST_DROP_SAMPLE_OBZONE = 0;
 

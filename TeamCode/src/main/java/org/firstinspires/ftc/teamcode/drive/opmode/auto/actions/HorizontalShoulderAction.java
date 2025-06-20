@@ -38,7 +38,7 @@ public class HorizontalShoulderAction implements Action {
             }
 
             //tell RR we need to keep running if duration has not elapsed
-            return (timer.milliseconds() < 1100);
+            return (timer.milliseconds() < 800);
         }
 
         return false;
