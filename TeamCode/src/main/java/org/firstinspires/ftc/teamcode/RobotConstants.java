@@ -36,7 +36,7 @@ public class RobotConstants {
     public static double VERTICAL_SHOULDER_POSITION_TOLERANCE = 0.05;
 
     public static double HORIZONTAL_CLAW_OPEN = 0.85;
-    public static double HORIZONTAL_CLAW_CLOSE = 0.61;
+    public static double HORIZONTAL_CLAW_CLOSE = 0.58;
     public static int HORIZONTAL_SLIDE_VELOCITY = 2000;
 
     // HORIZONTAL RESTING STATE VALUES
