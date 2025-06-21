@@ -34,11 +34,11 @@ public class HorizontalShoulderAction implements Action {
 
         if (waitForAction) {
             if (shortWait) {
-                return (timer.milliseconds() < 500);
+                return (timer.milliseconds() < 400);
             }
 
             //tell RR we need to keep running if duration has not elapsed
-            return (timer.milliseconds() < 800);
+            return (timer.milliseconds() < 1000);
         }
 
         return false;

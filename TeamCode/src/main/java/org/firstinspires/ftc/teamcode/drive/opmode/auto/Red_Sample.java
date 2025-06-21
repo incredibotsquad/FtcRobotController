@@ -99,7 +99,7 @@ public class Red_Sample extends BaseAuto{
             );
 
             Actions.runBlocking(
-                    robotControl.GetPickSampleActionSequence()
+                    robotControl.GetPickSampleActionSequence(true)
             );
 
             Actions.runBlocking(
@@ -126,7 +126,7 @@ public class Red_Sample extends BaseAuto{
             );
 
             Actions.runBlocking(
-                    robotControl.GetPickSampleActionSequence()
+                    robotControl.GetPickSampleActionSequence(true)
             );
 
             Actions.runBlocking(
@@ -151,7 +151,7 @@ public class Red_Sample extends BaseAuto{
             );
 
             Actions.runBlocking(
-                    robotControl.GetPickSampleActionSequence()
+                    robotControl.GetPickSampleActionSequence(true)
             );
 
             Actions.runBlocking(

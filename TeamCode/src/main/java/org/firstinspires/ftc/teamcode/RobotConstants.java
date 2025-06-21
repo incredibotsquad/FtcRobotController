@@ -112,7 +112,7 @@ public class RobotConstants {
 
     // VERTICAL PICK SPECIMEN VALUES
     public static int VERTICAL_SLIDE_PICK_SPECIMEN = 600;
-    public static double VERTICAL_SHOULDER_PICK_SPECIMEN = 0.58;
+    public static double VERTICAL_SHOULDER_PICK_SPECIMEN = 0.56;
     public static double VERTICAL_ELBOW_PICK_SPECIMEN = 0.64;
     public static double VERTICAL_WRIST_PICK_SPECIMEN = 0.15;
 
@@ -123,7 +123,7 @@ public class RobotConstants {
     public static double VERTICAL_WRIST_HANG_SPECIMEN = VERTICAL_WRIST_PICK_SPECIMEN;
 
     // VERTICAL SNAP HIGH SPECIMEN VALUES
-    public static int VERTICAL_SLIDE_SNAP_SPECIMEN = 700;
+    public static int VERTICAL_SLIDE_SNAP_SPECIMEN = 750;
 
     // VERTICAL LOW BASKET VALUES
     public static int VERTICAL_SLIDE_DROP_LOW_SAMPLE = 440;

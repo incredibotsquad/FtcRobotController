@@ -8,6 +8,7 @@ import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.ProfileAccelConstraint;
 import com.acmerobotics.roadrunner.SequentialAction;
+import com.acmerobotics.roadrunner.SleepAction;
 import com.acmerobotics.roadrunner.TranslationalVelConstraint;
 import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
@@ -16,6 +17,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.GameConstants;
 import org.firstinspires.ftc.teamcode.HorizontalPickupVector;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
+import org.firstinspires.ftc.teamcode.RobotConstants;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 import org.firstinspires.ftc.teamcode.drive.opmode.RobotControl;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.VerticalClawAction;
@@ -37,6 +39,7 @@ public class Blue_Specimen extends BaseAuto{
 
 
         robotControl.setGameColor(GameConstants.GAME_COLORS.BLUE);
+        robotControl.SetCurrentRobotStateToEnterExitSub();
         robotHardware.startLimelight();
 
         //Put all the actions here, but replace the sample pushing with continuous splines below
@@ -45,8 +48,12 @@ public class Blue_Specimen extends BaseAuto{
                 .strafeToConstantHeading(coordinates.BRACE_RUNGS_FOR_SPECIMEN_ONE.position)
                 .build();
 
+        Action newMoveToPickSample1 = mecanumDrive.actionBuilder(coordinates.BRACE_RUNGS_FOR_SPECIMEN_ONE)
+                .setTangent(coordinates.reverseHeading)
+                .splineToLinearHeading(coordinates.PICK_SAMPLE_1, coordinates.PICK_SAMPLE_1.heading)
+                .build();
+
         Action moveToPickSample1 = mecanumDrive.actionBuilder(coordinates.INIT_POS)
-                .setTangent(coordinates.heading)
                 .splineToConstantHeading(coordinates.PICK_SAMPLE_1.position, coordinates.PICK_SAMPLE_1.heading)
                 .build();
 
@@ -58,9 +65,13 @@ public class Blue_Specimen extends BaseAuto{
                 .strafeToConstantHeading(coordinates.PICK_SAMPLE_3.position)
                 .build();
 
-        Action moveToPickSpecimen = mecanumDrive.actionBuilder(coordinates.PICK_SAMPLE_3)
+        Action moveToPickSpecimenStep1 = mecanumDrive.actionBuilder(coordinates.PICK_SAMPLE_3)
                 .setTangent(coordinates.heading)
                 .splineToLinearHeading(coordinates.PICK_SPECIMEN, coordinates.reverseHeading)
+                .build();
+
+        Action moveToPickSpecimenStep2 = mecanumDrive.actionBuilder(coordinates.PICK_SPECIMEN)
+                .setTangent(coordinates.reverseHeading)
                 .lineToY(coordinates.PICK_SPECIMEN_SLOW.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(coordinates.minAccel, 20))
                 .build();
 
@@ -69,7 +80,7 @@ public class Blue_Specimen extends BaseAuto{
                 .splineToConstantHeading(coordinates.BRACE_RUNGS_FOR_SPECIMEN_ONE.position, coordinates.heading)
                 .build();
 
-        Action moveToPickSpecimen2 = mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+        Action moveToPickSpecimen2 = mecanumDrive.actionBuilder(coordinates.BRACE_RUNGS_FOR_SPECIMEN_ONE)
                 .setTangent(coordinates.reverseHeading)
                 .splineToConstantHeading(coordinates.PICK_SPECIMEN.position, coordinates.reverseHeading)
                 .lineToY(coordinates.PICK_SPECIMEN_SLOW.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(coordinates.minAccel, 20))
@@ -78,6 +89,28 @@ public class Blue_Specimen extends BaseAuto{
         Action moveToSnapSpecimen2 = mecanumDrive.actionBuilder(coordinates.PICK_SPECIMEN_SLOW)
                 .setTangent(coordinates.heading)
                 .splineToConstantHeading(coordinates.BRACE_RUNGS_FOR_SPECIMEN_TWO.position, coordinates.heading)
+                .build();
+
+        Action moveToPickSpecimen3 = mecanumDrive.actionBuilder(coordinates.BRACE_RUNGS_FOR_SPECIMEN_TWO)
+                .setTangent(coordinates.reverseHeading)
+                .splineToConstantHeading(coordinates.PICK_SPECIMEN.position, coordinates.reverseHeading)
+                .lineToY(coordinates.PICK_SPECIMEN_SLOW.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(coordinates.minAccel, 20))
+                .build();
+
+        Action moveToSnapSpecimen3 = mecanumDrive.actionBuilder(coordinates.PICK_SPECIMEN_SLOW)
+                .setTangent(coordinates.heading)
+                .splineToConstantHeading(coordinates.BRACE_RUNGS_FOR_SPECIMEN_THREE.position, coordinates.heading)
+                .build();
+
+        Action moveToPickSpecimen4 = mecanumDrive.actionBuilder(coordinates.BRACE_RUNGS_FOR_SPECIMEN_THREE)
+                .setTangent(coordinates.reverseHeading)
+                .splineToConstantHeading(coordinates.PICK_SPECIMEN.position, coordinates.reverseHeading)
+                .lineToY(coordinates.PICK_SPECIMEN_SLOW.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(coordinates.minAccel, 20))
+                .build();
+
+        Action moveToSnapSpecimen4 = mecanumDrive.actionBuilder(coordinates.PICK_SPECIMEN_SLOW)
+                .setTangent(coordinates.heading)
+                .splineToConstantHeading(coordinates.BRACE_RUNGS_FOR_SPECIMEN_FOUR.position, coordinates.heading)
                 .build();
 
         Action park = mecanumDrive.actionBuilder(coordinates.BRACE_RUNGS_FOR_SPECIMEN_FOUR)
@@ -91,17 +124,161 @@ public class Blue_Specimen extends BaseAuto{
             ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
             //snap preloaded specimen
-//            Actions.runBlocking(
-//                    new ParallelAction(
-//                            snapPreloadedSpecimen,
-//                            robotControl.GetHangSpecimenActionSequence()
-//                    )
-//            );
-//
-//            Actions.runBlocking(
-//                    robotControl.GetSnapSpecimenActionSequence()
-//            );
+            Actions.runBlocking(
+                    new ParallelAction(
+                            new InstantAction(() -> robotHardware.setVerticalShoulderServoPosition(RobotConstants.VERTICAL_SHOULDER_PICK_SPECIMEN)),
+                            snapPreloadedSpecimen,
+                            robotControl.GetHangSpecimenActionSequence_Fast()
+                    )
+            );
 
+            Actions.runBlocking(
+                    robotControl.GetSnapSpecimenActionSequence()
+            );
+
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "ELAPSED TIME AFTER SNAPPING PRELOAD: " + timer.milliseconds());
+
+            Actions.runBlocking(
+                    new ParallelAction(
+                            newMoveToPickSample1,
+                            robotControl.GetEnterExitSubActionSequence(true),
+                            new InstantAction(() -> {
+                                List<HorizontalPickupVector> choices = new ArrayList<>();
+                                choices.add(robotControl.GetHorizontalPickupVectorFromLimelightLocation(coordinates.SAMPLE1_LIMELIGHT_LOCATION));
+                                robotControl.SetSampleChoices(choices);
+                            })
+                    )
+            );
+
+            Actions.runBlocking(
+                    robotControl.GetPickSampleActionSequence(false)
+            );
+
+            Actions.runBlocking(
+                    new ParallelAction(
+                            robotControl.GetTransferSampleActionSequence(),
+                            moveToPickSample2,
+                            new InstantAction(() -> {
+                                List<HorizontalPickupVector> choices = new ArrayList<>();
+                                choices.add(robotControl.GetHorizontalPickupVectorFromLimelightLocation(coordinates.SAMPLE2_LIMELIGHT_LOCATION));
+                                robotControl.SetSampleChoices(choices);
+                            })
+                    )
+            );
+
+            Actions.runBlocking(
+                    new SequentialAction(
+                            new ParallelAction(
+                                    robotControl.GetTransferToObZoneActionSequence(false),
+                                    robotControl.GetPickSampleActionSequence(false)
+                            ),
+                            new InstantAction(()-> {
+                                robotHardware.setHorizontalShoulderServoPosition(RobotConstants.HORIZONTAL_SHOULDER_ENTER_EXIT_SUB);
+                                robotHardware.setHorizontalTurretServoPosition(RobotConstants.HORIZONTAL_TURRET_CENTER);
+                            })
+                    )
+            );
+
+            Actions.runBlocking(
+                    new SequentialAction(
+                            moveToPickSpecimenStep1,
+                            new InstantAction(() -> robotHardware.setHorizontalClawState(true)),
+                            new SleepAction(0.1),
+                            new ParallelAction(
+                                    robotControl.GetPickSpecimenActionSequence(),
+                                    moveToPickSpecimenStep2
+                            )
+                    )
+            );
+
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "ELAPSED TIME AFTER TRANSFERRING 2 SAMPLES: " + timer.milliseconds());
+
+            //pick and snap specimen 2
+            Actions.runBlocking(
+                    new SequentialAction(
+                            new SleepAction(0.2),
+                            new VerticalClawAction(robotHardware, false, true, false),
+                            new ParallelAction(
+                                    robotControl.GetHangSpecimenActionSequence_Fast(),
+                                    moveToSnapSpecimen2
+                            )
+                    )
+            );
+
+            Actions.runBlocking(
+                    robotControl.GetSnapSpecimenActionSequence()
+            );
+
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "ELAPSED TIME AFTER SNAPPING SPECIMEN 2: " + timer.milliseconds());
+
+
+            //pick and snap specimen 3
+            Actions.runBlocking(
+                    new ParallelAction(
+                            moveToPickSpecimen3,
+                            robotControl.GetPickSpecimenActionSequence()
+                    )
+            );
+
+            Actions.runBlocking(
+                    new SequentialAction(
+                            new SleepAction(0.2),
+                            new VerticalClawAction(robotHardware, false, true, false),
+                            new ParallelAction(
+                                    robotControl.GetHangSpecimenActionSequence_Fast(),
+                                    moveToSnapSpecimen3
+                            )
+                    )
+            );
+
+            Actions.runBlocking(
+                    robotControl.GetSnapSpecimenActionSequence()
+            );
+
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "ELAPSED TIME AFTER SNAPPING SPECIMEN 3: " + timer.milliseconds());
+
+            //pick and snap specimen 4
+            Actions.runBlocking(
+                    new ParallelAction(
+                            moveToPickSpecimen4,
+                            robotControl.GetPickSpecimenActionSequence()
+                    )
+            );
+
+            Actions.runBlocking(
+                    new SequentialAction(
+                            new SleepAction(0.2),
+                            new VerticalClawAction(robotHardware, false, true, false),
+                            new ParallelAction(
+                                    robotControl.GetHangSpecimenActionSequence_Fast(),
+                                    moveToSnapSpecimen4
+                            )
+                    )
+            );
+
+            Actions.runBlocking(
+                    robotControl.GetSnapSpecimenActionSequence()
+            );
+
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "ELAPSED TIME AFTER SNAPPING SPECIMEN 4: " + timer.milliseconds());
+
+
+            //park
+            Actions.runBlocking(
+                    new ParallelAction(
+                            park,
+                            new InstantAction(() -> {
+                                robotHardware.setVerticalWristServoPosition(RobotConstants.VERTICAL_WRIST_TRANSFER);
+                                robotHardware.setVerticalShoulderServoPosition(RobotConstants.VERTICAL_SHOULDER_TRANSFER);
+                                robotHardware.setVerticalSlidePosition(RobotConstants.VERTICAL_SLIDE_RESTING);
+                            })
+                    )
+            );
+
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "TOTAL ELAPSED TIME: " + timer.milliseconds());
+
+            break;
+            /*
 
 //            pick sample 1
             Actions.runBlocking(
@@ -117,14 +294,15 @@ public class Blue_Specimen extends BaseAuto{
             );
 
             Actions.runBlocking(
-                    robotControl.GetPickSampleActionSequence()
+                    robotControl.GetPickSampleActionSequence(false)
             );
 
             Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "ELAPSED TIME AFTER PICKING SAMPLE 1: " + timer.milliseconds());
 
             Actions.runBlocking(
                     new ParallelAction(
-                            robotControl.GetTransferToObZoneActionSequence(),
+//                            robotControl.GetTransferToObZoneActionSequence(),
+                            robotControl.GetTransferSampleActionSequence(),
                             moveToPickSample2,
                             new InstantAction(() -> {
                                 List<HorizontalPickupVector> choices = new ArrayList<>();
@@ -135,14 +313,20 @@ public class Blue_Specimen extends BaseAuto{
             );
 
             Actions.runBlocking(
-                    robotControl.GetPickSampleActionSequence()
+                    new ParallelAction(
+                            robotControl.GetTransferToObZoneActionSequence(false),
+                            robotControl.GetPickSampleActionSequence(false)
+                    )
             );
 
             Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "ELAPSED TIME AFTER PICKING SAMPLE 2: " + timer.milliseconds());
 
             Actions.runBlocking(
                     new ParallelAction(
-                            robotControl.GetTransferToObZoneActionSequence(),
+                            new SequentialAction(
+                                    robotControl.GetTransferSampleActionSequence(),
+                                    robotControl.GetEnterExitSubActionSequence(true)
+                            ),
                             moveToPickSample3,
                             new InstantAction(() -> {
                                 List<HorizontalPickupVector> choices = new ArrayList<>();
@@ -153,19 +337,29 @@ public class Blue_Specimen extends BaseAuto{
             );
 
             Actions.runBlocking(
-                    robotControl.GetPickSampleActionSequence()
-            );
-
-            Actions.runBlocking(
-                    robotControl.GetTransferToObZoneActionSequence()
+                    new SequentialAction(
+                            new ParallelAction(
+                                    robotControl.GetTransferToObZoneActionSequence(false),
+                                    robotControl.GetPickSampleActionSequence(false)
+                            ),
+                            new InstantAction(()-> {
+                                robotHardware.setHorizontalShoulderServoPosition(RobotConstants.HORIZONTAL_SHOULDER_ENTER_EXIT_SUB);
+                                robotHardware.setHorizontalTurretServoPosition(RobotConstants.HORIZONTAL_TURRET_CENTER);
+                            })
+                    )
             );
 
             Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "ELAPSED TIME AFTER PICKING SAMPLE 3: " + timer.milliseconds());
 
             Actions.runBlocking(
-                    new ParallelAction(
-                            moveToPickSpecimen,
-                            robotControl.GetPickSpecimenActionSequence()
+                    new SequentialAction(
+                            moveToPickSpecimenStep1,
+                            new InstantAction(() -> robotHardware.setHorizontalClawState(true)),
+                            new SleepAction(0.2),
+                            new ParallelAction(
+                                    robotControl.GetPickSpecimenActionSequence(),
+                                    moveToPickSpecimenStep2
+                            )
                     )
             );
 
@@ -180,11 +374,16 @@ public class Blue_Specimen extends BaseAuto{
             );
 
             Actions.runBlocking(
-                    new SequentialAction(
-                            robotControl.GetSnapSpecimenActionSequence(),
-                            new InstantAction(()->mecanumDrive.localizer.update())  //update the pose estimate
-                    )
+                    robotControl.GetSnapSpecimenActionSequence()
             );
+
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "SPECIMEN 1 X: " + mecanumDrive.localizer.getPose().position.x);
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "SPECIMEN 1 Y: " + mecanumDrive.localizer.getPose().position.y);
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "SPECIMEN 1 HEADING: " + Math.toDegrees(mecanumDrive.localizer.getPose().heading.toDouble()));
+
+
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "ELAPSED TIME AFTER SNAPPING SPECIMEN 1: " + timer.milliseconds());
+
 
             //pick and snap specimen 2
             Actions.runBlocking(
@@ -207,8 +406,78 @@ public class Blue_Specimen extends BaseAuto{
             Actions.runBlocking(
                     robotControl.GetSnapSpecimenActionSequence()
             );
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "SPECIMEN 2 X: " + mecanumDrive.localizer.getPose().position.x);
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "SPECIMEN 2 Y: " + mecanumDrive.localizer.getPose().position.y);
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "SPECIMEN 2 HEADING: " + Math.toDegrees(mecanumDrive.localizer.getPose().heading.toDouble()));
+
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "ELAPSED TIME AFTER SNAPPING SPECIMEN 2: " + timer.milliseconds());
+
+            //pick and snap specimen 3
+            Actions.runBlocking(
+                    new ParallelAction(
+                            moveToPickSpecimen3,
+                            robotControl.GetPickSpecimenActionSequence()
+                    )
+            );
+
+            Actions.runBlocking(
+                    new SequentialAction(
+                            new VerticalClawAction(robotHardware, false, true, false),
+                            new ParallelAction(
+                                    robotControl.GetHangSpecimenActionSequence(),
+                                    moveToSnapSpecimen3
+                            )
+                    )
+            );
+
+            Actions.runBlocking(
+                    robotControl.GetSnapSpecimenActionSequence()
+            );
+
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "SPECIMEN 3 X: " + mecanumDrive.localizer.getPose().position.x);
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "SPECIMEN 3 Y: " + mecanumDrive.localizer.getPose().position.y);
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "SPECIMEN 3 HEADING: " + Math.toDegrees(mecanumDrive.localizer.getPose().heading.toDouble()));
+
+
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "ELAPSED TIME AFTER SNAPPING SPECIMEN 3: " + timer.milliseconds());
+
+            //pick and snap specimen 4
+            Actions.runBlocking(
+                    new ParallelAction(
+                            moveToPickSpecimen4,
+                            robotControl.GetPickSpecimenActionSequence()
+                    )
+            );
+
+            Actions.runBlocking(
+                    new SequentialAction(
+                            new VerticalClawAction(robotHardware, false, true, false),
+                            new ParallelAction(
+                                    robotControl.GetHangSpecimenActionSequence(),
+                                    moveToSnapSpecimen4
+                            )
+                    )
+            );
+
+            Actions.runBlocking(
+                    robotControl.GetSnapSpecimenActionSequence()
+            );
+
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "SPECIMEN 4 X: " + mecanumDrive.localizer.getPose().position.x);
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "SPECIMEN 4 Y: " + mecanumDrive.localizer.getPose().position.y);
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "SPECIMEN 4 HEADING: " + Math.toDegrees(mecanumDrive.localizer.getPose().heading.toDouble()));
+
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "ELAPSED TIME AFTER SNAPPING SPECIMEN 3: " + timer.milliseconds());
+
+            Actions.runBlocking(
+                    park
+            );
+
+            Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "TOTAL ELAPSED TIME: " + timer.milliseconds());
 
             break;
+
+             */
     }
 
     robotHardware.stopLimelight();

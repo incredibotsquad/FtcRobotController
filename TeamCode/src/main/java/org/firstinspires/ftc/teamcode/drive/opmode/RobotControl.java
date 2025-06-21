@@ -124,6 +124,10 @@ public class RobotControl
         this.sampleChoices.addAll(sampleChoices);
     }
 
+    public void SetCurrentRobotStateToEnterExitSub() {
+        this.currentRobotState = ROBOT_STATE.ENTER_EXIT_SUB;
+    }
+
     public void ProcessInputs(Telemetry telemetry) {
         // Check if camera settings need to be applied
 //        if (!cameraSettingsApplied) {
@@ -485,7 +489,7 @@ public class RobotControl
                         sampleChoices.add(new HorizontalPickupVector(robotHardware.getHorizontalSlidePosition(), robotHardware.getHorizontalTurretServoPosition(), robotHardware.getHorizontalWristServoPosition()));
                     }
 
-                    runningActions.add(GetPickSampleActionSequence());
+                    runningActions.add(GetPickSampleActionSequence(true));
 
                     break;
 
@@ -499,7 +503,7 @@ public class RobotControl
                 case TRANSFER_TO_OB_ZONE:
                     Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: TRANSFER TO OBSERVATION ZONE");
 
-                    runningActions.add(GetTransferToObZoneActionSequence());
+                    runningActions.add(GetTransferToObZoneActionSequence(true));
 
                     break;
 
@@ -709,7 +713,7 @@ public class RobotControl
         );
     }
 
-    public Action GetPickSampleActionSequence() {
+    public Action GetPickSampleActionSequence(boolean includeVerticalTransferSetup) {
 
         //TODO: THIS SHOULD START A RED LIGHT OR SOMETHING
         if (sampleChoices.isEmpty()) return new NullAction();
@@ -741,7 +745,7 @@ public class RobotControl
         );
 
         return new ParallelAction(
-                verticalActions,
+                includeVerticalTransferSetup ? verticalActions : new NullAction(),
                 horizontalActions);
     }
 
@@ -763,41 +767,39 @@ public class RobotControl
                         horizontalActions,
                         verticalActions
                 ),
-                new VerticalClawAction(robotHardware, false, true, false),
+                new VerticalClawAction(robotHardware, false, true, true),
                 new HorizontalClawAction(robotHardware, true, true, true),
                 new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_AFTER_TRANSFER, false, false),
                 new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_AFTER_TRANSFER, false, false)
         );
     }
 
-    public Action GetTransferToObZoneActionSequence() {
+    public Action GetTransferToObZoneActionSequence(boolean includeSampleTransfer) {
 
         //TODO: MOVE ROBOT TO OB ZONE ??
 
-        Action horizontalActions = new ParallelAction(
-                new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_TRANSFER, false, false),
-                new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_AFTER_TRANSFER, false, false),
-                new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_AFTER_TRANSFER, false, false),
-                new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_TRANSFER, false, false),
-                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_TRANSFER, false, false)
-        );
+//        Action horizontalActions = new ParallelAction(
+//                new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_TRANSFER, false, false),
+//                new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_AFTER_TRANSFER, false, false),
+//                new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_AFTER_TRANSFER, false, false),
+//                new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_TRANSFER, false, false),
+//                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_TRANSFER, false, false)
+//        );
 
         Action verticalActions = new SequentialAction(
                 new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_DROP_SAMPLE_OBZONE, true, false),
-                new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_DROP_SAMPLE_OBZONE, true, false),
+                new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_DROP_SAMPLE_OBZONE, false, true),
                 new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_DROP_SAMPLE_OBZONE, true, false),
                 new VerticalClawAction(robotHardware, true, true, true),
                 new VerticalClawAction(robotHardware, false, true, false),
-                new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_TRANSFER, true, false),
-                new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_TRANSFER, true, false)
+                new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_TRANSFER, false, false),
+                new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_TRANSFER, false, false)
 //                new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_DROP_SAMPLE_OBZONE, false, false)
         );
 
         return new SequentialAction(
-                GetTransferSampleActionSequence(),
-                new ParallelAction(
-                    horizontalActions,
-                    verticalActions)
+                includeSampleTransfer ? GetTransferSampleActionSequence():new NullAction(),
+                verticalActions
         );
     }
 
@@ -920,11 +922,27 @@ public class RobotControl
         );
     }
 
+    public Action GetHangSpecimenActionSequence_Fast() {
+        //TODO: MOVE ROBOT TO SNAP SPECIMEN
+
+        Action verticalActions = new SequentialAction(
+                new VerticalClawAction(robotHardware, false, true, false), //close the claw to make sure we pass thru the slides
+                new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_HANG_SPECIMEN, false, false),
+                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_HANG_SPECIMEN, false, true),
+                new ParallelAction(
+                        new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_HANG_SPECIMEN, true, false),
+                        new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_HANG_SPECIMEN, false, false),
+                        new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_HANG_SPECIMEN, true, true)
+                )
+        );
+
+        return verticalActions;
+    }
+
     public Action GetSnapSpecimenActionSequence() {
         //TODO: MOVE ROBOT TO SNAP SPECIMEN
 
         return new SequentialAction(
-                GetHangSpecimenActionSequence(),
                 new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_SNAP_SPECIMEN, true, false),
                 new SleepAction(0.2),
                 new VerticalClawAction(robotHardware, true, false, false)

@@ -340,7 +340,9 @@ public class RobotHardware {
 
     //function to return the minimum of 2 motors on the vertical slide.
     public int getVerticalSlidePosition() {
-        return Math.min(verticalSlideMotor1.getCurrentPosition(), verticalSlideMotor2.getCurrentPosition());
+        int retVal = Math.min(verticalSlideMotor1.getCurrentPosition(), verticalSlideMotor2.getCurrentPosition());
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " getVerticalSlidePosition: " + retVal);
+        return retVal;
     }
 
     public void setVerticalSlidePosition(int pos) {

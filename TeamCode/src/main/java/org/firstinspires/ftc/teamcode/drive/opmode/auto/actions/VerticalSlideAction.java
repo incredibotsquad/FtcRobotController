@@ -19,7 +19,7 @@ public class VerticalSlideAction implements Action {
     private ElapsedTime timer;
 
     public VerticalSlideAction(RobotHardware robotHardware, int slidePosition, boolean waitForAction) {
-        this(robotHardware, slidePosition, RobotConstants.HORIZONTAL_SLIDE_VELOCITY, waitForAction, true);
+        this(robotHardware, slidePosition, RobotConstants.VERTICAL_SLIDE_VELOCITY, waitForAction, true);
     }
 
     public VerticalSlideAction(RobotHardware robotHardware, int slidePosition, int slideVelocity, boolean waitForAction) {
@@ -27,7 +27,7 @@ public class VerticalSlideAction implements Action {
     }
 
     public VerticalSlideAction(RobotHardware robotHardware, int slidePosition, boolean waitForAction, boolean shortWait) {
-        this(robotHardware, slidePosition, RobotConstants.HORIZONTAL_SLIDE_VELOCITY, waitForAction, shortWait);
+        this(robotHardware, slidePosition, RobotConstants.VERTICAL_SLIDE_VELOCITY, waitForAction, shortWait);
     }
 
     public VerticalSlideAction(RobotHardware robotHardware, int slidePosition, int slideVelocity, boolean waitForAction, boolean shortWait) {
