@@ -26,6 +26,8 @@ import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.HorizontalShould
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.HorizontalSlideAction;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.HorizontalTurretAction;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.HorizontalWristAction;
+import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.ResetHorizontalSlideAction;
+import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.ResetVerticalSlideAction;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.VerticalClawAction;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.VerticalElbowAction;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.VerticalShoulderAction;
@@ -140,8 +142,6 @@ public class RobotControl
 
         ProcessActions();
 
-//        ProcessSafetyChecks();
-
         ProcessDPad();
         ProcessBumpers();
         ProcessJoystickForHorizontalWrist();
@@ -164,10 +164,6 @@ public class RobotControl
 //        }
 //    }
 
-    private void ProcessSafetyChecks() {
-        robotHardware.horizontalSlideSafetyChecks();
-        robotHardware.verticalSlideSafetyChecks();
-    }
 
     public void setGameColor(GameConstants.GAME_COLORS gameColor) {
 //        sampleDetectionPipeline.setColorMode(gameColor);
@@ -650,8 +646,11 @@ public class RobotControl
     }
 
     public Action GetResetEncodersActionSequence() {
-        //TODO: add proper code here
-        return new SleepAction(0);
+
+        return new ParallelAction(
+                new ResetHorizontalSlideAction(robotHardware),
+                new ResetVerticalSlideAction(robotHardware)
+        );
     }
 
     public Action GetVerticalActionsForTransfer() {
@@ -876,6 +875,7 @@ public class RobotControl
 
     private Action GetHorizontalActionsForSpecimen() {
         Action horizontalActions = new SequentialAction(
+                new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_CAMERA_READY, false, true),
                 new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_TRANSITION_TO_PICK_SPECIMEN, true, true),
                 new ParallelAction(
                         new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_PICK_SPECIMEN, true, false),
@@ -884,7 +884,7 @@ public class RobotControl
                 ),
                 new ParallelAction(
                         new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_PICK_SPECIMEN, false, false),
-                        new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SPECIMEN, false, false)
+                        new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SPECIMEN, true, true)
                 )
         );
 
@@ -892,8 +892,15 @@ public class RobotControl
     }
 
     public Action GetPickSpecimenActionSequence(boolean includeHorizontalActions) {
-        //TODO: MOVE ROBOT TO PICK SPECIMEN
+
         Action horizontalActions = GetHorizontalActionsForSpecimen();
+
+        if (currentRobotState == ROBOT_STATE.HANG_SPECIMEN ||
+                currentRobotState == ROBOT_STATE.SNAP_SPECIMEN ||
+                targetRobotState == ROBOT_STATE.HANG_SPECIMEN ||
+                targetRobotState == ROBOT_STATE.SNAP_SPECIMEN) {
+            horizontalActions = new NullAction();
+        }
 
         Action verticalActions = new SequentialAction(
                 new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_PICK_SPECIMEN_STEP_1, true, false),

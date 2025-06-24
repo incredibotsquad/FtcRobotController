@@ -95,7 +95,7 @@ public class RobotHardware {
          horizontalShoulderServo = hardwareMap.get(Servo.class, "HorizontalShoulderServo");
          horizontalTurretServo = hardwareMap.get(Servo.class, "HorizontalTurretServo");
          colorSensor = hardwareMap.get(ColorRangeSensor.class, "ColorSensor");
-//         horizontalLimitSwitch = hardwareMap.get(TouchSensor.class, "HorizontalLimitSwitch");
+         horizontalLimitSwitch = hardwareMap.get(TouchSensor.class, "HorizontalLimitSwitch");
 
 
          // vertical stack
@@ -118,7 +118,7 @@ public class RobotHardware {
          verticalShoulderServo = hardwareMap.get(Servo.class, "VerticalShoulderServo");
          verticalShoulderServoEncoder = hardwareMap.get(AnalogInput.class, "AxonEncoder");
 
-//         verticalLimitSwitch = hardwareMap.get(TouchSensor.class, "VerticalLimitSwitch");
+         verticalLimitSwitch = hardwareMap.get(TouchSensor.class, "VerticalLimitSwitch");
 
          limelight = hardwareMap.get(Limelight3A.class, "limelight");
 
@@ -157,10 +157,39 @@ public class RobotHardware {
      public void stopAllMechanisms()
      {
          Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " stopAllMechanisms");
+         this.stopHorizontalSlide();
+         this.stopVerticalSlide();
+     }
+
+     public void stopHorizontalSlide()
+     {
+         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " stopHorizontalSlide");
          horizontalSlideMotor.setPower(0);
+     }
+
+    public void stopHorizontalSlideAndResetEncoder()
+    {
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " stopHorizontalSlideAndResetEncoder");
+        stopHorizontalSlide();
+        horizontalSlideMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        setHorizontalSlidePosition(0);
+    }
+
+     public void stopVerticalSlide()
+     {
+         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " stopVerticalSlide");
          verticalSlideMotor1.setPower(0);
          verticalSlideMotor2.setPower(0);
      }
+
+    public void stopVerticalSlideAndResetEncoder()
+    {
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " stopVerticalSlideAndResetEncoder");
+        stopVerticalSlide();
+        verticalSlideMotor1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        verticalSlideMotor2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        setVerticalSlidePosition(0);
+    }
 
     public void stopRobotChassis() {
         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " stopRobotChassis");
@@ -277,16 +306,9 @@ public class RobotHardware {
         Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " setHorizontalSlidePositionAndVelocity: " + pos + " AND VELOCITY: " + velocity);
     }
 
-    // function to check proximity sensors and ensure the motor stops
-    public void horizontalSlideSafetyChecks()
+    public boolean isHorizontalLimitSwitchPressed()
     {
-        if (horizontalLimitSwitch.isPressed() && horizontalSlideMotor.isBusy()) {
-            //int pos = horizontalSlideMotor.getCurrentPosition();
-
-            horizontalSlideMotor.setPower(0);
-
-            //horizontalSlideMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        }
+        return horizontalLimitSwitch.isPressed();
     }
 
     public boolean getVerticalClawState() {
@@ -363,12 +385,9 @@ public class RobotHardware {
     }
 
     // function to check proximity sensors and ensure the motor stops
-    public void verticalSlideSafetyChecks()
+    public boolean isVerticalLimitSwitchPressed()
     {
-        if (verticalLimitSwitch.isPressed() && (verticalSlideMotor1.isBusy() || verticalSlideMotor2.isBusy())) {
-            verticalSlideMotor1.setPower(0);
-            verticalSlideMotor2.setPower(0);
-        }
+        return verticalLimitSwitch.isPressed();
     }
 
     //returns the robots yaw as radians
