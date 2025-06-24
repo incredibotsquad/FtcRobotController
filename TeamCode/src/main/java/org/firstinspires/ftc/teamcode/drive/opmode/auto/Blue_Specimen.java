@@ -91,6 +91,11 @@ public class Blue_Specimen extends BaseAuto{
                 .splineToConstantHeading(coordinates.BRACE_RUNGS_FOR_SPECIMEN_TWO.position, coordinates.heading)
                 .build();
 
+        Action strafeAfterBracingRungForSpecimen2 = mecanumDrive.actionBuilder(coordinates.BRACE_RUNGS_FOR_SPECIMEN_TWO)
+                .setTangent(0)
+                .strafeToConstantHeading(coordinates.BRACE_RUNGS_FOR_SPECIMEN_ONE.position)
+                .build();
+
         Action moveToPickSpecimen3 = mecanumDrive.actionBuilder(coordinates.BRACE_RUNGS_FOR_SPECIMEN_TWO)
                 .setTangent(coordinates.reverseHeading)
                 .splineToConstantHeading(coordinates.PICK_SPECIMEN.position, coordinates.reverseHeading)
@@ -102,6 +107,11 @@ public class Blue_Specimen extends BaseAuto{
                 .splineToConstantHeading(coordinates.BRACE_RUNGS_FOR_SPECIMEN_THREE.position, coordinates.heading)
                 .build();
 
+        Action strafeAfterBracingRungForSpecimen3 = mecanumDrive.actionBuilder(coordinates.BRACE_RUNGS_FOR_SPECIMEN_THREE)
+                .setTangent(0)
+                .strafeToConstantHeading(coordinates.BRACE_RUNGS_FOR_SPECIMEN_ONE.position)
+                .build();
+
         Action moveToPickSpecimen4 = mecanumDrive.actionBuilder(coordinates.BRACE_RUNGS_FOR_SPECIMEN_THREE)
                 .setTangent(coordinates.reverseHeading)
                 .splineToConstantHeading(coordinates.PICK_SPECIMEN.position, coordinates.reverseHeading)
@@ -111,6 +121,11 @@ public class Blue_Specimen extends BaseAuto{
         Action moveToSnapSpecimen4 = mecanumDrive.actionBuilder(coordinates.PICK_SPECIMEN_SLOW)
                 .setTangent(coordinates.heading)
                 .splineToConstantHeading(coordinates.BRACE_RUNGS_FOR_SPECIMEN_FOUR.position, coordinates.heading)
+                .build();
+
+        Action strafeAfterBracingRungForSpecimen4 = mecanumDrive.actionBuilder(coordinates.BRACE_RUNGS_FOR_SPECIMEN_FOUR)
+                .setTangent(0)
+                .strafeToConstantHeading(coordinates.BRACE_RUNGS_FOR_SPECIMEN_ONE.position)
                 .build();
 
         Action park = mecanumDrive.actionBuilder(coordinates.BRACE_RUNGS_FOR_SPECIMEN_FOUR)
@@ -181,11 +196,15 @@ public class Blue_Specimen extends BaseAuto{
 
             Actions.runBlocking(
                     new SequentialAction(
-                            moveToPickSpecimenStep1,
+                            new ParallelAction(
+                                    moveToPickSpecimenStep1,
+                                    robotControl.GetPickSpecimenActionSequence(false)
+                            ),
+                            new InstantAction(() -> robotHardware.setHorizontalSlidePosition(RobotConstants.VERTICAL_SLIDE_SNAP_SPECIMEN)),
                             new InstantAction(() -> robotHardware.setHorizontalClawState(true)),
                             new SleepAction(0.1),
                             new ParallelAction(
-                                    robotControl.GetPickSpecimenActionSequence(),
+                                    robotControl.GetPickSpecimenActionSequence(true),
                                     moveToPickSpecimenStep2
                             )
                     )
@@ -206,7 +225,10 @@ public class Blue_Specimen extends BaseAuto{
             );
 
             Actions.runBlocking(
-                    robotControl.GetSnapSpecimenActionSequence()
+                    new ParallelAction(
+//                            strafeAfterBracingRungForSpecimen2,
+                            robotControl.GetSnapSpecimenActionSequence()
+                    )
             );
 
             Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "ELAPSED TIME AFTER SNAPPING SPECIMEN 2: " + timer.milliseconds());
@@ -216,7 +238,7 @@ public class Blue_Specimen extends BaseAuto{
             Actions.runBlocking(
                     new ParallelAction(
                             moveToPickSpecimen3,
-                            robotControl.GetPickSpecimenActionSequence()
+                            robotControl.GetPickSpecimenActionSequence(false)
                     )
             );
 
@@ -232,7 +254,10 @@ public class Blue_Specimen extends BaseAuto{
             );
 
             Actions.runBlocking(
-                    robotControl.GetSnapSpecimenActionSequence()
+                    new ParallelAction(
+//                            strafeAfterBracingRungForSpecimen3,
+                            robotControl.GetSnapSpecimenActionSequence()
+                    )
             );
 
             Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "ELAPSED TIME AFTER SNAPPING SPECIMEN 3: " + timer.milliseconds());
@@ -241,7 +266,7 @@ public class Blue_Specimen extends BaseAuto{
             Actions.runBlocking(
                     new ParallelAction(
                             moveToPickSpecimen4,
-                            robotControl.GetPickSpecimenActionSequence()
+                            robotControl.GetPickSpecimenActionSequence(false)
                     )
             );
 
@@ -257,7 +282,10 @@ public class Blue_Specimen extends BaseAuto{
             );
 
             Actions.runBlocking(
-                    robotControl.GetSnapSpecimenActionSequence()
+                    new ParallelAction(
+//                            strafeAfterBracingRungForSpecimen4,
+                            robotControl.GetSnapSpecimenActionSequence()
+                    )
             );
 
             Log.i("=== INCREDIBOTS / SPECIMEN AUTO ===", "ELAPSED TIME AFTER SNAPPING SPECIMEN 4: " + timer.milliseconds());
@@ -269,7 +297,7 @@ public class Blue_Specimen extends BaseAuto{
                             park,
                             new InstantAction(() -> {
                                 robotHardware.setVerticalWristServoPosition(RobotConstants.VERTICAL_WRIST_TRANSFER);
-                                robotHardware.setVerticalShoulderServoPosition(RobotConstants.VERTICAL_SHOULDER_TRANSFER);
+                                robotHardware.setVerticalShoulderServoPosition(RobotConstants.VERTICAL_SHOULDER_PICK_SPECIMEN);
                                 robotHardware.setVerticalSlidePosition(RobotConstants.VERTICAL_SLIDE_RESTING);
                             })
                     )

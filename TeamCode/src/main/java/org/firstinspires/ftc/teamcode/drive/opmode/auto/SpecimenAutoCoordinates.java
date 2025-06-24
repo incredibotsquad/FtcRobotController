@@ -11,6 +11,7 @@ public class SpecimenAutoCoordinates {
 
     public double heading;
     public double reverseHeading;
+    public double sweepHeading;
 
     public double minTransVelocity;
     public double minAccel;
@@ -43,6 +44,7 @@ public class SpecimenAutoCoordinates {
         maxAccel = 40;
 
         heading = Math.toRadians(-90 * multiplier);
+        sweepHeading = Math.toRadians((-90 * multiplier) + 90);
         reverseHeading = Math.toRadians(90 * multiplier);
 
         INIT_POS = new Pose2d(-15.25 * multiplier, 63.5 * multiplier, reverseHeading);
@@ -59,11 +61,11 @@ public class SpecimenAutoCoordinates {
         PICK_SPECIMEN = new Pose2d(-42 * multiplier, 50 * multiplier, reverseHeading);
         PICK_SPECIMEN_SLOW = new Pose2d(-42 * multiplier, 62.5 * multiplier, reverseHeading);
 
-        BRACE_RUNGS_FOR_SPECIMEN_ONE = new Pose2d(8 * multiplier, 30 * multiplier, reverseHeading);
-        BRACE_RUNGS_FOR_SPECIMEN_TWO = new Pose2d(7 * multiplier, 30 * multiplier, reverseHeading);
+        BRACE_RUNGS_FOR_SPECIMEN_ONE = new Pose2d(9 * multiplier, 30 * multiplier, reverseHeading);
+        BRACE_RUNGS_FOR_SPECIMEN_TWO = new Pose2d(8 * multiplier, 30 * multiplier, reverseHeading);
 
-        BRACE_RUNGS_FOR_SPECIMEN_THREE = new Pose2d(6 * multiplier, 30 * multiplier, reverseHeading);
-        BRACE_RUNGS_FOR_SPECIMEN_FOUR = new Pose2d(5 * multiplier, 30 * multiplier, reverseHeading);
+        BRACE_RUNGS_FOR_SPECIMEN_THREE = new Pose2d(7 * multiplier, 30 * multiplier, reverseHeading);
+        BRACE_RUNGS_FOR_SPECIMEN_FOUR = new Pose2d(6 * multiplier, 30 * multiplier, reverseHeading);
 
         PARK = new Pose2d(-50 * multiplier, 50 * multiplier, reverseHeading);
     }

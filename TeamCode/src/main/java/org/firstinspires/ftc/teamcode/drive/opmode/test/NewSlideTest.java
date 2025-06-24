@@ -57,12 +57,12 @@ public class NewSlideTest extends LinearOpMode {
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
         SlideMotor1 = hardwareMap.get(DcMotorEx.class, "VerticalSlideMotor1");
-        SlideMotor1.setDirection(DcMotorSimple.Direction.REVERSE);
         SlideMotor1.setTargetPosition(0);
         SlideMotor1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         SlideMotor1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
         SlideMotor2 = hardwareMap.get(DcMotorEx.class, "VerticalSlideMotor2");
+        SlideMotor2.setDirection(DcMotorSimple.Direction.REVERSE);
         SlideMotor2.setTargetPosition(0);
         SlideMotor2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         SlideMotor2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);

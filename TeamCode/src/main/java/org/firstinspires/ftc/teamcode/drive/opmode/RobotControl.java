@@ -523,7 +523,7 @@ public class RobotControl
                 case PICK_SPECIMEN:   //PICK SPECIMEN
                     Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: PICK SPECIMEN");
 
-                    runningActions.add(GetPickSpecimenActionSequence());
+                    runningActions.add(GetPickSpecimenActionSequence(true));
 
                     break;
 
@@ -625,13 +625,15 @@ public class RobotControl
 
     public Action GetRestingActionSequence() {
 
-        Action verticalActions = new ParallelAction(
-                new VerticalClawAction(robotHardware, false, false, false),
-                new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_RESTING, false, false),
-                new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_RESTING, false, false),
-                new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_RESTING, false, false),
-                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_RESTING, true, false)  //wait for slide
-        );
+        Action verticalActions = new SequentialAction(
+                new ParallelAction(
+                        new VerticalClawAction(robotHardware, false, false, false),
+                        new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_RESTING, true, false),
+                        new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_RESTING, false, false),
+                        new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_RESTING, false, false)
+                ),
+                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_RESTING, false, false)  //wait for slide
+        ) ;
 
         Action horizontalActions = new ParallelAction(
                 new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_RESTING, false, false),
@@ -642,7 +644,7 @@ public class RobotControl
                 new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_RESTING, true, false)  //wait for slide
         );
 
-        return new ParallelAction(
+        return new SequentialAction(
                 verticalActions,
                 horizontalActions);
     }
@@ -707,9 +709,15 @@ public class RobotControl
                 new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_ENTER_EXIT_SUB, false,false)
         );
 
-        return new ParallelAction(
-                verticalActions,
-                horizontalActions
+        return new SequentialAction(
+                //move up the vertical slide in case we are in the specimen position
+                //this will help
+                (currentRobotState == ROBOT_STATE.PICK_SPECIMEN || targetRobotState == ROBOT_STATE.PICK_SPECIMEN) ?
+                        new VerticalSlideAction(robotHardware, 800, true, false) : new NullAction(),
+                new ParallelAction(
+                        verticalActions,
+                        horizontalActions
+                )
         );
     }
 
@@ -868,47 +876,50 @@ public class RobotControl
 
     private Action GetHorizontalActionsForSpecimen() {
         Action horizontalActions = new SequentialAction(
+                new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_TRANSITION_TO_PICK_SPECIMEN, true, true),
                 new ParallelAction(
                         new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_PICK_SPECIMEN, true, false),
-                        new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_PICK_SPECIMEN, false, false),
                         new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_PICK_SPECIMEN, false, false),
                         new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_PICK_SPECIMEN, false, false)
                 ),
-                new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SPECIMEN, false, false)
+                new ParallelAction(
+                        new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_PICK_SPECIMEN, false, false),
+                        new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SPECIMEN, false, false)
+                )
         );
 
         return horizontalActions;
     }
 
-    public Action GetPickSpecimenActionSequence() {
+    public Action GetPickSpecimenActionSequence(boolean includeHorizontalActions) {
         //TODO: MOVE ROBOT TO PICK SPECIMEN
         Action horizontalActions = GetHorizontalActionsForSpecimen();
 
         Action verticalActions = new SequentialAction(
-                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_PICK_SPECIMEN, true, false),
+                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_PICK_SPECIMEN_STEP_1, true, false),
                 new ParallelAction(
                         new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_PICK_SPECIMEN, false, false),
                         new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_PICK_SPECIMEN, false, false)
                 ),
                 new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_PICK_SPECIMEN, true, false),
                 new VerticalClawAction(robotHardware, true, false, false),
-                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_RESTING, false, false)
+                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_PICK_SPECIMEN_STEP_2, false, false)
         );
 
         return new SequentialAction(
-                    horizontalActions,
+                    includeHorizontalActions? horizontalActions : new NullAction(),
                     verticalActions);
     }
 
     public Action GetHangSpecimenActionSequence() {
         //TODO: MOVE ROBOT TO SNAP SPECIMEN
 
-        // HORIZONTAL STATE SHOULD HAVE ALREADY BEEN DONE DURING PICK SPECIMEN
-        Action horizontalActions = GetHorizontalActionsForSpecimen();
-
         Action verticalActions = new SequentialAction(
                 new VerticalClawAction(robotHardware, false, true, false), //close the claw to make sure we pass thru the slides
-                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_HANG_SPECIMEN, true, true),
+                new ParallelAction(
+                        new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_PICK_SPECIMEN, false, false),
+                        new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_HANG_SPECIMEN, true, true)
+                ),
                 new ParallelAction(
                         new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_HANG_SPECIMEN, true, false),
                         new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_HANG_SPECIMEN, false, false),
@@ -916,10 +927,7 @@ public class RobotControl
                 )
         );
 
-        return new ParallelAction(
-                horizontalActions,
-                verticalActions
-        );
+        return verticalActions;
     }
 
     public Action GetHangSpecimenActionSequence_Fast() {
@@ -1036,13 +1044,13 @@ public class RobotControl
     private void ProcessJoystickForHorizontalWrist() {
         if (gamepad2.right_stick_x < 0) {
             double wristPos = robotHardware.getHorizontalWristServoPosition();
-            wristPos = Math.max(wristPos - RobotConstants.HORIZONTAL_WRIST_INCREMENT, 0);
+            wristPos = Math.max(wristPos - RobotConstants.HORIZONTAL_WRIST_INCREMENT, RobotConstants.HORIZONTAL_WRIST_MIN_POS);
             robotHardware.setHorizontalWristServoPosition(wristPos);
         }
 
         if (gamepad2.right_stick_x > 0) {
             double wristPos = robotHardware.getHorizontalWristServoPosition();
-            wristPos = Math.min(wristPos + RobotConstants.HORIZONTAL_WRIST_INCREMENT, 1);
+            wristPos = Math.min(wristPos + RobotConstants.HORIZONTAL_WRIST_INCREMENT, RobotConstants.HORIZONTAL_WRIST_MAX_POS);
             robotHardware.setHorizontalWristServoPosition(wristPos);
         }
 

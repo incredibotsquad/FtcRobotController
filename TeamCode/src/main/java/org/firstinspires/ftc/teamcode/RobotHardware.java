@@ -101,13 +101,13 @@ public class RobotHardware {
          // vertical stack
          verticalSlideMotor1 = hardwareMap.get(DcMotorEx.class, "VerticalSlideMotor1");
          verticalSlideMotor1.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-         verticalSlideMotor1.setDirection(DcMotorSimple.Direction.REVERSE);
          verticalSlideMotor1.setTargetPosition(0);
          verticalSlideMotor1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
          verticalSlideMotor1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
          verticalSlideMotor2 = hardwareMap.get(DcMotorEx.class, "VerticalSlideMotor2");
          verticalSlideMotor2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+         verticalSlideMotor2.setDirection(DcMotorSimple.Direction.REVERSE);
          verticalSlideMotor2.setTargetPosition(0);
          verticalSlideMotor2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
          verticalSlideMotor2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
