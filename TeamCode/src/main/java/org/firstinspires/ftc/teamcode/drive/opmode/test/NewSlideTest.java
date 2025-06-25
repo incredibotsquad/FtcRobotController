@@ -63,9 +63,11 @@ public class NewSlideTest extends LinearOpMode {
         SlideMotor1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
         SlideMotor2 = hardwareMap.get(DcMotorEx.class, "VerticalSlideMotor2");
-        SlideMotor2.setTargetPosition(0);
-        SlideMotor2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        SlideMotor2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        SlideMotor2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        //        SlideMotor2.setTargetPosition(0);
+//        SlideMotor2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+//        SlideMotor2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
 
 //        leftVBSerbo = hardwareMap.get(Servo.class, "LeftVB");
@@ -85,7 +87,7 @@ public class NewSlideTest extends LinearOpMode {
 
                 telemetry.addData("Time: ", runtime.milliseconds());
 
-                Log.i("INCREDIBOTS", "SLIDE RUNTIME: " + runtime.milliseconds());
+                Log.i("INCREDIBOTS / NEW SLIDE TEST", "SLIDE RUNTIME: " + runtime.milliseconds());
                 telemetry.update();
             }
 
@@ -97,16 +99,28 @@ public class NewSlideTest extends LinearOpMode {
                 rightVBSerbo.setPosition(rightVBServoPosition);
             }
 
+            keepMotorsInSync();
         }
     }
     public void setSlidePositionAndVelocity(int pos, double velocity) {
         SlideMotor1.setTargetPosition(pos);
-        SlideMotor2.setTargetPosition(pos);
+//        SlideMotor2.setTargetPosition(pos);
 
         SlideMotor2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        SlideMotor1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+//        SlideMotor1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         SlideMotor1.setVelocity(velocity);
-        SlideMotor2.setVelocity(velocity);
+//        SlideMotor2.setVelocity(velocity);
     }
+
+    public void keepMotorsInSync() {
+
+        double motor1Power = SlideMotor1.getPower();
+        SlideMotor2.setPower(motor1Power);
+
+        Log.i("INCREDIBOTS / NEW SLIDE TEST", "MOTOR 1 POWER: " + motor1Power);
+
+
+    }
+
 }
