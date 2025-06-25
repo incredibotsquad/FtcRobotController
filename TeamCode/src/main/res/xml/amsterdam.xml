@@ -15,8 +15,8 @@
             <AnalogInput name="AxonEncoder" port="2" />
         </LynxModule>
         <LynxModule name="Control Hub" port="173">
-            <goBILDA5202SeriesMotor name="VerticalSlideMotor2" port="0" />
-            <goBILDA5202SeriesMotor name="VerticalSlideMotor1" port="1" />
+            <goBILDA5202SeriesMotor name="VerticalSlideMotor2" port="1" />
+            <goBILDA5202SeriesMotor name="VerticalSlideMotor1" port="0" />
             <goBILDA5202SeriesMotor name="LBMotor" port="2" />
             <goBILDA5202SeriesMotor name="LFMotor" port="3" />
             <Servo name="HorizontalTurretServo" port="1" />

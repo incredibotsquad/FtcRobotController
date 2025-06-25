@@ -27,12 +27,21 @@ public class ServoTest extends LinearOpMode {
     RobotHardware myHardware;
 
     // Declare OpMode members.
-    public static double servo1Position = 0.5;
     public static String servo1Name = "HorizontalTurretServo";
+    public static double servo1Position = 0.5;
 
-    public static boolean enableServo2 = true;
-    public static double servo2Position = 0.5;
+    public static boolean enableServo2 = false;
     public static String servo2Name = "HorizontalShoulderServo";
+    public static double servo2Position = 0.5;
+
+    public static boolean enableServo3 = false;
+    public static String servo3Name = "HorizontalShoulderServo";
+    public static double servo3Position = 0.5;
+
+    public static boolean enableServo4 = false;
+    public static String servo4Name = "HorizontalShoulderServo";
+    public static double servo4Position = 0.5;
+
 
     // Close: 0.42
     // Open: 0.55
@@ -40,19 +49,31 @@ public class ServoTest extends LinearOpMode {
     private Servo Servo1;
     private Servo Servo2;
 
+    private Servo Servo3;
+    private Servo Servo4;
+
     @Override
     public void runOpMode() {
 
         while (opModeInInit()) {
             Servo1 = hardwareMap.get(Servo.class, servo1Name);
+
             if (enableServo2) {
                 Servo2 = hardwareMap.get(Servo.class, servo2Name);
             }
+
+            if (enableServo3) {
+                Servo3 = hardwareMap.get(Servo.class, servo3Name);
+            }
+
+            if (enableServo4) {
+                Servo4 = hardwareMap.get(Servo.class, servo4Name);
+            }
+
         }
 
         telemetry.addData("Status", "Initialized");
         telemetry.update();
-
 
         // Wait for the game to start (driver presses START)
         waitForStart();
@@ -61,11 +82,19 @@ public class ServoTest extends LinearOpMode {
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
 //            if(gamepad1.a) {
-                Servo1.setPosition(servo1Position);
+            Servo1.setPosition(servo1Position);
 
-                if (enableServo2) {
-                    Servo2.setPosition(servo2Position);
-                }
+            if (enableServo2) {
+                Servo2.setPosition(servo2Position);
+            }
+
+            if (enableServo3) {
+                Servo3.setPosition(servo3Position);
+            }
+
+            if (enableServo4) {
+                Servo4.setPosition(servo4Position);
+            }
 //            }
         }
     }
