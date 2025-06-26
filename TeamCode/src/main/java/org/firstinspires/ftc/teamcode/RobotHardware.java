@@ -101,12 +101,12 @@ public class RobotHardware {
          // vertical stack
          verticalSlideMotor1 = hardwareMap.get(DcMotorEx.class, "VerticalSlideMotor1");
          verticalSlideMotor1.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-         verticalSlideMotor1.setDirection(DcMotorSimple.Direction.REVERSE);
          verticalSlideMotor1.setTargetPosition(0);
          verticalSlideMotor1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
          verticalSlideMotor1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
          verticalSlideMotor2 = hardwareMap.get(DcMotorEx.class, "VerticalSlideMotor2");
+         verticalSlideMotor2.setDirection(DcMotorSimple.Direction.REVERSE);
          verticalSlideMotor2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
          verticalSlideMotor2.setTargetPosition(0);
          verticalSlideMotor2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
@@ -351,7 +351,7 @@ public class RobotHardware {
         double voltage = verticalShoulderServoEncoder.getVoltage();
         double position = 1 - (voltage / 3.3);  //position via encoder seems to be flipped
 
-        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getVerticalShoulderServo Position: " + position);
+//        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getVerticalShoulderServo Position: " + position);
         return position;
     }
 
@@ -362,7 +362,7 @@ public class RobotHardware {
 
     //function to return the minimum of 2 motors on the vertical slide.
     public int getVerticalSlidePosition() {
-        int retVal = Math.min(verticalSlideMotor1.getCurrentPosition(), verticalSlideMotor2.getCurrentPosition());
+        int retVal = Math.max(verticalSlideMotor1.getCurrentPosition(), verticalSlideMotor2.getCurrentPosition());
         Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " getVerticalSlidePosition: " + retVal);
         return retVal;
     }

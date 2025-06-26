@@ -5,6 +5,7 @@
             <goBILDA5202SeriesMotor name="RBMotor" port="2" />
             <goBILDA5202SeriesMotor name="HorizontalSlideMotor" port="1" />
             <goBILDA5202SeriesMotor name="RFMotor" port="3" />
+            <goBILDA5202SeriesMotor name="VerticalSlideMotor1" port="0" />
             <Servo name="VerticalClawServo" port="0" />
             <Servo name="VerticalElbowServo" port="1" />
             <Servo name="VerticalShoulderServo" port="2" />
@@ -16,7 +17,6 @@
         </LynxModule>
         <LynxModule name="Control Hub" port="173">
             <goBILDA5202SeriesMotor name="VerticalSlideMotor2" port="1" />
-            <goBILDA5202SeriesMotor name="VerticalSlideMotor1" port="0" />
             <goBILDA5202SeriesMotor name="LBMotor" port="2" />
             <goBILDA5202SeriesMotor name="LFMotor" port="3" />
             <Servo name="HorizontalTurretServo" port="1" />

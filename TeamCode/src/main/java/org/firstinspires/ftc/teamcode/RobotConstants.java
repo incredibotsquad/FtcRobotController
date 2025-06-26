@@ -16,7 +16,7 @@ public class RobotConstants {
 
     public static int VERTICAL_SLIDE_MAX_POS = 2350;
     public static int VERTICAL_SLIDE_INCREMENT = 100;
-
+    public static double VERTICAL_SHOULDER_RAMP_STEP = 0.05;
     public static double HORIZONTAL_TURRET_CENTER = 0.64;
     public static double HORIZONTAL_TURRET_MAX_POS = 0.9;
     public static double HORIZONTAL_TURRET_MIN_POS = 0.36;
