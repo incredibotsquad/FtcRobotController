@@ -61,9 +61,9 @@ public class RobotConstants {
     public static int HORIZONTAL_SLIDE_HANG_SPECIMEN = 750;
 
     // HORIZONTAL TRANSFER STATE VALUES
-    public static int HORIZONTAL_SLIDE_TRANSFER = 0;
+    public static int HORIZONTAL_SLIDE_TRANSFER = 230;
     public static double HORIZONTAL_TURRET_TRANSFER = HORIZONTAL_TURRET_CENTER;
-    public static double HORIZONTAL_SHOULDER_TRANSFER = 0.41;
+    public static double HORIZONTAL_SHOULDER_TRANSFER = 0.395;
     public static double HORIZONTAL_SHOULDER_AFTER_TRANSFER = 0.46;
     public static double HORIZONTAL_ELBOW_TRANSFER = 0.85;
     public static double HORIZONTAL_ELBOW_AFTER_TRANSFER = 0.5;
@@ -93,7 +93,7 @@ public class RobotConstants {
     public static double HORIZONTAL_WRIST_PICK_SPECIMEN = 0.18;
 
     public static double VERTICAL_CLAW_OPEN = 0.6;
-    public static double VERTICAL_CLAW_CLOSE =  0.2;
+    public static double VERTICAL_CLAW_CLOSE =  0.25;
     public static int VERTICAL_SLIDE_VELOCITY = 3500;
 
 
