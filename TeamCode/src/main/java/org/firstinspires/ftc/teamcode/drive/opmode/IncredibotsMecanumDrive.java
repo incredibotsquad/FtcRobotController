@@ -213,11 +213,21 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
             telemetry.addData("Front left/Right", "%4.2f, %4.2f", leftFrontPower, rightFrontPower);
             telemetry.addData("Back  left/Right", "%4.2f, %4.2f", leftBackPower, rightBackPower);
 
+//            telemetry.addData("Horizontal Claw: ", robotHardware.getHorizontalClawState());
+//            telemetry.addData("Horizontal Wrist: ", robotHardware.getHorizontalWristServoPosition());
+//            telemetry.addData("Horizontal Elbow: ", robotHardware.getHorizontalElbowServoPosition());
+//            telemetry.addData("Horizontal Shoulder: ", robotHardware.getHorizontalShoulderServoPosition());
+//            telemetry.addData("Horizontal Turret: ", robotHardware.getHorizontalTurretServoPosition());
+//            telemetry.addData("Horizontal Slide: ", robotHardware.getHorizontalSlidePosition());
+//
+//            telemetry.addData("Vertical Claw: ", robotHardware.getVerticalClawState());
+//            telemetry.addData("Vertical Wrist: ", robotHardware.getVerticalWristServoPosition());
+//            telemetry.addData("Vertical Elbow: ", robotHardware.getVerticalElbowServoPosition());
+//            telemetry.addData("Vertical Shoulder: ", robotHardware.getVerticalShoulderServoPosition());
+//            telemetry.addData("Vertical Slide: ", robotHardware.getVerticalSlidePosition());
+
             // calls the process inputs function from the arm control class
             robotControl.ProcessInputs(telemetry);
-
-            robotHardware.keepVerticalSlideMotorsInSync();
-
             //updates telemetry
             telemetry.update();
 

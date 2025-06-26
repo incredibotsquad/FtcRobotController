@@ -108,11 +108,9 @@ public class RobotHardware {
 
          verticalSlideMotor2 = hardwareMap.get(DcMotorEx.class, "VerticalSlideMotor2");
          verticalSlideMotor2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-         verticalSlideMotor2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-
-//         verticalSlideMotor2.setTargetPosition(0);
-//         verticalSlideMotor2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-//         verticalSlideMotor2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+         verticalSlideMotor2.setTargetPosition(0);
+         verticalSlideMotor2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+         verticalSlideMotor2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
          verticalClawServo = hardwareMap.get(Servo.class, "VerticalClawServo");
          verticalWristServo = hardwareMap.get(Servo.class, "VerticalWristServo");
@@ -189,7 +187,7 @@ public class RobotHardware {
         Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " stopVerticalSlideAndResetEncoder");
         stopVerticalSlide();
         verticalSlideMotor1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-//        verticalSlideMotor2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        verticalSlideMotor2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         setVerticalSlidePosition(0);
     }
 
@@ -364,8 +362,7 @@ public class RobotHardware {
 
     //function to return the minimum of 2 motors on the vertical slide.
     public int getVerticalSlidePosition() {
-        int retVal = verticalSlideMotor1.getCurrentPosition();
-//        int retVal = Math.min(verticalSlideMotor1.getCurrentPosition(), verticalSlideMotor2.getCurrentPosition());
+        int retVal = Math.min(verticalSlideMotor1.getCurrentPosition(), verticalSlideMotor2.getCurrentPosition());
         Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " getVerticalSlidePosition: " + retVal);
         return retVal;
     }
@@ -377,18 +374,14 @@ public class RobotHardware {
 
     public void setVerticalSlidePositionAndVelocity(int pos, int velocity) {
         verticalSlideMotor1.setTargetPosition(pos);
-//        verticalSlideMotor2.setTargetPosition(pos);
+        verticalSlideMotor2.setTargetPosition(pos);
 
         verticalSlideMotor1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-//        verticalSlideMotor2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        verticalSlideMotor2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         verticalSlideMotor1.setVelocity(velocity);
-//        verticalSlideMotor2.setVelocity(velocity);
+        verticalSlideMotor2.setVelocity(velocity);
         Log.i("=== INCREDIBOTS / ROBOTHARDWARE ===", " setVerticalSlidePositionAndVelocity: " + pos + " AND VELOCITY: " + velocity);
-    }
-
-    public void keepVerticalSlideMotorsInSync() {
-         verticalSlideMotor2.setPower(verticalSlideMotor1.getPower());
     }
 
     // function to check proximity sensors and ensure the motor stops
