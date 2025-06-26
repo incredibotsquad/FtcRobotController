@@ -473,8 +473,7 @@ public class RobotControl
                 case PICK_SAMPLE:   //PICK SAMPLE
                     Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: PICK SAMPLE");
 
-                    if (currentRobotState == ROBOT_STATE.CAMERA_READY ||
-                    currentRobotState == ROBOT_STATE.PICK_SAMPLE){
+                    if (currentRobotState == ROBOT_STATE.CAMERA_READY){
                         //get slide / turret / wrist from camera
                         GetSampleChoicesFromCameraInputs();//use current slide / turret / wrist position
                     }
