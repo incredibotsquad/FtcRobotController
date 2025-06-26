@@ -114,12 +114,9 @@ public class NewSlideTest extends LinearOpMode {
     }
 
     public void keepMotorsInSync() {
-        
-        double motor1Power = SlideMotor1.getPower();
 
-        //getpower always returns between 0 and 1
-        //since the motors are flipped, we need to multiply by -1
-        SlideMotor2.setPower(-1 * motor1Power);
+        double motor1Power = SlideMotor1.getPower();
+        SlideMotor2.setPower(motor1Power);
 
         Log.i("INCREDIBOTS / NEW SLIDE TEST", "MOTOR 1 POWER: " + motor1Power);
 

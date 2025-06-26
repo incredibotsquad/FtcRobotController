@@ -388,8 +388,7 @@ public class RobotHardware {
     }
 
     public void keepVerticalSlideMotorsInSync() {
-         //multiply by -1 since getpower always returns between 0 and 1
-         verticalSlideMotor2.setPower(-1 * verticalSlideMotor1.getPower());
+         verticalSlideMotor2.setPower(verticalSlideMotor1.getPower());
     }
 
     // function to check proximity sensors and ensure the motor stops
