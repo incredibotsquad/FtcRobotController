@@ -318,14 +318,18 @@ public class RobotControl
                     sampleChoices.add(choice);
                 }
 
-                displayLimelightTelemetry(best, allLocations);
+//                displayLimelightTelemetry(best, allLocations);
             } else {
-                displayLimelightTelemetry(null, null);
+                Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: Limelight found nothing! ");
+
+//                displayLimelightTelemetry(null, null);
             }
 
         } catch (Exception e) {
-            telemetry.addData("Error", e.getMessage());
-            telemetry.update();
+            Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "GetSampleChoicesFromCameraInputs: Exception running Limelight: " + e.getMessage());
+
+//            telemetry.addData("Error", e.getMessage());
+//            telemetry.update();
         }
     }
 
@@ -476,6 +480,11 @@ public class RobotControl
                     if (currentRobotState == ROBOT_STATE.CAMERA_READY){
                         //get slide / turret / wrist from camera
                         GetSampleChoicesFromCameraInputs();//use current slide / turret / wrist position
+
+                        if (sampleChoices.isEmpty()) {
+                            //if we didnt find any choices, stay at the current state.
+                            targetRobotState = ROBOT_STATE.CAMERA_READY;
+                        }
                     }
                     else {
                         //NOTE: if we are going through enter/exit sub, operators are manually adjusting positions
@@ -854,11 +863,14 @@ public class RobotControl
         );
 
         Action verticalActions = new ParallelAction(
-                new VerticalClawAction(robotHardware, false, false, false),
-                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_DROP_HIGH_SAMPLE, true, false),
-                new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_DROP_HIGH_SAMPLE, false, false),
-                new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_DROP_HIGH_SAMPLE, false, false),
-                new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_DROP_HIGH_SAMPLE, true, false)
+                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_DROP_HIGH_SAMPLE, true, true),
+                new ParallelAction(
+                        new VerticalClawAction(robotHardware, false, false, false),
+                        new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_DROP_HIGH_SAMPLE, false, false),
+                        new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_DROP_HIGH_SAMPLE, false, false),
+                        new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_DROP_HIGH_SAMPLE, true, false)
+                )
+
         );
 
         return new SequentialAction(
@@ -879,7 +891,8 @@ public class RobotControl
                 new ParallelAction(
                         new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_PICK_SPECIMEN, true, false),
                         new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_PICK_SPECIMEN, false, false),
-                        new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_PICK_SPECIMEN, false, false)
+                        new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_PICK_SPECIMEN, false, false),
+                        new HorizontalClawAction(robotHardware, false, false, false)
                 ),
                 new ParallelAction(
                         new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_PICK_SPECIMEN, false, false),
@@ -894,7 +907,8 @@ public class RobotControl
 
         Action horizontalActions = GetHorizontalActionsForSpecimen();
 
-        if (currentRobotState == ROBOT_STATE.HANG_SPECIMEN ||
+        if (currentRobotState == ROBOT_STATE.PICK_SPECIMEN ||
+                currentRobotState == ROBOT_STATE.HANG_SPECIMEN ||
                 currentRobotState == ROBOT_STATE.SNAP_SPECIMEN ||
                 targetRobotState == ROBOT_STATE.HANG_SPECIMEN ||
                 targetRobotState == ROBOT_STATE.SNAP_SPECIMEN) {
@@ -908,8 +922,8 @@ public class RobotControl
                         new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_PICK_SPECIMEN, false, false)
                 ),
                 new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_PICK_SPECIMEN, true, false),
-                new VerticalClawAction(robotHardware, true, false, false),
-                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_PICK_SPECIMEN_STEP_2, false, false)
+                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_PICK_SPECIMEN_STEP_2, false, false),
+                new VerticalClawAction(robotHardware, true, false, false)
         );
 
         return new SequentialAction(

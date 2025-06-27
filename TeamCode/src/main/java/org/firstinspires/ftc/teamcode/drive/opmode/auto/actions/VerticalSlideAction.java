@@ -54,7 +54,7 @@ public class VerticalSlideAction implements Action {
                 if (Math.abs(robotHardware.getVerticalSlidePosition() - slidePosition) < RobotConstants.SLIDE_POSITION_TOLERANCE)
                     return false;   //return immediately if slide is already at the target position
 
-                return (timer.milliseconds() < 400);
+                return (timer.milliseconds() < 600);
             }
 
             return (Math.abs(robotHardware.getVerticalSlidePosition() - slidePosition) > RobotConstants.SLIDE_POSITION_TOLERANCE);

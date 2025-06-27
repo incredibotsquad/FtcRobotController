@@ -5,7 +5,6 @@ import android.util.Log;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.ParallelAction;
-import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.ProfileAccelConstraint;
 import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.SleepAction;
@@ -21,6 +20,7 @@ import org.firstinspires.ftc.teamcode.RobotConstants;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 import org.firstinspires.ftc.teamcode.drive.opmode.RobotControl;
 import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.VerticalClawAction;
+import org.firstinspires.ftc.teamcode.drive.opmode.auto.actions.VerticalShoulderAction;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,20 +50,20 @@ public class Blue_Specimen extends BaseAuto{
 
         Action newMoveToPickSample1 = mecanumDrive.actionBuilder(coordinates.BRACE_RUNGS_FOR_SPECIMEN_ONE)
                 .setTangent(coordinates.reverseHeading)
-                .splineToLinearHeading(coordinates.PICK_SAMPLE_1, coordinates.PICK_SAMPLE_1.heading)
+                .splineToLinearHeading(coordinates.PICK_SAMPLE_1, coordinates.PICK_SAMPLE_1.heading, new TranslationalVelConstraint(32), new ProfileAccelConstraint(-32, 32))
                 .build();
 
-        Action moveToPickSample1 = mecanumDrive.actionBuilder(coordinates.INIT_POS)
-                .splineToConstantHeading(coordinates.PICK_SAMPLE_1.position, coordinates.PICK_SAMPLE_1.heading)
-                .build();
+//        Action moveToPickSample1 = mecanumDrive.actionBuilder(coordinates.INIT_POS)
+//                .splineToConstantHeading(coordinates.PICK_SAMPLE_1.position, coordinates.PICK_SAMPLE_1.heading)
+//                .build();
 
         Action moveToPickSample2 = mecanumDrive.actionBuilder(coordinates.PICK_SAMPLE_1)
                 .strafeToConstantHeading(coordinates.PICK_SAMPLE_2.position)
                 .build();
 
-        Action moveToPickSample3 = mecanumDrive.actionBuilder(coordinates.PICK_SAMPLE_2)
-                .strafeToConstantHeading(coordinates.PICK_SAMPLE_3.position)
-                .build();
+//        Action moveToPickSample3 = mecanumDrive.actionBuilder(coordinates.PICK_SAMPLE_2)
+//                .strafeToConstantHeading(coordinates.PICK_SAMPLE_3.position)
+//                .build();
 
         Action moveToPickSpecimenStep1 = mecanumDrive.actionBuilder(coordinates.PICK_SAMPLE_3)
                 .setTangent(coordinates.heading)
@@ -75,35 +75,38 @@ public class Blue_Specimen extends BaseAuto{
                 .lineToY(coordinates.PICK_SPECIMEN_SLOW.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(coordinates.minAccel, 20))
                 .build();
 
-        Action moveToSnapSpecimen1 = mecanumDrive.actionBuilder(coordinates.PICK_SPECIMEN_SLOW)
-                .setTangent(coordinates.heading)
-                .splineToConstantHeading(coordinates.BRACE_RUNGS_FOR_SPECIMEN_ONE.position, coordinates.heading)
-                .build();
+//        Action moveToSnapSpecimen1 = mecanumDrive.actionBuilder(coordinates.PICK_SPECIMEN_SLOW)
+//                .setTangent(coordinates.heading)
+//                .splineToConstantHeading(coordinates.BRACE_RUNGS_FOR_SPECIMEN_ONE.position, coordinates.heading)
+//                .build();
 
-        Action moveToPickSpecimen2 = mecanumDrive.actionBuilder(coordinates.BRACE_RUNGS_FOR_SPECIMEN_ONE)
-                .setTangent(coordinates.reverseHeading)
-                .splineToConstantHeading(coordinates.PICK_SPECIMEN.position, coordinates.reverseHeading)
-                .lineToY(coordinates.PICK_SPECIMEN_SLOW.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(coordinates.minAccel, 20))
-                .build();
+//        Action moveToPickSpecimen2 = mecanumDrive.actionBuilder(coordinates.BRACE_RUNGS_FOR_SPECIMEN_ONE)
+//                .setTangent(coordinates.reverseHeading)
+//                .splineToConstantHeading(coordinates.PICK_SPECIMEN.position, coordinates.reverseHeading)
+//                .lineToY(coordinates.PICK_SPECIMEN_SLOW.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(coordinates.minAccel, 20))
+//                .build();
 
         Action moveToSnapSpecimen2 = mecanumDrive.actionBuilder(coordinates.PICK_SPECIMEN_SLOW)
                 .setTangent(coordinates.heading)
+                .splineToConstantHeading(coordinates.SPLINE_INTERMEDIATE_SNAP.position, coordinates.sweepLeftHeading)
                 .splineToConstantHeading(coordinates.BRACE_RUNGS_FOR_SPECIMEN_TWO.position, coordinates.heading)
                 .build();
 
-        Action strafeAfterBracingRungForSpecimen2 = mecanumDrive.actionBuilder(coordinates.BRACE_RUNGS_FOR_SPECIMEN_TWO)
-                .setTangent(0)
-                .strafeToConstantHeading(coordinates.BRACE_RUNGS_FOR_SPECIMEN_ONE.position)
-                .build();
+//        Action strafeAfterBracingRungForSpecimen2 = mecanumDrive.actionBuilder(coordinates.BRACE_RUNGS_FOR_SPECIMEN_TWO)
+//                .setTangent(0)
+//                .strafeToConstantHeading(coordinates.BRACE_RUNGS_FOR_SPECIMEN_ONE.position)
+//                .build();
 
         Action moveToPickSpecimen3 = mecanumDrive.actionBuilder(coordinates.BRACE_RUNGS_FOR_SPECIMEN_TWO)
                 .setTangent(coordinates.reverseHeading)
+                .splineToConstantHeading(coordinates.SPLINE_INTERMEDIATE_PICK.position, coordinates.SPLINE_INTERMEDIATE_PICK.heading)
                 .splineToConstantHeading(coordinates.PICK_SPECIMEN.position, coordinates.reverseHeading)
                 .lineToY(coordinates.PICK_SPECIMEN_SLOW.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(coordinates.minAccel, 20))
                 .build();
 
         Action moveToSnapSpecimen3 = mecanumDrive.actionBuilder(coordinates.PICK_SPECIMEN_SLOW)
                 .setTangent(coordinates.heading)
+                .splineToConstantHeading(coordinates.SPLINE_INTERMEDIATE_SNAP.position, coordinates.sweepLeftHeading)
                 .splineToConstantHeading(coordinates.BRACE_RUNGS_FOR_SPECIMEN_THREE.position, coordinates.heading)
                 .build();
 
@@ -114,12 +117,14 @@ public class Blue_Specimen extends BaseAuto{
 
         Action moveToPickSpecimen4 = mecanumDrive.actionBuilder(coordinates.BRACE_RUNGS_FOR_SPECIMEN_THREE)
                 .setTangent(coordinates.reverseHeading)
+                .splineToConstantHeading(coordinates.SPLINE_INTERMEDIATE_PICK.position, coordinates.SPLINE_INTERMEDIATE_PICK.heading)
                 .splineToConstantHeading(coordinates.PICK_SPECIMEN.position, coordinates.reverseHeading)
                 .lineToY(coordinates.PICK_SPECIMEN_SLOW.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(coordinates.minAccel, 20))
                 .build();
 
         Action moveToSnapSpecimen4 = mecanumDrive.actionBuilder(coordinates.PICK_SPECIMEN_SLOW)
                 .setTangent(coordinates.heading)
+                .splineToConstantHeading(coordinates.SPLINE_INTERMEDIATE_SNAP.position, coordinates.sweepLeftHeading)
                 .splineToConstantHeading(coordinates.BRACE_RUNGS_FOR_SPECIMEN_FOUR.position, coordinates.heading)
                 .build();
 
@@ -141,7 +146,7 @@ public class Blue_Specimen extends BaseAuto{
             //snap preloaded specimen
             Actions.runBlocking(
                     new ParallelAction(
-                            new InstantAction(() -> robotHardware.setVerticalShoulderServoPosition(RobotConstants.VERTICAL_SHOULDER_PICK_SPECIMEN)),
+                            new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_HANG_SPECIMEN, false, false),
                             snapPreloadedSpecimen,
                             robotControl.GetHangSpecimenActionSequence_Fast()
                     )
@@ -187,10 +192,7 @@ public class Blue_Specimen extends BaseAuto{
                                     robotControl.GetTransferToObZoneActionSequence(false),
                                     robotControl.GetPickSampleActionSequence(false)
                             ),
-                            new InstantAction(()-> {
-                                robotHardware.setHorizontalShoulderServoPosition(RobotConstants.HORIZONTAL_SHOULDER_ENTER_EXIT_SUB);
-                                robotHardware.setHorizontalTurretServoPosition(RobotConstants.HORIZONTAL_TURRET_CENTER);
-                            })
+                            robotControl.GetTransferToObZoneActionSequence(true)
                     )
             );
 
@@ -198,15 +200,10 @@ public class Blue_Specimen extends BaseAuto{
                     new SequentialAction(
                             new ParallelAction(
                                     moveToPickSpecimenStep1,
-                                    robotControl.GetPickSpecimenActionSequence(false)
+                                    robotControl.GetPickSpecimenActionSequence(true)
                             ),
-                            new InstantAction(() -> robotHardware.setHorizontalSlidePosition(RobotConstants.VERTICAL_SLIDE_SNAP_SPECIMEN)),
-                            new InstantAction(() -> robotHardware.setHorizontalClawState(true)),
                             new SleepAction(0.1),
-                            new ParallelAction(
-                                    robotControl.GetPickSpecimenActionSequence(true),
-                                    moveToPickSpecimenStep2
-                            )
+                            moveToPickSpecimenStep2
                     )
             );
 

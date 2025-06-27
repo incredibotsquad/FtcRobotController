@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.drive.opmode.test;
 
+import android.util.Log;
+
 import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -58,6 +60,8 @@ public class ServoTest extends LinearOpMode {
         while (opModeInInit()) {
             Servo1 = hardwareMap.get(Servo.class, servo1Name);
 
+            Servo1.setDirection(Servo.Direction.REVERSE);
+
             if (enableServo2) {
                 Servo2 = hardwareMap.get(Servo.class, servo2Name);
             }
@@ -83,6 +87,9 @@ public class ServoTest extends LinearOpMode {
         while (opModeIsActive()) {
 //            if(gamepad1.a) {
             Servo1.setPosition(servo1Position);
+
+            Log.i("INCREDIBOTS / SERVOTEST", "DIRECTION: " + Servo1.getDirection());
+
 
             if (enableServo2) {
                 Servo2.setPosition(servo2Position);

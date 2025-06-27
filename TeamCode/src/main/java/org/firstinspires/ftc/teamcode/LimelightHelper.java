@@ -150,8 +150,8 @@ public class LimelightHelper {
                     // Apply the correction equations:
                     // real_y = 0.9935*observed_y - 0.0687*observed_x - 0.0810
                     // real_x = 0.3458*observed_y + 1.1758*observed_x - 3.7199
-                    double correctedY = 1.2314 * observedY + 0.0113 * observedX - 1.8056;
-                    double correctedX = 0.0358 * observedY + 1.2005 * observedX - 0.3771;
+                    double correctedY = 1.0567 * observedY + 0.0046 * observedX - 1.9551;
+                    double correctedX = 0.0120 * observedY + 1.0569 * observedX - 0.0186;
 
                     // Create location with corrected position values
                     LimelightLocation loc = new LimelightLocation(correctedX, correctedY, orientationAngle, rotationScore, aspectRatio, color, result.getPipelineIndex());
