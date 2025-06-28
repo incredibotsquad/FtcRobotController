@@ -130,6 +130,10 @@ public class RobotControl
         this.currentRobotState = ROBOT_STATE.ENTER_EXIT_SUB;
     }
 
+    public void SetCurrentRobotStateToCameraReady() {
+        this.currentRobotState = ROBOT_STATE.CAMERA_READY;
+    }
+
     public void ProcessInputs(Telemetry telemetry) {
         // Check if camera settings need to be applied
 //        if (!cameraSettingsApplied) {
@@ -279,7 +283,7 @@ public class RobotControl
         }
     }
 
-    private void GetSampleChoicesFromCameraInputs() {
+    public void GetSampleChoicesFromCameraInputs() {
 
         sampleChoices.clear();
 
@@ -653,6 +657,31 @@ public class RobotControl
                 horizontalActions);
     }
 
+    public Action GetRestingActionSequence_Fast() {
+
+        Action horizontalActions = new ParallelAction(
+                new HorizontalTurretAction(robotHardware, RobotConstants.HORIZONTAL_TURRET_RESTING, false, false),
+                new HorizontalClawAction(robotHardware, false, false, false),
+                new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_RESTING, false, false),
+                new HorizontalElbowAction(robotHardware, RobotConstants.HORIZONTAL_ELBOW_RESTING, false, false),
+                new HorizontalWristAction(robotHardware, RobotConstants.HORIZONTAL_WRIST_RESTING, false, false),
+                new HorizontalSlideAction(robotHardware, RobotConstants.HORIZONTAL_SLIDE_RESTING, true, false)  //wait for slide
+        );
+
+        Action combinedActions = new SequentialAction(
+                new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_RESTING, true, false),
+                new ParallelAction(
+                        new VerticalClawAction(robotHardware, false, false, false),
+                        new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_RESTING, false, false),
+                        new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_RESTING, false, false),
+                        new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_RESTING, true, false),
+                        horizontalActions
+                )
+        );
+
+        return combinedActions;
+    }
+
     public Action GetResetEncodersActionSequence() {
 
         return new ParallelAction(
@@ -755,7 +784,7 @@ public class RobotControl
                 ),
                 //short wait if coming from enter exit sub, longer otherwise.
                 new HorizontalShoulderAction(robotHardware, RobotConstants.HORIZONTAL_SHOULDER_PICK_SAMPLE, true, (currentRobotState == ROBOT_STATE.ENTER_EXIT_SUB)),
-                new HorizontalClawAction(robotHardware, false, true, false),
+                new HorizontalClawAction(robotHardware, false, true, true),
                 new InstantAction(this::ProcessColorForPickedSample)
         );
 

@@ -104,7 +104,7 @@ public class RobotConstants {
     public static double VERTICAL_WRIST_DROP_SAMPLE_OBZONE = 0;
 
     // VERTICAL TRANSFER STATE VALUES
-    public static int VERTICAL_SLIDE_TRANSFER = 330;
+    public static int VERTICAL_SLIDE_TRANSFER = 350;
     public static double VERTICAL_SHOULDER_TRANSFER = 0.74;
     public static double VERTICAL_ELBOW_TRANSFER = 0;
     public static double VERTICAL_WRIST_TRANSFER = 0.68;

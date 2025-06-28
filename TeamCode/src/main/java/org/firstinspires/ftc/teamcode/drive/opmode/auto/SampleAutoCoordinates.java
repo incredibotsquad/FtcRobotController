@@ -11,6 +11,8 @@ public class SampleAutoCoordinates {
 
     public double heading;
     public double reverseHeading;
+    public double sweepLeftHeading;
+    public double sweepRightHeading;
     public double basketHeading;
     public double minTransVelocity;
     public double minAccel;
@@ -25,33 +27,37 @@ public class SampleAutoCoordinates {
     public LimelightLocation SAMPLE3_LIMELIGHT_LOCATION;
     public Pose2d DROP_SAMPLE_IN_BASKET;
     public Pose2d PARK;
+    public Pose2d PICK_FROM_SUB_STEP1;
+    public Pose2d PICK_FROM_SUB_STEP2;
 
     public SampleAutoCoordinates(int multiplier) {
         this.multiplier = multiplier;    //used to flip coordinates between blue (1) and red (-1)
 
-        minTransVelocity = 30;
+        minTransVelocity = 35;
         minAccel = -20;
-        maxAccel = 40;
+        maxAccel = 35;
 
         heading = Math.toRadians(-90 * multiplier);
         reverseHeading = Math.toRadians(90 * multiplier);
-
+        sweepLeftHeading = Math.toRadians((-90 * multiplier) + 90);
+        sweepRightHeading = Math.toRadians((90 * multiplier) + 90);
         basketHeading = Math.toRadians(-90 * multiplier - 45);
 
         INIT_POS = new Pose2d(39.25 * multiplier, 63.5 * multiplier, heading);
 
         PICK_SAMPLE_1 = new Pose2d(46.5 * multiplier, 48 * multiplier, heading);
-        SAMPLE1_LIMELIGHT_LOCATION = new LimelightLocation(0, 13, 90, 0,0, GameConstants.GAME_COLORS.YELLOW, 0);
+        SAMPLE1_LIMELIGHT_LOCATION = new LimelightLocation(0, 12, 90, 0,0, GameConstants.GAME_COLORS.YELLOW, 0);
 
         PICK_SAMPLE_2 = new Pose2d(56.5 * multiplier, 48 * multiplier, heading);
-        SAMPLE2_LIMELIGHT_LOCATION = new LimelightLocation(0, 13, 90, 0, 0, GameConstants.GAME_COLORS.YELLOW, 0);
+        SAMPLE2_LIMELIGHT_LOCATION = new LimelightLocation(0, 12, 90, 0, 0, GameConstants.GAME_COLORS.YELLOW, 0);
 
         PICK_SAMPLE_3 = new Pose2d(63 * multiplier, 48 * multiplier, heading);
-        SAMPLE3_LIMELIGHT_LOCATION = new LimelightLocation(-5, 13, 90, 0, 0, GameConstants.GAME_COLORS.YELLOW, 0);
+        SAMPLE3_LIMELIGHT_LOCATION = new LimelightLocation(-5, 13.5, 90, 0, 0, GameConstants.GAME_COLORS.YELLOW, 0);
 
         DROP_SAMPLE_IN_BASKET = new Pose2d(62 * multiplier, 57 * multiplier, basketHeading);
 
-        PARK = new Pose2d(-50*multiplier, -50*multiplier, Math.toRadians((-90 * multiplier) + 270));
-    }
+        PICK_FROM_SUB_STEP1 = new Pose2d(48 * multiplier, 17 * multiplier, heading);
 
+        PICK_FROM_SUB_STEP2 = new Pose2d(10 * multiplier, 17 * multiplier, sweepRightHeading);
+    }
 }

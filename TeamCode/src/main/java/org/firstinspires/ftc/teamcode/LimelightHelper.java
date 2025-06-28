@@ -250,9 +250,12 @@ public class LimelightHelper {
         }
 
         // Sort by score and return a random element from valid locations
-        validLocations.sort((a, b) -> Double.compare(b.score, a.score));
-        java.util.Random random = new java.util.Random();
-        return validLocations.get(random.nextInt(validLocations.size()));
+//        validLocations.sort((a, b) -> Double.compare(b.score, a.score));
+//        java.util.Random random = new java.util.Random();
+        validLocations.sort((a, b) -> Double.compare(a.extension, b.extension));
+//        return validLocations.get(random.nextInt(validLocations.size()));
+
+        return validLocations.get(validLocations.size() / 2);
     }
 
 }

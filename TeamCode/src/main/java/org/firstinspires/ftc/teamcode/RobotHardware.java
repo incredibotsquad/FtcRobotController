@@ -268,7 +268,9 @@ public class RobotHardware {
      public GameConstants.GAME_COLORS getDetectedColor(){
          GameConstants.GAME_COLORS detectedColor = GameConstants.GAME_COLORS.YELLOW;
 
-         if (colorSensor.red() > colorSensor.green() && colorSensor.red() > colorSensor.blue()) {
+         colorSensor.getNormalizedColors();
+
+         if (colorSensor.red() > (colorSensor.green() * 1.2) && colorSensor.red() > (colorSensor.blue() * 1.2 )) {
              detectedColor = GameConstants.GAME_COLORS.RED;
          }
 
