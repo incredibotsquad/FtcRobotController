@@ -28,6 +28,7 @@ import org.firstinspires.ftc.teamcode.RobotHardware;
  */
 
 @Config
+@Disabled
 @TeleOp(name="NewSlideTest", group="Linear OpMode")
 public class NewSlideTest extends LinearOpMode {
     RobotHardware myHardware;

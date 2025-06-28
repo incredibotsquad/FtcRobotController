@@ -26,6 +26,7 @@ import org.firstinspires.ftc.teamcode.RobotHardware;
  */
 
 @Config
+@Disabled
 @TeleOp(name="ServoWithEncoderTest", group="Linear OpMode")
 public class ServoWithEncoderTest extends LinearOpMode {
     RobotHardware myHardware;

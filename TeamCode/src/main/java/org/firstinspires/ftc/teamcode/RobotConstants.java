@@ -46,7 +46,7 @@ public class RobotConstants {
     // HORIZONTAL PICK SAMPLE STATE VALUES
     public static int HORIZONTAL_SLIDE_PICK_SAMPLE = 0;
     public static double HORIZONTAL_TURRET_PICK_SAMPLE = 0.5;
-    public static double HORIZONTAL_SHOULDER_PICK_SAMPLE = 0.504;
+    public static double HORIZONTAL_SHOULDER_PICK_SAMPLE = 0.506;
     public static double HORIZONTAL_ELBOW_PICK_SAMPLE = 0.2;
     public static double HORIZONTAL_WRIST_PICK_SAMPLE = 0.52;
 
@@ -98,8 +98,8 @@ public class RobotConstants {
 
 
     // VERTICAL DROP SAMPLE OB-ZONE VALUES
-    public static int VERTICAL_SLIDE_DROP_SAMPLE_OBZONE = 500;
-    public static double VERTICAL_SHOULDER_DROP_SAMPLE_OBZONE = 0.9;
+    public static int VERTICAL_SLIDE_DROP_SAMPLE_OBZONE = 600;
+    public static double VERTICAL_SHOULDER_DROP_SAMPLE_OBZONE = 1;
     public static double VERTICAL_ELBOW_DROP_SAMPLE_OBZONE = 1;
     public static double VERTICAL_WRIST_DROP_SAMPLE_OBZONE = 0;
 
@@ -119,12 +119,12 @@ public class RobotConstants {
     public static int VERTICAL_SLIDE_PICK_SPECIMEN_STEP_1 = 600;
     public static int VERTICAL_SLIDE_PICK_SPECIMEN_STEP_2 = 50;
     public static double VERTICAL_SHOULDER_PICK_SPECIMEN = 0.605;
-    public static double VERTICAL_ELBOW_PICK_SPECIMEN = 0.2;
+    public static double VERTICAL_ELBOW_PICK_SPECIMEN = 0.15;
     public static double VERTICAL_WRIST_PICK_SPECIMEN = 0.02;
 
     // VERTICAL HANG HIGH SPECIMEN VALUES
     public static int VERTICAL_SLIDE_HANG_SPECIMEN = 200;
-    public static double VERTICAL_SHOULDER_HANG_SPECIMEN = 0.2;
+    public static double VERTICAL_SHOULDER_HANG_SPECIMEN = 0.18;
     public static double VERTICAL_ELBOW_HANG_SPECIMEN = 0;
     public static double VERTICAL_WRIST_HANG_SPECIMEN = VERTICAL_WRIST_PICK_SPECIMEN;
 

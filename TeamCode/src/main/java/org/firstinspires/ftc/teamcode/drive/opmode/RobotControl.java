@@ -833,11 +833,11 @@ public class RobotControl
         Action verticalActions = new SequentialAction(
                 new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_DROP_SAMPLE_OBZONE, true, false),
                 new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_DROP_SAMPLE_OBZONE, false, true),
-                new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_DROP_SAMPLE_OBZONE, true, false),
+//                new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_DROP_SAMPLE_OBZONE, true, false),
                 new VerticalClawAction(robotHardware, true, true, true),
                 new VerticalClawAction(robotHardware, false, true, false),
-                new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_TRANSFER, false, false),
-                new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_TRANSFER, false, false)
+//                new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_TRANSFER, false, false),
+                new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_TRANSFER, true, true)
 //                new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_DROP_SAMPLE_OBZONE, false, false)
         );
 
@@ -983,9 +983,9 @@ public class RobotControl
         //TODO: MOVE ROBOT TO SNAP SPECIMEN
 
         Action verticalActions = new SequentialAction(
-                new VerticalClawAction(robotHardware, false, true, false), //close the claw to make sure we pass thru the slides
-                new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_HANG_SPECIMEN, false, false),
+//                new VerticalClawAction(robotHardware, false, true, false), //close the claw to make sure we pass thru the slides
                 new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_HANG_SPECIMEN, false, true),
+                new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_HANG_SPECIMEN, false, false),
                 new ParallelAction(
                         new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_HANG_SPECIMEN, true, false),
                         new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_HANG_SPECIMEN, false, false),
@@ -1002,6 +1002,16 @@ public class RobotControl
         return new SequentialAction(
                 new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_SNAP_SPECIMEN, true, false),
                 new SleepAction(0.2),
+                new VerticalClawAction(robotHardware, true, false, false)
+        );
+    }
+
+    public Action GetSnapSpecimenActionSequence_Fast() {
+        //TODO: MOVE ROBOT TO SNAP SPECIMEN
+
+        return new SequentialAction(
+                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_SNAP_SPECIMEN, true, false),
+                new SleepAction(0.1),
                 new VerticalClawAction(robotHardware, true, false, false)
         );
     }

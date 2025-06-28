@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.drive.opmode.auto;
 
 import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.Vector2d;
 
 import org.firstinspires.ftc.teamcode.GameConstants;
 import org.firstinspires.ftc.teamcode.LimelightLocation;
@@ -38,13 +39,18 @@ public class SpecimenAutoCoordinates {
     public Pose2d PARK;
     public Pose2d SPLINE_INTERMEDIATE_PICK;
     public Pose2d SPLINE_INTERMEDIATE_SNAP;
+    public Vector2d FRONT_OF_RUNGS;
+
+    public Pose2d BRACE_RUNGS_FOR_SPECIMEN_TWO_DELTA;
+
+    public Pose2d BRACE_RUNGS_FOR_SPECIMEN_THREE_DELTA;
 
     public SpecimenAutoCoordinates(int multiplier) {
         this.multiplier = multiplier;    //used to flip coordinates between blue (1) and red (-1)
 
-        minTransVelocity = 30;
-        minAccel = -20;
-        maxAccel = 40;
+        minTransVelocity = 35;
+        minAccel = -25;
+        maxAccel = 35;
 
         heading = Math.toRadians(-90 * multiplier);
         sweepLeftHeading = Math.toRadians((-90 * multiplier) + 90);
@@ -53,29 +59,36 @@ public class SpecimenAutoCoordinates {
 
         INIT_POS = new Pose2d(-15.25 * multiplier, 63.5 * multiplier, reverseHeading);
 
-        PICK_SAMPLE_1 = new Pose2d(-48 * multiplier, 48 * multiplier, heading);
-        SAMPLE1_LIMELIGHT_LOCATION = new LimelightLocation(0, 10.5, 90, 0,0, GameConstants.GAME_COLORS.YELLOW, 0);
+        FRONT_OF_RUNGS = new Vector2d(10 * multiplier, 45 * multiplier);
 
-        PICK_SAMPLE_2 = new Pose2d(-61 * multiplier, 48 * multiplier, heading);
-        SAMPLE2_LIMELIGHT_LOCATION = new LimelightLocation(0, 11.5, 90, 0, 0, GameConstants.GAME_COLORS.YELLOW, 0);
+        PICK_SAMPLE_1 = new Pose2d(-42 * multiplier, 41 * multiplier, heading);
+        SAMPLE1_LIMELIGHT_LOCATION = new LimelightLocation(0, 12, 90, 0,0, GameConstants.GAME_COLORS.YELLOW, 0);
 
-        PICK_SAMPLE_3 = new Pose2d(-65 * multiplier, 48 * multiplier, heading);
-        SAMPLE3_LIMELIGHT_LOCATION = new LimelightLocation(5, 8, 90, 0, 0, GameConstants.GAME_COLORS.YELLOW, 0);
+        PICK_SAMPLE_2 = new Pose2d(-56 * multiplier, 40 * multiplier, heading);
+        SAMPLE2_LIMELIGHT_LOCATION = new LimelightLocation(0, 12, 90, 0, 0, GameConstants.GAME_COLORS.YELLOW, 0);
+
+        PICK_SAMPLE_3 = new Pose2d(-59 * multiplier, 39 * multiplier, heading);
+        SAMPLE3_LIMELIGHT_LOCATION = new LimelightLocation(5, 12, 90, 0, 0, GameConstants.GAME_COLORS.YELLOW, 0);
 
         PICK_SPECIMEN = new Pose2d(-42 * multiplier, 50 * multiplier, reverseHeading);
-        PICK_SPECIMEN_SLOW = new Pose2d(-42 * multiplier, 63.75 * multiplier, reverseHeading);
+        PICK_SPECIMEN_SLOW = new Pose2d(-42 * multiplier, 58 * multiplier, reverseHeading);
 
         SPLINE_INTERMEDIATE_PICK = new Pose2d(0 * multiplier, 48 * multiplier, sweepRightHeading);
         SPLINE_INTERMEDIATE_SNAP = new Pose2d(0 * multiplier, 48 * multiplier, sweepRightHeading);
 
 
-        BRACE_RUNGS_FOR_SPECIMEN_ONE = new Pose2d(10 * multiplier, 30 * multiplier, reverseHeading);
-        BRACE_RUNGS_FOR_SPECIMEN_TWO = new Pose2d(9.5 * multiplier, 30 * multiplier, reverseHeading);
+        BRACE_RUNGS_FOR_SPECIMEN_ONE = new Pose2d(10 * multiplier, 33 * multiplier, reverseHeading);
+        BRACE_RUNGS_FOR_SPECIMEN_TWO = new Pose2d(11.25 * multiplier, 37 * multiplier, reverseHeading);
 
-        BRACE_RUNGS_FOR_SPECIMEN_THREE = new Pose2d(9 * multiplier, 30 * multiplier, reverseHeading);
-        BRACE_RUNGS_FOR_SPECIMEN_FOUR = new Pose2d(8.5 * multiplier, 30 * multiplier, reverseHeading);
+        BRACE_RUNGS_FOR_SPECIMEN_TWO_DELTA = new Pose2d(BRACE_RUNGS_FOR_SPECIMEN_TWO.position.x , 34 * multiplier, reverseHeading);
 
-        PARK = new Pose2d(-50 * multiplier, 50 * multiplier, sweepRightHeading);
+        BRACE_RUNGS_FOR_SPECIMEN_THREE = new Pose2d(11 * multiplier, 37 * multiplier, reverseHeading);
+
+        BRACE_RUNGS_FOR_SPECIMEN_THREE_DELTA = new Pose2d(BRACE_RUNGS_FOR_SPECIMEN_THREE.position.x , 34 * multiplier, reverseHeading);
+
+        BRACE_RUNGS_FOR_SPECIMEN_FOUR = new Pose2d(10.75 * multiplier, 37 * multiplier, reverseHeading);
+
+        PARK = new Pose2d(-50 * multiplier, 55 * multiplier, sweepRightHeading);
     }
 
 }

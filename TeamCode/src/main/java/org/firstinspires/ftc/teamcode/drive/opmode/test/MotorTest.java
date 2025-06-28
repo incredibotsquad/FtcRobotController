@@ -26,6 +26,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 
 @Config
+@Disabled
 @TeleOp(name="MotorTest", group="Linear OpMode")
 public class MotorTest extends LinearOpMode {
 
