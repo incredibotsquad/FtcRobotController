@@ -215,7 +215,7 @@ public class RobotControl
         }
 
         //Hang the robot with start + left/right triggers
-        if (gamepad2.start && gamepad2.left_trigger > 0 && gamepad2.right_trigger > 0) {
+        if (gamepad2.start) {
             newTargetRobotState = ROBOT_STATE.ROBOT_HANG;
         }
 
@@ -552,7 +552,7 @@ public class RobotControl
                 case ROBOT_HANG: //SLIDE CLOSED, ARM RESTING
                     Log.i("=== INCREDIBOTS / ROBOT CONTROL ===", "PROCESSING STATE: ROBOT HANG");
 
-                    //TODO: add code here
+                    runningActions.add(GetRobotHangActionSequence());
 
                     break;
             }
@@ -1014,6 +1014,35 @@ public class RobotControl
                 new SleepAction(0.1),
                 new VerticalClawAction(robotHardware, true, false, false)
         );
+    }
+
+    public Action GetRobotHangActionSequence() {
+        Action horizontalActions = GetHorizontalActionsForSpecimen();
+
+        if (currentRobotState == ROBOT_STATE.PICK_SPECIMEN ||
+                currentRobotState == ROBOT_STATE.HANG_SPECIMEN ||
+                currentRobotState == ROBOT_STATE.SNAP_SPECIMEN ||
+                targetRobotState == ROBOT_STATE.HANG_SPECIMEN ||
+                targetRobotState == ROBOT_STATE.SNAP_SPECIMEN) {
+            horizontalActions = new NullAction();
+        }
+
+        Action verticalActions = new SequentialAction(
+                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_PICK_SPECIMEN_STEP_1, true, false),
+                new ParallelAction(
+                        new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_PICK_SPECIMEN, false, false),
+                        new VerticalWristAction(robotHardware, RobotConstants.VERTICAL_WRIST_PICK_SPECIMEN, false, false)
+                ),
+                new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_PICK_SPECIMEN, true, false),
+                new VerticalSlideAction(robotHardware, RobotConstants.VERTICAL_SLIDE_RESTING, false, false),
+                new VerticalElbowAction(robotHardware, RobotConstants.VERTICAL_ELBOW_HANG_ROBOT, true, true),
+                new VerticalClawAction(robotHardware, false, false, false),
+                new VerticalShoulderAction(robotHardware, RobotConstants.VERTICAL_SHOULDER_HANG_ROBOT, true, false)
+        );
+
+        return new SequentialAction(
+                horizontalActions,
+                verticalActions);
     }
 
     /// Function to move the slide and turret in response to DPAD presses

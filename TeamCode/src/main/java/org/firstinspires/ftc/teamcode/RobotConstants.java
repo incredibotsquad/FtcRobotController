@@ -97,6 +97,10 @@ public class RobotConstants {
     public static int VERTICAL_SLIDE_VELOCITY = 3500;
 
 
+    // VERTICAL ROBOT HANG VALUES
+    public static double VERTICAL_SHOULDER_HANG_ROBOT = 0.44;
+    public static double VERTICAL_ELBOW_HANG_ROBOT = 0.5;
+
     // VERTICAL DROP SAMPLE OB-ZONE VALUES
     public static int VERTICAL_SLIDE_DROP_SAMPLE_OBZONE = 600;
     public static double VERTICAL_SHOULDER_DROP_SAMPLE_OBZONE = 1;
