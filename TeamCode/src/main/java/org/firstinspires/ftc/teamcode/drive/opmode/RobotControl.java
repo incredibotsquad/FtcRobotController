@@ -214,13 +214,9 @@ public class RobotControl
             newTargetRobotState = ROBOT_STATE.RESET_ENCODERS;
         }
 
-        //Hang the robot with start + left/right triggers
-        if (gamepad2.start) {
+        if (gamepad2.left_trigger > 0 && gamepad2.right_trigger > 0 && gamepad2.start) {
+//            newTargetRobotState = ROBOT_STATE.TRANSFER_TO_OB_ZONE;
             newTargetRobotState = ROBOT_STATE.ROBOT_HANG;
-        }
-
-        if (gamepad2.left_trigger > 0 && gamepad2.right_trigger > 0) {
-            newTargetRobotState = ROBOT_STATE.TRANSFER_TO_OB_ZONE;
         }
 
         if (gamepad2.a){
