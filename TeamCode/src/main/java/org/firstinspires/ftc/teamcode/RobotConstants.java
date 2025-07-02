@@ -46,7 +46,7 @@ public class RobotConstants {
     // HORIZONTAL PICK SAMPLE STATE VALUES
     public static int HORIZONTAL_SLIDE_PICK_SAMPLE = 0;
     public static double HORIZONTAL_TURRET_PICK_SAMPLE = 0.5;
-    public static double HORIZONTAL_SHOULDER_PICK_SAMPLE = 0.506;
+    public static double HORIZONTAL_SHOULDER_PICK_SAMPLE = 0.508;
     public static double HORIZONTAL_ELBOW_PICK_SAMPLE = 0.2;
     public static double HORIZONTAL_WRIST_PICK_SAMPLE = 0.52;
 
@@ -61,20 +61,13 @@ public class RobotConstants {
     public static int HORIZONTAL_SLIDE_HANG_SPECIMEN = 750;
 
     // HORIZONTAL TRANSFER STATE VALUES
-    public static int HORIZONTAL_SLIDE_TRANSFER = 230;
+    public static int HORIZONTAL_SLIDE_TRANSFER = 240;
     public static double HORIZONTAL_TURRET_TRANSFER = HORIZONTAL_TURRET_CENTER;
     public static double HORIZONTAL_SHOULDER_TRANSFER = 0.395;
     public static double HORIZONTAL_SHOULDER_AFTER_TRANSFER = 0.46;
     public static double HORIZONTAL_ELBOW_TRANSFER = 0.85;
     public static double HORIZONTAL_ELBOW_AFTER_TRANSFER = 0.5;
     public static double HORIZONTAL_WRIST_TRANSFER = 0.5;
-
-    // HORIZONTAL RESTING STATE VALUES
-    public static int HORIZONTAL_SLIDE_RESTING = HORIZONTAL_SLIDE_CAMERA_READY;
-    public static double HORIZONTAL_TURRET_RESTING = HORIZONTAL_TURRET_CENTER;
-    public static double HORIZONTAL_SHOULDER_RESTING = HORIZONTAL_SHOULDER_CAMERA_READY;
-    public static double HORIZONTAL_ELBOW_RESTING = HORIZONTAL_ELBOW_TRANSFER;
-    public static double HORIZONTAL_WRIST_RESTING = HORIZONTAL_WRIST_TRANSFER;
 
 
     //HORIZONTAL ENTER EXIT SUB STATE VALUES
@@ -83,6 +76,13 @@ public class RobotConstants {
     public static int HORIZONTAL_SLIDE_ENTER_EXIT_SUB = 0;
     public static double HORIZONTAL_SHOULDER_ENTER_EXIT_SUB = 0.47;
     public static double HORIZONTAL_WRIST_ENTER_EXIT_SUB = HORIZONTAL_WRIST_TRANSFER;
+
+    // HORIZONTAL RESTING STATE VALUES
+    public static int HORIZONTAL_SLIDE_RESTING = HORIZONTAL_SLIDE_CAMERA_READY;
+    public static double HORIZONTAL_TURRET_RESTING = HORIZONTAL_TURRET_CENTER;
+    public static double HORIZONTAL_SHOULDER_RESTING = HORIZONTAL_SHOULDER_ENTER_EXIT_SUB;
+    public static double HORIZONTAL_ELBOW_RESTING = HORIZONTAL_ELBOW_TRANSFER;
+    public static double HORIZONTAL_WRIST_RESTING = HORIZONTAL_WRIST_TRANSFER;
 
     // HORIZONTAL PICK SPECIMEN STATE VALUES
     public static int HORIZONTAL_SLIDE_PICK_SPECIMEN = HORIZONTAL_SLIDE_RESTING;
@@ -109,7 +109,7 @@ public class RobotConstants {
 
     // VERTICAL TRANSFER STATE VALUES
     public static int VERTICAL_SLIDE_TRANSFER = 300;
-    public static double VERTICAL_SHOULDER_TRANSFER = 0.76;
+    public static double VERTICAL_SHOULDER_TRANSFER = 0.77;
     public static double VERTICAL_ELBOW_TRANSFER = 0;
     public static double VERTICAL_WRIST_TRANSFER = 0.68;
 
@@ -121,9 +121,9 @@ public class RobotConstants {
 
     // VERTICAL PICK SPECIMEN VALUES
     public static int VERTICAL_SLIDE_PICK_SPECIMEN_STEP_1 = 600;
-    public static int VERTICAL_SLIDE_PICK_SPECIMEN_STEP_2 = 50;
-    public static double VERTICAL_SHOULDER_PICK_SPECIMEN = 0.635;
-    public static double VERTICAL_ELBOW_PICK_SPECIMEN = 0.15;
+    public static int VERTICAL_SLIDE_PICK_SPECIMEN_STEP_2 = 0;
+    public static double VERTICAL_SHOULDER_PICK_SPECIMEN = 0.645;
+    public static double VERTICAL_ELBOW_PICK_SPECIMEN = 0.16;
     public static double VERTICAL_WRIST_PICK_SPECIMEN = 0.02;
 
     // VERTICAL HANG HIGH SPECIMEN VALUES
@@ -137,13 +137,13 @@ public class RobotConstants {
 
     // VERTICAL LOW BASKET VALUES
     public static int VERTICAL_SLIDE_DROP_LOW_SAMPLE = 440;
-    public static double VERTICAL_SHOULDER_DROP_LOW_SAMPLE = 0.15;
+    public static double VERTICAL_SHOULDER_DROP_LOW_SAMPLE = 0.16;
     public static double VERTICAL_ELBOW_DROP_LOW_SAMPLE = 0.45;
     public static double VERTICAL_WRIST_DROP_LOW_SAMPLE = VERTICAL_WRIST_TRANSFER;
 
     // VERTICAL HIGH BASKET VALUES
     public static int VERTICAL_SLIDE_DROP_HIGH_SAMPLE = 2350;
-    public static double VERTICAL_SHOULDER_DROP_HIGH_SAMPLE = 0.15;
+    public static double VERTICAL_SHOULDER_DROP_HIGH_SAMPLE = 0.16;
     public static double VERTICAL_ELBOW_DROP_HIGH_SAMPLE = 0.55;
     public static double VERTICAL_WRIST_DROP_HIGH_SAMPLE = VERTICAL_WRIST_TRANSFER;
 

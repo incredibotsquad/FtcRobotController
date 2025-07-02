@@ -48,16 +48,16 @@ public class SampleAutoCoordinates {
         PICK_SAMPLE_1 = new Pose2d(46.5 * multiplier, 48 * multiplier, heading);
         SAMPLE1_LIMELIGHT_LOCATION = new LimelightLocation(0, 12, 90, 0,0, GameConstants.GAME_COLORS.YELLOW, 0);
 
-        PICK_SAMPLE_2 = new Pose2d(56.5 * multiplier, 48 * multiplier, heading);
+        PICK_SAMPLE_2 = new Pose2d(59.5 * multiplier, 48 * multiplier, heading);
         SAMPLE2_LIMELIGHT_LOCATION = new LimelightLocation(0, 12, 90, 0, 0, GameConstants.GAME_COLORS.YELLOW, 0);
 
-        PICK_SAMPLE_3 = new Pose2d(63 * multiplier, 48 * multiplier, heading);
-        SAMPLE3_LIMELIGHT_LOCATION = new LimelightLocation(-5, 13.5, 90, 0, 0, GameConstants.GAME_COLORS.YELLOW, 0);
+        PICK_SAMPLE_3 = new Pose2d(67 * multiplier, 48 * multiplier, heading);
+        SAMPLE3_LIMELIGHT_LOCATION = new LimelightLocation(-6, 13.5, 90, 0, 0, GameConstants.GAME_COLORS.YELLOW, 0);
 
         DROP_SAMPLE_IN_BASKET = new Pose2d(62 * multiplier, 57 * multiplier, basketHeading);
 
-        PICK_FROM_SUB_STEP1 = new Pose2d(48 * multiplier, 17 * multiplier, heading);
+        PICK_FROM_SUB_STEP1 = new Pose2d(48 * multiplier, 15 * multiplier, heading);
 
-        PICK_FROM_SUB_STEP2 = new Pose2d(10 * multiplier, 17 * multiplier, sweepRightHeading);
+        PICK_FROM_SUB_STEP2 = new Pose2d(10 * multiplier, 15 * multiplier, sweepRightHeading);
     }
 }

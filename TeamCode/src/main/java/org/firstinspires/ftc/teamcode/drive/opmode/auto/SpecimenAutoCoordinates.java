@@ -61,28 +61,28 @@ public class SpecimenAutoCoordinates {
 
         FRONT_OF_RUNGS = new Vector2d(10 * multiplier, 45 * multiplier);
 
-        PICK_SAMPLE_1 = new Pose2d(-42 * multiplier, 41 * multiplier, heading);
+        PICK_SAMPLE_1 = new Pose2d(-47 * multiplier, 48 * multiplier, heading);
         SAMPLE1_LIMELIGHT_LOCATION = new LimelightLocation(0, 12, 90, 0,0, GameConstants.GAME_COLORS.YELLOW, 0);
 
-        PICK_SAMPLE_2 = new Pose2d(-56 * multiplier, 40 * multiplier, heading);
+        PICK_SAMPLE_2 = new Pose2d(-60 * multiplier, 48 * multiplier, heading);
         SAMPLE2_LIMELIGHT_LOCATION = new LimelightLocation(0, 12, 90, 0, 0, GameConstants.GAME_COLORS.YELLOW, 0);
 
         PICK_SAMPLE_3 = new Pose2d(-59 * multiplier, 39 * multiplier, heading);
         SAMPLE3_LIMELIGHT_LOCATION = new LimelightLocation(5, 12, 90, 0, 0, GameConstants.GAME_COLORS.YELLOW, 0);
 
         PICK_SPECIMEN = new Pose2d(-42 * multiplier, 50 * multiplier, reverseHeading);
-        PICK_SPECIMEN_SLOW = new Pose2d(-42 * multiplier, 58 * multiplier, reverseHeading);
+        PICK_SPECIMEN_SLOW = new Pose2d(-42 * multiplier, 62 * multiplier, reverseHeading);
 
         SPLINE_INTERMEDIATE_PICK = new Pose2d(0 * multiplier, 48 * multiplier, sweepRightHeading);
         SPLINE_INTERMEDIATE_SNAP = new Pose2d(0 * multiplier, 48 * multiplier, sweepRightHeading);
 
 
-        BRACE_RUNGS_FOR_SPECIMEN_ONE = new Pose2d(10 * multiplier, 33 * multiplier, reverseHeading);
-        BRACE_RUNGS_FOR_SPECIMEN_TWO = new Pose2d(11.25 * multiplier, 37 * multiplier, reverseHeading);
+        BRACE_RUNGS_FOR_SPECIMEN_ONE = new Pose2d(9 * multiplier, 33 * multiplier, reverseHeading);
+        BRACE_RUNGS_FOR_SPECIMEN_TWO = new Pose2d(8.5 * multiplier, 37 * multiplier, reverseHeading);
 
         BRACE_RUNGS_FOR_SPECIMEN_TWO_DELTA = new Pose2d(BRACE_RUNGS_FOR_SPECIMEN_TWO.position.x , 34 * multiplier, reverseHeading);
 
-        BRACE_RUNGS_FOR_SPECIMEN_THREE = new Pose2d(11 * multiplier, 37 * multiplier, reverseHeading);
+        BRACE_RUNGS_FOR_SPECIMEN_THREE = new Pose2d(8 * multiplier, 37 * multiplier, reverseHeading);
 
         BRACE_RUNGS_FOR_SPECIMEN_THREE_DELTA = new Pose2d(BRACE_RUNGS_FOR_SPECIMEN_THREE.position.x , 34 * multiplier, reverseHeading);
 

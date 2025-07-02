@@ -268,8 +268,6 @@ public class RobotHardware {
      public GameConstants.GAME_COLORS getDetectedColor(){
          GameConstants.GAME_COLORS detectedColor = GameConstants.GAME_COLORS.YELLOW;
 
-         colorSensor.getNormalizedColors();
-
          if (colorSensor.red() > (colorSensor.green() * 1.2) && colorSensor.red() > (colorSensor.blue() * 1.2 )) {
              detectedColor = GameConstants.GAME_COLORS.RED;
          }
@@ -353,7 +351,7 @@ public class RobotHardware {
         double voltage = verticalShoulderServoEncoder.getVoltage();
         double position = 1 - (voltage / 3.3);  //position via encoder seems to be flipped
 
-//        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getVerticalShoulderServo Position: " + position);
+        Log.i("=== INCREDIBOTS / ROBOTHARDWARE  ===", " getVerticalShoulderServo Position: " + position);
         return position;
     }
 
