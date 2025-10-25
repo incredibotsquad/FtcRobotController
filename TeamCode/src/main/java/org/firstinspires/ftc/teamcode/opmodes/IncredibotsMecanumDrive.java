@@ -15,6 +15,7 @@ import org.firstinspires.ftc.teamcode.SubSystems.LaunchVisor;
 import org.firstinspires.ftc.teamcode.SubSystems.Spindexer;
 
 import dev.nextftc.bindings.BindingManager;
+import dev.nextftc.bindings.Button;
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.commands.groups.ParallelGroup;
 import dev.nextftc.core.commands.groups.SequentialGroup;
@@ -91,12 +92,10 @@ public class IncredibotsMecanumDrive extends NextFTCOpMode {
             LaunchSystem.INSTANCE.launchThree
         );
 
-        Gamepads.gamepad2().start().toggleOnBecomesTrue().whenBecomesTrue(
-            new InstantCommand(() -> IntakeSystem.INSTANCE.enableIntakeAutomation = true)
-        );
-
-        Gamepads.gamepad2().start().toggleOnBecomesTrue().whenBecomesFalse(
-                new InstantCommand(() -> IntakeSystem.INSTANCE.enableIntakeAutomation = false)
-        );
+        Gamepads.gamepad2().start().toggleOnBecomesTrue()
+                .whenBecomesTrue(
+                    new InstantCommand(() -> IntakeSystem.INSTANCE.enableIntakeAutomation = true))
+                .whenBecomesFalse(
+                    new InstantCommand(() -> IntakeSystem.INSTANCE.enableIntakeAutomation = false));
     }
 }

@@ -4,6 +4,7 @@ import android.util.Log;
 import com.acmerobotics.dashboard.config.Config;
 import org.firstinspires.ftc.teamcode.GameColors;
 import dev.nextftc.core.commands.Command;
+import dev.nextftc.core.commands.groups.ParallelGroup;
 import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.subsystems.SubsystemGroup;
 
@@ -19,13 +20,22 @@ public class IntakeSystem extends SubsystemGroup {
     private IntakeSystem() {
         super(
                 IntakeColorSensors.INSTANCE,
-                IntakeWheels.INSTANCE
+                IntakeWheels.INSTANCE,
+                IntakeLight.INSTANCE
         );
         isOn = false;
     }
 
     public boolean isFull() {
         return Spindexer.INSTANCE.storedColors.stream().noneMatch(ballEntry -> ballEntry.ballColor == GameColors.NONE);
+    }
+
+    public boolean hasOneBall(){
+        return Spindexer.INSTANCE.storedColors.stream().filter(ballEntry -> ballEntry.ballColor != GameColors.NONE).count() == 1;
+    }
+
+    public boolean hasTwoBalls(){
+        return Spindexer.INSTANCE.storedColors.stream().filter(ballEntry -> ballEntry.ballColor != GameColors.NONE).count() == 2;
     }
 
     public boolean isEmpty() {
@@ -51,17 +61,17 @@ public class IntakeSystem extends SubsystemGroup {
 
     @Override
     public void periodic() {
-        if(!enableIntakeAutomation) return;
+        if (!enableIntakeAutomation) return;
 
         //start the intake if we have no stored colors
-        if(!isOn && isEmpty()) {
+        if (!isOn && isEmpty()) {
             turnOn.schedule();
             Log.i("INTAKE", "PERIODIC: INTAKE TURNED ON");
             return;
         }
 
         //stop the intake if we have no more space
-        if(isOn && isFull()) {
+        if (isOn && isFull()) {
             turnOff.schedule();
             Log.i("INTAKE", "PERIODIC: INTAKE TURNED OFF");
             return;
@@ -70,9 +80,28 @@ public class IntakeSystem extends SubsystemGroup {
         if (isOn && IntakeColorSensors.INSTANCE.detectedColor != GameColors.NONE) {
             Spindexer.INSTANCE.storeCurrentBall(IntakeColorSensors.INSTANCE.detectedColor);
             IntakeColorSensors.INSTANCE.clearDetectedColor();
-            Spindexer.INSTANCE.moveToNextEmptySlot.schedule();
+            new ParallelGroup(
+                    Spindexer.INSTANCE.moveToNextEmptySlot,
+                    IntakeLight.INSTANCE.indiateSuccessfulIntake
+            ).schedule();
             Log.i("INTAKE", "PERIODIC: BALL INDEXED AND MOVED TO NEXT EMPTY SLOT");
             return;
+        }
+
+        if (isEmpty()) {
+            IntakeLight.INSTANCE.indicateEmpty.schedule();
+        }
+
+        if (hasOneBall()) {
+            IntakeLight.INSTANCE.indicateOneBall.schedule();
+        }
+
+        if (hasTwoBalls()) {
+            IntakeLight.INSTANCE.indicateTwoBalls.schedule();
+        }
+
+        if (isFull()) {
+            IntakeLight.INSTANCE.indicateThreeBalls.schedule();
         }
     }
 }
