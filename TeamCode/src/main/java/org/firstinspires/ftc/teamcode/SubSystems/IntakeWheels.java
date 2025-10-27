@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.SubSystems;
 import com.acmerobotics.dashboard.config.Config;
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.commands.utility.InstantCommand;
+import dev.nextftc.core.commands.utility.NullCommand;
 import dev.nextftc.core.subsystems.Subsystem;
 import dev.nextftc.hardware.impl.MotorEx;
 import dev.nextftc.hardware.powerable.SetPower;
@@ -22,10 +23,13 @@ public class IntakeWheels implements Subsystem {
     //instant command on purpose - no need to wait for it to finish
     public final Command turnOff = new SetPower(intakeMotor, 0.0)
                                     .and(new InstantCommand(() -> isON = false))
-                                    .requires(this)
+                                    .requires(intakeMotor)
                                     .named("Intake Wheels Off");
+
     public final Command turnOn = new SetPower(intakeMotor, INTAKE_POWER)
                                     .and(new InstantCommand(() -> isON = true))
-                                    .requires(this)
+                                    .requires(intakeMotor)
                                     .named("Intake Wheels On");
+
+//    public final Command turnOn = new NullCommand();
 }

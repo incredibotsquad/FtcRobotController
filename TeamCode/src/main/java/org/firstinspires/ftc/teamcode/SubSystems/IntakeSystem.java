@@ -11,7 +11,7 @@ import dev.nextftc.core.subsystems.SubsystemGroup;
 @Config
 public class IntakeSystem extends SubsystemGroup {
 
-    private boolean isOn;
+    public boolean isOn;
 
     public boolean enableIntakeAutomation = false;
 
@@ -42,15 +42,26 @@ public class IntakeSystem extends SubsystemGroup {
         return Spindexer.INSTANCE.storedColors.stream().noneMatch(ballEntry -> ballEntry.ballColor != GameColors.NONE);
     }
 
-    private Command turnOn = IntakeWheels.INSTANCE.turnOn
-                                .and(Spindexer.INSTANCE.moveToNextEmptySlot)
-                                .and(new InstantCommand(() -> isOn = true))
-                                .named("Intake Group On");
+    public void turnOn() {
+        IntakeWheels.INSTANCE.turnOn.invoke();
+        Spindexer.INSTANCE.moveToNextEmptySlot();
+        isOn = true;
+    }
+//    public Command turnOn = IntakeWheels.INSTANCE.turnOn
+//                                .and(Spindexer.INSTANCE.moveToNextEmptySlot)
+//                                .and(new InstantCommand(() -> isOn = true))
+//                                .named("Intake Group On");
 
-    private Command turnOff = IntakeWheels.INSTANCE.turnOff
-                                .and(Spindexer.INSTANCE.moveToNextFullSlot)
-                                .and(new InstantCommand(() -> isOn = false))
-                                .named("Intake Group Off");
+    public void turnOff() {
+        IntakeWheels.INSTANCE.turnOff.invoke();
+        Spindexer.INSTANCE.moveToNextFullSlot();
+        isOn = false;
+    }
+//    public Command turnOff = IntakeWheels.INSTANCE.turnOff
+//                                .and(Spindexer.INSTANCE.moveToNextFullSlot)
+//                                .and(new InstantCommand(() -> isOn = false))
+//                                .named("Intake Group Off");
+
 //    public Command manualOn = turnOn
 //                                .and()
 //                                .requires(this);
@@ -59,49 +70,31 @@ public class IntakeSystem extends SubsystemGroup {
 //                                .and()
 //                                .requires(this);
 
+    //THIS FUNCTION GETS CALLED EVERY LOOP WHILE WAITING FOR START - ITS FINE TO RUN IT THEN
+    //THIS WILL ALSO GET CALLED WHILE THE OPMODE IS RUNNING - THIS IS ALSO WHAT WE NEED
     @Override
     public void periodic() {
+
         if (!enableIntakeAutomation) return;
 
-        //start the intake if we have no stored colors
-        if (!isOn && isEmpty()) {
-            turnOn.schedule();
-            Log.i("INTAKE", "PERIODIC: INTAKE TURNED ON");
-            return;
-        }
-
-        //stop the intake if we have no more space
-        if (isOn && isFull()) {
-            turnOff.schedule();
-            Log.i("INTAKE", "PERIODIC: INTAKE TURNED OFF");
-            return;
-        }
-
-        if (isOn && IntakeColorSensors.INSTANCE.detectedColor != GameColors.NONE) {
-            Spindexer.INSTANCE.storeCurrentBall(IntakeColorSensors.INSTANCE.detectedColor);
-            IntakeColorSensors.INSTANCE.clearDetectedColor();
-            new ParallelGroup(
-                    Spindexer.INSTANCE.moveToNextEmptySlot,
-                    IntakeLight.INSTANCE.indiateSuccessfulIntake
-            ).schedule();
-            Log.i("INTAKE", "PERIODIC: BALL INDEXED AND MOVED TO NEXT EMPTY SLOT");
-            return;
-        }
-
         if (isEmpty()) {
-            IntakeLight.INSTANCE.indicateEmpty.schedule();
+            Log.i("INTAKE", "PERIODIC: EMPTY LIGHT");
+            IntakeLight.INSTANCE.indicateEmpty.invoke();
         }
 
         if (hasOneBall()) {
-            IntakeLight.INSTANCE.indicateOneBall.schedule();
+            Log.i("INTAKE", "PERIODIC: ONE BALL LIGHT");
+            IntakeLight.INSTANCE.indicateOneBall.invoke();
         }
 
         if (hasTwoBalls()) {
-            IntakeLight.INSTANCE.indicateTwoBalls.schedule();
+            Log.i("INTAKE", "PERIODIC: TWO BALLS LIGHT");
+            IntakeLight.INSTANCE.indicateTwoBalls.invoke();
         }
 
         if (isFull()) {
-            IntakeLight.INSTANCE.indicateThreeBalls.schedule();
+            Log.i("INTAKE", "PERIODIC: FULL LIGHT");
+            IntakeLight.INSTANCE.indicateThreeBalls.invoke();
         }
     }
 }

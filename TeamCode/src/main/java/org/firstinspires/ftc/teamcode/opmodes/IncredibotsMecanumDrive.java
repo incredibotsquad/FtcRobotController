@@ -4,7 +4,9 @@ import android.util.Log;
 
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
+import org.firstinspires.ftc.teamcode.GameColors;
 import org.firstinspires.ftc.teamcode.SubSystems.IntakeColorSensors;
+import org.firstinspires.ftc.teamcode.SubSystems.IntakeLight;
 import org.firstinspires.ftc.teamcode.SubSystems.IntakeSystem;
 import org.firstinspires.ftc.teamcode.SubSystems.IntakeWheels;
 import org.firstinspires.ftc.teamcode.SubSystems.LaunchFlywheel;
@@ -46,16 +48,6 @@ public class IncredibotsMecanumDrive extends NextFTCOpMode {
     private final MotorEx backRightMotor = new MotorEx("BRMotor").reversed();
 
     @Override
-    public void onUpdate() {
-        BindingManager.update();
-    }
-
-    @Override
-    public void onStop() {
-        BindingManager.reset();
-    }
-
-    @Override
     public void onStartButtonPressed() {
         Command driverControlled = new MecanumDriverControlled(
                 frontLeftMotor,
@@ -92,10 +84,59 @@ public class IncredibotsMecanumDrive extends NextFTCOpMode {
             LaunchSystem.INSTANCE.launchThree
         );
 
-        Gamepads.gamepad2().start().toggleOnBecomesTrue()
+        Gamepads.gamepad2().start().toggleOnBecomesFalse()
                 .whenBecomesTrue(
                     new InstantCommand(() -> IntakeSystem.INSTANCE.enableIntakeAutomation = true))
                 .whenBecomesFalse(
                     new InstantCommand(() -> IntakeSystem.INSTANCE.enableIntakeAutomation = false));
+    }
+
+    @Override
+    public void onUpdate() {
+        BindingManager.update();
+        processIntake();
+        processLaunch();
+    }
+
+    @Override
+    public void onStop() {
+        BindingManager.reset();
+    }
+
+    private void processIntake() {
+        //start the intake if we have no stored colors
+        if (!IntakeSystem.INSTANCE.isOn && IntakeSystem.INSTANCE.isEmpty()) {
+            IntakeSystem.INSTANCE.turnOn();
+            Log.i("OPMODE: PROCESSINTAKE", "INTAKE TURNED ON");
+            return;
+        }
+
+        //stop the intake if we have no more space
+        if (IntakeSystem.INSTANCE.isOn && IntakeSystem.INSTANCE.isFull()) {
+            IntakeSystem.INSTANCE.turnOff();
+            Log.i("OPMODE: PROCESSINTAKE", "INTAKE TURNED OFF");
+            return;
+        }
+
+        if (IntakeSystem.INSTANCE.isOn && IntakeColorSensors.INSTANCE.detectedColor != GameColors.NONE) {
+            Spindexer.INSTANCE.storeCurrentBall(IntakeColorSensors.INSTANCE.detectedColor);
+            IntakeColorSensors.INSTANCE.clearDetectedColor();
+            Spindexer.INSTANCE.moveToNextEmptySlot();
+            IntakeLight.INSTANCE.indiateSuccessfulIntake.invoke();
+
+            Log.i("OPMODE: PROCESSINTAKE", "BALL INDEXED AND MOVED TO NEXT EMPTY SLOT");
+            return;
+        }
+    }
+
+    private void processLaunch() {
+        if (IntakeSystem.INSTANCE.isEmpty() && LaunchSystem.INSTANCE.isOn) {
+            Log.i("OPMODE: PROCESS LAUNCH", "INTAKE EMPTY - TURNING OFF LAUNCH");
+            LaunchSystem.INSTANCE.turnOff.invoke();
+        }
+        else if (!LaunchSystem.INSTANCE.isOn) {
+            Log.i("OPMODE: PROCESS LAUNCH", "INTAKE NOT EMPTY - TURNING ON LAUNCH");
+            LaunchSystem.INSTANCE.turnOn.invoke();
+        }
     }
 }

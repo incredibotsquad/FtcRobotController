@@ -44,7 +44,7 @@ public class ColorSensorTest extends LinearOpMode {
             if ((colorSensor1.getDistance(DistanceUnit.MM) < DISTANCE_THRESHOLD_IN_MM) ||
                     (colorSensor2.getDistance(DistanceUnit.MM) < DISTANCE_THRESHOLD_IN_MM)) {
                 Log.i("Color Sensor Test", "Sensor 1 distance in mm: " + colorSensor1.getDistance(DistanceUnit.MM));
-                Log.i("Color Sensor Test", "Sensor 1 distance in mm: " + colorSensor2.getDistance(DistanceUnit.MM));
+                Log.i("Color Sensor Test", "Sensor 2 distance in mm: " + colorSensor2.getDistance(DistanceUnit.MM));
 
                 Log.i("Color Sensor Test", "Sensor 1 R: " + colorSensor1.red());
                 Log.i("Color Sensor Test", "Sensor 1 G: " + colorSensor1.green());

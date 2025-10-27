@@ -15,7 +15,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 public class ServoTest extends LinearOpMode {
 
     // Declare OpMode members.
-    public static String servo1Name = "IntakeLight";
+    public static String servo1Name = "SpindexServo";
     public static double servo1Position = 0.5;
 
     public static boolean enableServo2 = false;

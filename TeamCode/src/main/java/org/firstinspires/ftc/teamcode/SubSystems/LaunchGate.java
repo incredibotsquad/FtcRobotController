@@ -13,10 +13,8 @@ public class LaunchGate implements Subsystem {
 
     public static final LaunchGate INSTANCE = new LaunchGate();
     private LaunchGate() {}
-
     private final ServoEx launchGateServo = new ServoEx("LaunchGateServo");
 
     public Command open = new SetPosition(launchGateServo, LAUNCH_GATE_OPEN).requires(launchGateServo);
     public Command close = new SetPosition(launchGateServo, LAUNCH_GATE_CLOSE).requires(launchGateServo);
-
 }
