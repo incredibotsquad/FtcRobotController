@@ -9,14 +9,14 @@ import com.acmerobotics.roadrunner.Action;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 
 @Config
-public class LaunchVisor implements Action {
+public class LaunchVisorAction implements Action {
     private RobotHardware robotHardware;
     private boolean raise;
     private boolean initialized = false;
     public static double LAUNCH_VISOR_RESTING = 0;
     public static double LAUNCH_VISOR_RAISED = 1;
 
-    public LaunchVisor(RobotHardware robotHardware, boolean raise) {
+    public LaunchVisorAction(RobotHardware robotHardware, boolean raise) {
         this.robotHardware = robotHardware;
         this.raise = raise;
         this.initialized = false;

@@ -13,9 +13,11 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
 
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 public class RobotHardware {
+
+    public static double COLOR_SENSOR_DISTANCE_THRESHOLD_IN_MM = 30;
 
     public HardwareMap hardwareMap;
     IMU imu;
@@ -35,8 +37,12 @@ public class RobotHardware {
     private Servo kickServo;
     private Servo visorServo;
 
-    private ColorRangeSensor colorSensor;
-    private AnalogInput verticalShoulderServoEncoder;
+    private Servo intakeLightServo;
+
+
+    private ColorRangeSensor colorSensor1;
+    private ColorRangeSensor colorSensor2;
+    private AnalogInput spindexerEncoder;
     private Limelight3A limelight;
 
     //making constructor
@@ -79,12 +85,17 @@ public class RobotHardware {
         kickServo = hardwareMap.get(Servo.class, "KickServo");
         visorServo = hardwareMap.get(Servo.class, "VisorServo");
 
+        //color sensors
+        colorSensor1 = hardwareMap.get(ColorRangeSensor.class, "IntakeColorSensor1");
+        colorSensor2 = hardwareMap.get(ColorRangeSensor.class, "IntakeColorSensor2");
+
+        intakeLightServo = hardwareMap.get(Servo.class, "IntakeLightServo");
 
 //        imu = hardwareMap.get(IMU.class, "imu");
     }
 
     public LLResult GetLatestLimelightResults() {
-        Log.i("=== ROBOTHARDWARE  ===", " GetLatestLimelightResults");
+        Log.i("== ROBOTHARDWARE ==", " GetLatestLimelightResults");
 
         LLResult result = null;
         if (limelight != null) {
@@ -165,5 +176,46 @@ public class RobotHardware {
     public void setLaunchVisorPosition(double position) {
         Log.i("=== ROBOTHARDWARE  ===", " setLaunchVisorPosition: " + position);
         visorServo.setPosition(position);
+    }
+
+    public GameColors getDetectedBallColor() {
+
+        GameColors detectedColor = GameColors.NONE;
+        double sensor1Distance = colorSensor1.getDistance(DistanceUnit.MM);
+        double sensor2Distance = colorSensor2.getDistance(DistanceUnit.MM);
+
+        if ((sensor1Distance < COLOR_SENSOR_DISTANCE_THRESHOLD_IN_MM) || (sensor2Distance < COLOR_SENSOR_DISTANCE_THRESHOLD_IN_MM))
+        {
+            Log.i("COLOR SENSORS", "PASSED DISTANCE THRESHOLD: ");
+            Log.i("COLOR SENSORS", "DISTANCE 1: " + sensor1Distance);
+            Log.i("COLOR SENSORS", "DISTANCE 2: " + sensor2Distance);
+
+
+            Log.i("COLOR SENSORS", "Sensor 1 R: " + colorSensor1.red());
+            Log.i("COLOR SENSORS", "Sensor 1 G: " + colorSensor1.green());
+            Log.i("COLOR SENSORS", "Sensor 1 B: " + colorSensor1.blue());
+
+//            if ((colorSensor1.green() > colorSensor1.blue() && colorSensor1.green() > colorSensor1.red()) &&
+//                    (colorSensor2.green() > colorSensor2.blue() && colorSensor2.green() > colorSensor2.red())) {
+//                detectedColor = GameColors.GREEN;
+//                Log.i("COLOR SENSORS", "DETECTED GREEN");
+//            }
+
+            Log.i("COLOR SENSORS", "Sensor 2 R: " + colorSensor2.red());
+            Log.i("COLOR SENSORS", "Sensor 2 G: " + colorSensor2.green());
+            Log.i("COLOR SENSORS", "Sensor 2 B: " + colorSensor2.blue());
+
+            if ((colorSensor1.blue() > colorSensor1.green() && colorSensor1.blue() > colorSensor1.red()) &&
+                    (colorSensor2.blue() > colorSensor2.green() && colorSensor2.blue() > colorSensor2.red())) {
+                detectedColor = GameColors.PURPLE;
+                Log.i("COLOR SENSORS", "DETECTED PURPLE");
+            }
+        }
+
+        return detectedColor;
+    }
+
+    public void setIntakeLightColor(double color) {
+        intakeLightServo.setPosition(color);
     }
 }

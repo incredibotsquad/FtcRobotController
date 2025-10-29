@@ -7,48 +7,38 @@ import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.teamcode.GameColors;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 
 @Config
-public class Spindex implements Action {
-
-    private class ColorIndex {
-        double intakePosition;
-        double launchPosition;
-        GameColors color;
-    }
-
+public class LaunchKickAction implements Action {
     private RobotHardware robotHardware;
-    private boolean intake;
+    private boolean kick;
     private boolean initialized = false;
-    public static double SPINDEX_LAUNCH = 0.35;
-    public static double SPINDEX_INTAKE = 0.53;
+    public static double LAUNCH_KICK_RESTING = 0.95;
+    public static double LAUNCH_KICK_KICKING = 0.7;
     private ElapsedTime timer;
 
-    public Spindex(RobotHardware robotHardware, boolean intake) {
+    public LaunchKickAction(RobotHardware robotHardware, boolean kick) {
         this.robotHardware = robotHardware;
-        this.intake = intake;
+        this.kick = kick;
         this.initialized = false;
     }
 
     @Override
     public boolean run (@NonNull TelemetryPacket packet) {
         if (!initialized) {
-
             timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
-            if (intake) {
-                robotHardware.setSpindexPosition(SPINDEX_INTAKE);
+            if (kick) {
+                robotHardware.setLaunchKickPosition(LAUNCH_KICK_KICKING);
             }
             else {
-                robotHardware.setSpindexPosition(SPINDEX_LAUNCH);
+                robotHardware.setLaunchKickPosition(LAUNCH_KICK_RESTING);
             }
 
             initialized = true;
         }
 
-        return (timer.milliseconds() < 200);    //tell RR to wait 200 ms for spindex position
-
+        return (timer.milliseconds() < 200);    //tell RR to wait 200 ms for kick
     }
 }

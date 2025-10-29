@@ -56,8 +56,6 @@ public class BasicAuto extends LinearOpMode {
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive() && !isStopRequested()) {
 
-            mechanismControl.Rishi();
-
             mechanismControl.ProcessInputs();
 
             if (timer.milliseconds() > 20000) {
@@ -73,7 +71,6 @@ public class BasicAuto extends LinearOpMode {
                 break;
 
             }
-
 
 
             //updates telemetry

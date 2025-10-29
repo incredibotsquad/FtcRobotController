@@ -3,16 +3,15 @@ package org.firstinspires.ftc.teamcode;
 import android.util.Log;
 
 import com.acmerobotics.roadrunner.Action;
+import com.acmerobotics.roadrunner.NullAction;
 import com.acmerobotics.roadrunner.ParallelAction;
-import com.acmerobotics.roadrunner.SequentialAction;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.acmerobotics.dashboard.FtcDashboard;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.teamcode.Actions.IntakeWheels;
-import org.firstinspires.ftc.teamcode.Actions.LaunchFlywheel;
-import org.firstinspires.ftc.teamcode.Actions.LaunchGate;
-import org.firstinspires.ftc.teamcode.Actions.LaunchKick;
-import org.firstinspires.ftc.teamcode.Actions.Spindex;
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSystem;
+import org.firstinspires.ftc.teamcode.subsystems.LaunchSystem;
+import org.firstinspires.ftc.teamcode.subsystems.LimelightAprilTagHelper;
+import org.firstinspires.ftc.teamcode.subsystems.Spindex;
 
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import java.util.ArrayList;
@@ -21,17 +20,24 @@ import java.util.List;
 public class MechanismControl {
     private Gamepad gamepad2;
     private RobotHardware robotHardware;
+    private Spindex spindex;
+    private IntakeSystem intakeSystem;
+    private LaunchSystem launchSystem;
+
+    private LimelightAprilTagHelper limelightAprilTagHelper;
     private List<Action> runningActions;
     private FtcDashboard dashboard;
     private Telemetry telemetry;
 
+    private AllianceColors allianceColor;
+
     private enum ROBOT_STATE {
         NONE,
-        INTAKE_ON,
-        INTAKE_OFF,
-        LAUNCH_CLOSE,
-        LAUNCH_MID,
-        LAUNCH_FAR,
+        INTAKE,
+        LAUNCH_ONE,
+        LAUNCH_GREEN,
+        LAUNCH_PURPLE,
+        LAUNCH_ALL,
         LIFT
     }
 
@@ -43,6 +49,11 @@ public class MechanismControl {
         gamepad2 = gamepad;
         this.telemetry = telemetry;
         this.robotHardware = robotHardware;
+        this.spindex = new Spindex(robotHardware);
+        this.intakeSystem = new IntakeSystem(robotHardware, this.spindex);
+        this.launchSystem = new LaunchSystem(robotHardware, this.spindex);
+        this.limelightAprilTagHelper = new LimelightAprilTagHelper(robotHardware);
+
         currentRobotState = ROBOT_STATE.NONE;
         targetRobotState = ROBOT_STATE.NONE;
         stateTransitionInProgress = false;
@@ -50,48 +61,57 @@ public class MechanismControl {
         dashboard = FtcDashboard.getInstance();
     }
 
+    public void setAllianceColor(AllianceColors color) {
+        this.allianceColor = color;
+        limelightAprilTagHelper.setAllianceColor(color);
+    }
+
     public void ProcessInputs() {
         CreateStateFromButtonPress();
 
+        CreateStateAutomatically();
+
         TranslateStateIntoActions();
 
-        ProcessActions();
+        //this has to be done after translating any state into actions
+        CheckForBallsToIntake();
 
+        ProcessActions();
     }
+
 
     //Function to create a state from Gamepad inputs
     private void CreateStateFromButtonPress() {
 
         ROBOT_STATE newTargetRobotState =  ROBOT_STATE.NONE;
 
-        if (gamepad2.aWasPressed()) {
-            if (currentRobotState != ROBOT_STATE.INTAKE_ON) {
-                newTargetRobotState = ROBOT_STATE.INTAKE_ON;
-            }
-            else {
-                newTargetRobotState = ROBOT_STATE.INTAKE_OFF;
-            }
+        if (gamepad2.bWasPressed()) {
+            newTargetRobotState = ROBOT_STATE.LAUNCH_ONE;
         }
 
-        if (gamepad2.yWasPressed()) {
-            newTargetRobotState = ROBOT_STATE.LAUNCH_CLOSE;
+        if (gamepad2.aWasPressed()) {
+            newTargetRobotState = ROBOT_STATE.LAUNCH_GREEN;
         }
 
         if (gamepad2.xWasPressed()) {
-            newTargetRobotState = ROBOT_STATE.LAUNCH_MID;
+            newTargetRobotState = ROBOT_STATE.LAUNCH_PURPLE;
         }
 
-        if (gamepad2.bWasPressed()) {
-            newTargetRobotState = ROBOT_STATE.LAUNCH_FAR;
+        if (gamepad2.right_trigger > 0.5) {
+            newTargetRobotState = ROBOT_STATE.LAUNCH_ALL;
+        }
+
+        if (gamepad2.startWasPressed()) {
+            newTargetRobotState = ROBOT_STATE.LIFT;
         }
 
         if (newTargetRobotState != ROBOT_STATE.NONE) {
 
-            Log.i("=== MECHANISM CONTROL ===", "GAMEPAD INPUTS RECEIVED FOR STATE CHANGE CURRENT: " + currentRobotState + " TARGET: " + newTargetRobotState);
+            Log.i("== MECHANISM CONTROL ==", "GAMEPAD INPUTS RECEIVED FOR STATE CHANGE CURRENT: " + currentRobotState + " TARGET: " + newTargetRobotState);
 
             if (targetRobotState != ROBOT_STATE.NONE && newTargetRobotState != targetRobotState) {
                 //STOP ALL PROCESSING - STATE TRANSITION WAS GOING ON WHEN NEW STATE WAS CALLED IN
-                Log.i("=== MECHANISM CONTROL ===", "STOPPING! STATE TRANSITION WAS GOING ON WHEN NEW TARGET WAS CALLED IN. OLD TARGET: " + targetRobotState + " NEW TARGET: " + newTargetRobotState);
+                Log.i("== MECHANISM CONTROL ==", "STOPPING! STATE TRANSITION WAS GOING ON WHEN NEW TARGET WAS CALLED IN. OLD TARGET: " + targetRobotState + " NEW TARGET: " + newTargetRobotState);
 
                 robotHardware.stopRobotAndMechanisms();
                 runningActions.clear();
@@ -105,14 +125,13 @@ public class MechanismControl {
         }
     }
 
+    private void CreateStateAutomatically() {
+        //IF SPINDEXER IS EMPTY AND WE HAVE ALREADY NOT STARTED THE PROCESS OF INTAKING, START IT
+        if (spindex.isEmpty() && currentRobotState != ROBOT_STATE.INTAKE && targetRobotState != ROBOT_STATE.INTAKE) {
+            Log.i("== MECHANISM CONTROL ==", "CreateStateAutomatically");
 
-    public void Rishi (){
-        currentRobotState = ROBOT_STATE.NONE;
-
-        targetRobotState = ROBOT_STATE.LAUNCH_FAR;
-
-        stateTransitionInProgress = false;
-
+            targetRobotState = ROBOT_STATE.INTAKE;
+        }
     }
 
     private void TranslateStateIntoActions() {
@@ -122,69 +141,70 @@ public class MechanismControl {
         if (!stateTransitionInProgress) {
 
             switch (targetRobotState) {
-                case INTAKE_ON:
-                case INTAKE_OFF:
-                    Log.i("=== MECHANISM CONTROL ===", "PROCESSING STATE: INTAKE ON / OFF");
+
+                case INTAKE:
+                    Log.i("== MECHANISM CONTROL ==", "PROCESSING STATE: INTAKE");
 
                     //get the list of actions and put it in running actions
                     runningActions.add(new ParallelAction(
-                            new LaunchFlywheel(robotHardware, LaunchPositions.NONE),
-                            new LaunchGate(robotHardware, false),
-                            new LaunchKick(robotHardware, false)
+                        launchSystem.getLockLauncherForIntakeAction(),
+                        intakeSystem.getTurnOnAction(),
+                        //launchSystem.getTurnOnAction()
+                            new NullAction()
                     ));
-
-                    if (targetRobotState == ROBOT_STATE.INTAKE_ON) {
-                        //get the list of actions and put it in running actions
-                        runningActions.add(new ParallelAction(
-                                new IntakeWheels(robotHardware, true),
-                                new Spindex(robotHardware, true)
-                        ));
-                    } else {
-                        runningActions.add(new ParallelAction(
-                                new IntakeWheels(robotHardware, false),
-                                new Spindex(robotHardware, false)
-                        ));
-                    }
 
                     break;
 
-                case LAUNCH_CLOSE:
-                case LAUNCH_MID:
-                case LAUNCH_FAR:
+                case LAUNCH_ONE:
+                    Log.i("== MECHANISM CONTROL ==", "PROCESSING STATE: LAUNCH ONE");
+                    runningActions.add(launchSystem.getLaunchNextBallAction());
+                    break;
 
-                    LaunchPositions launchPosition = LaunchPositions.CLOSE;
+                case LAUNCH_GREEN:
+                    Log.i("== MECHANISM CONTROL ==", "PROCESSING STATE: LAUNCH GREEN");
+                    runningActions.add(launchSystem.getLaunchGreenBallAction());
+                    break;
 
-                    if (targetRobotState == ROBOT_STATE.LAUNCH_MID) {
-                        launchPosition = LaunchPositions.MID;
-                    }
+                case LAUNCH_PURPLE:
+                    Log.i("== MECHANISM CONTROL ==", "PROCESSING STATE: LAUNCH PURPLE");
+                    runningActions.add(launchSystem.getLaunchPurpleBallAction());
+                    break;
 
-                    if (targetRobotState == ROBOT_STATE.LAUNCH_FAR) {
-                        launchPosition = LaunchPositions.FAR;
-                    }
-
-                    Log.i("=== MECHANISM CONTROL ===", "PROCESSING STATE: LAUNCH");
-
-                    runningActions.add(new SequentialAction(
-                            new LaunchFlywheel(robotHardware, launchPosition),
-                            new ParallelAction(
-                                new LaunchGate(robotHardware, true),
-                                new IntakeWheels(robotHardware, false),
-                                new Spindex(robotHardware, false)
-                            ),
-                            new LaunchKick(robotHardware, true),
-                            new LaunchKick(robotHardware, false)
-                    ));
+                case LAUNCH_ALL:
+                    Log.i("== MECHANISM CONTROL ==", "PROCESSING STATE: LAUNCH ALL");
+                    runningActions.add(launchSystem.getLaunchAllBallsAction());
                     break;
 
                 case LIFT:
-                    Log.i("=== MECHANISM CONTROL ===", "PROCESSING STATE: LIFT");
+                    Log.i("== MECHANISM CONTROL ==", "PROCESSING STATE: LIFT");
 
+                    runningActions.add(new ParallelAction(
+                            intakeSystem.getTurnOffAction(),
+                            launchSystem.getTurnOffAction()
+                    ));
                     break;
             }
 
         }
     }
 
+    private void CheckForBallsToIntake() {
+        if (currentRobotState == ROBOT_STATE.INTAKE ) {
+            if (!spindex.isFull())
+            {
+                //set targetrobotstate to intake so that processactions does not clear it out
+                //if it get cleared out, ball intake will not work properly
+                //all state based actions are added before this function and all actions
+                //are processed after this function - so setting the target state here should be safe
+                targetRobotState = ROBOT_STATE.INTAKE;
+                runningActions.add(intakeSystem.checkForBallIntakeAndGetAction());
+            }
+            else
+            {
+                runningActions.add(spindex.moveToNextFullSlotAction());
+            }
+        }
+    }
 
     private void ProcessActions()
     {
@@ -216,9 +236,9 @@ public class MechanismControl {
                 targetRobotState = ROBOT_STATE.NONE;
                 stateTransitionInProgress = false;
 
-                Log.i("=== MECHANISM CONTROL ===", "ProcessActions: DONE RUNNING ACTIONS");
-                Log.i("=== MECHANISM CONTROL ===", "ProcessActions: CURRENT ROBOT STATE: " + currentRobotState);
-                Log.i("=== MECHANISM CONTROL ===", "ProcessActions: TARGET ROBOT STATE: " + targetRobotState);
+                Log.i("== MECHANISM CONTROL ==", "ProcessActions: DONE RUNNING ACTIONS");
+                Log.i("== MECHANISM CONTROL ==", "ProcessActions: CURRENT ROBOT STATE: " + currentRobotState);
+                Log.i("== MECHANISM CONTROL ==", "ProcessActions: TARGET ROBOT STATE: " + targetRobotState);
 
                 //NOTE: CAREFUL NOT TO CONSTRUCT LOOPS HERE
                 // STATE A -> STATE B -> STATE A
@@ -227,5 +247,8 @@ public class MechanismControl {
             }
         }
     }
+
+
+
 
 }

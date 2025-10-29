@@ -9,13 +9,13 @@ import com.acmerobotics.roadrunner.Action;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 
 @Config
-public class IntakeWheels implements Action {
+public class IntakeWheelsAction implements Action {
     private RobotHardware robotHardware;
     private boolean start;
     private boolean initialized = false;
     public static double INTAKE_POWER = 1;
 
-    public IntakeWheels(RobotHardware robotHardware, boolean start) {
+    public IntakeWheelsAction(RobotHardware robotHardware, boolean start) {
         this.robotHardware = robotHardware;
         this.start = start;
         this.initialized = false;

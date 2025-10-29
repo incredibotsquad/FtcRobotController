@@ -10,35 +10,31 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 
 @Config
-public class LaunchKick implements Action {
+public class SpindexAction implements Action {
+
     private RobotHardware robotHardware;
-    private boolean kick;
+    private double position;
     private boolean initialized = false;
-    public static double LAUNCH_KICK_RESTING = 0.95;
-    public static double LAUNCH_KICK_KICKING = 0.7;
     private ElapsedTime timer;
 
-    public LaunchKick(RobotHardware robotHardware, boolean kick) {
+    public SpindexAction(RobotHardware robotHardware, double position) {
         this.robotHardware = robotHardware;
-        this.kick = kick;
+        this.position = position;
         this.initialized = false;
     }
 
     @Override
     public boolean run (@NonNull TelemetryPacket packet) {
         if (!initialized) {
+
             timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
-            if (kick) {
-                robotHardware.setLaunchKickPosition(LAUNCH_KICK_KICKING);
-            }
-            else {
-                robotHardware.setLaunchKickPosition(LAUNCH_KICK_RESTING);
-            }
+            robotHardware.setSpindexPosition(position);
 
             initialized = true;
         }
 
-        return (timer.milliseconds() < 200);    //tell RR to wait 200 ms for kick
+        return (timer.milliseconds() < 250);    //tell RR to wait 200 ms for spindex position
+
     }
 }

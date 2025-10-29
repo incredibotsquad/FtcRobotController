@@ -9,14 +9,14 @@ import com.acmerobotics.roadrunner.Action;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 
 @Config
-public class LaunchGate implements Action {
+public class LaunchGateAction implements Action {
     private RobotHardware robotHardware;
     private boolean open;
     private boolean initialized = false;
     public static double LAUNCH_GATE_CLOSED = 0.6;
     public static double LAUNCH_GATE_OPEN = 1;
 
-    public LaunchGate(RobotHardware robotHardware, boolean open) {
+    public LaunchGateAction(RobotHardware robotHardware, boolean open) {
         this.robotHardware = robotHardware;
         this.open = open;
         this.initialized = false;
