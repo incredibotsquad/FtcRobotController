@@ -14,17 +14,10 @@ import org.firstinspires.ftc.teamcode.RobotHardware;
 @TeleOp(name="IncredibotsMecanumDrive", group="Linear OpMode")
 public class IncredibotsMecanumDrive extends LinearOpMode {
 
-    public static double POWER_RATIO = 1;
+    public static double DRIVETRAIN_POWER_RATIO = 1;
 
     private RobotHardware robotHardware;
     private MechanismControl mechanismControl;
-
-
-// Declare OpMode members for each of the 4 motors.
-//    private DcMotor leftFrontDrive = null;
-//    private DcMotor leftBackDrive = null;
-//    private DcMotor rightFrontDrive = null;
-//    private DcMotor rightBackDrive = null;
 
     @Override
     public void runOpMode() {
@@ -38,21 +31,23 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
         robotHardware.setLimelightPipeline(6);
 
         while (opModeInInit()) {
-            if (gamepad1.x || gamepad2.x) {
+            if (gamepad1.xWasPressed() || gamepad2.xWasPressed()) {
                 mechanismControl.setAllianceColor(AllianceColors.BLUE);
                 telemetry.addData("Alliance Color", "Blue");
+                telemetry.update();
             }
 
-            if (gamepad1.b || gamepad2.b) {
+            if (gamepad1.bWasPressed() || gamepad2.bWasPressed()) {
                 mechanismControl.setAllianceColor(AllianceColors.RED);
                 telemetry.addData("Alliance Color", "Red");
+                telemetry.update();
             }
         }
 
-        // Wait for the game to start (driver presses PLAY)
         telemetry.addData("Status", "Initialized");
         telemetry.update();
 
+        // Wait for the game to start (driver presses PLAY)
         waitForStart();
 
         // run until the end of the match (driver presses STOP)
@@ -60,9 +55,9 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
             double max;
 
             // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
-            double axial   = -gamepad1.left_stick_y  * POWER_RATIO;  // Note: pushing stick forward gives negative value
-            double lateral =  gamepad1.left_stick_x * POWER_RATIO;
-            double yaw     =  gamepad1.right_stick_x * POWER_RATIO;
+            double axial   = -gamepad1.left_stick_y  * DRIVETRAIN_POWER_RATIO;  // Note: pushing stick forward gives negative value
+            double lateral =  gamepad1.left_stick_x * DRIVETRAIN_POWER_RATIO;
+            double yaw     =  gamepad1.right_stick_x * DRIVETRAIN_POWER_RATIO;
 
             // Combine the joystick requests for each axis-motion to determine each wheel's power.
             // Set up a variable for each drive wheel to save the power level for telemetry.
@@ -89,9 +84,6 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
 
             //control robot mechanisms
             mechanismControl.ProcessInputs();
-
-            //updates telemetry
-            telemetry.update();
 
             idle();
         }

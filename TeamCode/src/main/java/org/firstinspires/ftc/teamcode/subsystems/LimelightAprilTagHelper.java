@@ -5,27 +5,26 @@ import android.util.Log;
 import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.AllianceColors;
-import org.firstinspires.ftc.teamcode.LaunchYawAndTolerance;
+import org.firstinspires.ftc.teamcode.AprilTagConstants;
+import org.firstinspires.ftc.teamcode.LaunchYawDistanceTolerance;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 
-import java.security.PublicKey;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Config
 public class LimelightAprilTagHelper  {
+
+
     public static double BASE_YAW_TOLERANCE = 5.0; // Base tolerance in degrees
     public static double TARGET_AREA_INCHES = 16.0; // 8 inches on either side of center
     public static double MIN_TOLERANCE = 2.0; // Minimum tolerance at far distances
     public static double MAX_TOLERANCE = 10.0; // Maximum tolerance at close distances
     public static double TOLERANCE_SCALING_DISTANCE = 40.0; // Distance in inches for scaling
-
-    public static int RED_ALLIANCE_TAG_ID = 24;
-
-    public static int BLUE_ALLIANCE_TAG_ID = 20;
 
     private RobotHardware robotHardware;
     private AllianceColors allianceColor;
@@ -36,9 +35,10 @@ public class LimelightAprilTagHelper  {
 
     public void setAllianceColor(AllianceColors allianceColor) {
         this.allianceColor = allianceColor;
+        Log.i("LimelightAprilTagHelper", "Alliance Color: " + allianceColor);
     }
 
-    public LaunchYawAndTolerance getGoalYawAndToleranceFromCurrentPosition() {
+    public LaunchYawDistanceTolerance getGoalYawDistanceToleranceFromCurrentPosition() {
 
         LLResult result = robotHardware.GetLatestLimelightResults();
 
@@ -54,9 +54,10 @@ public class LimelightAprilTagHelper  {
 
                 switch (allianceColor) {
                     case RED:
-                        List<LLResultTypes.FiducialResult> redResults = fiducialResults.stream().filter(fr -> fr.getFiducialId() == RED_ALLIANCE_TAG_ID).collect(Collectors.toList());
-                        if (redResults != null && !redResults.isEmpty())
+                        List<LLResultTypes.FiducialResult> redResults = fiducialResults.stream().filter(fr -> fr.getFiducialId() == AprilTagConstants.RED_ALLIANCE_TAG_ID).collect(Collectors.toList());
+                        if (!redResults.isEmpty())
                         {
+                            Log.i("LimelightAprilTagHelper", allianceColor + " april tag found");
                             primaryTarget = redResults.get(0);
                         }
                         else
@@ -67,9 +68,11 @@ public class LimelightAprilTagHelper  {
                         break;
 
                     case BLUE:
-                        List<LLResultTypes.FiducialResult> blueResults = fiducialResults.stream().filter(fr -> fr.getFiducialId() == BLUE_ALLIANCE_TAG_ID).collect(Collectors.toList());
-                        if (blueResults != null && !blueResults.isEmpty())
+                        List<LLResultTypes.FiducialResult> blueResults = fiducialResults.stream().filter(fr -> fr.getFiducialId() == AprilTagConstants.BLUE_ALLIANCE_TAG_ID).collect(Collectors.toList());
+                        if (!blueResults.isEmpty())
                         {
+                            Log.i("LimelightAprilTagHelper", allianceColor + " april tag found");
+
                             primaryTarget = blueResults.get(0);
                         }
                         else
@@ -107,7 +110,11 @@ public class LimelightAprilTagHelper  {
                 // Calculate dynamic tolerance based on distance
                 double dynamicTolerance = calculateDistanceBasedTolerance(horizontalDistance);
 
-                return new LaunchYawAndTolerance(yaw, dynamicTolerance);
+                Log.i("LimelightAprilTagHelper", "YAW: " + yaw);
+                Log.i("LimelightAprilTagHelper", "DISTANCE: " + horizontalDistance);
+                Log.i("LimelightAprilTagHelper", "TOLERANCE: " + dynamicTolerance);
+
+                return new LaunchYawDistanceTolerance(yaw, horizontalDistance, dynamicTolerance);
                 // Use dynamic tolerance for alignment check
 //                if (Math.abs(yaw) < dynamicTolerance) {
 //                    Log.i("LimelightAprilTagHelper", " Shooter Ready");
@@ -115,7 +122,7 @@ public class LimelightAprilTagHelper  {
 //                }
             }
         }
-        Log.i("LimelightAprilTagHelper", " Shooter NOT Ready");
+        Log.i("LimelightAprilTagHelper", "No April tags found");
 
         return null;
     }

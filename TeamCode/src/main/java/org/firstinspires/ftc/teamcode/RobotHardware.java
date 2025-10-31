@@ -4,7 +4,6 @@ import android.util.Log;
 
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
-import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.ColorRangeSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
@@ -14,6 +13,7 @@ import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 
 public class RobotHardware {
 
@@ -25,25 +25,19 @@ public class RobotHardware {
     private DcMotorEx frontLeftDriveMotor;
     private DcMotorEx backRightDriveMotor;
     private DcMotorEx backLeftDriveMotor;
-    private DcMotor odoPara;
-    private DcMotor odoPerp;
-
     private DcMotorEx intakeMotor;
-
     private DcMotorEx flywheelMotor;
-    private Servo launchGateServo;
 
+    private Servo launchGateServo;
     private Servo spindexServo;
     private Servo kickServo;
-    private Servo visorServo;
-
     private Servo intakeLightServo;
 
 
     private ColorRangeSensor colorSensor1;
     private ColorRangeSensor colorSensor2;
-    private AnalogInput spindexerEncoder;
     private Limelight3A limelight;
+    private GoBildaPinpointDriver odo; // Declare OpMode member for the Odometry Computer
 
     //making constructor
     public RobotHardware(HardwareMap hwMap) {
@@ -77,13 +71,13 @@ public class RobotHardware {
         //flywheel motor
         flywheelMotor = hardwareMap.get(DcMotorEx.class, "LaunchMotor");
         flywheelMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        flywheelMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         flywheelMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
         //servos
         launchGateServo = hardwareMap.get(Servo.class, "LaunchGateServo");
         spindexServo = hardwareMap.get(Servo.class, "SpindexServo");
         kickServo = hardwareMap.get(Servo.class, "KickServo");
-        visorServo = hardwareMap.get(Servo.class, "VisorServo");
 
         //color sensors
         colorSensor1 = hardwareMap.get(ColorRangeSensor.class, "IntakeColorSensor1");
@@ -91,7 +85,20 @@ public class RobotHardware {
 
         intakeLightServo = hardwareMap.get(Servo.class, "IntakeLightServo");
 
-//        imu = hardwareMap.get(IMU.class, "imu");
+        limelight = hardwareMap.get(Limelight3A.class, "limelight");
+        limelight.setPollRateHz(100); // This sets how often we ask Limelight for data (100 times per second)
+
+        odo = hardwareMap.get(GoBildaPinpointDriver.class,"PinpointOdo");
+        odo.setOffsets(20.0, -241.3, DistanceUnit.MM); //these are tuned for 3110-0002-0001 Product Insight #1
+        odo.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
+        odo.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.REVERSED, GoBildaPinpointDriver.EncoderDirection.FORWARD);
+        odo.resetPosAndIMU();
+
+    }
+
+    public Pose2D getCurrentRobotPose() {
+        odo.update();
+        return odo.getPosition();
     }
 
     public LLResult GetLatestLimelightResults() {
@@ -124,11 +131,11 @@ public class RobotHardware {
     }
 
     //sets the drive motor's powers
-    public void setDriveMotorPowers(double rfPower, double lfPower, double rbPower, double lbPower) {
-        frontRightDriveMotor.setPower(rfPower);
-        frontLeftDriveMotor.setPower(lfPower);
-        backRightDriveMotor.setPower(rbPower);
-        backLeftDriveMotor.setPower(lbPower);
+    public void setDriveMotorPowers(double frPower, double flPower, double brPower, double blPower) {
+        frontRightDriveMotor.setPower(frPower);
+        frontLeftDriveMotor.setPower(flPower);
+        backRightDriveMotor.setPower(brPower);
+        backLeftDriveMotor.setPower(blPower);
     }
 
     public void stopRobotChassis() {
@@ -149,18 +156,23 @@ public class RobotHardware {
     }
 
     public double getFlywheelMotorVelocityInTPS() {
-        Log.i("=== ROBOTHARDWARE  ===", " getFlywheelMotorVelocityInTPS: ");
+//        Log.i("=== ROBOTHARDWARE  ===", " getFlywheelMotorVelocityInTPS: ");
         return flywheelMotor.getVelocity();
     }
 
     public void setFlywheelMotorVelocityInTPS(double velocity) {
-        Log.i("=== ROBOTHARDWARE  ===", " setFlywheelMotorVelocityInTPS: " + velocity);
+//        Log.i("=== ROBOTHARDWARE  ===", " setFlywheelMotorVelocityInTPS: " + velocity);
         flywheelMotor.setVelocity(velocity);
     }
 
     public void setLaunchGatePosition(double position) {
         Log.i("=== ROBOTHARDWARE  ===", " setLaunchGatePosition: " + position);
         launchGateServo.setPosition(position);
+    }
+
+    public double getSpindexPosition() {
+        Log.i("=== ROBOTHARDWARE  ===", " getSpindexPosition: ");
+        return spindexServo.getPosition();
     }
 
     public void setSpindexPosition(double position) {
@@ -173,11 +185,6 @@ public class RobotHardware {
         kickServo.setPosition(position);
     }
 
-    public void setLaunchVisorPosition(double position) {
-        Log.i("=== ROBOTHARDWARE  ===", " setLaunchVisorPosition: " + position);
-        visorServo.setPosition(position);
-    }
-
     public GameColors getDetectedBallColor() {
 
         GameColors detectedColor = GameColors.NONE;
@@ -186,24 +193,24 @@ public class RobotHardware {
 
         if ((sensor1Distance < COLOR_SENSOR_DISTANCE_THRESHOLD_IN_MM) || (sensor2Distance < COLOR_SENSOR_DISTANCE_THRESHOLD_IN_MM))
         {
-            Log.i("COLOR SENSORS", "PASSED DISTANCE THRESHOLD: ");
-            Log.i("COLOR SENSORS", "DISTANCE 1: " + sensor1Distance);
-            Log.i("COLOR SENSORS", "DISTANCE 2: " + sensor2Distance);
+//            Log.i("COLOR SENSORS", "PASSED DISTANCE THRESHOLD: ");
+//            Log.i("COLOR SENSORS", "DISTANCE 1: " + sensor1Distance);
+//            Log.i("COLOR SENSORS", "DISTANCE 2: " + sensor2Distance);
+//
+//
+//            Log.i("COLOR SENSORS", "Sensor 1 R: " + colorSensor1.red());
+//            Log.i("COLOR SENSORS", "Sensor 1 G: " + colorSensor1.green());
+//            Log.i("COLOR SENSORS", "Sensor 1 B: " + colorSensor1.blue());
 
+            if ((colorSensor1.green() > colorSensor1.blue() && colorSensor1.green() > colorSensor1.red()) &&
+                    (colorSensor2.green() > colorSensor2.blue() && colorSensor2.green() > colorSensor2.red())) {
+                detectedColor = GameColors.GREEN;
+                Log.i("COLOR SENSORS", "DETECTED GREEN");
+            }
 
-            Log.i("COLOR SENSORS", "Sensor 1 R: " + colorSensor1.red());
-            Log.i("COLOR SENSORS", "Sensor 1 G: " + colorSensor1.green());
-            Log.i("COLOR SENSORS", "Sensor 1 B: " + colorSensor1.blue());
-
-//            if ((colorSensor1.green() > colorSensor1.blue() && colorSensor1.green() > colorSensor1.red()) &&
-//                    (colorSensor2.green() > colorSensor2.blue() && colorSensor2.green() > colorSensor2.red())) {
-//                detectedColor = GameColors.GREEN;
-//                Log.i("COLOR SENSORS", "DETECTED GREEN");
-//            }
-
-            Log.i("COLOR SENSORS", "Sensor 2 R: " + colorSensor2.red());
-            Log.i("COLOR SENSORS", "Sensor 2 G: " + colorSensor2.green());
-            Log.i("COLOR SENSORS", "Sensor 2 B: " + colorSensor2.blue());
+//            Log.i("COLOR SENSORS", "Sensor 2 R: " + colorSensor2.red());
+//            Log.i("COLOR SENSORS", "Sensor 2 G: " + colorSensor2.green());
+//            Log.i("COLOR SENSORS", "Sensor 2 B: " + colorSensor2.blue());
 
             if ((colorSensor1.blue() > colorSensor1.green() && colorSensor1.blue() > colorSensor1.red()) &&
                     (colorSensor2.blue() > colorSensor2.green() && colorSensor2.blue() > colorSensor2.red())) {

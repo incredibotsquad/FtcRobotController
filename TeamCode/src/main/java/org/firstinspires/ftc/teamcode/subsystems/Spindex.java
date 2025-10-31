@@ -10,6 +10,7 @@ import org.firstinspires.ftc.teamcode.BallEntry;
 import org.firstinspires.ftc.teamcode.GameColors;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,10 +26,10 @@ public class Spindex {
             new BallEntry(1, INTAKE_POS_2, LAUNCH_POS_2, GameColors.NONE),
             new BallEntry(2, INTAKE_POS_3, LAUNCH_POS_3, GameColors.NONE));
 
-    private int currentIndex = 0;
+    public int currentIndex;
     private RobotHardware robotHardware;
     public Spindex(RobotHardware robotHardware){
-        this.currentIndex = 0;
+        this.currentIndex = -1; //to ensure the first move happens
         this.robotHardware = robotHardware;
     }
 
@@ -44,7 +45,7 @@ public class Spindex {
         if (!list.isEmpty())
             nextEmptySlotIndex = list.get(0).index;
 
-        Log.i("SPINDEXER", "NEXT EMPTY SLOT INDEX: " + nextEmptySlotIndex);
+//        Log.i("SPINDEXER", "NEXT EMPTY SLOT INDEX: " + nextEmptySlotIndex);
         return nextEmptySlotIndex;
     }
 
@@ -56,9 +57,10 @@ public class Spindex {
         int nextFullSlotIndex = -1;
 
         if (!list.isEmpty())
+            Collections.reverse(list);  //move full slots backwards
             nextFullSlotIndex = list.get(0).index;
 
-        Log.i("SPINDEXER", "NEXT FULL SLOT INDEX: " + nextFullSlotIndex);
+//        Log.i("SPINDEXER", "NEXT FULL SLOT INDEX: " + nextFullSlotIndex);
         return nextFullSlotIndex;
     }
 
@@ -72,7 +74,7 @@ public class Spindex {
         if (!list.isEmpty())
             nextGreenSlotIndex = list.get(0).index;
 
-        Log.i("SPINDEXER", "NEXT GREEN SLOT INDEX: " + nextGreenSlotIndex);
+//        Log.i("SPINDEXER", "NEXT GREEN SLOT INDEX: " + nextGreenSlotIndex);
         return nextGreenSlotIndex;
     }
 
@@ -86,13 +88,13 @@ public class Spindex {
         if (!list.isEmpty())
             nextPurpleSlotIndex = list.get(0).index;
 
-        Log.i("SPINDEXER", "NEXT GREEN SLOT INDEX: " + nextPurpleSlotIndex);
+//        Log.i("SPINDEXER", "NEXT GREEN SLOT INDEX: " + nextPurpleSlotIndex);
         return nextPurpleSlotIndex;
     }
 
     public Action moveToNextEmptySlotAction() {
         int nextIndex = getNextEmptySlotIndex();
-        if (nextIndex < 0) return new NullAction();
+        if (nextIndex < 0 || nextIndex == currentIndex) return new NullAction();
 
         currentIndex = nextIndex;
 
@@ -101,7 +103,7 @@ public class Spindex {
 
     public Action moveToNextFullSlotAction() {
         int nextIndex = getNextFullSlotIndex();
-        if (nextIndex < 0) return new NullAction();
+        if (nextIndex < 0 || nextIndex == currentIndex) return new NullAction();
 
         currentIndex = nextIndex;
 
@@ -110,7 +112,7 @@ public class Spindex {
 
     public Action moveToNextGreenSlotAction() {
         int nextIndex = getNextGreenSlotIndex();
-        if (nextIndex < 0) return new NullAction();
+        if (nextIndex < 0 || nextIndex == currentIndex) return new NullAction();
 
         currentIndex = nextIndex;
         return new SpindexAction(robotHardware, storedColors.get(currentIndex).launchPosition);
@@ -118,7 +120,7 @@ public class Spindex {
 
     public Action moveToNextPurpleSlotAction() {
         int nextIndex = getNextPurpleSlotIndex();
-        if (nextIndex < 0) return new NullAction();
+        if (nextIndex < 0 || nextIndex == currentIndex) return new NullAction();
 
         currentIndex = nextIndex;
 

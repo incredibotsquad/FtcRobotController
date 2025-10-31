@@ -4,6 +4,7 @@ import android.util.Log;
 
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.roadrunner.Action;
+import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.NullAction;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SequentialAction;
@@ -51,6 +52,10 @@ public class IntakeSystem {
         return new IntakeWheelsAction(robotHardware, false);
     }
 
+    public Action getReverseIntakeAction() {
+        return new InstantAction(() -> robotHardware.setIntakeMotorPower(-1));
+    }
+
     public Action getLightActionForSpindexState() {
 
         switch (spindex.fullSlotCount()) {
@@ -81,17 +86,22 @@ public class IntakeSystem {
     }
 
     public Action checkForBallIntakeAndGetAction() {
+        //we dont want this to be every loop
+        if (timeSinceLastIntake.milliseconds() < INTAKE_THROTTLE_TIME_MS)
+            return new NullAction();
+
+        timeSinceLastIntake.reset();
+
         //check color sensors and if there is a ball there, there are things to do
         //else null action
         GameColors detectedColor = robotHardware.getDetectedBallColor();
 
         Log.i("INTAKE SYSTEM: ", "checkForBallIntakeAndGetAction: DETECTED COLOR: " + detectedColor);
 
-        if (isOn && detectedColor != GameColors.NONE && timeSinceLastIntake.milliseconds() > INTAKE_THROTTLE_TIME_MS) {
+        if (isOn && detectedColor != GameColors.NONE) {
             spindex.storeCurrentBall(detectedColor);
 
             Log.i("INTAKE SYSTEM: ", "checkForBallIntakeAndGetAction: BALL INDEXED AND MOVED TO NEXT EMPTY SLOT");
-            timeSinceLastIntake.reset();
 
             return new SequentialAction(
                     spindex.moveToNextEmptySlotAction(),
@@ -102,5 +112,4 @@ public class IntakeSystem {
 
         return new NullAction();
     }
-
 }

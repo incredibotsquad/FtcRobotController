@@ -27,10 +27,10 @@ public class LaunchVisorAction implements Action {
         if (!initialized) {
 
             if (raise) {
-                robotHardware.setLaunchVisorPosition(LAUNCH_VISOR_RAISED);
+//                robotHardware.setLaunchVisorPosition(LAUNCH_VISOR_RAISED);
             }
             else {
-                robotHardware.setLaunchVisorPosition(LAUNCH_VISOR_RESTING);
+//                robotHardware.setLaunchVisorPosition(LAUNCH_VISOR_RESTING);
             }
 
             initialized = true;
