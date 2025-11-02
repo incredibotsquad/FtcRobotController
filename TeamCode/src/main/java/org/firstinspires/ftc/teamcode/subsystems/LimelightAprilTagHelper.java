@@ -10,6 +10,7 @@ import com.qualcomm.hardware.limelightvision.Limelight3A;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.AllianceColors;
 import org.firstinspires.ftc.teamcode.AprilTagConstants;
+import org.firstinspires.ftc.teamcode.GamePattern;
 import org.firstinspires.ftc.teamcode.LaunchYawDistanceTolerance;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 
@@ -38,6 +39,38 @@ public class LimelightAprilTagHelper  {
         Log.i("LimelightAprilTagHelper", "Alliance Color: " + allianceColor);
     }
 
+    public GamePattern getGamePatternFromObelisk() {
+        LLResult result = robotHardware.GetLatestLimelightResults();
+
+        if (result.isValid()) { // Tag is visible
+
+            Log.i("LimelightAprilTagHelper", "getGamePatternFromObelisk: valid results found");
+
+            // Get fiducial (AprilTag) results
+            List<LLResultTypes.FiducialResult> fiducialResults = result.getFiducialResults();
+
+            if (!fiducialResults.isEmpty()) {
+                List<LLResultTypes.FiducialResult> gameTags = fiducialResults.stream().filter(fr -> fr.getFiducialId() == 21 || fr.getFiducialId() == 22 || fr.getFiducialId() == 23).collect(Collectors.toList());
+
+                Log.i("LimelightAprilTagHelper", "getGamePatternFromObelisk: April tag results found: " + gameTags.size());
+
+                if (!gameTags.isEmpty()) {
+                    int idToSearch = gameTags.get(0).getFiducialId();
+
+                    Log.i("LimelightAprilTagHelper", "getGamePatternFromObelisk: id to search: " + idToSearch);
+
+                    List<GamePattern> foundPattern = AprilTagConstants.patterns.stream().filter(pattern -> pattern.tagId == idToSearch).collect(Collectors.toList());
+
+                    if (!foundPattern.isEmpty()) {
+                        return foundPattern.get(0);
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
     public LaunchYawDistanceTolerance getGoalYawDistanceToleranceFromCurrentPosition() {
 
         LLResult result = robotHardware.GetLatestLimelightResults();
@@ -51,6 +84,8 @@ public class LimelightAprilTagHelper  {
                 // Get the first detected AprilTag
 
                 LLResultTypes.FiducialResult primaryTarget = null;
+
+                if(allianceColor == null) return null;
 
                 switch (allianceColor) {
                     case RED:

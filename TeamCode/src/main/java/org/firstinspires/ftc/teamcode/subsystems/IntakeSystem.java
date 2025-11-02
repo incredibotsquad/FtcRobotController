@@ -11,27 +11,23 @@ import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.SleepAction;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.teamcode.Actions.IntakeLightAction;
 import org.firstinspires.ftc.teamcode.Actions.IntakeWheelsAction;
 import org.firstinspires.ftc.teamcode.GameColors;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 
 @Config
 public class IntakeSystem {
-    public static double INTAKE_LIGHT_SUCCESSFUL_INTAKE = 0.333;    //ORANGE BLINK
-    public static double INTAKE_LIGHT_EMPTY = 0.277;    //RED
-    public static double INTAKE_LIGHT_ONE_BALL = 0.333; //ORANGE
-    public static double INTAKE_LIGHT_TWO_BALLS = 0.388;    //YELLOW
-    public static double INTAKE_LIGHT_THREE_BALLS = 0.5;    //GREEN
-    public static double INTAKE_THROTTLE_TIME_MS = 200;
+    public static double INTAKE_THROTTLE_TIME_MS = 500;
     private RobotHardware robotHardware;
     private Spindex spindex;
+    private LightSystem lightSystem;
     public boolean isOn;
     private ElapsedTime timeSinceLastIntake;
 
-    public IntakeSystem(RobotHardware robotHardware, Spindex spindex) {
+    public IntakeSystem(RobotHardware robotHardware, Spindex spindex, LightSystem lightSystem) {
         this.robotHardware = robotHardware;
         this.spindex = spindex;
+        this.lightSystem = lightSystem;
         this.isOn = false;
         timeSinceLastIntake = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
     }
@@ -43,45 +39,27 @@ public class IntakeSystem {
         isOn = true;
         return new ParallelAction(
                 new IntakeWheelsAction(robotHardware, true),
-                spindex.moveToNextEmptySlotAction()
+                spindex.moveToNextEmptySlotAction(),
+                lightSystem.getIntakeOnLightAction()
         );
     }
 
     public Action getTurnOffAction() {
         isOn = false;
-        return new IntakeWheelsAction(robotHardware, false);
+        return new ParallelAction(
+                new IntakeWheelsAction(robotHardware, false),
+                lightSystem.getIntakeOffLightAction()
+        );
     }
 
     public Action getReverseIntakeAction() {
-        return new InstantAction(() -> robotHardware.setIntakeMotorPower(-1));
-    }
 
-    public Action getLightActionForSpindexState() {
-
-        switch (spindex.fullSlotCount()) {
-            case 0:
-                return new IntakeLightAction(robotHardware, INTAKE_LIGHT_EMPTY);
-            case 1:
-                return new IntakeLightAction(robotHardware, INTAKE_LIGHT_ONE_BALL);
-            case 2:
-                return new IntakeLightAction(robotHardware, INTAKE_LIGHT_TWO_BALLS);
-            default:
-                return new IntakeLightAction(robotHardware, INTAKE_LIGHT_THREE_BALLS);
-        }
-    }
-
-    public Action getLightOffAction() {
-        return new IntakeLightAction(robotHardware, 0);
-    }
-
-    public Action getSuccesfulBallIntakeLightAction() {
         return new SequentialAction(
-                new IntakeLightAction(robotHardware, INTAKE_LIGHT_SUCCESSFUL_INTAKE),
-                new SleepAction(0.1),
-                getLightOffAction(),
-                new IntakeLightAction(robotHardware, INTAKE_LIGHT_SUCCESSFUL_INTAKE),
-                new SleepAction(0.1),
-                getLightOffAction()
+                getTurnOffAction(),
+                new IntakeWheelsAction(robotHardware, true, -1),
+                new SleepAction(0.5),
+                getTurnOffAction(),
+                isOn ? getTurnOnAction() : new NullAction()
         );
     }
 
@@ -96,19 +74,34 @@ public class IntakeSystem {
         //else null action
         GameColors detectedColor = robotHardware.getDetectedBallColor();
 
-        Log.i("INTAKE SYSTEM: ", "checkForBallIntakeAndGetAction: DETECTED COLOR: " + detectedColor);
+        Log.i("INTAKE SYSTEM: ", "checkForBallIntakeAndGetAction: Detected Color: " + detectedColor);
 
         if (isOn && detectedColor != GameColors.NONE) {
             spindex.storeCurrentBall(detectedColor);
 
             Log.i("INTAKE SYSTEM: ", "checkForBallIntakeAndGetAction: BALL INDEXED AND MOVED TO NEXT EMPTY SLOT");
 
-            return new SequentialAction(
-                    spindex.moveToNextEmptySlotAction(),
-                    getSuccesfulBallIntakeLightAction(),
-                    getLightActionForSpindexState()
-            );
+            return spindex.moveToNextEmptySlotAction();
          }
+
+        return new NullAction();
+    }
+
+    public Action checkForBallIntakeAndGetAction_Auto() {
+
+        //check color sensors and if there is a ball there, there are things to do
+        //else null action
+        GameColors detectedColor = robotHardware.getDetectedBallColor();
+
+        Log.i("INTAKE SYSTEM: ", "checkForBallIntakeAndGetAction: Detected Color: " + detectedColor);
+
+        if (isOn && detectedColor != GameColors.NONE) {
+            spindex.storeCurrentBall(detectedColor);
+
+            Log.i("INTAKE SYSTEM: ", "checkForBallIntakeAndGetAction: BALL INDEXED AND MOVED TO NEXT EMPTY SLOT");
+
+            return spindex.moveToNextEmptySlotAction();
+        }
 
         return new NullAction();
     }

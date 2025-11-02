@@ -41,15 +41,17 @@ public class LaunchFlywheelAction implements Action {
 
             timer.reset();
 
-            Log.i("LaunchFlywheelAction", "Target Velocity: " + targetVelocity);
+//            Log.i("LaunchFlywheelAction", "Target Velocity: " + targetVelocity);
 
             double currentVelocity = robotHardware.getFlywheelMotorVelocityInTPS();
 
-            Log.i("LaunchFlywheelAction", "Current Velocity: " + currentVelocity);
+//            Log.i("LaunchFlywheelAction", "Current Velocity: " + currentVelocity);
 
             // wait till the difference is more than 2%
             return (Math.abs( targetVelocity -  currentVelocity) > FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS);
         }
+
+//        Log.i("LaunchFlywheelAction", "Current Velocity: this would return false");
 
         return false;
     }

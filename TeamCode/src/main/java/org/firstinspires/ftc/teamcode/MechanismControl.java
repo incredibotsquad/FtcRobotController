@@ -10,6 +10,7 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import com.acmerobotics.dashboard.FtcDashboard;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSystem;
+import org.firstinspires.ftc.teamcode.subsystems.LightSystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSystem;
 import org.firstinspires.ftc.teamcode.subsystems.Spindex;
 
@@ -24,6 +25,8 @@ public class MechanismControl {
     private IntakeSystem intakeSystem;
     private LaunchSystem launchSystem;
 
+    private LightSystem lightSystem;
+
     private List<Action> runningActions;
     private FtcDashboard dashboard;
     private Telemetry telemetry;
@@ -33,6 +36,7 @@ public class MechanismControl {
     private enum ROBOT_STATE {
         NONE,
         INTAKE,
+        REVERSE_INTAKE,
         LAUNCH_ONE,
         LAUNCH_GREEN,
         LAUNCH_PURPLE,
@@ -52,8 +56,9 @@ public class MechanismControl {
         this.telemetry = telemetry;
         this.robotHardware = robotHardware;
         this.spindex = new Spindex(robotHardware);
-        this.intakeSystem = new IntakeSystem(robotHardware, this.spindex);
-        this.launchSystem = new LaunchSystem(robotHardware, this.spindex);
+        this.lightSystem = new LightSystem(robotHardware);
+        this.intakeSystem = new IntakeSystem(robotHardware, this.spindex, lightSystem);
+        this.launchSystem = new LaunchSystem(robotHardware, this.spindex, lightSystem);
 
         currentRobotState = ROBOT_STATE.NONE;
         targetRobotState = ROBOT_STATE.NONE;
@@ -80,6 +85,8 @@ public class MechanismControl {
         CheckForBallsToIntake();
 
         ProcessDPad();
+
+//        lightSignalForRobotAlignmentWhenLaunching();
     }
 
 
@@ -106,6 +113,10 @@ public class MechanismControl {
 
         if (gamepad2.startWasPressed()) {
             newTargetRobotState = ROBOT_STATE.PARK;
+        }
+
+        if (gamepad2.backWasPressed()) {
+            newTargetRobotState = ROBOT_STATE.REVERSE_INTAKE;
         }
 
         if (gamepad2.left_trigger > 0.5 && gamepad2.yWasPressed()) {
@@ -142,7 +153,11 @@ public class MechanismControl {
 
     private void CreateStateAutomatically() {
         //IF SPINDEXER IS EMPTY AND WE HAVE ALREADY NOT STARTED THE PROCESS OF INTAKING, START IT
-        if (spindex.isEmpty() && currentRobotState != ROBOT_STATE.INTAKE && targetRobotState != ROBOT_STATE.INTAKE) {
+        if (spindex.isEmpty()
+                && currentRobotState != ROBOT_STATE.INTAKE
+                && targetRobotState != ROBOT_STATE.INTAKE
+                && currentRobotState != ROBOT_STATE.PARK
+                && targetRobotState != ROBOT_STATE.PARK) {
             Log.i("== MECHANISM CONTROL ==", "CreateStateAutomatically - setting to INTAKE");
 
             targetRobotState = ROBOT_STATE.INTAKE;
@@ -168,6 +183,12 @@ public class MechanismControl {
                                     intakeSystem.getTurnOnAction()),
                             new SleepAction(0.5), //time to let the spindex go to the right position
                             intakeSystem.checkForBallIntakeAndGetAction()));
+                    break;
+
+                case REVERSE_INTAKE:
+                    Log.i("== MECHANISM CONTROL ==", "PROCESSING STATE: REVERSE_INTAKE");
+                    runningActions.add(intakeSystem.getReverseIntakeAction());
+
                     break;
 
                 case LAUNCH_ONE:
@@ -246,7 +267,8 @@ public class MechanismControl {
     }
 
     private void CheckForBallsToIntake() {
-        if (currentRobotState == ROBOT_STATE.INTAKE ) {
+;        if (currentRobotState == ROBOT_STATE.INTAKE ) {
+
             if (!spindex.isFull())
             {
                 //set targetrobotstate to intake so that processactions does not clear it out
@@ -261,11 +283,17 @@ public class MechanismControl {
                 //are processed after this function - so setting the target state here should be safe
                 //targetRobotState = ROBOT_STATE.INTAKE;
 
+//                Log.i("Mechanism Control", "Adding CheckForBallsToIntake Action Automatically");
                 runningActions.add(intakeSystem.checkForBallIntakeAndGetAction());
             }
             else
             {
-                runningActions.add(spindex.moveToNextFullSlotAction());
+                if (intakeSystem.isOn) {
+//                Log.i("Mechanism Control", "Spindex Full: added moveToNextFullSlotAction");
+                    runningActions.add(intakeSystem.getTurnOffAction());
+                    runningActions.add(spindex.moveToNextFullSlotAction());
+                }
+
             }
         }
     }
@@ -321,11 +349,15 @@ public class MechanismControl {
         double spindexOffset = 0.05;
 
         if (gamepad2.dpad_left) {
-            robotHardware.setSpindexPosition(robotHardware.getSpindexPosition() - spindexOffset);
+            robotHardware.setSpindexPosition(robotHardware.getSpindexPosition() + spindexOffset);
         }
 
         if (gamepad2.dpad_right) {
-            robotHardware.setSpindexPosition(robotHardware.getSpindexPosition() + spindexOffset);
+            robotHardware.setSpindexPosition(robotHardware.getSpindexPosition() - spindexOffset);
+        }
+
+        if (gamepad2.dpad_down) {
+            runningActions.add(spindex.reIndexBalls());
         }
     }
 }

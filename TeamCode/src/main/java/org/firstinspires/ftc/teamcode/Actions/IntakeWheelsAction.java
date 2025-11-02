@@ -14,11 +14,17 @@ public class IntakeWheelsAction implements Action {
     private boolean start;
     private boolean initialized = false;
     public static double INTAKE_POWER = 1;
+    private double power;
 
     public IntakeWheelsAction(RobotHardware robotHardware, boolean start) {
+        this(robotHardware, start, INTAKE_POWER);
+    }
+
+    public IntakeWheelsAction(RobotHardware robotHardware, boolean start, double power) {
         this.robotHardware = robotHardware;
         this.start = start;
         this.initialized = false;
+        this.power = power;
     }
 
     @Override
@@ -26,7 +32,7 @@ public class IntakeWheelsAction implements Action {
         if (!initialized) {
 
             if (start) {
-                robotHardware.setIntakeMotorPower(INTAKE_POWER);
+                robotHardware.setIntakeMotorPower(power);
             }
             else {
                 robotHardware.setIntakeMotorPower(0);

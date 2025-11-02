@@ -3,8 +3,12 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import android.util.Log;
 
 import com.acmerobotics.roadrunner.Action;
+import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.NullAction;
+import com.acmerobotics.roadrunner.SequentialAction;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.teamcode.Actions.IntakeLightAction;
 import org.firstinspires.ftc.teamcode.Actions.SpindexAction;
 import org.firstinspires.ftc.teamcode.BallEntry;
 import org.firstinspires.ftc.teamcode.GameColors;
@@ -35,6 +39,12 @@ public class Spindex {
 
     private Spindex() {}
 
+    public void initializeWithPPG() {
+        storedColors.get(0).ballColor = GameColors.PURPLE;
+        storedColors.get(1).ballColor = GameColors.PURPLE;
+        storedColors.get(2).ballColor = GameColors.GREEN;
+    }
+
     private int getNextEmptySlotIndex() {
         List<BallEntry> list = storedColors.stream()
                 .filter(entry -> entry.ballColor == GameColors.NONE)
@@ -57,14 +67,13 @@ public class Spindex {
         int nextFullSlotIndex = -1;
 
         if (!list.isEmpty())
-            Collections.reverse(list);  //move full slots backwards
-            nextFullSlotIndex = list.get(0).index;
+            nextFullSlotIndex = list.get(list.size() - 1).index;
 
 //        Log.i("SPINDEXER", "NEXT FULL SLOT INDEX: " + nextFullSlotIndex);
         return nextFullSlotIndex;
     }
 
-    private int getNextGreenSlotIndex() {
+    public int getNextGreenSlotIndex() {
         List<BallEntry> list = storedColors.stream()
                 .filter(entry -> entry.ballColor == GameColors.GREEN)
                 .collect(Collectors.toList());
@@ -78,7 +87,7 @@ public class Spindex {
         return nextGreenSlotIndex;
     }
 
-    private int getNextPurpleSlotIndex() {
+    public int getNextPurpleSlotIndex() {
         List<BallEntry> list = storedColors.stream()
                 .filter(entry -> entry.ballColor == GameColors.PURPLE)
                 .collect(Collectors.toList());
@@ -94,7 +103,7 @@ public class Spindex {
 
     public Action moveToNextEmptySlotAction() {
         int nextIndex = getNextEmptySlotIndex();
-        if (nextIndex < 0 || nextIndex == currentIndex) return new NullAction();
+        if (nextIndex < 0) return new NullAction();
 
         currentIndex = nextIndex;
 
@@ -103,7 +112,7 @@ public class Spindex {
 
     public Action moveToNextFullSlotAction() {
         int nextIndex = getNextFullSlotIndex();
-        if (nextIndex < 0 || nextIndex == currentIndex) return new NullAction();
+        if (nextIndex < 0 ) return new NullAction();
 
         currentIndex = nextIndex;
 
@@ -112,7 +121,7 @@ public class Spindex {
 
     public Action moveToNextGreenSlotAction() {
         int nextIndex = getNextGreenSlotIndex();
-        if (nextIndex < 0 || nextIndex == currentIndex) return new NullAction();
+        if (nextIndex < 0) return new NullAction();
 
         currentIndex = nextIndex;
         return new SpindexAction(robotHardware, storedColors.get(currentIndex).launchPosition);
@@ -120,7 +129,7 @@ public class Spindex {
 
     public Action moveToNextPurpleSlotAction() {
         int nextIndex = getNextPurpleSlotIndex();
-        if (nextIndex < 0 || nextIndex == currentIndex) return new NullAction();
+        if (nextIndex < 0) return new NullAction();
 
         currentIndex = nextIndex;
 
@@ -147,5 +156,43 @@ public class Spindex {
     public void clearCurrentBall() {
         Log.i("SPINDEXER", "CLEAR CURRENT BALL");
         storedColors.get(currentIndex).ballColor = GameColors.NONE;
+    }
+
+    public Action reIndexBalls() {
+        Log.i("SPINDEXER", "REINDEXING");
+
+        Action ball1 = new SequentialAction(
+                new SpindexAction(robotHardware, storedColors.get(0).intakePosition),
+                new InstantAction(() -> storedColors.get(0).ballColor = tryToGetDetectedColor())
+        );
+
+        Action ball2 = new SequentialAction(
+                new SpindexAction(robotHardware, storedColors.get(1).intakePosition),
+                new InstantAction(() -> storedColors.get(1).ballColor = tryToGetDetectedColor())
+        );
+
+        Action ball3 = new SequentialAction(
+                new SpindexAction(robotHardware, storedColors.get(2).intakePosition),
+                new InstantAction(() -> storedColors.get(2).ballColor = tryToGetDetectedColor())
+        );
+
+        return new SequentialAction(
+                ball1,
+                ball2,
+                ball3
+        );
+    }
+
+    private GameColors tryToGetDetectedColor() {
+        GameColors detectedColor = GameColors.NONE;
+        ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+        do {
+            detectedColor = robotHardware.getDetectedBallColor();
+
+        } while (detectedColor == GameColors.NONE && timer.milliseconds() < 300);
+
+        Log.i("SPINDEXER", "REINDEX COLOR DETECTED:" + detectedColor);
+
+        return detectedColor;
     }
 }
