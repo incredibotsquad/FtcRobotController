@@ -6,9 +6,9 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.acmerobotics.dashboard.config.Config;
 
-import org.firstinspires.ftc.teamcode.AllianceColors;
-import org.firstinspires.ftc.teamcode.MechanismControl;
-import org.firstinspires.ftc.teamcode.RobotHardware;
+import org.firstinspires.ftc.teamcode.common.AllianceColors;
+import org.firstinspires.ftc.teamcode.common.MechanismControl;
+import org.firstinspires.ftc.teamcode.common.RobotHardware;
 
 @Config
 @TeleOp(name="IncredibotsMecanumDrive", group="Linear OpMode")

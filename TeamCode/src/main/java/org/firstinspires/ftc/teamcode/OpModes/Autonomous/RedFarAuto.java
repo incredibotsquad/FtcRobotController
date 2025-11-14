@@ -8,10 +8,10 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.teamcode.AllianceColors;
-import org.firstinspires.ftc.teamcode.GamePattern;
+import org.firstinspires.ftc.teamcode.common.AllianceColors;
+import org.firstinspires.ftc.teamcode.common.GamePattern;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
-import org.firstinspires.ftc.teamcode.RobotHardware;
+import org.firstinspires.ftc.teamcode.common.RobotHardware;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightSystem;

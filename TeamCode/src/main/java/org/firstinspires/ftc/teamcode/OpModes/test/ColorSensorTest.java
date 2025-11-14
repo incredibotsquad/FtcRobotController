@@ -10,7 +10,7 @@ import com.qualcomm.robotcore.hardware.ColorRangeSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.teamcode.GameColors;
+import org.firstinspires.ftc.teamcode.common.GameColors;
 import org.opencv.core.Scalar;
 
 

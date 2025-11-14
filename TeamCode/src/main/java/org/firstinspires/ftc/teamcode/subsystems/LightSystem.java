@@ -3,7 +3,7 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import com.acmerobotics.roadrunner.Action;
 
 import org.firstinspires.ftc.teamcode.Actions.IntakeLightAction;
-import org.firstinspires.ftc.teamcode.RobotHardware;
+import org.firstinspires.ftc.teamcode.common.RobotHardware;
 
 public class LightSystem {
     private RobotHardware robotHardware;

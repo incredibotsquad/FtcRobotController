@@ -13,14 +13,13 @@ import org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction;
 import org.firstinspires.ftc.teamcode.Actions.LaunchGateAction;
 import org.firstinspires.ftc.teamcode.Actions.LaunchKickAction;
 import org.firstinspires.ftc.teamcode.Actions.SpindexAction;
-import org.firstinspires.ftc.teamcode.AllianceColors;
-import org.firstinspires.ftc.teamcode.BallEntry;
-import org.firstinspires.ftc.teamcode.GameColors;
-import org.firstinspires.ftc.teamcode.GamePattern;
-import org.firstinspires.ftc.teamcode.LaunchYawDistanceTolerance;
-import org.firstinspires.ftc.teamcode.RobotHardware;
+import org.firstinspires.ftc.teamcode.common.AllianceColors;
+import org.firstinspires.ftc.teamcode.common.BallEntry;
+import org.firstinspires.ftc.teamcode.common.GameColors;
+import org.firstinspires.ftc.teamcode.common.GamePattern;
+import org.firstinspires.ftc.teamcode.common.LaunchYawDistanceTolerance;
+import org.firstinspires.ftc.teamcode.common.RobotHardware;
 
-import java.security.PublicKey;
 import java.util.List;
 import java.util.stream.Collectors;
 

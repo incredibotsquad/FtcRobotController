@@ -4,7 +4,6 @@ import android.util.Log;
 
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.roadrunner.Action;
-import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.NullAction;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SequentialAction;
@@ -12,8 +11,8 @@ import com.acmerobotics.roadrunner.SleepAction;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Actions.IntakeWheelsAction;
-import org.firstinspires.ftc.teamcode.GameColors;
-import org.firstinspires.ftc.teamcode.RobotHardware;
+import org.firstinspires.ftc.teamcode.common.GameColors;
+import org.firstinspires.ftc.teamcode.common.RobotHardware;
 
 @Config
 public class IntakeSystem {

@@ -5,14 +5,13 @@ import android.util.Log;
 import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
-import com.qualcomm.hardware.limelightvision.Limelight3A;
 
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
-import org.firstinspires.ftc.teamcode.AllianceColors;
-import org.firstinspires.ftc.teamcode.AprilTagConstants;
-import org.firstinspires.ftc.teamcode.GamePattern;
-import org.firstinspires.ftc.teamcode.LaunchYawDistanceTolerance;
-import org.firstinspires.ftc.teamcode.RobotHardware;
+import org.firstinspires.ftc.teamcode.common.AllianceColors;
+import org.firstinspires.ftc.teamcode.common.AprilTagConstants;
+import org.firstinspires.ftc.teamcode.common.GamePattern;
+import org.firstinspires.ftc.teamcode.common.LaunchYawDistanceTolerance;
+import org.firstinspires.ftc.teamcode.common.RobotHardware;
 
 import java.util.List;
 import java.util.stream.Collectors;

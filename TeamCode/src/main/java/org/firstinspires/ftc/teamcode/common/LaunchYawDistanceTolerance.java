@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.common;
 
 public class LaunchYawDistanceTolerance {
     public double yaw;

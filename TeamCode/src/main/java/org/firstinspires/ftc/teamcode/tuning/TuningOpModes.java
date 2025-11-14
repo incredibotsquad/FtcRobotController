@@ -288,23 +288,23 @@ public final class TuningOpModes {
         }
 
         //TODO: uncomment these for tuning
-//        manager.register(metaForClass(AngularRampLogger.class), new AngularRampLogger(dvf));
-//        manager.register(metaForClass(ForwardPushTest.class), new ForwardPushTest(dvf));
-//        manager.register(metaForClass(ForwardRampLogger.class), new ForwardRampLogger(dvf));
-//        manager.register(metaForClass(LateralPushTest.class), new LateralPushTest(dvf));
-//        manager.register(metaForClass(LateralRampLogger.class), new LateralRampLogger(dvf));
-//        manager.register(metaForClass(ManualFeedforwardTuner.class), new ManualFeedforwardTuner(dvf));
-//        manager.register(metaForClass(MecanumMotorDirectionDebugger.class), new MecanumMotorDirectionDebugger(dvf));
-//        manager.register(metaForClass(DeadWheelDirectionDebugger.class), new DeadWheelDirectionDebugger(dvf));
-//
-//        manager.register(metaForClass(ManualFeedbackTuner.class), ManualFeedbackTuner.class);
-//        manager.register(metaForClass(SplineTest.class), SplineTest.class);
-//        manager.register(metaForClass(LocalizationTest.class), LocalizationTest.class);
-//
-//        manager.register(metaForClass(OTOSAngularScalarTuner.class), new OTOSAngularScalarTuner(dvf));
-//        manager.register(metaForClass(OTOSLinearScalarTuner.class), new OTOSLinearScalarTuner(dvf));
-//        manager.register(metaForClass(OTOSHeadingOffsetTuner.class), new OTOSHeadingOffsetTuner(dvf));
-//        manager.register(metaForClass(OTOSPositionOffsetTuner.class), new OTOSPositionOffsetTuner(dvf));
+        manager.register(metaForClass(AngularRampLogger.class), new AngularRampLogger(dvf));
+        manager.register(metaForClass(ForwardPushTest.class), new ForwardPushTest(dvf));
+        manager.register(metaForClass(ForwardRampLogger.class), new ForwardRampLogger(dvf));
+        manager.register(metaForClass(LateralPushTest.class), new LateralPushTest(dvf));
+        manager.register(metaForClass(LateralRampLogger.class), new LateralRampLogger(dvf));
+        manager.register(metaForClass(ManualFeedforwardTuner.class), new ManualFeedforwardTuner(dvf));
+        manager.register(metaForClass(MecanumMotorDirectionDebugger.class), new MecanumMotorDirectionDebugger(dvf));
+        manager.register(metaForClass(DeadWheelDirectionDebugger.class), new DeadWheelDirectionDebugger(dvf));
+
+        manager.register(metaForClass(ManualFeedbackTuner.class), ManualFeedbackTuner.class);
+        manager.register(metaForClass(SplineTest.class), SplineTest.class);
+        manager.register(metaForClass(LocalizationTest.class), LocalizationTest.class);
+
+        manager.register(metaForClass(OTOSAngularScalarTuner.class), new OTOSAngularScalarTuner(dvf));
+        manager.register(metaForClass(OTOSLinearScalarTuner.class), new OTOSLinearScalarTuner(dvf));
+        manager.register(metaForClass(OTOSHeadingOffsetTuner.class), new OTOSHeadingOffsetTuner(dvf));
+        manager.register(metaForClass(OTOSPositionOffsetTuner.class), new OTOSPositionOffsetTuner(dvf));
 
         FtcDashboard.getInstance().withConfigRoot(configRoot -> {
             for (Class<?> c : Arrays.asList(

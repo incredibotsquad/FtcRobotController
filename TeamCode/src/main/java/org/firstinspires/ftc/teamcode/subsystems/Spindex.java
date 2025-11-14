@@ -8,13 +8,11 @@ import com.acmerobotics.roadrunner.NullAction;
 import com.acmerobotics.roadrunner.SequentialAction;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.teamcode.Actions.IntakeLightAction;
 import org.firstinspires.ftc.teamcode.Actions.SpindexAction;
-import org.firstinspires.ftc.teamcode.BallEntry;
-import org.firstinspires.ftc.teamcode.GameColors;
-import org.firstinspires.ftc.teamcode.RobotHardware;
+import org.firstinspires.ftc.teamcode.common.BallEntry;
+import org.firstinspires.ftc.teamcode.common.GameColors;
+import org.firstinspires.ftc.teamcode.common.RobotHardware;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
