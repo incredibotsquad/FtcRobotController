@@ -178,7 +178,6 @@ public class MechanismControl {
                     //get the list of actions and put it in running actions
                     runningActions.add(new SequentialAction(
                             new ParallelAction(
-                                    launchSystem.getLockLauncherForIntakeAction(),
                                     launchSystem.getKeepWarmAction(),
                                     intakeSystem.getTurnOnAction()),
                             new SleepAction(0.5), //time to let the spindex go to the right position

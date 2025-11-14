@@ -6,11 +6,9 @@ import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.NullAction;
-import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SequentialAction;
 
 import org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction;
-import org.firstinspires.ftc.teamcode.Actions.LaunchGateAction;
 import org.firstinspires.ftc.teamcode.Actions.LaunchKickAction;
 import org.firstinspires.ftc.teamcode.Actions.SpindexAction;
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
@@ -67,12 +65,7 @@ public class LaunchSystem {
         Log.i("== LAUNCH SYSTEM ==", "getLaunchBallAction");
         return new SequentialAction(
                 new LaunchFlywheelAction(robotHardware, flywheelVelocity),
-                new LaunchGateAction(robotHardware, true),
-                new LaunchKickAction(robotHardware, true),
-                new ParallelAction(
-                    new LaunchKickAction(robotHardware, false),
-                    new LaunchGateAction(robotHardware, false)
-                )
+                new LaunchKickAction(robotHardware)
         );
     }
 
@@ -333,14 +326,6 @@ public class LaunchSystem {
                 ball3,
                 ball2,
                 ball1
-        );
-    }
-
-    public Action getLockLauncherForIntakeAction() {
-        Log.i("== LAUNCH SYSTEM ==", "Lock Launcher For Intake Action");
-        return new ParallelAction(
-                new LaunchGateAction(robotHardware, false),
-                new LaunchKickAction(robotHardware, false)
         );
     }
 

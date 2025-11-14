@@ -29,16 +29,15 @@ public class RobotHardware {
     private DcMotorEx backLeftDriveMotor;
     private DcMotorEx intakeMotor;
     private DcMotorEx flywheelMotor;
-
-    private Servo launchGateServo;
+    private Servo launchTurretServo;
+    private Servo launchVisorServo;
+    private Servo launchKickServo;
     private Servo spindexServo;
-    private Servo kickServo;
-    private Servo intakeLightServo;
+    private Servo indicatorLight;
 
-
-    private ColorRangeSensor colorSensor1;
-    private ColorRangeSensor colorSensor2;
+    private ColorRangeSensor colorSensor;
     private Limelight3A limelight;
+
     private GoBildaPinpointDriver odo; // Declare OpMode member for the Odometry Computer
 
     //making constructor
@@ -77,15 +76,14 @@ public class RobotHardware {
         flywheelMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
         //servos
-        launchGateServo = hardwareMap.get(Servo.class, "LaunchGateServo");
+        launchTurretServo = hardwareMap.get(Servo.class, "LaunchTurretServo");
+        launchVisorServo = hardwareMap.get(Servo.class, "LaunchVisorServo");
+        launchKickServo = hardwareMap.get(Servo.class, "LaunchKickServo");
         spindexServo = hardwareMap.get(Servo.class, "SpindexServo");
-        kickServo = hardwareMap.get(Servo.class, "KickServo");
+        indicatorLight = hardwareMap.get(Servo.class, "Lights");
 
         //color sensors
-        colorSensor1 = hardwareMap.get(ColorRangeSensor.class, "IntakeColorSensor1");
-        colorSensor2 = hardwareMap.get(ColorRangeSensor.class, "IntakeColorSensor2");
-
-        intakeLightServo = hardwareMap.get(Servo.class, "IntakeLightServo");
+        colorSensor = hardwareMap.get(ColorRangeSensor.class, "IntakeColorSensor");
 
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         limelight.setPollRateHz(100); // This sets how often we ask Limelight for data (100 times per second)
@@ -167,9 +165,19 @@ public class RobotHardware {
         flywheelMotor.setVelocity(velocity);
     }
 
-    public void setLaunchGatePosition(double position) {
-        Log.i("=== ROBOTHARDWARE  ===", " setLaunchGatePosition: " + position);
-        launchGateServo.setPosition(position);
+    public void setLaunchTurretPosition(double position) {
+//        Log.i("=== ROBOTHARDWARE  ===", " setLaunchTurretServoPosition: " + position);
+        launchTurretServo.setPosition(position);
+    }
+
+    public void setLaunchVisorPosition(double position) {
+//        Log.i("=== ROBOTHARDWARE  ===", " setLaunchVisorServoPosition: " + position);
+        launchVisorServo.setPosition(position);
+    }
+
+    public void setLaunchKickPosition(double position) {
+//        Log.i("=== ROBOTHARDWARE  ===", " setLaunchKickPosition: " + position);
+        launchKickServo.setPosition(position);
     }
 
     public double getSpindexPosition() {
@@ -182,15 +190,10 @@ public class RobotHardware {
         spindexServo.setPosition(position);
     }
 
-    public void setLaunchKickPosition(double position) {
-//        Log.i("=== ROBOTHARDWARE  ===", " setLaunchKickPosition: " + position);
-        kickServo.setPosition(position);
-    }
-
     public GameColors getDetectedBallColor() {
-        NormalizedRGBA sensor1Colors = colorSensor1.getNormalizedColors();
+        NormalizedRGBA sensor1Colors = colorSensor.getNormalizedColors();
 
-        double sensor1Distance = colorSensor1.getDistance(DistanceUnit.MM);
+        double sensor1Distance = colorSensor.getDistance(DistanceUnit.MM);
         if ((sensor1Distance < COLOR_SENSOR_DISTANCE_THRESHOLD_IN_MM)) {
 
 //            Log.i("Robot Hardware", "Color Sensor Distance Breached");
@@ -204,98 +207,7 @@ public class RobotHardware {
         return GameColors.NONE;
     }
 
-//    public GameColors getDetectedBallColor() {
-//
-//        GameColors detectedColor = GameColors.NONE;
-//        double sensor1Distance = colorSensor1.getDistance(DistanceUnit.MM);
-//        double sensor2Distance = colorSensor2.getDistance(DistanceUnit.MM);
-//
-//        if ((sensor1Distance < COLOR_SENSOR_DISTANCE_THRESHOLD_IN_MM) || (sensor2Distance < COLOR_SENSOR_DISTANCE_THRESHOLD_IN_MM))
-//        {
-////            Log.i("COLOR SENSORS", "PASSED DISTANCE THRESHOLD: ");
-////            Log.i("COLOR SENSORS", "DISTANCE 1: " + sensor1Distance);
-////            Log.i("COLOR SENSORS", "DISTANCE 2: " + sensor2Distance);
-////
-////
-////            Log.i("COLOR SENSORS", "Sensor 1 R: " + colorSensor1.red());
-////            Log.i("COLOR SENSORS", "Sensor 1 G: " + colorSensor1.green());
-////            Log.i("COLOR SENSORS", "Sensor 1 B: " + colorSensor1.blue());
-//
-//            if ((colorSensor1.green() > colorSensor1.blue() && colorSensor1.green() > colorSensor1.red()) &&
-//                    (colorSensor2.green() > colorSensor2.blue() && colorSensor2.green() > colorSensor2.red())) {
-//                detectedColor = GameColors.GREEN;
-//                Log.i("COLOR SENSORS", "DETECTED GREEN");
-//            }
-//
-////            Log.i("COLOR SENSORS", "Sensor 2 R: " + colorSensor2.red());
-////            Log.i("COLOR SENSORS", "Sensor 2 G: " + colorSensor2.green());
-////            Log.i("COLOR SENSORS", "Sensor 2 B: " + colorSensor2.blue());
-//
-//            if ((colorSensor1.blue() > colorSensor1.green() && colorSensor1.blue() > colorSensor1.red()) &&
-//                    (colorSensor2.blue() > colorSensor2.green() && colorSensor2.blue() > colorSensor2.red())) {
-//                detectedColor = GameColors.PURPLE;
-//                Log.i("COLOR SENSORS", "DETECTED PURPLE");
-//            }
-//        }
-//
-//        return detectedColor;
-//    }
-
-//        public GameColors getDetectedBallColor() {
-//
-//            double sensor1Distance = colorSensor1.getDistance(DistanceUnit.MM);
-//            double sensor2Distance = colorSensor2.getDistance(DistanceUnit.MM);
-//
-//            //|| (sensor2Distance < COLOR_SENSOR_DISTANCE_THRESHOLD_IN_MM)
-//
-//            if ((sensor1Distance < COLOR_SENSOR_DISTANCE_THRESHOLD_IN_MM) ) {
-//
-//                Log.i("COLOR SENSORS", "DISTANCE BREACHED");
-//
-////                Log.i("COLOR SENSORS", "Sensor 1 R: " + sensor1Colors.red);
-////                Log.i("COLOR SENSORS", "Sensor 1 G: " + sensor1Colors.green);
-////                Log.i("COLOR SENSORS", "Sensor 1 B: " + sensor1Colors.blue);
-////
-////                Log.i("COLOR SENSORS", "Sensor 2 R: " + sensor2Colors.red);
-////                Log.i("COLOR SENSORS", "Sensor 2 G: " + sensor2Colors.green);
-////                Log.i("COLOR SENSORS", "Sensor 2 B: " + sensor2Colors.blue);
-//
-//
-//                if ((colorSensor1.blue() > colorSensor1.green() && colorSensor1.blue() > colorSensor1.red()) &&
-//                        (colorSensor2.blue() > colorSensor2.green() && colorSensor2.blue() > colorSensor2.red())) {
-//
-//                    Log.i("COLOR SENSORS", "DETECTED PURPLE");
-//                    return GameColors.PURPLE;
-//                }
-//
-//                if ((colorSensor1.green() > colorSensor1.blue() && colorSensor1.green() > colorSensor1.red()) &&
-//                        (colorSensor2.green() > colorSensor2.blue() && colorSensor2.green() > colorSensor2.red())) {
-//
-//                    Log.i("COLOR SENSORS", "DETECTED GREEN");
-//                    return GameColors.GREEN;
-//                }
-//
-//                NormalizedRGBA sensor1Colors = colorSensor1.getNormalizedColors();
-//                NormalizedRGBA sensor2Colors = colorSensor2.getNormalizedColors();
-//
-//                GameColors colorSensor1Classification = classifyGreenOrPurple(sensor1Colors.red * 255, sensor1Colors.green * 255, sensor1Colors.blue * 255);
-//                GameColors colorSensor2Classification = classifyGreenOrPurple(sensor2Colors.red * 255, sensor2Colors.green * 255, sensor2Colors.blue * 255);
-//
-//                if (colorSensor1Classification == GameColors.NONE && colorSensor2Classification == GameColors.NONE) {
-//                    Log.i("COLOR SENSORS", "DETECTED NONE");
-//                    return GameColors.NONE;
-//                }
-//
-//                Log.i("COLOR SENSOR", "DETECTED UNKNOWN");
-//                return GameColors.UNKNOWN;
-//            }
-//
-//            return GameColors.NONE;
-//        }
-
-
-
-    public void setIntakeLightColor(double color) {
-        intakeLightServo.setPosition(color);
+    public void setLightColor(double color) {
+        indicatorLight.setPosition(color);
     }
 }

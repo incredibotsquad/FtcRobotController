@@ -5,20 +5,23 @@ import androidx.annotation.NonNull;
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
 
 @Config
 public class LaunchVisorAction implements Action {
     private RobotHardware robotHardware;
-    private boolean raise;
+    private double position;
     private boolean initialized = false;
     public static double LAUNCH_VISOR_RESTING = 0;
-    public static double LAUNCH_VISOR_RAISED = 1;
+    public static double LAUNCH_VISOR_ACTION_DELAY_MILLIS = 100;
 
-    public LaunchVisorAction(RobotHardware robotHardware, boolean raise) {
+    private ElapsedTime timer;
+
+    public LaunchVisorAction(RobotHardware robotHardware, double position) {
         this.robotHardware = robotHardware;
-        this.raise = raise;
+        this.position = position;
         this.initialized = false;
     }
 
@@ -26,16 +29,12 @@ public class LaunchVisorAction implements Action {
     public boolean run (@NonNull TelemetryPacket packet) {
         if (!initialized) {
 
-            if (raise) {
-//                robotHardware.setLaunchVisorPosition(LAUNCH_VISOR_RAISED);
-            }
-            else {
-//                robotHardware.setLaunchVisorPosition(LAUNCH_VISOR_RESTING);
-            }
+            timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+            robotHardware.setLaunchVisorPosition(position);
 
             initialized = true;
         }
 
-        return false;
+        return (timer.milliseconds() < LAUNCH_VISOR_ACTION_DELAY_MILLIS);
     }
 }

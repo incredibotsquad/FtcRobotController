@@ -10,17 +10,17 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
 
 @Config
-public class LaunchGateAction implements Action {
+public class LaunchTurretAction implements Action {
     private RobotHardware robotHardware;
-    private boolean open;
+    private double position;
     private boolean initialized = false;
-    public static double LAUNCH_GATE_CLOSED = 0.6;
-    public static double LAUNCH_GATE_OPEN = 1;
+    public static double LAUNCH_TURRET_CENTER = 0.5;
+    public static double LAUNCH_TURRET_ACTION_DELAY_MILLIS = 200;
     private ElapsedTime timer;
 
-    public LaunchGateAction(RobotHardware robotHardware, boolean open) {
+    public LaunchTurretAction(RobotHardware robotHardware, double position) {
         this.robotHardware = robotHardware;
-        this.open = open;
+        this.position = position;
         this.initialized = false;
     }
 
@@ -29,16 +29,11 @@ public class LaunchGateAction implements Action {
         if (!initialized) {
 
             timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
-            if (open) {
-                robotHardware.setLaunchGatePosition(LAUNCH_GATE_OPEN);
-            }
-            else {
-                robotHardware.setLaunchGatePosition(LAUNCH_GATE_CLOSED);
-            }
+            robotHardware.setLaunchTurretPosition(position);
 
             initialized = true;
         }
 
-        return (timer.milliseconds() < 200);
+        return (timer.milliseconds() < LAUNCH_TURRET_ACTION_DELAY_MILLIS);
     }
 }

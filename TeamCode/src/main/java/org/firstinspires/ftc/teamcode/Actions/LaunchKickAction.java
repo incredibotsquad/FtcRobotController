@@ -12,33 +12,44 @@ import org.firstinspires.ftc.teamcode.common.RobotHardware;
 @Config
 public class LaunchKickAction implements Action {
     private RobotHardware robotHardware;
-    private boolean kick;
-    private boolean initialized = false;
+    private boolean kicked = false;
+    private boolean reset = false;
     public static double LAUNCH_KICK_RESTING = 0.95;
     public static double LAUNCH_KICK_KICKING = 0.7;
-    private ElapsedTime timer;
+    public static double LAUNCH_KICK_DELAY_MILLIS = 500;
+    public static double LAUNCH_KICK_RESET_DELAY_MILLIS = 250;
 
-    public LaunchKickAction(RobotHardware robotHardware, boolean kick) {
+
+    private ElapsedTime kickTimer;
+    private ElapsedTime resetTimer;
+
+    public LaunchKickAction(RobotHardware robotHardware) {
         this.robotHardware = robotHardware;
-        this.kick = kick;
-        this.initialized = false;
+        this.kicked = false;
+        this.reset = false;
     }
 
     @Override
     public boolean run (@NonNull TelemetryPacket packet) {
-        if (!initialized) {
-            timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+        if (!kicked) {
+            kickTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
-            if (kick) {
-                robotHardware.setLaunchKickPosition(LAUNCH_KICK_KICKING);
-            }
-            else {
-                robotHardware.setLaunchKickPosition(LAUNCH_KICK_RESTING);
-            }
+            robotHardware.setLaunchKickPosition(LAUNCH_KICK_KICKING);
 
-            initialized = true;
+            kicked = true;
+            return true;
+        }
+        else if (!reset && kickTimer.milliseconds() > LAUNCH_KICK_DELAY_MILLIS) {
+            resetTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+            robotHardware.setLaunchKickPosition(LAUNCH_KICK_RESTING);
+
+            reset = true;
+        }
+        else {
+            return true;
         }
 
-        return (timer.milliseconds() < 200);    //tell RR to wait 200 ms for kick
+        return (resetTimer.milliseconds() < LAUNCH_KICK_RESET_DELAY_MILLIS);
+
     }
 }

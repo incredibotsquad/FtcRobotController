@@ -38,17 +38,13 @@ public class IntakeSystem {
         isOn = true;
         return new ParallelAction(
                 new IntakeWheelsAction(robotHardware, true),
-                spindex.moveToNextEmptySlotAction(),
-                lightSystem.getIntakeOnLightAction()
+                spindex.moveToNextEmptySlotAction()
         );
     }
 
     public Action getTurnOffAction() {
         isOn = false;
-        return new ParallelAction(
-                new IntakeWheelsAction(robotHardware, false),
-                lightSystem.getIntakeOffLightAction()
-        );
+        return new IntakeWheelsAction(robotHardware, false);
     }
 
     public Action getReverseIntakeAction() {
@@ -82,25 +78,6 @@ public class IntakeSystem {
 
             return spindex.moveToNextEmptySlotAction();
          }
-
-        return new NullAction();
-    }
-
-    public Action checkForBallIntakeAndGetAction_Auto() {
-
-        //check color sensors and if there is a ball there, there are things to do
-        //else null action
-        GameColors detectedColor = robotHardware.getDetectedBallColor();
-
-        Log.i("INTAKE SYSTEM: ", "checkForBallIntakeAndGetAction: Detected Color: " + detectedColor);
-
-        if (isOn && detectedColor != GameColors.NONE) {
-            spindex.storeCurrentBall(detectedColor);
-
-            Log.i("INTAKE SYSTEM: ", "checkForBallIntakeAndGetAction: BALL INDEXED AND MOVED TO NEXT EMPTY SLOT");
-
-            return spindex.moveToNextEmptySlotAction();
-        }
 
         return new NullAction();
     }

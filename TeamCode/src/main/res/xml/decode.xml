@@ -5,10 +5,11 @@
             <goBILDA5202SeriesMotor name="FLMotor" port="0" />
             <goBILDA5202SeriesMotor name="BLMotor" port="1" />
 
-            <Servo name="LaunchGateServo" port="0" />
-            <Servo name="SpindexServo" port="1" />
-            <Servo name="KickServo" port="2" />
-            <Servo name="IntakeLightServo" port="3" />
+            <Servo name="LaunchTurretServo" port="0" />
+            <Servo name="LaunchVisorServo" port="1" />
+            <Servo name="LaunchKickServo" port="2" />
+            <Servo name="SpindexServo" port="3" />
+            <Servo name="Lights" port="4" />
 
         </LynxModule>
         <LynxModule name="Control Hub" port="173">
@@ -19,8 +20,7 @@
             <goBILDA5202SeriesMotor name="FRMotor" port="2" />
             <goBILDA5202SeriesMotor name="BRMotor" port="3" />
 
-            <RevColorSensorV3 name="IntakeColorSensor1" port="1" bus="1" />
-            <RevColorSensorV3 name="IntakeColorSensor2" port="2" bus="2" />
+            <RevColorSensorV3 name="IntakeColorSensor" port="1" bus="1" />
         </LynxModule>
     </LynxUsbDevice>
     <EthernetDevice name="limelight" serialNumber="EthernetOverUsb:eth0:172.29.0.21" port="-1" ipAddress="172.29.0.1" />
