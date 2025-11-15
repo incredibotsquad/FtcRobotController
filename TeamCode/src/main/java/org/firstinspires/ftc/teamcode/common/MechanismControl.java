@@ -57,7 +57,7 @@ public class MechanismControl {
         this.robotHardware = robotHardware;
         this.spindex = new Spindex(robotHardware);
         this.lightSystem = new LightSystem(robotHardware);
-        this.intakeSystem = new IntakeSystem(robotHardware, this.spindex, lightSystem);
+        this.intakeSystem = new IntakeSystem(robotHardware, this.spindex);
         this.launchSystem = new LaunchSystem(robotHardware, this.spindex, lightSystem);
 
         currentRobotState = ROBOT_STATE.NONE;
@@ -176,12 +176,11 @@ public class MechanismControl {
                     Log.i("== MECHANISM CONTROL ==", "PROCESSING STATE: INTAKE");
 
                     //get the list of actions and put it in running actions
-                    runningActions.add(new SequentialAction(
-                            new ParallelAction(
+                    runningActions.add(
+                            new SequentialAction(
                                     launchSystem.getKeepWarmAction(),
-                                    intakeSystem.getTurnOnAction()),
-                            new SleepAction(0.5), //time to let the spindex go to the right position
-                            intakeSystem.checkForBallIntakeAndGetAction()));
+                                    intakeSystem.getTurnOnAction(),
+                                    intakeSystem.checkForBallIntakeAndGetAction()));
                     break;
 
                 case REVERSE_INTAKE:

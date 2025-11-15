@@ -19,14 +19,12 @@ public class IntakeSystem {
     public static double INTAKE_THROTTLE_TIME_MS = 500;
     private RobotHardware robotHardware;
     private Spindex spindex;
-    private LightSystem lightSystem;
     public boolean isOn;
     private ElapsedTime timeSinceLastIntake;
 
-    public IntakeSystem(RobotHardware robotHardware, Spindex spindex, LightSystem lightSystem) {
+    public IntakeSystem(RobotHardware robotHardware, Spindex spindex) {
         this.robotHardware = robotHardware;
         this.spindex = spindex;
-        this.lightSystem = lightSystem;
         this.isOn = false;
         timeSinceLastIntake = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
     }
@@ -67,17 +65,30 @@ public class IntakeSystem {
 
         //check color sensors and if there is a ball there, there are things to do
         //else null action
-        GameColors detectedColor = robotHardware.getDetectedBallColor();
 
-        Log.i("INTAKE SYSTEM: ", "checkForBallIntakeAndGetAction: Detected Color: " + detectedColor);
+        boolean ballDetected = robotHardware.didBallDetectionBeamBreak();
 
-        if (isOn && detectedColor != GameColors.NONE) {
-            spindex.storeCurrentBall(detectedColor);
+        if (isOn && ballDetected) {
+            spindex.storeCurrentBall(GameColors.UNKNOWN);   //default to unknown - we will update color later
+            Log.i("INTAKE SYSTEM: ", "checkForBallIntakeAndGetAction: Ball Detected: indexed as UNKNOWN ");
+            return new SequentialAction(
+                    spindex.moveToNextEmptySlotAction(),
+                    spindex.updateBallColor()
+            );
+        }
 
-            Log.i("INTAKE SYSTEM: ", "checkForBallIntakeAndGetAction: BALL INDEXED AND MOVED TO NEXT EMPTY SLOT");
 
-            return spindex.moveToNextEmptySlotAction();
-         }
+//        detectedColor = robotHardware.getDetectedBallColor();
+//
+//        Log.i("INTAKE SYSTEM: ", "checkForBallIntakeAndGetAction: Detected Color: " + detectedColor);
+//
+//
+//        if (isOn && detectedColor != GameColors.NONE) {
+//            spindex.storeCurrentBall(detectedColor);
+//
+//            Log.i("INTAKE SYSTEM: ", "checkForBallIntakeAndGetAction: BALL INDEXED AND MOVED TO NEXT EMPTY SLOT");
+//
+//         }
 
         return new NullAction();
     }

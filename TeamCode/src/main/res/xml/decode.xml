@@ -11,6 +11,8 @@
             <Servo name="SpindexServo" port="3" />
             <Servo name="Lights" port="4" />
 
+            <AnalogInput name="SpindexServoEncoder" port="2" />
+
         </LynxModule>
         <LynxModule name="Control Hub" port="173">
             <goBILDAPinpoint name="PinpointOdo" port="0" bus="0"/>

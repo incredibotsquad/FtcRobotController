@@ -17,13 +17,20 @@ public class LaunchFlywheelAction implements Action {
     public static double FLYWHEEL_FULL_TICKS_PER_SEC = 2800; //1900
     public static double FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS = 10;
     private double targetVelocity;
+    private boolean waitForAction;
     private ElapsedTime timer;
 
     public LaunchFlywheelAction(RobotHardware robotHardware, double flywheelVelocityTPS) {
+        this(robotHardware, flywheelVelocityTPS, true);
+    }
+
+    public LaunchFlywheelAction(RobotHardware robotHardware, double flywheelVelocityTPS, boolean waitForAction) {
         this.robotHardware = robotHardware;
         this.initialized = false;
         this.targetVelocity = flywheelVelocityTPS;
+        this.waitForAction = waitForAction;
     }
+
 
     @Override
     public boolean run (@NonNull TelemetryPacket packet) {
@@ -33,6 +40,9 @@ public class LaunchFlywheelAction implements Action {
             timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
             initialized = true;
         }
+
+        if (!waitForAction)
+            return false;
 
         if (targetVelocity > 0) {
             if (timer.milliseconds() < 100) return true; //check no frequent than 100 ms

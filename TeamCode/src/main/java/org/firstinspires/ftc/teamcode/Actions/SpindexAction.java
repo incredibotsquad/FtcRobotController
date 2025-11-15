@@ -16,6 +16,7 @@ public class SpindexAction implements Action {
     private double position;
     private boolean initialized = false;
     private ElapsedTime timer;
+    public static double SPINDEX_POSITION_TOLERANCE = 0.05;
 
     public SpindexAction(RobotHardware robotHardware, double position) {
         this.robotHardware = robotHardware;
@@ -26,15 +27,16 @@ public class SpindexAction implements Action {
     @Override
     public boolean run (@NonNull TelemetryPacket packet) {
         if (!initialized) {
-
             timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
-
             robotHardware.setSpindexPosition(position);
-
             initialized = true;
         }
 
-        return (timer.milliseconds() < 250);    //tell RR to wait 200 ms for spindex position
+        //run this loop every 50 ms.
+        if (timer.milliseconds() < 50) return true;
+        timer.reset();
+
+        return (Math.abs(robotHardware.getSpindexPosition() - position) > SPINDEX_POSITION_TOLERANCE);
 
     }
 }

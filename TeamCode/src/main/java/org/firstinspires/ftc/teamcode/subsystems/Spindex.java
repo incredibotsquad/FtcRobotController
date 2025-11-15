@@ -20,13 +20,18 @@ public class Spindex {
     public static double INTAKE_POS_1 = 0.2;
     public static double INTAKE_POS_2 = 0.575;
     public static double INTAKE_POS_3 = 0.95;
+
+    public static double COLOR_POS_1 = INTAKE_POS_2;
+    public static double COLOR_POS_2 = INTAKE_POS_3;
+    public static double COLOR_POS_3 = INTAKE_POS_1;
+
     public static double LAUNCH_POS_1 = 0;
     public static double LAUNCH_POS_2 = 0.37;
     public static double LAUNCH_POS_3 = 0.74;
     public List<BallEntry> storedColors = List.of(
-            new BallEntry(0, INTAKE_POS_1, LAUNCH_POS_1, GameColors.NONE),
-            new BallEntry(1, INTAKE_POS_2, LAUNCH_POS_2, GameColors.NONE),
-            new BallEntry(2, INTAKE_POS_3, LAUNCH_POS_3, GameColors.NONE));
+            new BallEntry(0, INTAKE_POS_1, COLOR_POS_1, LAUNCH_POS_1, GameColors.NONE),
+            new BallEntry(1, INTAKE_POS_2, COLOR_POS_2, LAUNCH_POS_2, GameColors.NONE),
+            new BallEntry(2, INTAKE_POS_3, COLOR_POS_3, LAUNCH_POS_3, GameColors.NONE));
 
     public int currentIndex;
     private RobotHardware robotHardware;
@@ -99,6 +104,18 @@ public class Spindex {
         return nextPurpleSlotIndex;
     }
 
+    public int getSlotIndexClosestToColorSensor() {
+        double pos = robotHardware.getSpindexPosition();
+
+        for (BallEntry entry: storedColors) {
+            if (Math.abs(pos - entry.colorDetectionPosition) < SpindexAction.SPINDEX_POSITION_TOLERANCE) {
+                return entry.index;
+            }
+        }
+
+        return -1;
+    }
+
     public Action moveToNextEmptySlotAction() {
         int nextIndex = getNextEmptySlotIndex();
         if (nextIndex < 0) return new NullAction();
@@ -156,22 +173,35 @@ public class Spindex {
         storedColors.get(currentIndex).ballColor = GameColors.NONE;
     }
 
+    public Action updateBallColor() {
+        Log.i("SPINDEXER", "UPDATE BALL COLOR");
+        //get the ball with color position as the current spindexer position
+        int indexToUpdate = getSlotIndexClosestToColorSensor();
+
+        //only update if the ball at that location is unknown
+        if (indexToUpdate >= 0 && storedColors.get(indexToUpdate).ballColor == GameColors.UNKNOWN) {
+            return new InstantAction(() -> storedColors.get(indexToUpdate).ballColor = robotHardware.getDetectedBallColor());
+        }
+
+        return new NullAction();
+    }
+
     public Action reIndexBalls() {
         Log.i("SPINDEXER", "REINDEXING");
 
         Action ball1 = new SequentialAction(
                 new SpindexAction(robotHardware, storedColors.get(0).intakePosition),
-                new InstantAction(() -> storedColors.get(0).ballColor = tryToGetDetectedColor())
+                new InstantAction(() -> storedColors.get(0).ballColor = robotHardware.getDetectedBallColor())
         );
 
         Action ball2 = new SequentialAction(
                 new SpindexAction(robotHardware, storedColors.get(1).intakePosition),
-                new InstantAction(() -> storedColors.get(1).ballColor = tryToGetDetectedColor())
+                new InstantAction(() -> storedColors.get(1).ballColor = robotHardware.getDetectedBallColor())
         );
 
         Action ball3 = new SequentialAction(
                 new SpindexAction(robotHardware, storedColors.get(2).intakePosition),
-                new InstantAction(() -> storedColors.get(2).ballColor = tryToGetDetectedColor())
+                new InstantAction(() -> storedColors.get(2).ballColor = robotHardware.getDetectedBallColor())
         );
 
         return new SequentialAction(
@@ -179,18 +209,5 @@ public class Spindex {
                 ball2,
                 ball3
         );
-    }
-
-    private GameColors tryToGetDetectedColor() {
-        GameColors detectedColor = GameColors.NONE;
-        ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
-        do {
-            detectedColor = robotHardware.getDetectedBallColor();
-
-        } while (detectedColor == GameColors.NONE && timer.milliseconds() < 300);
-
-        Log.i("SPINDEXER", "REINDEX COLOR DETECTED:" + detectedColor);
-
-        return detectedColor;
     }
 }

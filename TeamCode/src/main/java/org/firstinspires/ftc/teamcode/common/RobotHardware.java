@@ -4,22 +4,24 @@ import android.util.Log;
 
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
+import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.ColorRangeSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.NormalizedRGBA;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.GoBildaPinpointDriver;
 
 public class RobotHardware {
 
-    public static double COLOR_SENSOR_DISTANCE_THRESHOLD_IN_MM = 60;
+    public static double COLOR_DETECTION_RETRY_DURATION_MILLIS = 200;
 
     public HardwareMap hardwareMap;
     IMU imu;
@@ -33,10 +35,13 @@ public class RobotHardware {
     private Servo launchVisorServo;
     private Servo launchKickServo;
     private Servo spindexServo;
+    private AnalogInput spindexServoEncoder;
     private Servo indicatorLight;
 
     private ColorRangeSensor colorSensor;
     private Limelight3A limelight;
+    private DigitalChannel ballIntakeSensor;
+
 
     private GoBildaPinpointDriver odo; // Declare OpMode member for the Odometry Computer
 
@@ -80,10 +85,16 @@ public class RobotHardware {
         launchVisorServo = hardwareMap.get(Servo.class, "LaunchVisorServo");
         launchKickServo = hardwareMap.get(Servo.class, "LaunchKickServo");
         spindexServo = hardwareMap.get(Servo.class, "SpindexServo");
+        spindexServoEncoder = hardwareMap.get(AnalogInput.class, "SpindexEncoder");
         indicatorLight = hardwareMap.get(Servo.class, "Lights");
 
         //color sensors
         colorSensor = hardwareMap.get(ColorRangeSensor.class, "IntakeColorSensor");
+
+        //laser sensor
+        ballIntakeSensor = hardwareMap.get(DigitalChannel.class, "BallIntakeSensor");;
+        ballIntakeSensor.setMode(DigitalChannel.Mode.INPUT);
+
 
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         limelight.setPollRateHz(100); // This sets how often we ask Limelight for data (100 times per second)
@@ -182,7 +193,12 @@ public class RobotHardware {
 
     public double getSpindexPosition() {
 //        Log.i("=== ROBOTHARDWARE  ===", " getSpindexPosition: ");
-        return spindexServo.getPosition();
+
+        double voltage = spindexServoEncoder.getVoltage();
+        double position = 1 - (voltage / 3.3);  //position via encoder seems to be flipped
+
+        Log.i("=== ROBOTHARDWARE  ===", " getSpindexPosition: " + position);
+        return position;
     }
 
     public void setSpindexPosition(double position) {
@@ -190,21 +206,31 @@ public class RobotHardware {
         spindexServo.setPosition(position);
     }
 
+    public boolean didBallDetectionBeamBreak() {
+        // Read the sensor state (true = HIGH, false = LOW)
+        // HIGH means an object is detected
+        boolean detected = ballIntakeSensor.getState();
+//        Log.i("=== ROBOTHARDWARE  ===", " isBallPresentInIntake: " + detected);
+        return detected;
+    }
+
     public GameColors getDetectedBallColor() {
-        NormalizedRGBA sensor1Colors = colorSensor.getNormalizedColors();
+        GameColors detectedColor = GameColors.UNKNOWN;
+        ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
-        double sensor1Distance = colorSensor.getDistance(DistanceUnit.MM);
-        if ((sensor1Distance < COLOR_SENSOR_DISTANCE_THRESHOLD_IN_MM)) {
+        do {
+            NormalizedRGBA sensor1Colors = colorSensor.getNormalizedColors();
 
-//            Log.i("Robot Hardware", "Color Sensor Distance Breached");
 //            Log.i("Robot Hardware", "Color Sensor 1 R: " + sensor1Colors.red);
 //            Log.i("Robot Hardware", "Color Sensor 1 G: " + sensor1Colors.green);
 //            Log.i("Robot Hardware", "Color Sensor 1 B: " + sensor1Colors.blue);
 
-            return ColorClassifier.classify(sensor1Colors.red, sensor1Colors.green, sensor1Colors.blue);
-        }
+            detectedColor = ColorClassifier.classify(sensor1Colors.red, sensor1Colors.green, sensor1Colors.blue);
 
-        return GameColors.NONE;
+        } while (detectedColor == GameColors.UNKNOWN && timer.milliseconds() < COLOR_DETECTION_RETRY_DURATION_MILLIS);
+
+        Log.i("=== ROBOTHARDWARE  ===", " getDetectedBallColor: " + detectedColor);
+        return detectedColor;
     }
 
     public void setLightColor(double color) {

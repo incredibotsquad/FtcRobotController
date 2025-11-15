@@ -19,7 +19,6 @@ import java.util.stream.Collectors;
 @Config
 public class LimelightAprilTagHelper  {
 
-
     public static double BASE_YAW_TOLERANCE = 5.0; // Base tolerance in degrees
     public static double TARGET_AREA_INCHES = 16.0; // 8 inches on either side of center
     public static double MIN_TOLERANCE = 2.0; // Minimum tolerance at far distances

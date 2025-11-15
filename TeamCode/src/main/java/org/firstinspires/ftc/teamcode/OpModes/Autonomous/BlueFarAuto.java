@@ -47,7 +47,7 @@ public class BlueFarAuto extends LinearOpMode {
         this.spindex = new Spindex(robotHardware);
         this.spindex.initializeWithPPG();
         this.lightSystem = new LightSystem(robotHardware);
-        this.intakeSystem = new IntakeSystem(robotHardware, this.spindex, lightSystem);
+        this.intakeSystem = new IntakeSystem(robotHardware, this.spindex);
         this.launchSystem = new LaunchSystem(robotHardware, this.spindex, lightSystem);
         this.launchSystem.setAllianceColor(AllianceColors.BLUE);
 

@@ -53,7 +53,7 @@ public class LaunchSystem {
 
     public Action getKeepWarmAction() {
         Log.i("== LAUNCH SYSTEM ==", "Keep warm");
-        return new LaunchFlywheelAction(robotHardware, LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_WARM_UP);
+        return new LaunchFlywheelAction(robotHardware, LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_WARM_UP, false);
     }
 
     public Action getTurnOffAction() {

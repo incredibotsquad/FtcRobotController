@@ -74,7 +74,7 @@ public class ColorClassifier {
 
         // 1) Sure WHITE first (spandex-safe). Early return if accepted.
         double wScore = whiteScore(r,g,b);
-        if (wScore >= WHITE_ACCEPT_SCORE) return new Result(GameColors.NONE, clamp01(wScore));
+        if (wScore >= WHITE_ACCEPT_SCORE) return new Result(GameColors.UNKNOWN, clamp01(wScore));
 
         // 2) HSV + dominance
         HSV hsv = rgbToHsv(r, g, b);
