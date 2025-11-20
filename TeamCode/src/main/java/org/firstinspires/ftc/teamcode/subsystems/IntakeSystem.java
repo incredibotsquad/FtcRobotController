@@ -17,6 +17,7 @@ import org.firstinspires.ftc.teamcode.common.RobotHardware;
 @Config
 public class IntakeSystem {
     public static double INTAKE_THROTTLE_TIME_MS = 500;
+    public static double INTAKE_DELAY_TO_LET_BALL_SETTLE_SECS = 0.5;
     private RobotHardware robotHardware;
     private Spindex spindex;
     public boolean isOn;
@@ -72,6 +73,7 @@ public class IntakeSystem {
             spindex.storeCurrentBall(GameColors.UNKNOWN);   //default to unknown - we will update color later
             Log.i("INTAKE SYSTEM: ", "checkForBallIntakeAndGetAction: Ball Detected: indexed as UNKNOWN ");
             return new SequentialAction(
+                    new SleepAction(INTAKE_DELAY_TO_LET_BALL_SETTLE_SECS),   //wait for the ball to stabilize
                     spindex.moveToNextEmptySlotAction(),
                     spindex.updateBallColor()
             );

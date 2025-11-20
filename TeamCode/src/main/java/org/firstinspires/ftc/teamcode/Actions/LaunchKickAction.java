@@ -14,10 +14,10 @@ public class LaunchKickAction implements Action {
     private RobotHardware robotHardware;
     private boolean kicked = false;
     private boolean reset = false;
-    public static double LAUNCH_KICK_RESTING = 0.95;
-    public static double LAUNCH_KICK_KICKING = 0.7;
-    public static double LAUNCH_KICK_DELAY_MILLIS = 500;
-    public static double LAUNCH_KICK_RESET_DELAY_MILLIS = 250;
+    public static double LAUNCH_KICK_RESTING = 0;
+    public static double LAUNCH_KICK_KICKING = 0.32;
+    public static double LAUNCH_KICK_DELAY_MILLIS = 450;
+    public static double LAUNCH_KICK_RESET_DELAY_MILLIS = 450;
 
 
     private ElapsedTime kickTimer;

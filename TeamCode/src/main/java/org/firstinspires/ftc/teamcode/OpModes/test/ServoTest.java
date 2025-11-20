@@ -8,9 +8,9 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 //@Disabled
-@Disabled
+
 @Config
-@TeleOp(name="ServoTest", group="Linear OpMode")
+@TeleOp(name="ServoTest", group="Tests")
 public class ServoTest extends LinearOpMode {
 
     // Declare OpMode members.
@@ -18,15 +18,15 @@ public class ServoTest extends LinearOpMode {
     public static double servo1Position = 0.5;
 
     public static boolean enableServo2 = false;
-    public static String servo2Name = "LaunchGateServo";
+    public static String servo2Name = "LaunchKickServo";
     public static double servo2Position = 0.5;
 
     public static boolean enableServo3 = false;
-    public static String servo3Name = "KickServo";
+    public static String servo3Name = "LaunchTurretServo";
     public static double servo3Position = 0.5;
 
     public static boolean enableServo4 = false;
-    public static String servo4Name = "VisorServo";
+    public static String servo4Name = "LaunchVisorServo";
     public static double servo4Position = 0.5;
 
 
@@ -105,6 +105,13 @@ public class ServoTest extends LinearOpMode {
 //            sleep(1500);
 //            Servo1.setPosition(0);
 //            sleep(1500);
+//            Servo1.setPosition(1);
+//            sleep(1500);
+//            Servo1.setPosition(0);
+//            sleep(1500);
+//            Servo1.setPosition(1);
+//            sleep(1500);
+//            Servo1.setPosition(0);
         }
     }
 }

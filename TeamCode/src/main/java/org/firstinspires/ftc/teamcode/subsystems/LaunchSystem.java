@@ -16,6 +16,7 @@ import org.firstinspires.ftc.teamcode.common.BallEntry;
 import org.firstinspires.ftc.teamcode.common.GameColors;
 import org.firstinspires.ftc.teamcode.common.GamePattern;
 import org.firstinspires.ftc.teamcode.common.LaunchYawDistanceTolerance;
+import org.firstinspires.ftc.teamcode.common.LimelightAprilTagHelper;
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
 
 import java.util.List;
@@ -27,19 +28,23 @@ public class LaunchSystem {
     private RobotHardware robotHardware;
     private  Spindex spindex;
 
-    private LightSystem lightSystem;
     private LimelightAprilTagHelper limelightAprilTagHelper;
     private AllianceColors allianceColor;
 
-    public static double FLYWHEEL_POWER_COEFFICIENT_WARM_UP = 0.35;
+    public static double FLYWHEEL_POWER_COEFFICIENT_WARM_UP = 1;
     public static double FLYWHEEL_POWER_COEFFICIENT_CLOSE = 0.37;
     public static double FLYWHEEL_POWER_COEFFICIENT_MID = 0.42;
     public static double FLYWHEEL_POWER_COEFFICIENT_FAR = 0.55;
+    public static double TURRET_SERVO_MIN_POS = 0;
+    public static double TURRET_SERVO_CENTERED = 0.5;
+    public static double TURRET_SERVO_MAX_POS = 1;
+    public static double TURRET_SERVO_ADJUSTMENT_DELTA = 0.01;
+    public static double ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT = 0.277;    //RED
+    public static double ROBOT_ALIGNED_TO_SHOOT_LIGHT = 0.5;    //GREEN
 
-    public LaunchSystem(RobotHardware robotHardware, Spindex spindex, LightSystem lightSystem) {
+    public LaunchSystem(RobotHardware robotHardware, Spindex spindex) {
         this.robotHardware = robotHardware;
         this.spindex = spindex;
-        this.lightSystem = lightSystem;
         this.limelightAprilTagHelper = new LimelightAprilTagHelper(robotHardware);
     }
 
@@ -347,5 +352,51 @@ public class LaunchSystem {
         }
 
         return LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * coefficient;
+    }
+
+    public void AlignTurretToGoal() {
+        //get the yaw from the april tag helper
+        LaunchYawDistanceTolerance ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
+
+        if (ydt != null) {
+        // A positive bearing means the tag is to the right of the camera's center.
+        double servoDelta = ydt.yaw * TURRET_SERVO_ADJUSTMENT_DELTA;
+
+        // Calculate the new potential servo position and constrain it
+        double newServoPosition = robotHardware.getLaunchTurretPosition() + servoDelta;
+        newServoPosition = Math.max(TURRET_SERVO_MIN_POS, Math.min(TURRET_SERVO_MAX_POS, newServoPosition));
+
+        // move the servo to account for the yaw.
+        // Move the servo if the error is outside the tolerance
+        if (Math.abs(ydt.yaw) > ydt.tolerance) {
+
+            //clear out the alignment light
+
+
+            //the cycle might be so fast that the servo is still turning
+            //since we are not using an encoder on the turret, the get position will return
+            //the last position that the servo was told to go to. So if the calculation is the same,
+            //no need to call the command on the servo again - this should prevent jitter.
+            if (robotHardware.getLaunchTurretPosition() == newServoPosition)
+                return;
+
+            robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
+            robotHardware.setLaunchTurretPosition(newServoPosition);
+
+            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: Adjusting... New Position: %.2f" + newServoPosition);
+        } else {
+
+            robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
+            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: Turret Aligned!");
+
+        }
+    } else {
+
+            //No tag found - center the turret
+            robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
+            robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
+
+            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: no tag found");
+        }
     }
 }

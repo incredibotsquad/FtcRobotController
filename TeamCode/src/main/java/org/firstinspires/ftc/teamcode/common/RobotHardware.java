@@ -11,7 +11,6 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.NormalizedRGBA;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -24,7 +23,6 @@ public class RobotHardware {
     public static double COLOR_DETECTION_RETRY_DURATION_MILLIS = 200;
 
     public HardwareMap hardwareMap;
-    IMU imu;
     private DcMotorEx frontRightDriveMotor;
     private DcMotorEx frontLeftDriveMotor;
     private DcMotorEx backRightDriveMotor;
@@ -33,10 +31,12 @@ public class RobotHardware {
     private DcMotorEx flywheelMotor;
     private Servo launchTurretServo;
     private Servo launchVisorServo;
+    private AnalogInput visorServoEncoder;
     private Servo launchKickServo;
     private Servo spindexServo;
     private AnalogInput spindexServoEncoder;
-    private Servo indicatorLight;
+    private Servo alignmentIndicatorLight;
+    private Servo colorSensorLight;
 
     private ColorRangeSensor colorSensor;
     private Limelight3A limelight;
@@ -75,18 +75,23 @@ public class RobotHardware {
         intakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         //flywheel motor
-        flywheelMotor = hardwareMap.get(DcMotorEx.class, "LaunchMotor");
+        flywheelMotor = hardwareMap.get(DcMotorEx.class, "LauncherMotor");
         flywheelMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         flywheelMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        flywheelMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
         //servos
         launchTurretServo = hardwareMap.get(Servo.class, "LaunchTurretServo");
-        launchVisorServo = hardwareMap.get(Servo.class, "LaunchVisorServo");
         launchKickServo = hardwareMap.get(Servo.class, "LaunchKickServo");
+
+        launchVisorServo = hardwareMap.get(Servo.class, "LaunchVisorServo");
+        visorServoEncoder = hardwareMap.get(AnalogInput.class, "VisorServoEncoder");
+
         spindexServo = hardwareMap.get(Servo.class, "SpindexServo");
-        spindexServoEncoder = hardwareMap.get(AnalogInput.class, "SpindexEncoder");
-        indicatorLight = hardwareMap.get(Servo.class, "Lights");
+        spindexServoEncoder = hardwareMap.get(AnalogInput.class, "SpindexServoEncoder");
+
+        alignmentIndicatorLight = hardwareMap.get(Servo.class, "AlignmentIndicatorLight");
+        colorSensorLight = hardwareMap.get(Servo.class, "ColorSensorLight");
+        colorSensorLight.setPosition(0.5);    //turn on for color sensing
 
         //color sensors
         colorSensor = hardwareMap.get(ColorRangeSensor.class, "IntakeColorSensor");
@@ -94,7 +99,6 @@ public class RobotHardware {
         //laser sensor
         ballIntakeSensor = hardwareMap.get(DigitalChannel.class, "BallIntakeSensor");;
         ballIntakeSensor.setMode(DigitalChannel.Mode.INPUT);
-
 
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         limelight.setPollRateHz(100); // This sets how often we ask Limelight for data (100 times per second)
@@ -176,9 +180,24 @@ public class RobotHardware {
         flywheelMotor.setVelocity(velocity);
     }
 
+    public double getLaunchTurretPosition() {
+        double position = launchTurretServo.getPosition();
+//        Log.i("=== ROBOTHARDWARE  ===", " getLaunchTurretServoPosition: " + position);
+        return position;
+    }
     public void setLaunchTurretPosition(double position) {
 //        Log.i("=== ROBOTHARDWARE  ===", " setLaunchTurretServoPosition: " + position);
         launchTurretServo.setPosition(position);
+    }
+
+    public double getLaunchVisorPosition() {
+//        Log.i("=== ROBOTHARDWARE  ===", " getLaunchVisorPosition: ");
+
+        double voltage = visorServoEncoder.getVoltage();
+        double position = 1 - (voltage / 3.3);  //position via encoder seems to be flipped
+
+        Log.i("=== ROBOTHARDWARE  ===", " getLaunchVisorPosition: " + position);
+        return position;
     }
 
     public void setLaunchVisorPosition(double position) {
@@ -233,7 +252,11 @@ public class RobotHardware {
         return detectedColor;
     }
 
-    public void setLightColor(double color) {
-        indicatorLight.setPosition(color);
+    public void setAlignmentLightColor(double color) {
+        alignmentIndicatorLight.setPosition(color);
+    }
+
+    public void setColorSensorLightColor(double color) {
+        colorSensorLight.setPosition(color);
     }
 }

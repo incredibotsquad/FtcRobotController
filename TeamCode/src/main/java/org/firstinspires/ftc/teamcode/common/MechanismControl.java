@@ -5,12 +5,10 @@ import android.util.Log;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SequentialAction;
-import com.acmerobotics.roadrunner.SleepAction;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.acmerobotics.dashboard.FtcDashboard;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSystem;
-import org.firstinspires.ftc.teamcode.subsystems.LightSystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSystem;
 import org.firstinspires.ftc.teamcode.subsystems.Spindex;
 
@@ -24,8 +22,6 @@ public class MechanismControl {
     private Spindex spindex;
     private IntakeSystem intakeSystem;
     private LaunchSystem launchSystem;
-
-    private LightSystem lightSystem;
 
     private List<Action> runningActions;
     private FtcDashboard dashboard;
@@ -56,9 +52,8 @@ public class MechanismControl {
         this.telemetry = telemetry;
         this.robotHardware = robotHardware;
         this.spindex = new Spindex(robotHardware);
-        this.lightSystem = new LightSystem(robotHardware);
         this.intakeSystem = new IntakeSystem(robotHardware, this.spindex);
-        this.launchSystem = new LaunchSystem(robotHardware, this.spindex, lightSystem);
+        this.launchSystem = new LaunchSystem(robotHardware, this.spindex);
 
         currentRobotState = ROBOT_STATE.NONE;
         targetRobotState = ROBOT_STATE.NONE;
@@ -85,6 +80,9 @@ public class MechanismControl {
         CheckForBallsToIntake();
 
         ProcessDPad();
+
+        //process the yaw and rotate the turret always
+        launchSystem.AlignTurretToGoal();
 
 //        lightSignalForRobotAlignmentWhenLaunching();
     }
@@ -358,4 +356,5 @@ public class MechanismControl {
             runningActions.add(spindex.reIndexBalls());
         }
     }
+
 }

@@ -2,27 +2,37 @@
 <Robot type="FirstInspires-FTC">
     <LynxUsbDevice name="Control Hub Portal" serialNumber="(embedded)" parentModuleAddress="173">
         <LynxModule name="Expansion Hub 2" port="2">
-            <goBILDA5202SeriesMotor name="FLMotor" port="0" />
-            <goBILDA5202SeriesMotor name="BLMotor" port="1" />
+            <goBILDA5202SeriesMotor name="FRMotor" port="0" />
+            <goBILDA5202SeriesMotor name="BRMotor" port="1" />
+            <goBILDA5202SeriesMotor name="RightLiftMotor" port="2" />
+            <goBILDA5202SeriesMotor name="BLMotor" port="3" />
 
-            <Servo name="LaunchTurretServo" port="0" />
-            <Servo name="LaunchVisorServo" port="1" />
-            <Servo name="LaunchKickServo" port="2" />
-            <Servo name="SpindexServo" port="3" />
-            <Servo name="Lights" port="4" />
 
-            <AnalogInput name="SpindexServoEncoder" port="2" />
+            <Servo name="LaunchKickServo" port="1" />
+            <Servo name="LaunchTurretServo" port="2" />
+            <Servo name="ColorSensorLight" port="3" />
+
+
+            <goBILDAPinpoint name="PinpointOdo" port="0" bus="0"/>
+            <RevColorSensorV3 name="IntakeColorSensor" port="1" bus="1" />
+
+            <DigitalDevice name="BallIntakeSensor" port="0" />
 
         </LynxModule>
         <LynxModule name="Control Hub" port="173">
-            <goBILDAPinpoint name="PinpointOdo" port="0" bus="0"/>
+            <goBILDA5202SeriesMotor name="FLMotor" port="0" />
+            <goBILDA5202SeriesMotor name="LauncherMotor" port="1" />
+            <goBILDA5202SeriesMotor name="IntakeMotor" port="2" />
+            <goBILDA5202SeriesMotor name="LeftLiftMotor" port="3" />
 
-            <goBILDA5202SeriesMotor name="LaunchMotor" port="0" />
-            <goBILDA5202SeriesMotor name="IntakeMotor" port="1" />
-            <goBILDA5202SeriesMotor name="FRMotor" port="2" />
-            <goBILDA5202SeriesMotor name="BRMotor" port="3" />
+            <Servo name="AlignmentIndicatorLight" port="0" />
+            <Servo name="LaunchVisorServo" port="1" />
+            <Servo name="SpindexServo" port="2" />
 
-            <RevColorSensorV3 name="IntakeColorSensor" port="1" bus="1" />
+            <AnalogInput name="VisorServoEncoder" port="0" />
+            <AnalogInput name="SpindexServoEncoder" port="1" />
+
+
         </LynxModule>
     </LynxUsbDevice>
     <EthernetDevice name="limelight" serialNumber="EthernetOverUsb:eth0:172.29.0.21" port="-1" ipAddress="172.29.0.1" />

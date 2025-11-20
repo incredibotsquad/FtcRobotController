@@ -7,6 +7,8 @@ import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.ColorRangeSensor;
+import com.qualcomm.robotcore.hardware.NormalizedRGBA;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
@@ -14,16 +16,17 @@ import org.firstinspires.ftc.teamcode.common.GameColors;
 import org.opencv.core.Scalar;
 
 
-@Disabled
 @Config
-@TeleOp(name="Color Sensor Test", group="Linear OpMode")
+@TeleOp(name="Color Sensor Test", group="Tests")
 public class ColorSensorTest extends LinearOpMode {
+
+    public static double COLOR_SENSOR_LIGHT_INTENSITY =  0.5;
 
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
-    public ColorRangeSensor colorSensor1;
-    public ColorRangeSensor colorSensor2;
+    public ColorRangeSensor colorSensor;
+    private Servo Servo1;
 
     public static double DISTANCE_THRESHOLD_IN_MM = 30;
 
@@ -34,8 +37,9 @@ public class ColorSensorTest extends LinearOpMode {
         // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
-        colorSensor1 = hardwareMap.get(ColorRangeSensor.class, "IntakeColorSensor1");
-        colorSensor2 = hardwareMap.get(ColorRangeSensor.class, "IntakeColorSensor2");
+        colorSensor = hardwareMap.get(ColorRangeSensor.class, "IntakeColorSensor");
+        Servo1 = hardwareMap.get(Servo.class, "ColorSensorLight");
+        Servo1.setPosition(COLOR_SENSOR_LIGHT_INTENSITY);
 
         runtime = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
@@ -54,52 +58,34 @@ public class ColorSensorTest extends LinearOpMode {
             //                    (colorSensor2.getDistance(DistanceUnit.MM) < DISTANCE_THRESHOLD_IN_MM)
 
             GameColors detectedColor = GameColors.NONE;
-            if ((colorSensor1.getDistance(DistanceUnit.MM) < DISTANCE_THRESHOLD_IN_MM) ) {
+//            if ((colorSensor.getDistance(DistanceUnit.MM) < DISTANCE_THRESHOLD_IN_MM) ) {
 
 
 //                Log.i("Color Sensor Test", "Sensor 1 distance in mm: " + colorSensor1.getDistance(DistanceUnit.MM));
 //                Log.i("Color Sensor Test", "Sensor 2 distance in mm: " + colorSensor2.getDistance(DistanceUnit.MM));
 //
-                Log.i("Color Sensor Test", "Sensor 1 R: " + colorSensor1.red() + " G: " + colorSensor1.green() + " B: " + colorSensor1.blue());
-                Log.i("Color Sensor Test", "Sensor 1 NORMALIZED R: " + colorSensor1.getNormalizedColors().red + " G: " +colorSensor1.getNormalizedColors().green + " B: " + colorSensor1.getNormalizedColors().blue);
+//                Log.i("Color Sensor Test", "Sensor 1 R: " + colorSensor.red() + " G: " + colorSensor.green() + " B: " + colorSensor.blue());
+
+            NormalizedRGBA normalizedRGBA = colorSensor.getNormalizedColors();
+
+            Log.i("Color Sensor Test", "Sensor 1 NORMALIZED R: " + normalizedRGBA.red + " G: " + normalizedRGBA.green + " B: " + normalizedRGBA.blue);
 
 //                Log.i("Color Sensor Test", "Sensor 1 Alpha: " + colorSensor1.alpha());
 //
 //
-//                if ((colorSensor1.green() > colorSensor1.blue() && colorSensor1.green() > colorSensor1.red()) &&
-//                        (colorSensor2.green() > colorSensor2.blue() && colorSensor2.green() > colorSensor2.red())) {
-//                    detectedColor = GameColors.GREEN;
-//
-//                }
+                if (normalizedRGBA.green > normalizedRGBA.blue && normalizedRGBA.green > normalizedRGBA.red)  {
+                    detectedColor = GameColors.GREEN;
+                }
 //
 
 //                Log.i("Color Sensor Test", "Sensor 2 Alpha: " + colorSensor2.alpha());
 //
-//                if ((colorSensor1.blue() > colorSensor1.green() && colorSensor1.blue() > colorSensor1.red()) &&
-//                        (colorSensor2.blue() > colorSensor2.green() && colorSensor2.blue() > colorSensor2.red())) {
-//                    detectedColor = GameColors.PURPLE;
+                if (normalizedRGBA.blue > normalizedRGBA.green && normalizedRGBA.blue > normalizedRGBA.red) {
+                    detectedColor = GameColors.PURPLE;
+                }
 //
-//                }
-//
-//                Log.i("Color Sensor Test", "Detected color: " + detectedColor);
-//                Scalar sensor1out = rgbToYCrCb(colorSensor1.getNormalizedColors().red, colorSensor1.getNormalizedColors().green, colorSensor1.getNormalizedColors().blue);
-//                Log.i("Color Sensor Test", "Sensor 1 SCALAR: " + sensor1out.toString());
+                Log.i("Color Sensor Test", "Detected color: " + detectedColor);
 
-
-//                GameColors colorSensor1Classification = classifyGreenOrPurple(colorSensor1.red(), colorSensor1.green(), colorSensor1.blue());
-//                Log.i("Color Sensor Test", "Sensor 1 Classification: " + colorSensor1Classification);
-//
-//
-//
-//                Log.i("Color Sensor Test", "Sensor 2 R: " + colorSensor2.red() + " G: " +colorSensor2.green() + " B: " + colorSensor2.blue());
-//                Log.i("Color Sensor Test", "Sensor 2 NORMALIZED R: " + colorSensor2.getNormalizedColors().red + " G: " + colorSensor2.getNormalizedColors().green + " B: " + colorSensor2.getNormalizedColors().blue);
-//
-//                Scalar sensor2out = rgbToYCrCb(colorSensor2.getNormalizedColors().red, colorSensor2.getNormalizedColors().green, colorSensor2.getNormalizedColors().blue);
-//                Log.i("Color Sensor Test", "Sensor 2 SCALAR: " + sensor2out.toString());
-//
-//                GameColors colorSensor2Classification = classifyGreenOrPurple(colorSensor2.red(), colorSensor2.green(), colorSensor2.blue());
-//                Log.i("Color Sensor Test", "Sensor 2 Classification: " + colorSensor2Classification);
-            }
         }
     }
 
@@ -210,115 +196,4 @@ public class ColorSensorTest extends LinearOpMode {
         }
     }
 
-//    private GameColors classifyGreenOrPurple(double r, double g, double b) {
-//        // Normalize RGB values to 0-1 range for easier calculations
-//        double rNorm = r / 255.0;
-//        double gNorm = g / 255.0;
-//        double bNorm = b / 255.0;
-//
-//        // Convert RGB to HSV for hue-based detection
-//        double max = Math.max(rNorm, Math.max(gNorm, bNorm));
-//        double min = Math.min(rNorm, Math.min(gNorm, bNorm));
-//        double delta = max - min;
-//
-//        // Calculate Hue (in degrees 0-360)
-//        double hue = 0;
-//        if (delta > 0.001) { // Avoid division by zero
-//            if (max == rNorm) {
-//                hue = 60 * (((gNorm - bNorm) / delta) % 6);
-//            } else if (max == gNorm) {
-//                hue = 60 * (((bNorm - rNorm) / delta) + 2);
-//            } else {
-//                hue = 60 * (((rNorm - gNorm) / delta) + 4);
-//            }
-//        }
-//        if (hue < 0) hue += 360;
-//
-//        Log.i("Color Sensor Test", "hue: " + hue);
-//
-//        // Calculate Saturation
-//        double saturation = (max < 0.001) ? 0 : (delta / max);
-//        Log.i("Color Sensor Test", "saturation: " + saturation);
-//
-//        // Calculate Value (brightness)
-//        double value = max;
-//
-//        // Multi-factor classification
-//
-//        // Factor 1: Hue-based detection
-//        // Green: 90-150 degrees, Purple: 270-330 degrees
-//        boolean hueIsGreen = (hue >= 90 && hue <= 150);
-//        boolean hueIsPurple = (hue >= 270 && hue <= 330);
-//
-//        Log.i("Color Sensor Test", "Factor 1: hueIsGreen: " + hueIsGreen);
-//        Log.i("Color Sensor Test", "Factor 1: hueIsPurple: " + hueIsPurple);
-//
-//
-//        // Factor 2: RGB ratio analysis
-//        // For Green: G should dominate, and G/(R+B) should be high
-//        // For Purple: R and B should be similar and higher than G
-//        double greenStrength = gNorm / (rNorm + bNorm + 0.001); // Avoid division by zero
-//        double purpleStrength = (rNorm + bNorm) / (2.0 * gNorm + 0.001);
-//
-//        Log.i("Color Sensor Test", "Factor 2: greenStrength: " + greenStrength);
-//        Log.i("Color Sensor Test", "Factor 2: purpleStrength: " + purpleStrength);
-//
-//
-//        // Factor 3: Channel dominance with thresholds
-//        // Green: G should be significantly higher than both R and B
-//        boolean greenDominant = (g > r + 20) && (g > b + 20);
-//
-//        // Purple: R and B should be close to each other and both higher than G
-//        boolean purpleDominant = (Math.abs(r - b) < 40) && (r > g + 10) && (b > g + 10);
-//
-//        Log.i("Color Sensor Test", "Factor 3: greenDominant: " + greenDominant);
-//        Log.i("Color Sensor Test", "Factor 3: purpleDominant: " + purpleDominant);
-//
-//        // Factor 4: Saturation check (colors should be reasonably saturated)
-//        boolean isSaturated = saturation > 0.2;
-//        Log.i("Color Sensor Test", "Factor 4: isSaturated: " + isSaturated);
-//
-//        // Factor 5: Brightness check (object should be reasonably bright)
-//        boolean isBright = value > 0.15;
-//        Log.i("Color Sensor Test", "Factor 5: isBright: " + isBright);
-//
-//        // Decision logic combining multiple factors
-//        int greenScore = 0;
-//        int purpleScore = 0;
-//
-//        if (hueIsGreen) greenScore += 3;
-//        if (hueIsPurple) purpleScore += 3;
-//
-//        if (greenStrength > 1.2) greenScore += 2;
-//        if (purpleStrength > 1.1) purpleScore += 2;
-//
-//        if (greenDominant) greenScore += 2;
-//        if (purpleDominant) purpleScore += 2;
-//
-//        // Additional checks for edge cases
-//        // If hue is in ambiguous range but RGB ratios are clear
-//        if (!hueIsGreen && !hueIsPurple) {
-//            if (greenStrength > 1.5 && g > 100) greenScore += 1;
-//            if (purpleStrength > 1.3 && r > 80 && b > 80) purpleScore += 1;
-//        }
-//
-//        // Require minimum saturation and brightness
-//        if (!isSaturated || !isBright) {
-//            // If color is too washed out, be more conservative
-//            greenScore = Math.max(0, greenScore - 1);
-//            purpleScore = Math.max(0, purpleScore - 1);
-//        }
-//
-//        Log.i("Color Sensor Test", "greenScore: " + greenScore);
-//        Log.i("Color Sensor Test", "purpleScore: " + purpleScore);
-//
-//        // Final classification with confidence threshold
-//        if ( greenScore > purpleScore) {
-//            return GameColors.GREEN;
-//        } else if (purpleScore > greenScore) {
-//            return GameColors.PURPLE;
-//        } else {
-//            return GameColors.NONE;
-//        }
-//    }
 }

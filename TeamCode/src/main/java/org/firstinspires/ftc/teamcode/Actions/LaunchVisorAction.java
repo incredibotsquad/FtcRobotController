@@ -14,27 +14,31 @@ public class LaunchVisorAction implements Action {
     private RobotHardware robotHardware;
     private double position;
     private boolean initialized = false;
-    public static double LAUNCH_VISOR_RESTING = 0;
-    public static double LAUNCH_VISOR_ACTION_DELAY_MILLIS = 100;
+    public static double LAUNCH_VISOR_RESTING = 0.1;
+    public static double LAUNCH_VISOR_MAX = 0.8;
+
+    public static double VISOR_POSITION_TOLERANCE = 0.02;
 
     private ElapsedTime timer;
 
     public LaunchVisorAction(RobotHardware robotHardware, double position) {
         this.robotHardware = robotHardware;
-        this.position = position;
+        this.position = Math.max(LAUNCH_VISOR_RESTING, Math.min(position, LAUNCH_VISOR_MAX));
         this.initialized = false;
     }
 
     @Override
     public boolean run (@NonNull TelemetryPacket packet) {
         if (!initialized) {
-
             timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
             robotHardware.setLaunchVisorPosition(position);
-
             initialized = true;
         }
 
-        return (timer.milliseconds() < LAUNCH_VISOR_ACTION_DELAY_MILLIS);
+        //run this loop every 50 ms.
+        if (timer.milliseconds() < 50) return true;
+        timer.reset();
+
+        return (Math.abs(robotHardware.getLaunchVisorPosition() - position) > VISOR_POSITION_TOLERANCE);
     }
 }

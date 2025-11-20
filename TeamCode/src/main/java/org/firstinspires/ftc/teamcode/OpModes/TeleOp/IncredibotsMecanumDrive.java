@@ -11,7 +11,7 @@ import org.firstinspires.ftc.teamcode.common.MechanismControl;
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
 
 @Config
-@TeleOp(name="IncredibotsMecanumDrive", group="Linear OpMode")
+@TeleOp(name="IncredibotsMecanumDrive", group="TeleOp")
 public class IncredibotsMecanumDrive extends LinearOpMode {
 
     public static double DRIVETRAIN_POWER_RATIO = 1;

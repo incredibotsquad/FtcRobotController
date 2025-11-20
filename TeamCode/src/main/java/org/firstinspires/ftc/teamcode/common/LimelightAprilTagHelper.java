@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.subsystems;
+package org.firstinspires.ftc.teamcode.common;
 
 import android.util.Log;
 
@@ -7,11 +7,6 @@ import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
-import org.firstinspires.ftc.teamcode.common.AllianceColors;
-import org.firstinspires.ftc.teamcode.common.AprilTagConstants;
-import org.firstinspires.ftc.teamcode.common.GamePattern;
-import org.firstinspires.ftc.teamcode.common.LaunchYawDistanceTolerance;
-import org.firstinspires.ftc.teamcode.common.RobotHardware;
 
 import java.util.List;
 import java.util.stream.Collectors;

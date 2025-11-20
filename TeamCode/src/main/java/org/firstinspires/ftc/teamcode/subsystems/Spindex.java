@@ -17,17 +17,17 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class Spindex {
-    public static double INTAKE_POS_1 = 0.2;
-    public static double INTAKE_POS_2 = 0.575;
-    public static double INTAKE_POS_3 = 0.95;
+    public static double INTAKE_POS_1 = 0.02;
+    public static double INTAKE_POS_2 = 0.39;
+    public static double INTAKE_POS_3 = 0.76;
 
     public static double COLOR_POS_1 = INTAKE_POS_2;
     public static double COLOR_POS_2 = INTAKE_POS_3;
     public static double COLOR_POS_3 = INTAKE_POS_1;
 
-    public static double LAUNCH_POS_1 = 0;
-    public static double LAUNCH_POS_2 = 0.37;
-    public static double LAUNCH_POS_3 = 0.74;
+    public static double LAUNCH_POS_1 = 0.58;
+    public static double LAUNCH_POS_2 = 0.95;
+    public static double LAUNCH_POS_3 = 0.205;
     public List<BallEntry> storedColors = List.of(
             new BallEntry(0, INTAKE_POS_1, COLOR_POS_1, LAUNCH_POS_1, GameColors.NONE),
             new BallEntry(1, INTAKE_POS_2, COLOR_POS_2, LAUNCH_POS_2, GameColors.NONE),

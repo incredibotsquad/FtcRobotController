@@ -16,7 +16,6 @@ import org.firstinspires.ftc.teamcode.common.GamePattern;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSystem;
-import org.firstinspires.ftc.teamcode.subsystems.LightSystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSystem;
 import org.firstinspires.ftc.teamcode.subsystems.Spindex;
 
@@ -27,7 +26,6 @@ public class RedNearAuto extends LinearOpMode {
     private Spindex spindex;
     private IntakeSystem intakeSystem;
     private LaunchSystem launchSystem;
-    private LightSystem lightSystem;
     public MecanumDrive mecanumDrive;
 
     private static final int multiplier = 1;    //used to flip coordinates between red (1), Blue (-1)
@@ -66,9 +64,8 @@ public class RedNearAuto extends LinearOpMode {
 
         this.spindex = new Spindex(robotHardware);
         this.spindex.initializeWithPPG();
-        this.lightSystem = new LightSystem(robotHardware);
         this.intakeSystem = new IntakeSystem(robotHardware, this.spindex);
-        this.launchSystem = new LaunchSystem(robotHardware, this.spindex, lightSystem);
+        this.launchSystem = new LaunchSystem(robotHardware, this.spindex);
 
         mecanumDrive = new MecanumDrive(this.hardwareMap, INIT_POS);
 
