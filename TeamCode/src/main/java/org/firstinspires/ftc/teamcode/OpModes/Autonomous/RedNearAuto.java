@@ -166,7 +166,7 @@ public class RedNearAuto extends LinearOpMode {
             Actions.runBlocking(
                     new ParallelAction(
                             moveForwardToPickLine1,
-                            spindex.reIndexBalls()
+                            intakeSystem.reIndexBalls()
                     )
             );
 

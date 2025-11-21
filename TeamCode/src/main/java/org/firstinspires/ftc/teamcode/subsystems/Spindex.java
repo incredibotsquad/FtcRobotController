@@ -6,7 +6,6 @@ import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.NullAction;
 import com.acmerobotics.roadrunner.SequentialAction;
-import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Actions.SpindexAction;
 import org.firstinspires.ftc.teamcode.common.BallEntry;
@@ -33,9 +32,11 @@ public class Spindex {
             new BallEntry(1, INTAKE_POS_2, COLOR_POS_2, LAUNCH_POS_2, GameColors.NONE),
             new BallEntry(2, INTAKE_POS_3, COLOR_POS_3, LAUNCH_POS_3, GameColors.NONE));
 
+    private int previousIndex;
     public int currentIndex;
     private RobotHardware robotHardware;
     public Spindex(RobotHardware robotHardware){
+        this.previousIndex = -1;
         this.currentIndex = -1; //to ensure the first move happens
         this.robotHardware = robotHardware;
     }
@@ -69,8 +70,20 @@ public class Spindex {
 
         int nextFullSlotIndex = -1;
 
-        if (!list.isEmpty())
-            nextFullSlotIndex = list.get(list.size() - 1).index;
+        if (!list.isEmpty()) {
+            double distance = 1;
+            double currPos = robotHardware.getSpindexPosition();
+
+            //this gets the closest full slot to current position
+            for (BallEntry entry: list) {
+                if (Math.abs(entry.launchPosition - currPos) < distance) {
+                    distance = Math.abs(entry.launchPosition - currPos);
+                    nextFullSlotIndex = entry.index;
+                }
+            }
+
+            //nextFullSlotIndex = list.get(list.size() - 1).index;
+        }
 
 //        Log.i("SPINDEXER", "NEXT FULL SLOT INDEX: " + nextFullSlotIndex);
         return nextFullSlotIndex;
@@ -120,6 +133,7 @@ public class Spindex {
         int nextIndex = getNextEmptySlotIndex();
         if (nextIndex < 0) return new NullAction();
 
+        previousIndex = currentIndex;
         currentIndex = nextIndex;
 
         return new SpindexAction(robotHardware, storedColors.get(currentIndex).intakePosition);
@@ -129,6 +143,7 @@ public class Spindex {
         int nextIndex = getNextFullSlotIndex();
         if (nextIndex < 0 ) return new NullAction();
 
+        previousIndex = currentIndex;
         currentIndex = nextIndex;
 
         return new SpindexAction(robotHardware, storedColors.get(currentIndex).launchPosition);
@@ -138,6 +153,7 @@ public class Spindex {
         int nextIndex = getNextGreenSlotIndex();
         if (nextIndex < 0) return new NullAction();
 
+        previousIndex = currentIndex;
         currentIndex = nextIndex;
         return new SpindexAction(robotHardware, storedColors.get(currentIndex).launchPosition);
     }
@@ -146,6 +162,7 @@ public class Spindex {
         int nextIndex = getNextPurpleSlotIndex();
         if (nextIndex < 0) return new NullAction();
 
+        previousIndex = currentIndex;
         currentIndex = nextIndex;
 
         return new SpindexAction(robotHardware, storedColors.get(currentIndex).launchPosition);
@@ -173,41 +190,26 @@ public class Spindex {
         storedColors.get(currentIndex).ballColor = GameColors.NONE;
     }
 
-    public Action updateBallColor() {
-        Log.i("SPINDEXER", "UPDATE BALL COLOR");
+    public Action updateBallColorForPreviousIndex() {
         //get the ball with color position as the current spindexer position
-        int indexToUpdate = getSlotIndexClosestToColorSensor();
+//        int indexToUpdate = getSlotIndexClosestToColorSensor();
+
+
+//        int indexToUpdate = currentIndex;
+
+        Log.i("SPINDEXER", "updateBallColorForPreviousIndex: indexToUpdate: " + previousIndex);
+        Log.i("SPINDEXER", "updateBallColorForPreviousIndex: storedColor at indexToUpdate: " + storedColors.get(previousIndex).ballColor);
+
 
         //only update if the ball at that location is unknown
-        if (indexToUpdate >= 0 && storedColors.get(indexToUpdate).ballColor == GameColors.UNKNOWN) {
-            return new InstantAction(() -> storedColors.get(indexToUpdate).ballColor = robotHardware.getDetectedBallColor());
+        if (previousIndex >= 0 && storedColors.get(previousIndex).ballColor == GameColors.UNKNOWN) {
+
+            GameColors color = robotHardware.getDetectedBallColor();
+            Log.i("SPINDEXER", "UPDATED BALL COLOR AT INDEX: " + previousIndex + " to color: " + color);
+
+            return new InstantAction(() -> storedColors.get(previousIndex).ballColor = color);
         }
 
         return new NullAction();
-    }
-
-    public Action reIndexBalls() {
-        Log.i("SPINDEXER", "REINDEXING");
-
-        Action ball1 = new SequentialAction(
-                new SpindexAction(robotHardware, storedColors.get(0).intakePosition),
-                new InstantAction(() -> storedColors.get(0).ballColor = robotHardware.getDetectedBallColor())
-        );
-
-        Action ball2 = new SequentialAction(
-                new SpindexAction(robotHardware, storedColors.get(1).intakePosition),
-                new InstantAction(() -> storedColors.get(1).ballColor = robotHardware.getDetectedBallColor())
-        );
-
-        Action ball3 = new SequentialAction(
-                new SpindexAction(robotHardware, storedColors.get(2).intakePosition),
-                new InstantAction(() -> storedColors.get(2).ballColor = robotHardware.getDetectedBallColor())
-        );
-
-        return new SequentialAction(
-                ball1,
-                ball2,
-                ball3
-        );
     }
 }

@@ -79,8 +79,6 @@ public class MechanismControl {
         //this has to be done after translating any state into actions
         CheckForBallsToIntake();
 
-        ProcessDPad();
-
         //process the yaw and rotate the turret always
         launchSystem.AlignTurretToGoal();
 
@@ -156,8 +154,8 @@ public class MechanismControl {
                 && targetRobotState != ROBOT_STATE.INTAKE
                 && currentRobotState != ROBOT_STATE.PARK
                 && targetRobotState != ROBOT_STATE.PARK) {
-            Log.i("== MECHANISM CONTROL ==", "CreateStateAutomatically - setting to INTAKE");
 
+            Log.i("== MECHANISM CONTROL ==", "CreateStateAutomatically - setting to INTAKE");
             targetRobotState = ROBOT_STATE.INTAKE;
         }
     }
@@ -176,7 +174,7 @@ public class MechanismControl {
                     //get the list of actions and put it in running actions
                     runningActions.add(
                             new SequentialAction(
-                                    launchSystem.getKeepWarmAction(),
+//                                    launchSystem.getKeepWarmAction(),
                                     intakeSystem.getTurnOnAction(),
                                     intakeSystem.checkForBallIntakeAndGetAction()));
                     break;
@@ -287,9 +285,11 @@ public class MechanismControl {
                 if (intakeSystem.isOn) {
 //                Log.i("Mechanism Control", "Spindex Full: added moveToNextFullSlotAction");
                     runningActions.add(intakeSystem.getTurnOffAction());
-                    runningActions.add(spindex.moveToNextFullSlotAction());
+                    runningActions.add(new SequentialAction(
+                            intakeSystem.indexAnyUnknowns(),
+                            spindex.moveToNextFullSlotAction()
+                    ));
                 }
-
             }
         }
     }
@@ -340,21 +340,4 @@ public class MechanismControl {
             }
         }
     }
-
-    private void ProcessDPad() {
-        double spindexOffset = 0.05;
-
-        if (gamepad2.dpad_left) {
-            robotHardware.setSpindexPosition(robotHardware.getSpindexPosition() + spindexOffset);
-        }
-
-        if (gamepad2.dpad_right) {
-            robotHardware.setSpindexPosition(robotHardware.getSpindexPosition() - spindexOffset);
-        }
-
-        if (gamepad2.dpad_down) {
-            runningActions.add(spindex.reIndexBalls());
-        }
-    }
-
 }

@@ -4,6 +4,7 @@ import android.util.Log;
 
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.roadrunner.Action;
+import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.NullAction;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SequentialAction;
@@ -11,13 +12,19 @@ import com.acmerobotics.roadrunner.SleepAction;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Actions.IntakeWheelsAction;
+import org.firstinspires.ftc.teamcode.Actions.SpindexAction;
+import org.firstinspires.ftc.teamcode.common.BallEntry;
 import org.firstinspires.ftc.teamcode.common.GameColors;
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Config
 public class IntakeSystem {
-    public static double INTAKE_THROTTLE_TIME_MS = 500;
-    public static double INTAKE_DELAY_TO_LET_BALL_SETTLE_SECS = 0.5;
+    public static double INTAKE_THROTTLE_TIME_MS = 900;
+    public static double INTAKE_DELAY_TO_LET_BALL_SETTLE_SECS = 0;
     private RobotHardware robotHardware;
     private Spindex spindex;
     public boolean isOn;
@@ -63,6 +70,11 @@ public class IntakeSystem {
             return new NullAction();
 
         timeSinceLastIntake.reset();
+//
+//        if (robotHardware.isSpindexMoving) {
+//            Log.i("INTAKE SYSTEM: ", "checkForBallIntakeAndGetAction: SKIPPED SINCE SPINDEX MOVING ");
+//            return new NullAction();
+//        }
 
         //check color sensors and if there is a ball there, there are things to do
         //else null action
@@ -71,27 +83,68 @@ public class IntakeSystem {
 
         if (isOn && ballDetected) {
             spindex.storeCurrentBall(GameColors.UNKNOWN);   //default to unknown - we will update color later
-            Log.i("INTAKE SYSTEM: ", "checkForBallIntakeAndGetAction: Ball Detected: indexed as UNKNOWN ");
+            Log.i("INTAKE SYSTEM", "checkForBallIntakeAndGetAction: Ball Detected: indexed as UNKNOWN ");
             return new SequentialAction(
-                    new SleepAction(INTAKE_DELAY_TO_LET_BALL_SETTLE_SECS),   //wait for the ball to stabilize
                     spindex.moveToNextEmptySlotAction(),
-                    spindex.updateBallColor()
+                    new SleepAction(INTAKE_THROTTLE_TIME_MS/1000),   //wait for the ball to stabilize
+                    spindex.updateBallColorForPreviousIndex()
             );
         }
 
-
-//        detectedColor = robotHardware.getDetectedBallColor();
-//
-//        Log.i("INTAKE SYSTEM: ", "checkForBallIntakeAndGetAction: Detected Color: " + detectedColor);
-//
-//
-//        if (isOn && detectedColor != GameColors.NONE) {
-//            spindex.storeCurrentBall(detectedColor);
-//
-//            Log.i("INTAKE SYSTEM: ", "checkForBallIntakeAndGetAction: BALL INDEXED AND MOVED TO NEXT EMPTY SLOT");
-//
-//         }
-
         return new NullAction();
+    }
+
+    public Action indexAnyUnknowns() {
+        List<Action> actionsToRun = new ArrayList<>();
+
+        //find all the unknown balls
+        List<BallEntry> unknownList = spindex.storedColors.stream()
+                .filter(entry -> entry.ballColor == GameColors.UNKNOWN)
+                .collect(Collectors.toList());
+
+        Log.i("INTAKE SYSTEM", "INDEXING ANY UNKNOWNS. FOUND: " + unknownList.size());
+
+        for (BallEntry entry: unknownList) {
+
+            Log.i("INTAKE SYSTEM", "UNKNOWN FOUND AT: " + entry.index);
+
+            Action ballAction = new SequentialAction(
+                    new SpindexAction(robotHardware, entry.colorDetectionPosition),
+                    new SleepAction(INTAKE_THROTTLE_TIME_MS/1000),   //wait for the ball to stabilize
+                    new InstantAction(() -> spindex.storedColors.get(entry.index).ballColor = robotHardware.getDetectedBallColor())
+            );
+
+            actionsToRun.add(ballAction);
+        }
+
+        return new SequentialAction(actionsToRun);
+    }
+
+    public Action reIndexBalls() {
+        Log.i("INTAKE SYSTEM", "REINDEXING");
+
+        Action ball1 = new SequentialAction(
+                new SpindexAction(robotHardware, spindex.storedColors.get(0).intakePosition),
+                new SleepAction(INTAKE_THROTTLE_TIME_MS/900),   //wait for the ball to stabilize
+                new InstantAction(() -> spindex.storedColors.get(2).ballColor = robotHardware.getDetectedBallColor())
+        );
+
+        Action ball2 = new SequentialAction(
+                new SpindexAction(robotHardware, spindex.storedColors.get(1).intakePosition),
+                new SleepAction(INTAKE_THROTTLE_TIME_MS/900),   //wait for the ball to stabilize
+                new InstantAction(() -> spindex.storedColors.get(0).ballColor = robotHardware.getDetectedBallColor())
+        );
+
+        Action ball3 = new SequentialAction(
+                new SpindexAction(robotHardware, spindex.storedColors.get(2).intakePosition),
+                new SleepAction(INTAKE_THROTTLE_TIME_MS/900),   //wait for the ball to stabilize
+                new InstantAction(() -> spindex.storedColors.get(1).ballColor = robotHardware.getDetectedBallColor())
+        );
+
+        return new SequentialAction(
+                ball1,
+                ball2,
+                ball3
+        );
     }
 }

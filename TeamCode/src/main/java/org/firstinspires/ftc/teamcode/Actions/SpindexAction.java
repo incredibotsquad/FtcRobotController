@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.Actions;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 
 import com.acmerobotics.dashboard.config.Config;
@@ -36,7 +38,11 @@ public class SpindexAction implements Action {
         if (timer.milliseconds() < 50) return true;
         timer.reset();
 
-        return (Math.abs(robotHardware.getSpindexPosition() - position) > SPINDEX_POSITION_TOLERANCE);
+        boolean retVal = (Math.abs(robotHardware.getSpindexPosition() - position) > SPINDEX_POSITION_TOLERANCE);
+
+        robotHardware.isSpindexMoving = retVal;
+
+        return retVal;
 
     }
 }

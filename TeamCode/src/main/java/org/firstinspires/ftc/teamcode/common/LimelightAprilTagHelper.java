@@ -105,7 +105,7 @@ public class LimelightAprilTagHelper  {
                         }
                         else
                         {
-                            Log.i("LimelightAprilTagHelper", allianceColor + " april tag not found");
+                            Log.i("LimelightAprilTagHelper", allianceColor + " april tag NOT found");
                             return null;
                         }
                         break;
@@ -113,14 +113,22 @@ public class LimelightAprilTagHelper  {
 
                 // Get TARGET POSE IN CAMERA SPACE
                 // This is the position of the AprilTag as seen from the camera
-                Pose3D targetPoseInCameraSpace = primaryTarget.getCameraPoseTargetSpace();
+//                Pose3D cameraPoseInTargetSpace = primaryTarget.getCameraPoseTargetSpace();
+
+                Pose3D pose = primaryTarget.getTargetPoseCameraSpace();
 
                 // Get RAW position values (target position relative to camera)
-                double rawX = targetPoseInCameraSpace.getPosition().x;
-                double rawY = targetPoseInCameraSpace.getPosition().y;
-                double rawZ = targetPoseInCameraSpace.getPosition().z;
+                double rawX = pose.getPosition().x;
+                double rawY = pose.getPosition().y;
+                double rawZ = pose.getPosition().z;
 
-                double yaw = targetPoseInCameraSpace.getOrientation().getYaw();
+                double oyaw = pose.getOrientation().getYaw();
+
+                double yaw = Math.toDegrees(Math.atan2(rawY, rawX));
+
+                double xyaw = Math.toDegrees(Math.atan2(rawX, rawY));
+
+                double zyaw = Math.toDegrees(Math.atan2(rawX, rawZ));
 
                 // For TARGET POSE IN CAMERA SPACE, Limelight returns METERS
                 // Convert to inches for our calculations
@@ -138,19 +146,18 @@ public class LimelightAprilTagHelper  {
                 // Calculate dynamic tolerance based on distance
                 double dynamicTolerance = calculateDistanceBasedTolerance(horizontalDistance);
 
-                Log.i("LimelightAprilTagHelper", "YAW: " + yaw);
+                Log.i("LimelightAprilTagHelper", "X YAW: " + xyaw);
+                Log.i("LimelightAprilTagHelper", "Z YAW: " + zyaw);
+                Log.i("LimelightAprilTagHelper", "ORIENTATION YAW: " + oyaw);
+                Log.i("LimelightAprilTagHelper", "YAW YAW: " + yaw);
                 Log.i("LimelightAprilTagHelper", "DISTANCE: " + horizontalDistance);
                 Log.i("LimelightAprilTagHelper", "TOLERANCE: " + dynamicTolerance);
 
-                return new LaunchYawDistanceTolerance(yaw, horizontalDistance, dynamicTolerance);
-                // Use dynamic tolerance for alignment check
-//                if (Math.abs(yaw) < dynamicTolerance) {
-//                    Log.i("LimelightAprilTagHelper", " Shooter Ready");
-//                    return true;
-//                }
+                return new LaunchYawDistanceTolerance(zyaw, horizontalDistance, dynamicTolerance);
+
             }
         }
-        Log.i("LimelightAprilTagHelper", "No April tags found");
+//        Log.i("LimelightAprilTagHelper", "No April tags found");
 
         return null;
     }

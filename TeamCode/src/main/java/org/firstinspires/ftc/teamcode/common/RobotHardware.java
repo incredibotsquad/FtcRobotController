@@ -15,6 +15,7 @@ import com.qualcomm.robotcore.hardware.NormalizedRGBA;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.GoBildaPinpointDriver;
 
@@ -42,6 +43,7 @@ public class RobotHardware {
     private Limelight3A limelight;
     private DigitalChannel ballIntakeSensor;
 
+    public boolean isSpindexMoving;
 
     private GoBildaPinpointDriver odo; // Declare OpMode member for the Odometry Computer
 
@@ -100,8 +102,7 @@ public class RobotHardware {
         ballIntakeSensor = hardwareMap.get(DigitalChannel.class, "BallIntakeSensor");;
         ballIntakeSensor.setMode(DigitalChannel.Mode.INPUT);
 
-        limelight = hardwareMap.get(Limelight3A.class, "limelight");
-        limelight.setPollRateHz(100); // This sets how often we ask Limelight for data (100 times per second)
+        isSpindexMoving = false;
 
 //        odo = hardwareMap.get(GoBildaPinpointDriver.class,"PinpointOdo");
 //        odo.setOffsets(20.0, -241.3, DistanceUnit.MM); //these are tuned for 3110-0002-0001 Product Insight #1
@@ -109,6 +110,9 @@ public class RobotHardware {
 //        odo.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.REVERSED, GoBildaPinpointDriver.EncoderDirection.FORWARD);
 //        odo.resetPosAndIMU();
 
+        limelight = hardwareMap.get(Limelight3A.class, "limelight");
+        limelight.setPollRateHz(100); // This sets how often we ask Limelight for data (100 times per second)
+//        limelight.updateRobotOrientation(0);
     }
 
     public Pose2D getCurrentRobotPose() {
@@ -117,7 +121,7 @@ public class RobotHardware {
     }
 
     public LLResult GetLatestLimelightResults() {
-        Log.i("== ROBOTHARDWARE ==", " GetLatestLimelightResults");
+//        Log.i("== ROBOTHARDWARE ==", " GetLatestLimelightResults");
 
         LLResult result = null;
         if (limelight != null) {
@@ -182,7 +186,7 @@ public class RobotHardware {
 
     public double getLaunchTurretPosition() {
         double position = launchTurretServo.getPosition();
-//        Log.i("=== ROBOTHARDWARE  ===", " getLaunchTurretServoPosition: " + position);
+        Log.i("=== ROBOTHARDWARE  ===", " getLaunchTurretServoPosition: " + position);
         return position;
     }
     public void setLaunchTurretPosition(double position) {
@@ -216,13 +220,14 @@ public class RobotHardware {
         double voltage = spindexServoEncoder.getVoltage();
         double position = 1 - (voltage / 3.3);  //position via encoder seems to be flipped
 
-        Log.i("=== ROBOTHARDWARE  ===", " getSpindexPosition: " + position);
+//        Log.i("=== ROBOTHARDWARE  ===", " getSpindexPosition: " + position);
         return position;
     }
 
     public void setSpindexPosition(double position) {
 //        Log.i("=== ROBOTHARDWARE  ===", " setSpindexPosition: " + position);
         spindexServo.setPosition(position);
+        isSpindexMoving = true;
     }
 
     public boolean didBallDetectionBeamBreak() {
@@ -238,13 +243,17 @@ public class RobotHardware {
         ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
         do {
-            NormalizedRGBA sensor1Colors = colorSensor.getNormalizedColors();
+            NormalizedRGBA normalizedRGBA = colorSensor.getNormalizedColors();
 
-//            Log.i("Robot Hardware", "Color Sensor 1 R: " + sensor1Colors.red);
-//            Log.i("Robot Hardware", "Color Sensor 1 G: " + sensor1Colors.green);
-//            Log.i("Robot Hardware", "Color Sensor 1 B: " + sensor1Colors.blue);
+//            Log.i("=== ROBOTHARDWARE  ===", "COLOR SENSOR NORMALIZED R: " + normalizedRGBA.red + " G: " + normalizedRGBA.green + " B: " + normalizedRGBA.blue);
 
-            detectedColor = ColorClassifier.classify(sensor1Colors.red, sensor1Colors.green, sensor1Colors.blue);
+            if (normalizedRGBA.green > normalizedRGBA.blue && normalizedRGBA.green > normalizedRGBA.red)  {
+                detectedColor = GameColors.GREEN;
+            }
+
+            if (normalizedRGBA.blue > normalizedRGBA.green && normalizedRGBA.blue > normalizedRGBA.red) {
+                detectedColor = GameColors.PURPLE;
+            }
 
         } while (detectedColor == GameColors.UNKNOWN && timer.milliseconds() < COLOR_DETECTION_RETRY_DURATION_MILLIS);
 
