@@ -15,7 +15,6 @@ import com.qualcomm.robotcore.hardware.NormalizedRGBA;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.GoBildaPinpointDriver;
 
@@ -43,7 +42,7 @@ public class RobotHardware {
     private Limelight3A limelight;
     private DigitalChannel ballIntakeSensor;
 
-    public boolean isSpindexMoving;
+    public boolean isSpindexStalled;
 
     private GoBildaPinpointDriver odo; // Declare OpMode member for the Odometry Computer
 
@@ -102,7 +101,7 @@ public class RobotHardware {
         ballIntakeSensor = hardwareMap.get(DigitalChannel.class, "BallIntakeSensor");;
         ballIntakeSensor.setMode(DigitalChannel.Mode.INPUT);
 
-        isSpindexMoving = false;
+        isSpindexStalled = false;
 
 //        odo = hardwareMap.get(GoBildaPinpointDriver.class,"PinpointOdo");
 //        odo.setOffsets(20.0, -241.3, DistanceUnit.MM); //these are tuned for 3110-0002-0001 Product Insight #1
@@ -186,7 +185,7 @@ public class RobotHardware {
 
     public double getLaunchTurretPosition() {
         double position = launchTurretServo.getPosition();
-        Log.i("=== ROBOTHARDWARE  ===", " getLaunchTurretServoPosition: " + position);
+//        Log.i("=== ROBOTHARDWARE  ===", " getLaunchTurretServoPosition: " + position);
         return position;
     }
     public void setLaunchTurretPosition(double position) {
@@ -226,7 +225,6 @@ public class RobotHardware {
     public void setSpindexPosition(double position) {
 //        Log.i("=== ROBOTHARDWARE  ===", " setSpindexPosition: " + position);
         spindexServo.setPosition(position);
-        isSpindexMoving = true;
     }
 
     public boolean didBallDetectionBeamBreak() {

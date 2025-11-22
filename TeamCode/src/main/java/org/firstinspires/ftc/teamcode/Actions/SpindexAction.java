@@ -15,34 +15,73 @@ import org.firstinspires.ftc.teamcode.common.RobotHardware;
 public class SpindexAction implements Action {
 
     private RobotHardware robotHardware;
+    private double originalPosition;
+    private double lastRecordedPosition;
     private double position;
     private boolean initialized = false;
-    private ElapsedTime timer;
+    private ElapsedTime pollingTimer;
+    private ElapsedTime stallTimer;
+    private boolean actionBeingReset;
+    private ElapsedTime actionResetTimer;
     public static double SPINDEX_POSITION_TOLERANCE = 0.05;
+    public static double SPINDEX_STALL_TIMER_MILLIS = 1000;
+    public static double ACTION_RESET_TIME_DURATION_MILLIS = 1000;
 
     public SpindexAction(RobotHardware robotHardware, double position) {
         this.robotHardware = robotHardware;
         this.position = position;
         this.initialized = false;
+        this.actionBeingReset = false;
     }
 
     @Override
     public boolean run (@NonNull TelemetryPacket packet) {
         if (!initialized) {
-            timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+            originalPosition = robotHardware.getSpindexPosition();
+            Log.i("SPINDEX ACTION", "ORIGINAL POSITION: " + originalPosition);
+
+            pollingTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+            stallTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+
+            lastRecordedPosition = originalPosition;
             robotHardware.setSpindexPosition(position);
             initialized = true;
         }
 
         //run this loop every 50 ms.
-        if (timer.milliseconds() < 50) return true;
-        timer.reset();
+        if (pollingTimer.milliseconds() < 50) return true;
+        pollingTimer.reset();
 
-        boolean retVal = (Math.abs(robotHardware.getSpindexPosition() - position) > SPINDEX_POSITION_TOLERANCE);
+        if (actionBeingReset) {
+            Log.i("SPINDEX ACTION", "INSIDE ACTION BEING RESET");
+            if (actionResetTimer.milliseconds() > ACTION_RESET_TIME_DURATION_MILLIS) {
+                Log.i("SPINDEX ACTION", "INSIDE ACTION BEING RESET - SETTING INTIALIZED TO FALSE");
+                initialized = false;
+                actionBeingReset = false;
+            }
+            return true;
+        }
 
-        robotHardware.isSpindexMoving = retVal;
+        double newPos = robotHardware.getSpindexPosition();
 
-        return retVal;
+        if (stallTimer.milliseconds() > SPINDEX_STALL_TIMER_MILLIS) {
+            if (Math.abs(newPos - lastRecordedPosition) < SPINDEX_POSITION_TOLERANCE) {
+                Log.i("SPINDEX ACTION", "STALL DETECTED");
+                robotHardware.isSpindexStalled = true;
 
+                Log.i("SPINDEX ACTION", "SETTING SPINDEX TO ORIGINAL POSITION: " + originalPosition);
+                robotHardware.setSpindexPosition(originalPosition);
+                actionBeingReset = true;
+                actionResetTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+
+                return true;   //action has to be reset now
+            }
+            else {
+                stallTimer.reset();
+                lastRecordedPosition = newPos;
+            }
+        }
+
+        return (Math.abs(newPos - position) > SPINDEX_POSITION_TOLERANCE);
     }
 }

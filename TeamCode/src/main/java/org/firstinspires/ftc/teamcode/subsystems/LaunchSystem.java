@@ -3,16 +3,13 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import static org.firstinspires.ftc.teamcode.Actions.LaunchVisorAction.LAUNCH_VISOR_MID;
 import static org.firstinspires.ftc.teamcode.Actions.LaunchVisorAction.LAUNCH_VISOR_RESTING;
 
-import android.util.ArrayMap;
 import android.util.Log;
 
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.NullAction;
-import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SequentialAction;
-import com.acmerobotics.roadrunner.SleepAction;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction;
@@ -28,9 +25,7 @@ import org.firstinspires.ftc.teamcode.common.LimelightAprilTagHelper;
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
 import org.firstinspires.ftc.teamcode.common.RobotLaunchParameters;
 
-import java.security.PublicKey;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Config
@@ -42,13 +37,15 @@ public class LaunchSystem {
     private LimelightAprilTagHelper limelightAprilTagHelper;
     private AllianceColors allianceColor;
     private ElapsedTime turretAlignmentThrottleTimer;
+    private ElapsedTime turretTagNotFoundTimer;
 
-    public static double TURRET_SERVO_MIN_POS = 0;
+    public static double TURRET_SERVO_MIN_POS = 0.25;
     public static double TURRET_SERVO_CENTERED = 0.5;
-    public static double TURRET_SERVO_MAX_POS = 1;
-    public static double TURRET_SERVO_ADJUSTMENT_DELTA = 0.005;
+    public static double TURRET_SERVO_MAX_POS = 0.75;
+    public static double TURRET_SERVO_ADJUSTMENT_DELTA = 0.004;
     public static double TURRET_ALIGNMENT_THROTTLE_MILLIS = 50;
     public static double TURRET_ALIGNMENT_TOLERANCE_DEGREES = 3;
+    public static double TURRET_TAG_NOT_FOUND_TIMER_MILLIS = 2000;
     public static double ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT = 0.277;    //RED
     public static double ROBOT_ALIGNED_TO_SHOOT_LIGHT = 0.5;    //GREEN
     public static double FLYWHEEL_POWER_COEFFICIENT_WARM_UP = 0.5;
@@ -57,8 +54,9 @@ public class LaunchSystem {
     public static double ROBOT_DISTANCE_FAR = 100;
 
     public static double FLYWHEEL_POWER_COEFFICIENT_CLOSE = 0.4;
-    public static double FLYWHEEL_POWER_COEFFICIENT_MID = 0.42;
+    public static double FLYWHEEL_POWER_COEFFICIENT_MID = 0.5;
     public static double FLYWHEEL_POWER_COEFFICIENT_FAR = 0.6;
+    public static double FLYWHEEL_POWER_BUCKET_THRESHOLD = 90;
     public static double DEFAULT_FLYWHEEL_POWER_COEFFICIENT = FLYWHEEL_POWER_COEFFICIENT_MID;
     public static double DEFAULT_VISOR_POSITION = LAUNCH_VISOR_MID;
 
@@ -68,6 +66,7 @@ public class LaunchSystem {
         this.spindex = spindex;
         this.limelightAprilTagHelper = new LimelightAprilTagHelper(robotHardware);
         this.turretAlignmentThrottleTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+        this.turretTagNotFoundTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
     }
 
     //make default constructor private
@@ -371,6 +370,9 @@ public class LaunchSystem {
 //            flywheelPowerCoefficient = Math.floor(flywheelPowerCoefficient * 100) / 100;
 //
 //            flywheelPowerCoefficient = Math.min(flywheelPowerCoefficient, FLYWHEEL_POWER_COEFFICIENT_FAR);
+            if (ydt.distance > FLYWHEEL_POWER_BUCKET_THRESHOLD) {
+                flywheelPowerCoefficient = FLYWHEEL_POWER_COEFFICIENT_FAR;
+            }
 
             Log.i("== LAUNCH SYSTEM ==", "getFlywheelVelocityBasedOnDistance. D: " + ydt.distance + " C: " + flywheelPowerCoefficient);
         }
@@ -383,7 +385,7 @@ public class LaunchSystem {
         return new RobotLaunchParameters(LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * flywheelPowerCoefficient, visorPosition);
     }
 
-    public void AlignTurretToGoal() {
+    public void AlignTurretToGoalAndKeepLauncherWarm() {
 
         if (turretAlignmentThrottleTimer.milliseconds() < TURRET_ALIGNMENT_THROTTLE_MILLIS)
             return;
@@ -394,6 +396,8 @@ public class LaunchSystem {
         LimelightLaunchParameters ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
 
         if (ydt != null) {
+
+            turretTagNotFoundTimer.reset();
 
             // move the servo to account for the yaw.
             // Move the servo if the error is outside the tolerance
@@ -406,7 +410,7 @@ public class LaunchSystem {
 
                 double servoDelta = ydt.yaw > 0 ? TURRET_SERVO_ADJUSTMENT_DELTA : -1 * TURRET_SERVO_ADJUSTMENT_DELTA;
 
-                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: servoDelta: " + servoDelta);
+//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalAndKeepLauncherWarm: servoDelta: " + servoDelta);
 
 
                 // Calculate the new potential servo position and constrain it
@@ -416,7 +420,7 @@ public class LaunchSystem {
 
                 newServoPosition = Math.max(TURRET_SERVO_MIN_POS, Math.min(TURRET_SERVO_MAX_POS, newServoPosition));
 
-                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: Adjusting... New Position: " + newServoPosition);
+//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalAndKeepLauncherWarm: Adjusting... New Position: " + newServoPosition);
 
                 //the cycle might be so fast that the servo is still turning
                 //since we are not using an encoder on the turret, the get position will return
@@ -430,14 +434,27 @@ public class LaunchSystem {
             } else {
 
                 robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
-                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: Turret Aligned!");
+//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalAndKeepLauncherWarm: Turret Aligned!");
 
             }
+
+            if (ydt.distance < FLYWHEEL_POWER_BUCKET_THRESHOLD) {
+                robotHardware.setFlywheelMotorVelocityInTPS(LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_MID);
+            } else {
+                robotHardware.setFlywheelMotorVelocityInTPS(LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR);
+            }
+
         } else {
 
             //No tag found - center the turret
 //            robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
-//            robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
+            robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
+
+            if (turretTagNotFoundTimer.milliseconds() > TURRET_TAG_NOT_FOUND_TIMER_MILLIS) {
+                robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
+
+                robotHardware.setFlywheelMotorVelocityInTPS(LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_MID);
+            }
 
 //            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: no tag found");
         }

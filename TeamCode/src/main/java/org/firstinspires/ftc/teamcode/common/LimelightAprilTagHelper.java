@@ -85,12 +85,12 @@ public class LimelightAprilTagHelper  {
                         List<LLResultTypes.FiducialResult> redResults = fiducialResults.stream().filter(fr -> fr.getFiducialId() == AprilTagConstants.RED_ALLIANCE_TAG_ID).collect(Collectors.toList());
                         if (!redResults.isEmpty())
                         {
-                            Log.i("LimelightAprilTagHelper", allianceColor + " april tag found");
+//                            Log.i("LimelightAprilTagHelper", allianceColor + " april tag found");
                             primaryTarget = redResults.get(0);
                         }
                         else
                         {
-                            Log.i("LimelightAprilTagHelper", allianceColor + " april tag not found");
+//                            Log.i("LimelightAprilTagHelper", allianceColor + " april tag not found");
                             return null;
                         }
                         break;
@@ -99,13 +99,13 @@ public class LimelightAprilTagHelper  {
                         List<LLResultTypes.FiducialResult> blueResults = fiducialResults.stream().filter(fr -> fr.getFiducialId() == AprilTagConstants.BLUE_ALLIANCE_TAG_ID).collect(Collectors.toList());
                         if (!blueResults.isEmpty())
                         {
-                            Log.i("LimelightAprilTagHelper", allianceColor + " april tag found");
+//                            Log.i("LimelightAprilTagHelper", allianceColor + " april tag found");
 
                             primaryTarget = blueResults.get(0);
                         }
                         else
                         {
-                            Log.i("LimelightAprilTagHelper", allianceColor + " april tag NOT found");
+//                            Log.i("LimelightAprilTagHelper", allianceColor + " april tag NOT found");
                             return null;
                         }
                         break;
@@ -149,9 +149,9 @@ public class LimelightAprilTagHelper  {
 //                Log.i("LimelightAprilTagHelper", "X YAW: " + xyaw);
 //                Log.i("LimelightAprilTagHelper", "Z YAW: " + zyaw);
 //                Log.i("LimelightAprilTagHelper", "ORIENTATION YAW: " + oyaw);
-                Log.i("LimelightAprilTagHelper", "YAW: " + zyaw);
-                Log.i("LimelightAprilTagHelper", "DISTANCE: " + horizontalDistance);
-                Log.i("LimelightAprilTagHelper", "TOLERANCE: " + dynamicTolerance);
+//                Log.i("LimelightAprilTagHelper", "YAW: " + zyaw);
+//                Log.i("LimelightAprilTagHelper", "DISTANCE: " + horizontalDistance);
+//                Log.i("LimelightAprilTagHelper", "TOLERANCE: " + dynamicTolerance);
 
                 return new LimelightLaunchParameters(zyaw, horizontalDistance, dynamicTolerance);
 

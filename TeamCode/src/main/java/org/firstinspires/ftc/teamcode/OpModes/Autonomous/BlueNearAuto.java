@@ -166,7 +166,7 @@ public class BlueNearAuto extends LinearOpMode {
             Actions.runBlocking(
                     new ParallelAction(
                             moveForwardToPickLine1,
-                            intakeSystem.reIndexBalls()
+                            intakeSystem.ReIndexBalls()
                     )
             );
 

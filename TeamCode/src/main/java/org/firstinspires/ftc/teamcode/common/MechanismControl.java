@@ -8,6 +8,7 @@ import com.acmerobotics.roadrunner.SequentialAction;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.acmerobotics.dashboard.FtcDashboard;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.teamcode.Actions.SpindexAction;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSystem;
 import org.firstinspires.ftc.teamcode.subsystems.Spindex;
@@ -76,12 +77,16 @@ public class MechanismControl {
 
         ProcessActions();
 
+        ProcessDPad();
+
         //this has to be done after translating any state into actions
         CheckForBallsToIntake();
 
-        //process the yaw and rotate the turret always
-        launchSystem.AlignTurretToGoal();
+        //process the yaw and rotate the turret always - except when parking
+        if (currentRobotState != ROBOT_STATE.PARK && targetRobotState != ROBOT_STATE.PARK)
+            launchSystem.AlignTurretToGoalAndKeepLauncherWarm();
 
+        CheckForSpindexStall();
 //        lightSignalForRobotAlignmentWhenLaunching();
     }
 
@@ -339,5 +344,32 @@ public class MechanismControl {
 
             }
         }
+    }
+
+    private void ProcessDPad() {
+        if (gamepad2.dpadDownWasPressed()) {
+            runningActions.add(intakeSystem.ReIndexBalls());
+        }
+    }
+
+    private void CheckForSpindexStall() {
+        if (!robotHardware.isSpindexStalled)
+            return;
+
+        //move the spindexer to the closest intake
+        double currPos = robotHardware.getSpindexPosition();
+        double distance = 1;
+        int indexToUse = 0;
+
+        for (BallEntry entry: spindex.storedColors) {
+            if (Math.abs(currPos - entry.intakePosition) < distance) {
+                distance = Math.abs(currPos - entry.intakePosition);
+                indexToUse = entry.index;
+            }
+        }
+
+        runningActions.add(intakeSystem.getReverseIntakeAction());
+
+        robotHardware.isSpindexStalled = false;
     }
 }
