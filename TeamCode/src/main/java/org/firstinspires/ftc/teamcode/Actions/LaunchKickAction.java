@@ -39,14 +39,16 @@ public class LaunchKickAction implements Action {
             kicked = true;
             return true;
         }
-        else if (!reset && kickTimer.milliseconds() > LAUNCH_KICK_DELAY_MILLIS) {
+        else if (!reset) {
+
+            //keep looping while kick is in progress
+            if (kickTimer.milliseconds() < LAUNCH_KICK_DELAY_MILLIS)
+                return true;
+
             resetTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
             robotHardware.setLaunchKickPosition(LAUNCH_KICK_RESTING);
 
             reset = true;
-        }
-        else {
-            return true;
         }
 
         return (resetTimer.milliseconds() < LAUNCH_KICK_RESET_DELAY_MILLIS);

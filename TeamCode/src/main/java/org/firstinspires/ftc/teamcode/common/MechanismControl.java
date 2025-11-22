@@ -174,9 +174,9 @@ public class MechanismControl {
                     //get the list of actions and put it in running actions
                     runningActions.add(
                             new SequentialAction(
-//                                    launchSystem.getKeepWarmAction(),
-                                    intakeSystem.getTurnOnAction(),
-                                    intakeSystem.checkForBallIntakeAndGetAction()));
+                                    launchSystem.getKeepWarmAction(),
+                                    intakeSystem.getTurnOnAction()
+                            ));
                     break;
 
                 case REVERSE_INTAKE:
@@ -249,7 +249,7 @@ public class MechanismControl {
                     break;
 
                 case PARK:
-                    Log.i("== MECHANISM CONTROL ==", "PROCESSING STATE: LIFT");
+                    Log.i("== MECHANISM CONTROL ==", "PROCESSING STATE: PARK");
 
                     runningActions.add(new ParallelAction(
                             intakeSystem.getTurnOffAction(),

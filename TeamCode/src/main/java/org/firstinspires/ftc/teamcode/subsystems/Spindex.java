@@ -13,6 +13,8 @@ import org.firstinspires.ftc.teamcode.common.GameColors;
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 public class Spindex {
@@ -120,6 +122,9 @@ public class Spindex {
     public int getSlotIndexClosestToColorSensor() {
         double pos = robotHardware.getSpindexPosition();
 
+        Log.i("SPINDEXER", "getSlotIndexClosestToColorSensor. Spindex pos: " + pos);
+
+
         for (BallEntry entry: storedColors) {
             if (Math.abs(pos - entry.colorDetectionPosition) < SpindexAction.SPINDEX_POSITION_TOLERANCE) {
                 return entry.index;
@@ -135,6 +140,9 @@ public class Spindex {
 
         previousIndex = currentIndex;
         currentIndex = nextIndex;
+
+        Log.i("SPINDEXER", "moveToNextEmptySlotAction: current index: " + currentIndex);
+
 
         return new SpindexAction(robotHardware, storedColors.get(currentIndex).intakePosition);
     }
@@ -181,35 +189,41 @@ public class Spindex {
     }
 
     public void storeCurrentBall(GameColors color) {
-        Log.i("SPINDEXER", "STORE CURRENT BALL: " + color);
+//        Log.i("SPINDEXER", "STORE CURRENT BALL: " + color);
         storedColors.get(currentIndex).ballColor = color;
     }
 
     public void clearCurrentBall() {
+
         Log.i("SPINDEXER", "CLEAR CURRENT BALL");
         storedColors.get(currentIndex).ballColor = GameColors.NONE;
     }
 
     public Action updateBallColorForPreviousIndex() {
         //get the ball with color position as the current spindexer position
-//        int indexToUpdate = getSlotIndexClosestToColorSensor();
 
+        AtomicInteger indexToUpdate = new AtomicInteger(-1);
+        AtomicReference<GameColors> color = new AtomicReference<>(GameColors.UNKNOWN);
 
-//        int indexToUpdate = currentIndex;
+        Action returnAction;
 
-        Log.i("SPINDEXER", "updateBallColorForPreviousIndex: indexToUpdate: " + previousIndex);
-        Log.i("SPINDEXER", "updateBallColorForPreviousIndex: storedColor at indexToUpdate: " + storedColors.get(previousIndex).ballColor);
+        returnAction = new SequentialAction(
+//                new InstantAction(() -> Log.i("SPINDEXER", "updateBallColorForPreviousIndex: indexToUpdate before: " + indexToUpdate.get())),
+                new InstantAction(() -> indexToUpdate.set(getSlotIndexClosestToColorSensor())),
+//                new InstantAction(() -> Log.i("SPINDEXER", "updateBallColorForPreviousIndex: indexToUpdate after: " + indexToUpdate.get())),
+//                new InstantAction(() -> Log.i("SPINDEXER", "updateBallColorForPreviousIndex: Existing Ball Color: " + storedColors.get(indexToUpdate.get()).ballColor)),
+                new InstantAction(() -> color.set(robotHardware.getDetectedBallColor())),
+//                new InstantAction(() -> Log.i("SPINDEXER", "updateBallColorForPreviousIndex: color: " + color.get())),
+                new InstantAction(() -> {
+//                    Log.i("SPINDEXER", "updateBallColorForPreviousIndex: indexToUpdate after: " + indexToUpdate.get());
+                    if(indexToUpdate.get() >= 0 && storedColors.get(indexToUpdate.get()).ballColor == GameColors.UNKNOWN) {
+                        storedColors.get(indexToUpdate.get()).ballColor = color.get();
+                        Log.i("SPINDEXER", "updateBallColorForPreviousIndex: Updated Ball at index: " + indexToUpdate.get() + " to: " + storedColors.get(indexToUpdate.get()).ballColor);
+                    }
+                })
+        );
 
+        return returnAction;
 
-        //only update if the ball at that location is unknown
-        if (previousIndex >= 0 && storedColors.get(previousIndex).ballColor == GameColors.UNKNOWN) {
-
-            GameColors color = robotHardware.getDetectedBallColor();
-            Log.i("SPINDEXER", "UPDATED BALL COLOR AT INDEX: " + previousIndex + " to color: " + color);
-
-            return new InstantAction(() -> storedColors.get(previousIndex).ballColor = color);
-        }
-
-        return new NullAction();
     }
 }

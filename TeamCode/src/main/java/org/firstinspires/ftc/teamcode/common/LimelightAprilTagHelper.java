@@ -146,12 +146,12 @@ public class LimelightAprilTagHelper  {
                 // Calculate dynamic tolerance based on distance
                 double dynamicTolerance = calculateDistanceBasedTolerance(horizontalDistance);
 
-                Log.i("LimelightAprilTagHelper", "X YAW: " + xyaw);
-                Log.i("LimelightAprilTagHelper", "Z YAW: " + zyaw);
-                Log.i("LimelightAprilTagHelper", "ORIENTATION YAW: " + oyaw);
-                Log.i("LimelightAprilTagHelper", "YAW YAW: " + yaw);
-                Log.i("LimelightAprilTagHelper", "DISTANCE: " + horizontalDistance);
-                Log.i("LimelightAprilTagHelper", "TOLERANCE: " + dynamicTolerance);
+//                Log.i("LimelightAprilTagHelper", "X YAW: " + xyaw);
+//                Log.i("LimelightAprilTagHelper", "Z YAW: " + zyaw);
+//                Log.i("LimelightAprilTagHelper", "ORIENTATION YAW: " + oyaw);
+//                Log.i("LimelightAprilTagHelper", "YAW YAW: " + yaw);
+//                Log.i("LimelightAprilTagHelper", "DISTANCE: " + horizontalDistance);
+//                Log.i("LimelightAprilTagHelper", "TOLERANCE: " + dynamicTolerance);
 
                 return new LaunchYawDistanceTolerance(zyaw, horizontalDistance, dynamicTolerance);
 

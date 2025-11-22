@@ -84,9 +84,13 @@ public class IntakeSystem {
         if (isOn && ballDetected) {
             spindex.storeCurrentBall(GameColors.UNKNOWN);   //default to unknown - we will update color later
             Log.i("INTAKE SYSTEM", "checkForBallIntakeAndGetAction: Ball Detected: indexed as UNKNOWN ");
+            Log.i("INTAKE SYSTEM", "checkForBallIntakeAndGetAction: current index: " + spindex.currentIndex);
+
             return new SequentialAction(
                     spindex.moveToNextEmptySlotAction(),
-                    new SleepAction(INTAKE_THROTTLE_TIME_MS/1000),   //wait for the ball to stabilize
+//                    new InstantAction(()->Log.i("INTAKE SYSTEM", "checkForBallIntakeAndGetAction. Spindex after rotating: " + robotHardware.getSpindexPosition())),
+//                    new SleepAction(INTAKE_THROTTLE_TIME_MS/1000),   //wait for the ball to stabilize
+                    new InstantAction(()->Log.i("INTAKE SYSTEM", "checkForBallIntakeAndGetAction. Spindex after rotating: " + robotHardware.getSpindexPosition())),
                     spindex.updateBallColorForPreviousIndex()
             );
         }
@@ -110,7 +114,7 @@ public class IntakeSystem {
 
             Action ballAction = new SequentialAction(
                     new SpindexAction(robotHardware, entry.colorDetectionPosition),
-                    new SleepAction(INTAKE_THROTTLE_TIME_MS/1000),   //wait for the ball to stabilize
+                    new SleepAction(0.5),   //wait for the ball to stabilize
                     new InstantAction(() -> spindex.storedColors.get(entry.index).ballColor = robotHardware.getDetectedBallColor())
             );
 

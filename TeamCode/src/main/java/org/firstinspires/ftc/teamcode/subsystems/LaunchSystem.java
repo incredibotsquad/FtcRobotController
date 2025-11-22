@@ -345,7 +345,7 @@ public class LaunchSystem {
     private double getFlywheelVelocityBasedOnDistance() {
         LaunchYawDistanceTolerance ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
 
-        double coefficient = FLYWHEEL_POWER_COEFFICIENT_CLOSE;
+        double coefficient = FLYWHEEL_POWER_COEFFICIENT_FAR;
 
         if (ydt != null) {
             coefficient = Math.max(FLYWHEEL_POWER_COEFFICIENT_WARM_UP,  (0.0019985 * ydt.distance + 0.29006));
@@ -429,7 +429,7 @@ public class LaunchSystem {
 //            robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
 //            robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
 
-            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: no tag found");
+//            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: no tag found");
         }
     }
 }
