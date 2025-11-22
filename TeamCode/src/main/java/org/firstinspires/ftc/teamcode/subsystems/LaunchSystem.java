@@ -1,26 +1,36 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import static org.firstinspires.ftc.teamcode.Actions.LaunchVisorAction.LAUNCH_VISOR_MID;
+import static org.firstinspires.ftc.teamcode.Actions.LaunchVisorAction.LAUNCH_VISOR_RESTING;
+
+import android.util.ArrayMap;
 import android.util.Log;
 
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.NullAction;
+import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SequentialAction;
+import com.acmerobotics.roadrunner.SleepAction;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction;
 import org.firstinspires.ftc.teamcode.Actions.LaunchKickAction;
+import org.firstinspires.ftc.teamcode.Actions.LaunchVisorAction;
 import org.firstinspires.ftc.teamcode.Actions.SpindexAction;
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.common.BallEntry;
 import org.firstinspires.ftc.teamcode.common.GameColors;
 import org.firstinspires.ftc.teamcode.common.GamePattern;
-import org.firstinspires.ftc.teamcode.common.LaunchYawDistanceTolerance;
+import org.firstinspires.ftc.teamcode.common.LimelightLaunchParameters;
 import org.firstinspires.ftc.teamcode.common.LimelightAprilTagHelper;
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
+import org.firstinspires.ftc.teamcode.common.RobotLaunchParameters;
 
+import java.security.PublicKey;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Config
@@ -32,28 +42,32 @@ public class LaunchSystem {
     private LimelightAprilTagHelper limelightAprilTagHelper;
     private AllianceColors allianceColor;
     private ElapsedTime turretAlignmentThrottleTimer;
-    public static double FLYWHEEL_POWER_COEFFICIENT_WARM_UP = 1;
-    public static double FLYWHEEL_POWER_COEFFICIENT_CLOSE = 0.37;
-    public static double FLYWHEEL_POWER_COEFFICIENT_MID = 0.42;
-    public static double FLYWHEEL_POWER_COEFFICIENT_FAR = 0.55;
+
     public static double TURRET_SERVO_MIN_POS = 0;
     public static double TURRET_SERVO_CENTERED = 0.5;
     public static double TURRET_SERVO_MAX_POS = 1;
-    public static double TURRET_SERVO_ADJUSTMENT_DELTA = 0.008;
-//    public static double TURRET_SERVO_ADJUSTMENT_DELTA = (double)1/300;
+    public static double TURRET_SERVO_ADJUSTMENT_DELTA = 0.005;
     public static double TURRET_ALIGNMENT_THROTTLE_MILLIS = 50;
-    public static double TURRET_ALIGNMENT_TOLERANCE_DEGREES = 5;
+    public static double TURRET_ALIGNMENT_TOLERANCE_DEGREES = 3;
     public static double ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT = 0.277;    //RED
     public static double ROBOT_ALIGNED_TO_SHOOT_LIGHT = 0.5;    //GREEN
+    public static double FLYWHEEL_POWER_COEFFICIENT_WARM_UP = 0.5;
+
+    public static double ROBOT_DISTANCE_CLOSE = 60;
+    public static double ROBOT_DISTANCE_FAR = 100;
+
+    public static double FLYWHEEL_POWER_COEFFICIENT_CLOSE = 0.4;
+    public static double FLYWHEEL_POWER_COEFFICIENT_MID = 0.42;
+    public static double FLYWHEEL_POWER_COEFFICIENT_FAR = 0.6;
+    public static double DEFAULT_FLYWHEEL_POWER_COEFFICIENT = FLYWHEEL_POWER_COEFFICIENT_MID;
+    public static double DEFAULT_VISOR_POSITION = LAUNCH_VISOR_MID;
+
 
     public LaunchSystem(RobotHardware robotHardware, Spindex spindex) {
         this.robotHardware = robotHardware;
         this.spindex = spindex;
         this.limelightAprilTagHelper = new LimelightAprilTagHelper(robotHardware);
         this.turretAlignmentThrottleTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
-
-        //TODO: remove this - cant move on init
-        robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
     }
 
     //make default constructor private
@@ -74,67 +88,71 @@ public class LaunchSystem {
         return new LaunchFlywheelAction(robotHardware, 0);
     }
 
-    private Action getLaunchBallAction(double flywheelVelocity) {
+    private Action getLaunchBallAction(RobotLaunchParameters robotLaunchParameters) {
         Log.i("== LAUNCH SYSTEM ==", "getLaunchBallAction");
         return new SequentialAction(
-                new LaunchFlywheelAction(robotHardware, flywheelVelocity),
-                new LaunchKickAction(robotHardware)
+                new LaunchFlywheelAction(robotHardware, robotLaunchParameters.flywheelVelocity),
+                new LaunchVisorAction(robotHardware, robotLaunchParameters.visorPosition),
+                new LaunchKickAction(robotHardware),
+                new LaunchVisorAction(robotHardware, LAUNCH_VISOR_RESTING)
         );
     }
 
     public Action getLaunchNextBallAction() {
         Log.i("== LAUNCH SYSTEM ==", "Launch Next Ball Action");
-        return getLaunchNextBallAction(getFlywheelVelocityBasedOnDistance());
+        return getLaunchNextBallAction(getRobotLaunchParametersBasedOnDistance());
     }
 
-    public Action getLaunchNextBallAction(double flywheelVelocity) {
+    public Action getLaunchNextBallAction(RobotLaunchParameters robotLaunchParameters) {
         Log.i("== LAUNCH SYSTEM ==", "Launch Next Ball Action");
-        return new SequentialAction(
+
+        return spindex.isEmpty() ? new NullAction() :
+                new SequentialAction(
                 spindex.moveToNextFullSlotAction(),
-                getLaunchBallAction(flywheelVelocity),
+                getLaunchBallAction(robotLaunchParameters),
                 new InstantAction(() -> spindex.clearCurrentBall())
         );
     }
 
     public Action getLaunchNextBallCloseAction() {
         Log.i("== LAUNCH SYSTEM ==", "Launch Next Ball Close Action");
-        return getLaunchNextBallAction(LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_CLOSE);
+        return getLaunchNextBallAction(new RobotLaunchParameters(LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_CLOSE, LaunchVisorAction.LAUNCH_VISOR_RESTING));
     }
 
     public Action getLaunchNextBallMidAction() {
         Log.i("== LAUNCH SYSTEM ==", "Launch Next Ball Mid Action");
-        return getLaunchNextBallAction(LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_MID);
+        return getLaunchNextBallAction(new RobotLaunchParameters(LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_MID, LAUNCH_VISOR_MID));
     }
 
     public Action getLaunchNextBallFarAction() {
         Log.i("== LAUNCH SYSTEM ==", "Launch Next Ball Far Action");
-        return getLaunchNextBallAction(LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR);
+        return getLaunchNextBallAction(new RobotLaunchParameters(LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR, LaunchVisorAction.LAUNCH_VISOR_MAX));
     }
 
     public Action getLaunchGreenBallAction() {
         Log.i("== LAUNCH SYSTEM ==", "Launch Green Ball Action");
-        return getLaunchGreenBallAction(getFlywheelVelocityBasedOnDistance());
+        return getLaunchGreenBallAction(getRobotLaunchParametersBasedOnDistance());
     }
 
-    public Action getLaunchGreenBallAction(double flywheelVelocity) {
+    public Action getLaunchGreenBallAction(RobotLaunchParameters robotLaunchParameters) {
         Log.i("== LAUNCH SYSTEM ==", "Launch Green Ball Action");
         return  new SequentialAction(
                 spindex.moveToNextGreenSlotAction(),
-                getLaunchBallAction(flywheelVelocity),
+                getLaunchBallAction(robotLaunchParameters),
                 new InstantAction(() -> spindex.clearCurrentBall())
         );
     }
 
     public Action getLaunchPurpleBallAction() {
         Log.i("== LAUNCH SYSTEM ==", "Launch Purple Ball Action");
-        return getLaunchPurpleBallAction(getFlywheelVelocityBasedOnDistance());
+        return getLaunchPurpleBallAction(getRobotLaunchParametersBasedOnDistance());
     }
 
-    public Action getLaunchPurpleBallAction(double flywheelVelocity) {
+    public Action getLaunchPurpleBallAction(RobotLaunchParameters robotLaunchParameters) {
         Log.i("== LAUNCH SYSTEM ==", "Launch Purple Ball Action");
         return new SequentialAction(
                 spindex.moveToNextPurpleSlotAction(),
-                getLaunchBallAction(flywheelVelocity),
+                getLaunchBallAction(robotLaunchParameters),
                 new InstantAction(() -> spindex.clearCurrentBall())
         );
     }
@@ -177,7 +195,7 @@ public class LaunchSystem {
 
     public Action getLaunchGPPAction() {
 
-        double flywheelVelocity = getFlywheelVelocityBasedOnDistance();
+        RobotLaunchParameters robotLaunchParameters = getRobotLaunchParametersBasedOnDistance();
         Action ball1 = new NullAction();
         Action ball2 = new NullAction();
         Action ball3 = new NullAction();
@@ -190,20 +208,20 @@ public class LaunchSystem {
 
         ball1 = new SequentialAction(
                 new SpindexAction(robotHardware, spindex.storedColors.get(greenSlot).launchPosition),
-                getLaunchBallAction(flywheelVelocity),
+                getLaunchBallAction(robotLaunchParameters),
                 new InstantAction(() -> spindex.storedColors.get(greenSlot).ballColor = GameColors.NONE)
         );
 
 
         ball2 = new SequentialAction(
                 new SpindexAction(robotHardware, spindex.storedColors.get(purpleSlots.get(0).index).launchPosition),
-                getLaunchBallAction(flywheelVelocity),
+                getLaunchBallAction(robotLaunchParameters),
                 new InstantAction(() -> spindex.storedColors.get(purpleSlots.get(0).index).ballColor = GameColors.NONE));
 
         if (purpleSlots.size() == 2) {
             ball3 = new SequentialAction(
                     new SpindexAction(robotHardware, spindex.storedColors.get(purpleSlots.get(1).index).launchPosition),
-                    getLaunchBallAction(flywheelVelocity),
+                    getLaunchBallAction(robotLaunchParameters),
                     new InstantAction(() -> spindex.storedColors.get(purpleSlots.get(1).index).ballColor = GameColors.NONE)
             );
         }
@@ -217,7 +235,7 @@ public class LaunchSystem {
 
     public Action getLaunchPGPAction() {
 
-        double flywheelVelocity = getFlywheelVelocityBasedOnDistance();
+        RobotLaunchParameters robotLaunchParameters = getRobotLaunchParametersBasedOnDistance();
         Action ball1 = new NullAction();
         Action ball2 = new NullAction();
         Action ball3 = new NullAction();
@@ -230,19 +248,19 @@ public class LaunchSystem {
 
         ball1 = new SequentialAction(
                 new SpindexAction(robotHardware, spindex.storedColors.get(greenSlot).launchPosition),
-                getLaunchBallAction(flywheelVelocity),
+                getLaunchBallAction(robotLaunchParameters),
                 new InstantAction(() -> spindex.storedColors.get(greenSlot).ballColor = GameColors.NONE)
         );
 
         ball2 = new SequentialAction(
                 new SpindexAction(robotHardware, spindex.storedColors.get(purpleSlots.get(0).index).launchPosition),
-                getLaunchBallAction(flywheelVelocity),
+                getLaunchBallAction(robotLaunchParameters),
                 new InstantAction(() -> spindex.storedColors.get(purpleSlots.get(0).index).ballColor = GameColors.NONE));
 
         if (purpleSlots.size() == 2) {
             ball3 = new SequentialAction(
                     new SpindexAction(robotHardware, spindex.storedColors.get(purpleSlots.get(1).index).launchPosition),
-                    getLaunchBallAction(flywheelVelocity),
+                    getLaunchBallAction(robotLaunchParameters),
                     new InstantAction(() -> spindex.storedColors.get(purpleSlots.get(1).index).ballColor = GameColors.NONE)
             );
         }
@@ -256,7 +274,7 @@ public class LaunchSystem {
 
     public Action getLaunchPPGAction() {
 
-        double flywheelVelocity = getFlywheelVelocityBasedOnDistance();
+        RobotLaunchParameters robotLaunchParameters = getRobotLaunchParametersBasedOnDistance();
         Action ball1 = new NullAction();
         Action ball2 = new NullAction();
         Action ball3 = new NullAction();
@@ -269,19 +287,19 @@ public class LaunchSystem {
 
         ball1 = new SequentialAction(
                 new SpindexAction(robotHardware, spindex.storedColors.get(greenSlot).launchPosition),
-                getLaunchBallAction(flywheelVelocity),
+                getLaunchBallAction(robotLaunchParameters),
                 new InstantAction(() -> spindex.storedColors.get(greenSlot).ballColor = GameColors.NONE)
         );
 
         ball2 = new SequentialAction(
                 new SpindexAction(robotHardware, spindex.storedColors.get(purpleSlots.get(0).index).launchPosition),
-                getLaunchBallAction(flywheelVelocity),
+                getLaunchBallAction(robotLaunchParameters),
                 new InstantAction(() -> spindex.storedColors.get(purpleSlots.get(0).index).ballColor = GameColors.NONE));
 
         if (purpleSlots.size() == 2) {
             ball3 = new SequentialAction(
                     new SpindexAction(robotHardware, spindex.storedColors.get(purpleSlots.get(1).index).launchPosition),
-                    getLaunchBallAction(flywheelVelocity),
+                    getLaunchBallAction(robotLaunchParameters),
                     new InstantAction(() -> spindex.storedColors.get(purpleSlots.get(1).index).ballColor = GameColors.NONE)
             );
         }
@@ -297,10 +315,10 @@ public class LaunchSystem {
     public Action getLaunchAllBallsAction() {
         Log.i("== LAUNCH SYSTEM ==", "Launch all Balls Action");
 
-        return getLaunchAllBallsAction(getFlywheelVelocityBasedOnDistance());
+        return getLaunchAllBallsAction(getRobotLaunchParametersBasedOnDistance());
     }
 
-    public Action getLaunchAllBallsAction(double flywheelVelocity) {
+    public Action getLaunchAllBallsAction(RobotLaunchParameters robotLaunchParameters) {
         Log.i("== LAUNCH SYSTEM ==", "Launching " + spindex.fullSlotCount() + " Balls Action: ");
 
         Action ball1 = new NullAction();
@@ -311,7 +329,7 @@ public class LaunchSystem {
             Log.i("== LAUNCH SYSTEM ==", "Launch all Balls. Third");
             ball3 = new SequentialAction(
                     new SpindexAction(robotHardware, spindex.storedColors.get(2).launchPosition),
-                    getLaunchBallAction(flywheelVelocity),
+                    getLaunchBallAction(robotLaunchParameters),
                     new InstantAction(() -> spindex.storedColors.get(2).ballColor = GameColors.NONE)
             );
         }
@@ -320,7 +338,7 @@ public class LaunchSystem {
             Log.i("== LAUNCH SYSTEM ==", "Launch all Balls. Second");
             ball2 = new SequentialAction(
                     new SpindexAction(robotHardware, spindex.storedColors.get(1).launchPosition),
-                    getLaunchBallAction(flywheelVelocity),
+                    getLaunchBallAction(robotLaunchParameters),
                     new InstantAction(() -> spindex.storedColors.get(1).ballColor = GameColors.NONE)
             );
         }
@@ -330,7 +348,7 @@ public class LaunchSystem {
 
             ball1 = new SequentialAction(
                     new SpindexAction(robotHardware, spindex.storedColors.get(0).launchPosition),
-                    getLaunchBallAction(flywheelVelocity),
+                    getLaunchBallAction(robotLaunchParameters),
                     new InstantAction(() -> spindex.storedColors.get(0).ballColor = GameColors.NONE)
             );
         }
@@ -342,24 +360,27 @@ public class LaunchSystem {
         );
     }
 
-    private double getFlywheelVelocityBasedOnDistance() {
-        LaunchYawDistanceTolerance ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
+    private RobotLaunchParameters getRobotLaunchParametersBasedOnDistance() {
+        LimelightLaunchParameters ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
 
-        double coefficient = FLYWHEEL_POWER_COEFFICIENT_FAR;
+        double flywheelPowerCoefficient = DEFAULT_FLYWHEEL_POWER_COEFFICIENT;
+        double visorPosition = DEFAULT_VISOR_POSITION;
 
         if (ydt != null) {
-            coefficient = Math.max(FLYWHEEL_POWER_COEFFICIENT_WARM_UP,  (0.0019985 * ydt.distance + 0.29006));
-            coefficient = Math.floor(coefficient * 100) / 100;
+//            flywheelPowerCoefficient = Math.max(FLYWHEEL_POWER_COEFFICIENT_WARM_UP,  (0.0019985 * ydt.distance + 0.29006));
+//            flywheelPowerCoefficient = Math.floor(flywheelPowerCoefficient * 100) / 100;
+//
+//            flywheelPowerCoefficient = Math.min(flywheelPowerCoefficient, FLYWHEEL_POWER_COEFFICIENT_FAR);
 
-            coefficient = Math.min(coefficient, FLYWHEEL_POWER_COEFFICIENT_FAR);
-
-            Log.i("== LAUNCH SYSTEM ==", "getFlywheelVelocityBasedOnDistance. D: " + ydt.distance + " C: " + coefficient);
+            Log.i("== LAUNCH SYSTEM ==", "getFlywheelVelocityBasedOnDistance. D: " + ydt.distance + " C: " + flywheelPowerCoefficient);
         }
         else {
-            Log.i("== LAUNCH SYSTEM ==", "getFlywheelVelocityBasedOnDistance. No limeight results. C: " + coefficient);
+            Log.i("== LAUNCH SYSTEM ==", "getFlywheelVelocityBasedOnDistance. No limeight results. C: " + flywheelPowerCoefficient);
         }
 
-        return LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * coefficient;
+        //TODO: add code for visor position
+
+        return new RobotLaunchParameters(LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * flywheelPowerCoefficient, visorPosition);
     }
 
     public void AlignTurretToGoal() {
@@ -370,60 +391,49 @@ public class LaunchSystem {
         turretAlignmentThrottleTimer.reset();
 
         //get the yaw from the april tag helper
-        LaunchYawDistanceTolerance ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
+        LimelightLaunchParameters ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
 
         if (ydt != null) {
 
-        Log.i("== LAUNCH SYSTEM ==", "YAW: " + ydt.yaw);
-        Log.i("== LAUNCH SYSTEM ==", "DISTANCE: " + ydt.distance);
-        Log.i("== LAUNCH SYSTEM ==", "TOLERANCE: " + ydt.tolerance);
+            // move the servo to account for the yaw.
+            // Move the servo if the error is outside the tolerance
+            if (Math.abs(ydt.yaw) > TURRET_ALIGNMENT_TOLERANCE_DEGREES) {
 
-        // A positive yaw means the tag is to the right of the camera's center.
-        if (ydt.yaw < 0)
-            Log.i("== LAUNCH SYSTEM ==", "YAW LESS THAN ZERO: " + ydt.yaw);
-        else
-            Log.i("== LAUNCH SYSTEM ==", "YAW MORE THAN ZERO: " + ydt.yaw);
+                //clear out the alignment light
+                robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
 
+    //            double servoDelta = ydt.yaw * TURRET_SERVO_ADJUSTMENT_DELTA;
 
-        // move the servo to account for the yaw.
-        // Move the servo if the error is outside the tolerance
-        if (Math.abs(ydt.yaw) > TURRET_ALIGNMENT_TOLERANCE_DEGREES) {
+                double servoDelta = ydt.yaw > 0 ? TURRET_SERVO_ADJUSTMENT_DELTA : -1 * TURRET_SERVO_ADJUSTMENT_DELTA;
 
-            //clear out the alignment light
-            robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
-
-//            double servoDelta = ydt.yaw * TURRET_SERVO_ADJUSTMENT_DELTA;
-
-            double servoDelta = ydt.yaw > 0 ? TURRET_SERVO_ADJUSTMENT_DELTA : -1 * TURRET_SERVO_ADJUSTMENT_DELTA;
-
-            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: servoDelta: " + servoDelta);
+                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: servoDelta: " + servoDelta);
 
 
-            // Calculate the new potential servo position and constrain it
-//            double newServoPosition = TURRET_SERVO_CENTERED + servoDelta;
+                // Calculate the new potential servo position and constrain it
+    //            double newServoPosition = TURRET_SERVO_CENTERED + servoDelta;
 
-            double newServoPosition = robotHardware.getLaunchTurretPosition() + servoDelta;
+                double newServoPosition = robotHardware.getLaunchTurretPosition() + servoDelta;
 
-            newServoPosition = Math.max(TURRET_SERVO_MIN_POS, Math.min(TURRET_SERVO_MAX_POS, newServoPosition));
+                newServoPosition = Math.max(TURRET_SERVO_MIN_POS, Math.min(TURRET_SERVO_MAX_POS, newServoPosition));
 
-            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: Adjusting... New Position: " + newServoPosition);
+                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: Adjusting... New Position: " + newServoPosition);
 
-            //the cycle might be so fast that the servo is still turning
-            //since we are not using an encoder on the turret, the get position will return
-            //the last position that the servo was told to go to. So if the calculation is the same,
-            //no need to call the command on the servo again - this should prevent jitter.
-            if (robotHardware.getLaunchTurretPosition() == newServoPosition)
-                return;
+                //the cycle might be so fast that the servo is still turning
+                //since we are not using an encoder on the turret, the get position will return
+                //the last position that the servo was told to go to. So if the calculation is the same,
+                //no need to call the command on the servo again - this should prevent jitter.
+                if (robotHardware.getLaunchTurretPosition() == newServoPosition)
+                    return;
 
-            robotHardware.setLaunchTurretPosition(newServoPosition);
+                robotHardware.setLaunchTurretPosition(newServoPosition);
 
+            } else {
+
+                robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
+                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: Turret Aligned!");
+
+            }
         } else {
-
-            robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
-            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: Turret Aligned!");
-
-        }
-    } else {
 
             //No tag found - center the turret
 //            robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);

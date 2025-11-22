@@ -55,22 +55,22 @@ public class RobotHardware {
         frontRightDriveMotor = hardwareMap.get(DcMotorEx.class, "FRMotor");
         frontRightDriveMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         frontRightDriveMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        frontRightDriveMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
         //this motor is oriented backwards, hence reversing direction
         frontLeftDriveMotor = hardwareMap.get(DcMotorEx.class, "FLMotor");
         frontLeftDriveMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         frontLeftDriveMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        frontLeftDriveMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
         backRightDriveMotor = hardwareMap.get(DcMotorEx.class, "BRMotor");
         backRightDriveMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         backRightDriveMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        backRightDriveMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
         //this motor is oriented backwards, hence reversing direction
         backLeftDriveMotor = hardwareMap.get(DcMotorEx.class, "BLMotor");
         backLeftDriveMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         backLeftDriveMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        backLeftDriveMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
         //intake motor
         intakeMotor = hardwareMap.get(DcMotorEx.class, "IntakeMotor");
@@ -195,7 +195,6 @@ public class RobotHardware {
     }
 
     public double getLaunchVisorPosition() {
-//        Log.i("=== ROBOTHARDWARE  ===", " getLaunchVisorPosition: ");
 
         double voltage = visorServoEncoder.getVoltage();
         double position = 1 - (voltage / 3.3);  //position via encoder seems to be flipped

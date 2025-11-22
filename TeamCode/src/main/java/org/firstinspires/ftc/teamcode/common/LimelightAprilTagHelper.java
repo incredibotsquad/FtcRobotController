@@ -64,7 +64,7 @@ public class LimelightAprilTagHelper  {
         return null;
     }
 
-    public LaunchYawDistanceTolerance getGoalYawDistanceToleranceFromCurrentPosition() {
+    public LimelightLaunchParameters getGoalYawDistanceToleranceFromCurrentPosition() {
 
         LLResult result = robotHardware.GetLatestLimelightResults();
 
@@ -149,11 +149,11 @@ public class LimelightAprilTagHelper  {
 //                Log.i("LimelightAprilTagHelper", "X YAW: " + xyaw);
 //                Log.i("LimelightAprilTagHelper", "Z YAW: " + zyaw);
 //                Log.i("LimelightAprilTagHelper", "ORIENTATION YAW: " + oyaw);
-//                Log.i("LimelightAprilTagHelper", "YAW YAW: " + yaw);
-//                Log.i("LimelightAprilTagHelper", "DISTANCE: " + horizontalDistance);
-//                Log.i("LimelightAprilTagHelper", "TOLERANCE: " + dynamicTolerance);
+                Log.i("LimelightAprilTagHelper", "YAW: " + zyaw);
+                Log.i("LimelightAprilTagHelper", "DISTANCE: " + horizontalDistance);
+                Log.i("LimelightAprilTagHelper", "TOLERANCE: " + dynamicTolerance);
 
-                return new LaunchYawDistanceTolerance(zyaw, horizontalDistance, dynamicTolerance);
+                return new LimelightLaunchParameters(zyaw, horizontalDistance, dynamicTolerance);
 
             }
         }
