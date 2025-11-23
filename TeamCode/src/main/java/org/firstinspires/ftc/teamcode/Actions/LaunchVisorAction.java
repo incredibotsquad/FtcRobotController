@@ -20,14 +20,19 @@ public class LaunchVisorAction implements Action {
     public static double LAUNCH_VISOR_MAX = 0.84;
     public static double LAUNCH_VISOR_MID = (LAUNCH_VISOR_RESTING + LAUNCH_VISOR_MAX)/2;
 
-    public static double VISOR_POSITION_TOLERANCE = 0.03;
-
+    public static double VISOR_POSITION_TOLERANCE = 0.0005;
+    private boolean waitForAction;
     private ElapsedTime timer;
 
     public LaunchVisorAction(RobotHardware robotHardware, double position) {
+        this(robotHardware, position, true);
+    }
+
+    public LaunchVisorAction(RobotHardware robotHardware, double position, boolean waitForAction) {
         this.robotHardware = robotHardware;
         this.position = Math.max(LAUNCH_VISOR_RESTING, Math.min(position, LAUNCH_VISOR_MAX));
         this.initialized = false;
+        this.waitForAction = waitForAction;
     }
 
     @Override
@@ -38,10 +43,16 @@ public class LaunchVisorAction implements Action {
             initialized = true;
         }
 
+        if (!waitForAction)
+            return false;
+
         //run this loop every 20 ms.
         if (timer.milliseconds() < 20) return true;
         timer.reset();
 
-        return (Math.abs(robotHardware.getLaunchVisorPosition() - robotHardware.getLaunchVisorPosition()) > VISOR_POSITION_TOLERANCE);
+        double visorPos = robotHardware.getLaunchVisorPositionFromEncoder();
+//        Log.i("LAUNCH VISOR ACTION", "POSITION: " + visorPos);
+
+        return (Math.abs(robotHardware.getLaunchVisorPositionFromEncoder() - visorPos) > VISOR_POSITION_TOLERANCE);
     }
 }

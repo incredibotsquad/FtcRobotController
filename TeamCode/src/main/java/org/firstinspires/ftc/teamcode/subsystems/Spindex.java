@@ -73,18 +73,18 @@ public class Spindex {
         int nextFullSlotIndex = -1;
 
         if (!list.isEmpty()) {
-            double distance = 1;
-            double currPos = robotHardware.getSpindexPosition();
+//            double distance = 1;
+//            double currPos = robotHardware.getSpindexPosition();
+//
+//            //this gets the closest full slot to current position
+//            for (BallEntry entry: list) {
+//                if (Math.abs(entry.launchPosition - currPos) < distance) {
+//                    distance = Math.abs(entry.launchPosition - currPos);
+//                    nextFullSlotIndex = entry.index;
+//                }
+//            }
 
-            //this gets the closest full slot to current position
-            for (BallEntry entry: list) {
-                if (Math.abs(entry.launchPosition - currPos) < distance) {
-                    distance = Math.abs(entry.launchPosition - currPos);
-                    nextFullSlotIndex = entry.index;
-                }
-            }
-
-            //nextFullSlotIndex = list.get(list.size() - 1).index;
+            nextFullSlotIndex = list.get(list.size() - 1).index;
         }
 
 //        Log.i("SPINDEXER", "NEXT FULL SLOT INDEX: " + nextFullSlotIndex);
@@ -120,7 +120,7 @@ public class Spindex {
     }
 
     public int getSlotIndexClosestToColorSensor() {
-        double pos = robotHardware.getSpindexPosition();
+        double pos = robotHardware.getSpindexPositionFromEncoder();
 
         Log.i("SPINDEXER", "getSlotIndexClosestToColorSensor. Spindex pos: " + pos);
 

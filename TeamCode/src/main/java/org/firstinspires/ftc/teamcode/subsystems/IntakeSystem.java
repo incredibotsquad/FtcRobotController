@@ -24,17 +24,19 @@ import java.util.stream.Collectors;
 @Config
 public class IntakeSystem {
     public static double INTAKE_THROTTLE_TIME_MS = 900;
-    public static double INTAKE_DELAY_TO_LET_BALL_SETTLE_SECS = 0;
     private RobotHardware robotHardware;
     private Spindex spindex;
     public boolean isOn;
     private ElapsedTime timeSinceLastIntake;
+
+    private boolean isUnknownIndexingOngoing;
 
     public IntakeSystem(RobotHardware robotHardware, Spindex spindex) {
         this.robotHardware = robotHardware;
         this.spindex = spindex;
         this.isOn = false;
         timeSinceLastIntake = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+        this.isUnknownIndexingOngoing = false;
     }
 
     //make the default constructor private
@@ -83,7 +85,7 @@ public class IntakeSystem {
 
         if (isOn && ballDetected) {
             //make sure the spindex is not stalled - the current position should be the intake position for the index at hand
-            if (Math.abs(robotHardware.getSpindexPosition() - spindex.storedColors.get(spindex.currentIndex).intakePosition) > SpindexAction.SPINDEX_POSITION_TOLERANCE)
+            if (Math.abs(robotHardware.getSpindexPositionFromEncoder() - spindex.storedColors.get(spindex.currentIndex).intakePosition) > SpindexAction.SPINDEX_POSITION_TOLERANCE)
                 return new NullAction();
 
 
@@ -95,8 +97,13 @@ public class IntakeSystem {
                     spindex.moveToNextEmptySlotAction(),
 //                    new InstantAction(()->Log.i("INTAKE SYSTEM", "checkForBallIntakeAndGetAction. Spindex after rotating: " + robotHardware.getSpindexPosition())),
 //                    new SleepAction(INTAKE_THROTTLE_TIME_MS/1000),   //wait for the ball to stabilize
-                    new InstantAction(()->Log.i("INTAKE SYSTEM", "checkForBallIntakeAndGetAction. Spindex after rotating: " + robotHardware.getSpindexPosition())),
-                    spindex.updateBallColorForPreviousIndex()
+                    new InstantAction(()->Log.i("INTAKE SYSTEM", "checkForBallIntakeAndGetAction. Spindex after rotating: " + robotHardware.getSpindexPositionFromEncoder())),
+                    spindex.updateBallColorForPreviousIndex(),
+                    spindex.isFull() ?
+                            new SequentialAction(
+                                    getTurnOffAction(),
+                                    indexAnyUnknowns(),
+                                    spindex.moveToNextFullSlotAction()) : new NullAction()
             );
         }
 
@@ -104,6 +111,10 @@ public class IntakeSystem {
     }
 
     public Action indexAnyUnknowns() {
+        if (isUnknownIndexingOngoing) {
+            return new NullAction();
+        }
+
         List<Action> actionsToRun = new ArrayList<>();
 
         //find all the unknown balls
@@ -112,6 +123,13 @@ public class IntakeSystem {
                 .collect(Collectors.toList());
 
         Log.i("INTAKE SYSTEM", "INDEXING ANY UNKNOWNS. FOUND: " + unknownList.size());
+
+        Action updateRunState = new InstantAction(() ->
+        {
+            Log.i("INTAKE SYSTEM", "SETTING LOCAL VARIABLE TO REPRESENT ON GOING INDEXING");
+            isUnknownIndexingOngoing = true;
+        });
+        actionsToRun.add(updateRunState);
 
         for (BallEntry entry: unknownList) {
 
@@ -125,6 +143,12 @@ public class IntakeSystem {
 
             actionsToRun.add(ballAction);
         }
+
+        Action clearRunState = new InstantAction(() -> {
+            Log.i("INTAKE SYSTEM", "SETTING LOCAL VARIABLE TO REPRESENT COMPLETED INDEXING");
+            isUnknownIndexingOngoing = false;
+        });
+        actionsToRun.add(clearRunState);
 
         return new SequentialAction(actionsToRun);
     }
@@ -203,7 +227,7 @@ public class IntakeSystem {
 
         return new SequentialAction(
                 ball1Action,
-                ball1Action,
+                ball2Action,
                 ball3Action,
                 colorForBall3Action);
     }

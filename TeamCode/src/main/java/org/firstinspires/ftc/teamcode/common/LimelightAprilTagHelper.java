@@ -68,13 +68,21 @@ public class LimelightAprilTagHelper  {
 
         LLResult result = robotHardware.GetLatestLimelightResults();
 
+//        Log.i("LimelightAprilTagHelper", "GOT RESULTS");
+
         if (result.isValid()) { // Tag is visible
+
+//            Log.i("LimelightAprilTagHelper", "RESULTS ARE VALID");
+
 
             // Get fiducial (AprilTag) results
             List<LLResultTypes.FiducialResult> fiducialResults = result.getFiducialResults();
 
             if (!fiducialResults.isEmpty()) {
                 // Get the first detected AprilTag
+
+//                Log.i("LimelightAprilTagHelper", "FOUND APRIL TAGS");
+
 
                 LLResultTypes.FiducialResult primaryTarget = null;
 
@@ -86,6 +94,7 @@ public class LimelightAprilTagHelper  {
                         if (!redResults.isEmpty())
                         {
 //                            Log.i("LimelightAprilTagHelper", allianceColor + " april tag found");
+
                             primaryTarget = redResults.get(0);
                         }
                         else

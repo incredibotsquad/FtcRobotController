@@ -193,12 +193,12 @@ public class RobotHardware {
         launchTurretServo.setPosition(position);
     }
 
-    public double getLaunchVisorPosition() {
+    public double getLaunchVisorPositionFromEncoder() {
 
         double voltage = visorServoEncoder.getVoltage();
         double position = 1 - (voltage / 3.3);  //position via encoder seems to be flipped
 
-        Log.i("=== ROBOTHARDWARE  ===", " getLaunchVisorPosition: " + position);
+//        Log.i("=== ROBOTHARDWARE  ===", " getLaunchVisorPosition: " + position);
         return position;
     }
 
@@ -212,7 +212,11 @@ public class RobotHardware {
         launchKickServo.setPosition(position);
     }
 
-    public double getSpindexPosition() {
+    public double getSpindexPositionRaw() {
+        return spindexServo.getPosition();
+    }
+
+    public double getSpindexPositionFromEncoder() {
 //        Log.i("=== ROBOTHARDWARE  ===", " getSpindexPosition: ");
 
         double voltage = spindexServoEncoder.getVoltage();

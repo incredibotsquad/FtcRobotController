@@ -8,7 +8,6 @@ import com.acmerobotics.roadrunner.SequentialAction;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.acmerobotics.dashboard.FtcDashboard;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.teamcode.Actions.SpindexAction;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSystem;
 import org.firstinspires.ftc.teamcode.subsystems.Spindex;
@@ -83,11 +82,15 @@ public class MechanismControl {
         CheckForBallsToIntake();
 
         //process the yaw and rotate the turret always - except when parking
-        if (currentRobotState != ROBOT_STATE.PARK && targetRobotState != ROBOT_STATE.PARK)
-            launchSystem.AlignTurretToGoalAndKeepLauncherWarm();
+        if (currentRobotState != ROBOT_STATE.PARK && targetRobotState != ROBOT_STATE.PARK) {
+//            Log.i("MECHANISM CONTROL", "ALIGNING TURRET");
+            launchSystem.AlignTurretToGoal();
+        }
+
+        if ((currentRobotState == ROBOT_STATE.INTAKE || targetRobotState == ROBOT_STATE.INTAKE) && (!stateTransitionInProgress))
+            launchSystem.KeepLauncherWarm();
 
         CheckForSpindexStall();
-//        lightSignalForRobotAlignmentWhenLaunching();
     }
 
 
@@ -266,7 +269,7 @@ public class MechanismControl {
     }
 
     private void CheckForBallsToIntake() {
-;        if (currentRobotState == ROBOT_STATE.INTAKE ) {
+;        if (currentRobotState == ROBOT_STATE.INTAKE && !robotHardware.isSpindexStalled) {
 
             if (!spindex.isFull())
             {
@@ -285,17 +288,16 @@ public class MechanismControl {
 //                Log.i("Mechanism Control", "Adding CheckForBallsToIntake Action Automatically");
                 runningActions.add(intakeSystem.checkForBallIntakeAndGetAction());
             }
-            else
-            {
-                if (intakeSystem.isOn) {
-//                Log.i("Mechanism Control", "Spindex Full: added moveToNextFullSlotAction");
-                    runningActions.add(intakeSystem.getTurnOffAction());
-                    runningActions.add(new SequentialAction(
-                            intakeSystem.indexAnyUnknowns(),
-                            spindex.moveToNextFullSlotAction()
-                    ));
-                }
-            }
+//            else
+//            {
+//                if (intakeSystem.isOn) {
+////                Log.i("Mechanism Control", "Spindex Full: added moveToNextFullSlotAction");
+////                    runningActions.add(new SequentialAction(
+////                            intakeSystem.indexAnyUnknowns(),
+////                            spindex.moveToNextFullSlotAction()
+////                    ));
+//                }
+//            }
         }
     }
 
@@ -348,6 +350,8 @@ public class MechanismControl {
 
     private void ProcessDPad() {
         if (gamepad2.dpadDownWasPressed()) {
+            //this clears out any running actions
+            runningActions.clear();
             runningActions.add(intakeSystem.ReIndexBalls());
         }
     }
@@ -355,18 +359,6 @@ public class MechanismControl {
     private void CheckForSpindexStall() {
         if (!robotHardware.isSpindexStalled)
             return;
-
-        //move the spindexer to the closest intake
-        double currPos = robotHardware.getSpindexPosition();
-        double distance = 1;
-        int indexToUse = 0;
-
-        for (BallEntry entry: spindex.storedColors) {
-            if (Math.abs(currPos - entry.intakePosition) < distance) {
-                distance = Math.abs(currPos - entry.intakePosition);
-                indexToUse = entry.index;
-            }
-        }
 
         runningActions.add(intakeSystem.getReverseIntakeAction());
 

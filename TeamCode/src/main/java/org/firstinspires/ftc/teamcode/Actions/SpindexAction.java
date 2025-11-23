@@ -16,7 +16,7 @@ public class SpindexAction implements Action {
 
     private RobotHardware robotHardware;
     private double originalPosition;
-    private double lastRecordedPosition;
+    private double lastRecordedPositionForStallDetection;
     private double position;
     private boolean initialized = false;
     private ElapsedTime pollingTimer;
@@ -25,27 +25,38 @@ public class SpindexAction implements Action {
     private ElapsedTime actionResetTimer;
     public static double SPINDEX_POSITION_TOLERANCE = 0.05;
     public static double SPINDEX_STALL_TIMER_MILLIS = 1000;
-    public static double ACTION_RESET_TIME_DURATION_MILLIS = 1000;
+    public static double ACTION_RESET_TIME_DURATION_MILLIS = 1500;
+    private boolean originalPositionRecorded = false;
 
     public SpindexAction(RobotHardware robotHardware, double position) {
         this.robotHardware = robotHardware;
         this.position = position;
         this.initialized = false;
         this.actionBeingReset = false;
+        this.originalPositionRecorded = false;
     }
 
     @Override
     public boolean run (@NonNull TelemetryPacket packet) {
+        if (!originalPositionRecorded) {
+            originalPosition = robotHardware.getSpindexPositionRaw();
+            Log.i("SPINDEX ACTION", "OBJECT ID:" + this.hashCode() + " ORIGINAL RAW POSITION: " + originalPosition);
+            Log.i("SPINDEX ACTION", "OBJECT ID:" + this.hashCode() + " TARGET POSITION: " + position);
+            originalPositionRecorded = true;
+        }
+
         if (!initialized) {
-            originalPosition = robotHardware.getSpindexPosition();
-            Log.i("SPINDEX ACTION", "ORIGINAL POSITION: " + originalPosition);
 
             pollingTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
             stallTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
-            lastRecordedPosition = originalPosition;
+            lastRecordedPositionForStallDetection = originalPosition;
             robotHardware.setSpindexPosition(position);
             initialized = true;
+
+            Log.i("SPINDEX ACTION", "OBJECT ID:" + this.hashCode() + " INITIALIZED");
+            Log.i("SPINDEX ACTION", "OBJECT ID:" + this.hashCode() + " INITIALIZED. lastRecordedPositionForStallDetection: " + lastRecordedPositionForStallDetection);
+
         }
 
         //run this loop every 50 ms.
@@ -53,23 +64,26 @@ public class SpindexAction implements Action {
         pollingTimer.reset();
 
         if (actionBeingReset) {
-            Log.i("SPINDEX ACTION", "INSIDE ACTION BEING RESET");
+            Log.i("SPINDEX ACTION", "OBJECT ID:" + this.hashCode() + " INSIDE ACTION BEING RESET");
             if (actionResetTimer.milliseconds() > ACTION_RESET_TIME_DURATION_MILLIS) {
-                Log.i("SPINDEX ACTION", "INSIDE ACTION BEING RESET - SETTING INTIALIZED TO FALSE");
+                Log.i("SPINDEX ACTION", "OBJECT ID:" + this.hashCode() + " INSIDE ACTION BEING RESET - SETTING INTIALIZED TO FALSE");
                 initialized = false;
                 actionBeingReset = false;
             }
             return true;
         }
 
-        double newPos = robotHardware.getSpindexPosition();
+        double newPos = robotHardware.getSpindexPositionFromEncoder();
 
+        Log.i("SPINDEX ACTION", "OBJECT ID:" + this.hashCode() + " NEW SERVO POSITION: " + newPos);
+
+        //if spindexer hasnt moved significantly in the last 1 second.
         if (stallTimer.milliseconds() > SPINDEX_STALL_TIMER_MILLIS) {
-            if (Math.abs(newPos - lastRecordedPosition) < SPINDEX_POSITION_TOLERANCE) {
-                Log.i("SPINDEX ACTION", "STALL DETECTED");
+            if (Math.abs(newPos - lastRecordedPositionForStallDetection) < SPINDEX_POSITION_TOLERANCE) {
+                Log.i("SPINDEX ACTION", "OBJECT ID:" + this.hashCode() + " STALL DETECTED");
                 robotHardware.isSpindexStalled = true;
 
-                Log.i("SPINDEX ACTION", "SETTING SPINDEX TO ORIGINAL POSITION: " + originalPosition);
+                Log.i("SPINDEX ACTION", "OBJECT ID:" + this.hashCode() + " SETTING SPINDEX TO ORIGINAL POSITION: " + originalPosition);
                 robotHardware.setSpindexPosition(originalPosition);
                 actionBeingReset = true;
                 actionResetTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
@@ -78,7 +92,7 @@ public class SpindexAction implements Action {
             }
             else {
                 stallTimer.reset();
-                lastRecordedPosition = newPos;
+                lastRecordedPositionForStallDetection = newPos;
             }
         }
 

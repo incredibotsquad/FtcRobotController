@@ -15,7 +15,7 @@ public class LaunchFlywheelAction implements Action {
     private boolean initialized = false;
 
     public static double FLYWHEEL_FULL_TICKS_PER_SEC = 2800; //1900
-    public static double FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS = 10;
+    public static double FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS = 30;
     private double targetVelocity;
     private boolean waitForAction;
     private ElapsedTime timer;
@@ -35,8 +35,10 @@ public class LaunchFlywheelAction implements Action {
     @Override
     public boolean run (@NonNull TelemetryPacket packet) {
         if (!initialized) {
+            //we are warming up, there might not be a need to set the velocity again
+            if (Math.abs( targetVelocity -  robotHardware.getFlywheelMotorVelocityInTPS()) > FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS)
+                robotHardware.setFlywheelMotorVelocityInTPS(targetVelocity);
 
-            robotHardware.setFlywheelMotorVelocityInTPS(targetVelocity);
             timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
             initialized = true;
         }
@@ -45,7 +47,7 @@ public class LaunchFlywheelAction implements Action {
             return false;
 
         if (targetVelocity > 0) {
-            if (timer.milliseconds() < 100) return true; //check no frequent than 100 ms
+            if (timer.milliseconds() < 20) return true; //check no frequent than 20 ms
 
             timer.reset();
 
@@ -55,7 +57,7 @@ public class LaunchFlywheelAction implements Action {
 
 //            Log.i("LaunchFlywheelAction", "Current Velocity: " + currentVelocity);
 
-            // wait till the difference is more than 2%
+            // wait till the difference is more than 30 TPS
             return (Math.abs( targetVelocity -  currentVelocity) > FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS);
         }
 
