@@ -1,6 +1,12 @@
 package org.firstinspires.ftc.teamcode.OpModes.Autonomous;
 
+import static org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC;
+import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.FLYWHEEL_POWER_COEFFICIENT_FAR;
+
+import android.util.Log;
+
 import com.acmerobotics.roadrunner.Action;
+import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
@@ -8,6 +14,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction;
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.common.GamePattern;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
@@ -17,24 +24,24 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchSystem;
 import org.firstinspires.ftc.teamcode.subsystems.Spindex;
 
 
-@Autonomous(name = "Red_Far_Auto", group = "Autonomous")
-public class RedFarAuto extends LinearOpMode {
+@Autonomous(name = "Blue_Far_Auto_3", group = "Autonomous")
+public class BlueFarAuto_3 extends LinearOpMode {
     public RobotHardware robotHardware;
     private Spindex spindex;
     private IntakeSystem intakeSystem;
     private LaunchSystem launchSystem;
     public MecanumDrive mecanumDrive;
 
-    private static final int multiplier = 1;    //used to flip coordinates between red (1), Blue (-1)
+    private static final int multiplier = -1;    //used to flip coordinates between red (1), Blue (-1)
 
     public double robotHeading = Math.toRadians(180 * multiplier);
-    public double goalHeading = Math.toRadians(180 - (22 * multiplier));
+    public double artifactHeading = Math.toRadians(90 * multiplier);
 
     public double obeliskHeading = Math.toRadians(180); //this is same for both sides - do NOT need a multiplier
 
-    public Pose2d INIT_POS = new Pose2d(58, 8 * multiplier, robotHeading);
-    public Pose2d LAUNCH_BALLS = new Pose2d(48, 12 * multiplier, goalHeading);
-    public Pose2d MOVE_OFF_LINE = new Pose2d(36, 24  * multiplier, obeliskHeading);
+    public Pose2d INIT_POS = new Pose2d(55, 16 * multiplier, robotHeading);
+
+    public Pose2d MOVE_OFF_LINE = new Pose2d(53, 36  * multiplier, obeliskHeading);
 
 
     @Override
@@ -46,18 +53,18 @@ public class RedFarAuto extends LinearOpMode {
         this.spindex.initializeWithPPG();
         this.intakeSystem = new IntakeSystem(robotHardware, this.spindex);
         this.launchSystem = new LaunchSystem(robotHardware, this.spindex);
-        this.launchSystem.setAllianceColor(AllianceColors.RED);
+
+        if (multiplier == 1)
+            this.launchSystem.setAllianceColor(AllianceColors.RED);
+        else
+            this.launchSystem.setAllianceColor(AllianceColors.BLUE);
 
         mecanumDrive = new MecanumDrive(this.hardwareMap, INIT_POS);
 
         robotHardware.startLimelight();
         robotHardware.setLimelightPipeline(6);
 
-        Action moveTolaunchBalls =mecanumDrive.actionBuilder(INIT_POS)
-                .strafeToLinearHeading(LAUNCH_BALLS.position, LAUNCH_BALLS.heading)
-                .build();
-
-        Action moveAwayFromLine = mecanumDrive.actionBuilder(LAUNCH_BALLS)
+        Action moveAwayFromLine = mecanumDrive.actionBuilder(INIT_POS)
                 .strafeToLinearHeading(MOVE_OFF_LINE.position, MOVE_OFF_LINE.heading)
                 .build();
 
@@ -74,14 +81,17 @@ public class RedFarAuto extends LinearOpMode {
 
             Actions.runBlocking(
                     new ParallelAction(
-                            moveTolaunchBalls,
-                            launchSystem.getKeepWarmAction()
+                            new InstantAction(() -> robotHardware.setLaunchTurretPosition(0.425)),
+                            new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR),
+                            spindex.moveToNextPurpleSlotAction()
                     )
             );
 
             Actions.runBlocking(launchSystem.getBallPatternLaunchAction(pattern));
 
             Actions.runBlocking(moveAwayFromLine);
+
+            Log.i("BLUE FAR AUTO", "Elapsed time: " + timer.seconds());
 
             break;
         }

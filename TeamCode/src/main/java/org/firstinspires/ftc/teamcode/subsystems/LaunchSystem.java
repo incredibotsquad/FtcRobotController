@@ -63,7 +63,7 @@ public class LaunchSystem {
     public static double DEFAULT_FLYWHEEL_POWER_COEFFICIENT = FLYWHEEL_POWER_COEFFICIENT_MID;
     public static double VISOR_POSITION_CLOSE = 0.22;
     public static double VISOR_POSITION_MID = 0.53;
-    public static double VISOR_POSITION_FAR = 0.72;
+    public static double VISOR_POSITION_FAR = 0.75;
     public static double DEFAULT_VISOR_POSITION = VISOR_POSITION_MID;
 
     public static double DELAY_BETWEEN_BALLS = 0.25;
@@ -499,7 +499,7 @@ public class LaunchSystem {
             } else {
 
                 robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
-//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalAndKeepLauncherWarm: Turret Aligned!");
+                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalAndKeepLauncherWarm: Turret Aligned At: " + robotHardware.getLaunchTurretPosition());
 
             }
 
