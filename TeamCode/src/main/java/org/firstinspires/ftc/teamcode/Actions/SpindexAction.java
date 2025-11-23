@@ -43,6 +43,10 @@ public class SpindexAction implements Action {
             Log.i("SPINDEX ACTION", "OBJECT ID:" + this.hashCode() + " ORIGINAL RAW POSITION: " + originalPosition);
             Log.i("SPINDEX ACTION", "OBJECT ID:" + this.hashCode() + " TARGET POSITION: " + position);
             originalPositionRecorded = true;
+
+            //dont need to do anything if spindexer is already there
+            if (Math.abs(originalPosition - position) < SPINDEX_POSITION_TOLERANCE)
+                return false;
         }
 
         if (!initialized) {

@@ -86,7 +86,7 @@ public class LaunchSystem {
         Log.i("== LAUNCH SYSTEM ==", "Keep warm");
         return new ParallelAction(
                 new LaunchFlywheelAction(robotHardware, getRobotLaunchParametersBasedOnDistance().flywheelVelocity, false),
-                new LaunchTurretAction(robotHardware, TURRET_SERVO_CENTERED)
+                new InstantAction(() -> robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED))
         );
     }
 
@@ -280,8 +280,8 @@ public class LaunchSystem {
     }
 
     public Action getLaunchPPGAction() {
-
         RobotLaunchParameters robotLaunchParameters = getRobotLaunchParametersBasedOnDistance();
+
         Action ball1 = new NullAction();
         Action ball2 = new NullAction();
         Action ball3 = new NullAction();
@@ -374,6 +374,9 @@ public class LaunchSystem {
         double visorPosition = DEFAULT_VISOR_POSITION;
 
         if (ydt != null) {
+            Log.i("getRobotLaunchParametersBasedOnDistance", "YAW: " + ydt.yaw);
+            Log.i("getRobotLaunchParametersBasedOnDistance", "DISTANCE: " + ydt.distance);
+
             if (ydt.distance < FLYWHEEL_POWER_BUCKET_THRESHOLD_LOW) {
                 targetFlywheelVelocityCoefficient = FLYWHEEL_POWER_COEFFICIENT_CLOSE;
                 visorPosition = VISOR_POSITION_CLOSE;
@@ -385,6 +388,9 @@ public class LaunchSystem {
                 visorPosition = VISOR_POSITION_FAR;
             }
         }
+
+        Log.i("getRobotLaunchParametersBasedOnDistance", "FLYWHEEL POWER: " + targetFlywheelVelocityCoefficient);
+        Log.i("getRobotLaunchParametersBasedOnDistance", "VISOR: " + visorPosition);
 
         return new RobotLaunchParameters(LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * targetFlywheelVelocityCoefficient, visorPosition);
     }

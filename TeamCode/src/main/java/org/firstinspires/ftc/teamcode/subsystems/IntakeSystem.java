@@ -42,12 +42,16 @@ public class IntakeSystem {
     //make the default constructor private
     private IntakeSystem() {}
 
-    public Action getTurnOnAction() {
+    public Action getTurnOnAction(boolean moveSpindexToEmptySlot) {
         isOn = true;
         return new ParallelAction(
                 new IntakeWheelsAction(robotHardware, true),
-                spindex.moveToNextEmptySlotAction()
+                moveSpindexToEmptySlot? spindex.moveToNextEmptySlotAction() : new NullAction()
         );
+    }
+
+    public Action getTurnOnAction() {
+        return getTurnOnAction(true);
     }
 
     public Action getTurnOffAction() {
@@ -55,15 +59,18 @@ public class IntakeSystem {
         return new IntakeWheelsAction(robotHardware, false);
     }
 
-    public Action getReverseIntakeAction() {
-
+    public Action getReverseIntakeAction(boolean moveSpindexToEmptySlot) {
         return new SequentialAction(
                 getTurnOffAction(),
                 new IntakeWheelsAction(robotHardware, true, -1),
                 new SleepAction(2),
                 getTurnOffAction(),
-                getTurnOnAction()
+                getTurnOnAction(moveSpindexToEmptySlot)
         );
+    }
+
+    public Action getReverseIntakeAction() {
+        return getReverseIntakeAction(true);
     }
 
     public Action checkForBallIntakeAndGetAction() {
@@ -138,7 +145,10 @@ public class IntakeSystem {
             Action ballAction = new SequentialAction(
                     new SpindexAction(robotHardware, entry.colorDetectionPosition),
                     new SleepAction(0.25),   //wait for the ball to stabilize
-                    new InstantAction(() -> spindex.storedColors.get(entry.index).ballColor = robotHardware.getDetectedBallColor())
+                    new InstantAction(() -> {
+                        final int entryIndex = entry.index;
+                        spindex.storedColors.get(entryIndex).ballColor = robotHardware.getDetectedBallColor();
+                    })
             );
 
             actionsToRun.add(ballAction);

@@ -360,7 +360,7 @@ public class MechanismControl {
         if (!robotHardware.isSpindexStalled)
             return;
 
-        runningActions.add(intakeSystem.getReverseIntakeAction());
+        runningActions.add(intakeSystem.getReverseIntakeAction(false));
 
         robotHardware.isSpindexStalled = false;
     }
