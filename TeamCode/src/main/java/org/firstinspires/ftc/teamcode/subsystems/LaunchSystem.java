@@ -42,7 +42,7 @@ public class LaunchSystem {
     private ElapsedTime flywheelWarmerThrottleTimer;
 
     public static double TURRET_SERVO_MIN_POS = 0.25;
-    public static double TURRET_SERVO_CENTERED = 0.5;
+    public static double TURRET_SERVO_CENTERED = 0.495;
     public static double TURRET_SERVO_MAX_POS = 0.75;
     public static double TURRET_SERVO_ADJUSTMENT_DELTA_NEAR = 0.004;
     public static double TURRET_SERVO_ADJUSTMENT_DELTA_FAR = 0.002;
@@ -407,8 +407,8 @@ public class LaunchSystem {
         double visorPosition = DEFAULT_VISOR_POSITION;
 
         if (ydt != null) {
-//            Log.i("getRobotLaunchParametersBasedOnDistance", "YAW: " + ydt.yaw);
-//            Log.i("getRobotLaunchParametersBasedOnDistance", "DISTANCE: " + ydt.distance);
+            Log.i("getRobotLaunchParametersBasedOnDistance", "YAW: " + ydt.yaw);
+            Log.i("getRobotLaunchParametersBasedOnDistance", "DISTANCE: " + ydt.distance);
 
             if (ydt.distance < FLYWHEEL_POWER_BUCKET_THRESHOLD_LOW) {
                 targetFlywheelVelocityCoefficient = FLYWHEEL_POWER_COEFFICIENT_CLOSE;
@@ -422,8 +422,8 @@ public class LaunchSystem {
             }
         }
 
-//        Log.i("getRobotLaunchParametersBasedOnDistance", "FLYWHEEL POWER: " + targetFlywheelVelocityCoefficient);
-//        Log.i("getRobotLaunchParametersBasedOnDistance", "VISOR: " + visorPosition);
+        Log.i("getRobotLaunchParametersBasedOnDistance", "FLYWHEEL POWER: " + targetFlywheelVelocityCoefficient);
+        Log.i("getRobotLaunchParametersBasedOnDistance", "VISOR: " + visorPosition);
 
         return new RobotLaunchParameters(LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * targetFlywheelVelocityCoefficient, visorPosition);
     }

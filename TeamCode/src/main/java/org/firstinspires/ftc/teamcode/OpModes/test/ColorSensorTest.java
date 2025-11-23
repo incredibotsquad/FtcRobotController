@@ -16,6 +16,7 @@ import org.firstinspires.ftc.teamcode.common.GameColors;
 import org.opencv.core.Scalar;
 
 
+@Disabled
 @Config
 @TeleOp(name="Color Sensor Test", group="Tests")
 public class ColorSensorTest extends LinearOpMode {
