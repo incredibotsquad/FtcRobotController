@@ -8,6 +8,7 @@ import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.NullAction;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SequentialAction;
+import com.acmerobotics.roadrunner.SleepAction;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction;
@@ -24,6 +25,7 @@ import org.firstinspires.ftc.teamcode.common.LimelightAprilTagHelper;
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
 import org.firstinspires.ftc.teamcode.common.RobotLaunchParameters;
 
+import java.net.PortUnreachableException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -63,6 +65,8 @@ public class LaunchSystem {
     public static double VISOR_POSITION_MID = 0.53;
     public static double VISOR_POSITION_FAR = 0.72;
     public static double DEFAULT_VISOR_POSITION = VISOR_POSITION_MID;
+
+    public static double DELAY_BETWEEN_BALLS = 0.25;
 
 
     public LaunchSystem(RobotHardware robotHardware, Spindex spindex) {
@@ -325,6 +329,35 @@ public class LaunchSystem {
         return getLaunchAllBallsAction(getRobotLaunchParametersBasedOnDistance());
     }
 
+//    public Action getLaunchAllBallsAction(RobotLaunchParameters robotLaunchParameters) {
+//        Log.i("== LAUNCH SYSTEM ==", "Launching " + spindex.fullSlotCount() + " Balls Action: ");
+//
+//        Action allBalls = new SequentialAction(
+//                new ParallelAction(
+//                    new SpindexAction(robotHardware, spindex.storedColors.get(2).launchPosition),
+//                    new LaunchFlywheelAction(robotHardware, robotLaunchParameters.flywheelVelocity)
+//                ),
+//                new LaunchVisorAction(robotHardware, robotLaunchParameters.visorPosition),
+//                new LaunchKickAction(robotHardware),
+//                new LaunchVisorAction(robotHardware, VISOR_POSITION_CLOSE, false),
+//                new InstantAction(() -> spindex.storedColors.get(2).ballColor = GameColors.NONE),
+//                new SleepAction(DELAY_BETWEEN_BALLS),
+//                new SpindexAction(robotHardware, spindex.storedColors.get(1).launchPosition),
+//                new LaunchVisorAction(robotHardware, robotLaunchParameters.visorPosition),
+//                new LaunchKickAction(robotHardware),
+//                new LaunchVisorAction(robotHardware, VISOR_POSITION_CLOSE, false),
+//                new InstantAction(() -> spindex.storedColors.get(1).ballColor = GameColors.NONE),
+//                new SleepAction(DELAY_BETWEEN_BALLS),
+//                new SpindexAction(robotHardware, spindex.storedColors.get(0).launchPosition),
+//                new LaunchVisorAction(robotHardware, robotLaunchParameters.visorPosition),
+//                new LaunchKickAction(robotHardware),
+//                new LaunchVisorAction(robotHardware, VISOR_POSITION_CLOSE, false),
+//                new InstantAction(() -> spindex.storedColors.get(0).ballColor = GameColors.NONE)
+//            );
+//
+//        return allBalls;
+//    }
+
     public Action getLaunchAllBallsAction(RobotLaunchParameters robotLaunchParameters) {
         Log.i("== LAUNCH SYSTEM ==", "Launching " + spindex.fullSlotCount() + " Balls Action: ");
 
@@ -374,8 +407,8 @@ public class LaunchSystem {
         double visorPosition = DEFAULT_VISOR_POSITION;
 
         if (ydt != null) {
-            Log.i("getRobotLaunchParametersBasedOnDistance", "YAW: " + ydt.yaw);
-            Log.i("getRobotLaunchParametersBasedOnDistance", "DISTANCE: " + ydt.distance);
+//            Log.i("getRobotLaunchParametersBasedOnDistance", "YAW: " + ydt.yaw);
+//            Log.i("getRobotLaunchParametersBasedOnDistance", "DISTANCE: " + ydt.distance);
 
             if (ydt.distance < FLYWHEEL_POWER_BUCKET_THRESHOLD_LOW) {
                 targetFlywheelVelocityCoefficient = FLYWHEEL_POWER_COEFFICIENT_CLOSE;
@@ -389,8 +422,8 @@ public class LaunchSystem {
             }
         }
 
-        Log.i("getRobotLaunchParametersBasedOnDistance", "FLYWHEEL POWER: " + targetFlywheelVelocityCoefficient);
-        Log.i("getRobotLaunchParametersBasedOnDistance", "VISOR: " + visorPosition);
+//        Log.i("getRobotLaunchParametersBasedOnDistance", "FLYWHEEL POWER: " + targetFlywheelVelocityCoefficient);
+//        Log.i("getRobotLaunchParametersBasedOnDistance", "VISOR: " + visorPosition);
 
         return new RobotLaunchParameters(LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * targetFlywheelVelocityCoefficient, visorPosition);
     }

@@ -51,7 +51,7 @@ public class LaunchVisorAction implements Action {
         timer.reset();
 
         double visorPos = robotHardware.getLaunchVisorPositionFromEncoder();
-//        Log.i("LAUNCH VISOR ACTION", "POSITION: " + visorPos);
+        Log.i("LAUNCH VISOR ACTION", "POSITION: " + visorPos);
 
         return (Math.abs(robotHardware.getLaunchVisorPositionFromEncoder() - visorPos) > VISOR_POSITION_TOLERANCE);
     }

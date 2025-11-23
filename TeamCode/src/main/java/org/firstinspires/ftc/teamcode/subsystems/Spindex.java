@@ -29,6 +29,8 @@ public class Spindex {
     public static double LAUNCH_POS_1 = 0.58;
     public static double LAUNCH_POS_2 = 0.95;
     public static double LAUNCH_POS_3 = 0.205;
+
+    public static double SPINDEX_MANUAL_DELTA = 0.1;
     public List<BallEntry> storedColors = List.of(
             new BallEntry(0, INTAKE_POS_1, COLOR_POS_1, LAUNCH_POS_1, GameColors.NONE),
             new BallEntry(1, INTAKE_POS_2, COLOR_POS_2, LAUNCH_POS_2, GameColors.NONE),

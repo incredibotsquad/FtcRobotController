@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.common;
 
+import static org.firstinspires.ftc.teamcode.subsystems.Spindex.SPINDEX_MANUAL_DELTA;
+
 import android.util.Log;
 
 import com.acmerobotics.roadrunner.Action;
@@ -76,6 +78,7 @@ public class MechanismControl {
 
         ProcessActions();
 
+        ProcessBackButton();
         ProcessDPad();
 
         //this has to be done after translating any state into actions
@@ -90,7 +93,7 @@ public class MechanismControl {
         if ((currentRobotState == ROBOT_STATE.INTAKE || targetRobotState == ROBOT_STATE.INTAKE) && (!stateTransitionInProgress))
             launchSystem.KeepLauncherWarm();
 
-        CheckForSpindexStall();
+//        CheckForSpindexStall();
     }
 
 
@@ -119,9 +122,9 @@ public class MechanismControl {
             newTargetRobotState = ROBOT_STATE.PARK;
         }
 
-        if (gamepad2.backWasPressed()) {
-            newTargetRobotState = ROBOT_STATE.REVERSE_INTAKE;
-        }
+//        if (gamepad2.backWasPressed()) {
+////            newTargetRobotState = ROBOT_STATE.REVERSE_INTAKE;
+//        }
 
         if (gamepad2.left_trigger > 0.5 && gamepad2.yWasPressed()) {
             newTargetRobotState = ROBOT_STATE.LAUNCH_MANUAL_ONE_CLOSE;
@@ -171,6 +174,10 @@ public class MechanismControl {
     private void TranslateStateIntoActions() {
 
 //        if (currentRobotState == targetRobotState) return;
+//        Log.i("== MECHANISM CONTROL ==","TranslateStateIntoActions: current state: " + currentRobotState);
+//        Log.i("== MECHANISM CONTROL ==","TranslateStateIntoActions: target state: " + targetRobotState);
+//        Log.i("== MECHANISM CONTROL ==","TranslateStateIntoActions: stateTransitionInProgress: " + stateTransitionInProgress);
+
 
         if (!stateTransitionInProgress) {
 
@@ -348,11 +355,39 @@ public class MechanismControl {
         }
     }
 
+    public void ProcessBackButton() {
+        if (gamepad2.backWasPressed()) {
+            //this is an emergency operation - we clear out the actions and we clear out state transition flag
+            // so that the state change can actually happen.
+            runningActions.clear();
+            stateTransitionInProgress = false;
+            targetRobotState = ROBOT_STATE.REVERSE_INTAKE;
+        }
+    }
+
     private void ProcessDPad() {
         if (gamepad2.dpadDownWasPressed()) {
             //this clears out any running actions
-            runningActions.clear();
+//            runningActions.clear();
             runningActions.add(intakeSystem.ReIndexBalls());
+        }
+
+        if (gamepad2.dpadLeftWasPressed()) {
+            double currentPos = robotHardware.getSpindexPositionFromEncoder();
+            robotHardware.setSpindexPosition(Math.max(0, currentPos - SPINDEX_MANUAL_DELTA));
+        }
+
+        if (gamepad2.dpadRightWasPressed()) {
+            double currentPos = robotHardware.getSpindexPositionFromEncoder();
+            robotHardware.setSpindexPosition(Math.min(1, currentPos + SPINDEX_MANUAL_DELTA));
+        }
+
+        if (gamepad2.dpadUpWasPressed()) {
+            //this is an emergency operation - we clear out the actions and we clear out state transition flag
+            // so that the state change can actually happen.
+            runningActions.clear();
+            stateTransitionInProgress = false;
+            targetRobotState = ROBOT_STATE.INTAKE;
         }
     }
 

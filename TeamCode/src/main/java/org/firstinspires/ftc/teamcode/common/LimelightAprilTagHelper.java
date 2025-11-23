@@ -37,7 +37,7 @@ public class LimelightAprilTagHelper  {
 
         if (result.isValid()) { // Tag is visible
 
-            Log.i("LimelightAprilTagHelper", "getGamePatternFromObelisk: valid results found");
+//            Log.i("LimelightAprilTagHelper", "getGamePatternFromObelisk: valid results found");
 
             // Get fiducial (AprilTag) results
             List<LLResultTypes.FiducialResult> fiducialResults = result.getFiducialResults();
@@ -45,12 +45,12 @@ public class LimelightAprilTagHelper  {
             if (!fiducialResults.isEmpty()) {
                 List<LLResultTypes.FiducialResult> gameTags = fiducialResults.stream().filter(fr -> fr.getFiducialId() == 21 || fr.getFiducialId() == 22 || fr.getFiducialId() == 23).collect(Collectors.toList());
 
-                Log.i("LimelightAprilTagHelper", "getGamePatternFromObelisk: April tag results found: " + gameTags.size());
+//                Log.i("LimelightAprilTagHelper", "getGamePatternFromObelisk: April tag results found: " + gameTags.size());
 
                 if (!gameTags.isEmpty()) {
                     int idToSearch = gameTags.get(0).getFiducialId();
 
-                    Log.i("LimelightAprilTagHelper", "getGamePatternFromObelisk: id to search: " + idToSearch);
+//                    Log.i("LimelightAprilTagHelper", "getGamePatternFromObelisk: id to search: " + idToSearch);
 
                     List<GamePattern> foundPattern = AprilTagConstants.patterns.stream().filter(pattern -> pattern.tagId == idToSearch).collect(Collectors.toList());
 
