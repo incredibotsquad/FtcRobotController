@@ -25,12 +25,7 @@ import org.firstinspires.ftc.teamcode.subsystems.Spindex;
 
 
 @Autonomous(name = "Blue_Far_Auto_3", group = "Autonomous")
-public class BlueFarAuto_3 extends LinearOpMode {
-    public RobotHardware robotHardware;
-    private Spindex spindex;
-    private IntakeSystem intakeSystem;
-    private LaunchSystem launchSystem;
-    public MecanumDrive mecanumDrive;
+public class BlueFarAuto_3 extends BaseAuto {
 
     private static final int multiplier = -1;    //used to flip coordinates between red (1), Blue (-1)
 
@@ -79,17 +74,24 @@ public class BlueFarAuto_3 extends LinearOpMode {
 
             GamePattern pattern = launchSystem.readGamePattern();
 
-            Actions.runBlocking(
+            runBlockingWithBackground(
                     new ParallelAction(
                             new InstantAction(() -> robotHardware.setLaunchTurretPosition(0.425)),
                             new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR),
                             spindex.moveToNextPurpleSlotAction()
-                    )
+                    ),
+                    () -> launchSystem.AlignTurretToGoal()
             );
 
-            Actions.runBlocking(launchSystem.getBallPatternLaunchAction(pattern));
+            runBlockingWithBackground(
+                    launchSystem.getBallPatternLaunchAction(pattern),
+                    () -> launchSystem.AlignTurretToGoal()
+            );
 
-            Actions.runBlocking(moveAwayFromLine);
+            runBlockingWithBackground(
+                    moveAwayFromLine,
+                    () -> launchSystem.AlignTurretToGoal()
+            );
 
             Log.i("BLUE FAR AUTO", "Elapsed time: " + timer.seconds());
 

@@ -7,6 +7,7 @@ import android.util.Log;
 
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.InstantAction;
+import com.acmerobotics.roadrunner.NullAction;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.ProfileAccelConstraint;
@@ -31,13 +32,7 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchSystem;
 import org.firstinspires.ftc.teamcode.subsystems.Spindex;
 
 @Autonomous(name = "Blue_Near_Auto", group = "Autonomous")
-public class BlueNearAuto extends LinearOpMode {
-
-    public RobotHardware robotHardware;
-    private Spindex spindex;
-    private IntakeSystem intakeSystem;
-    private LaunchSystem launchSystem;
-    public MecanumDrive mecanumDrive;
+public class BlueNearAuto extends BaseAuto {
 
     private static final int multiplier = -1;    //used to flip coordinates between red (1), Blue (-1)
 
@@ -59,8 +54,8 @@ public class BlueNearAuto extends LinearOpMode {
     public Pose2d LAUNCH_BALLS = new Pose2d(-26, 26 * multiplier, goalHeading);
     public Pose2d COLLECT_LINE_1_START = new Pose2d(-7, 38 * multiplier, artifactHeading);
     public Pose2d COLLECT_LINE_1_LOW = new Pose2d(COLLECT_LINE_1_START.position.x, COLLECT_LINE_1_START.position.y + (FORWARD_DELTA_TO_COLLECT_BALL_STEP * multiplier), artifactHeading);
-    public Pose2d COLLECT_LINE_1_MID = new Pose2d(COLLECT_LINE_1_LOW.position.x, COLLECT_LINE_1_LOW.position.y + ((FORWARD_DELTA_TO_COLLECT_BALL_STEP - 2) * multiplier), artifactHeading);
-    public Pose2d COLLECT_LINE_1_END = new Pose2d(COLLECT_LINE_1_MID.position.x, COLLECT_LINE_1_MID.position.y + ((FORWARD_DELTA_TO_COLLECT_BALL_STEP -2) * multiplier), artifactHeading);
+    public Pose2d COLLECT_LINE_1_MID = new Pose2d(COLLECT_LINE_1_LOW.position.x, COLLECT_LINE_1_LOW.position.y + ((FORWARD_DELTA_TO_COLLECT_BALL_STEP - 3) * multiplier), artifactHeading);
+    public Pose2d COLLECT_LINE_1_END = new Pose2d(COLLECT_LINE_1_MID.position.x, COLLECT_LINE_1_MID.position.y + ((FORWARD_DELTA_TO_COLLECT_BALL_STEP -3) * multiplier), artifactHeading);
 
     //    public Pose2d COLLECT_LINE_2_START = new Pose2d(12, 43 * multiplier, artifactHeading);
 //    public Pose2d COLLECT_LINE_2_END = new Pose2d(12, (43 + FORWARD_DELTA_TO_COLLECT_BALLS) * multiplier, artifactHeading);
@@ -160,7 +155,7 @@ public class BlueNearAuto extends LinearOpMode {
 
             GamePattern pattern;
 
-            Actions.runBlocking(
+            runBlockingWithBackground(
                     new SequentialAction(
                             new ParallelAction(
                                     spindex.moveToNextFullSlotAction(),
@@ -168,22 +163,29 @@ public class BlueNearAuto extends LinearOpMode {
                                     new InstantAction(() -> robotHardware.setFlywheelMotorVelocityInTPS(LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_CLOSE)),
                                     new InstantAction(() -> robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED))
                             )
-                    )
+                    ),
+                    () -> launchSystem.AlignTurretToGoal()
             );
+
 
             pattern = launchSystem.readGamePattern();
             Log.i("READING OBELISK", "PATTERN ID: " + pattern.tagId);
 
-            Actions.runBlocking(
+            runBlockingWithBackground(
                     new ParallelAction(
                             intakeSystem.getTurnOffAction(),
                             launchFromTagRead
-                    )
+                    ),
+                    () -> launchSystem.AlignTurretToGoal()
             );
 
-            Actions.runBlocking(launchSystem.getBallPatternLaunchAction(pattern));
+            runBlockingWithBackground(
+                    launchSystem.getBallPatternLaunchAction(pattern),
+                    () -> launchSystem.AlignTurretToGoal()
+            );
 
-            Actions.runBlocking(
+
+            runBlockingWithBackground(
                     new SequentialAction(
                             new ParallelAction(
                                     pickLine1AfterLaunch,
@@ -196,20 +198,20 @@ public class BlueNearAuto extends LinearOpMode {
                                 while (intakeTimer.milliseconds() < 500 && spindex.storedColors.get(0).ballColor == GameColors.NONE) {
                                     if (robotHardware.didBallDetectionBeamBreak()) {
                                         spindex.storedColors.get(0).ballColor = GameColors.UNKNOWN;
-                                        Log.i("BLUE NEAR AUTO", "RE INDEXED INDEX 0 AS UNKNOWN");
+                                        Log.i("RED NEAR AUTO", "RE INDEXED INDEX 0 AS UNKNOWN");
                                     } else {
                                         spindex.storedColors.get(0).ballColor = GameColors.NONE;
-                                        Log.i("BLUE NEAR AUTO", "RE INDEXED INDEX 0 AS NONE");
+                                        Log.i("RED NEAR AUTO", "RE INDEXED INDEX 0 AS NONE");
                                     }
                                 }
                             }),
                             new SpindexAction(robotHardware, spindex.storedColors.get(1).intakePosition),
                             new SleepAction(0.5)
-                    )
+                    ),
+                    () -> launchSystem.AlignTurretToGoal()
             );
 
-            //Need an action to index balls
-            Actions.runBlocking(
+            runBlockingWithBackground(
                     new SequentialAction(
                             moveForwardToPickBall2,
                             new InstantAction(() -> {
@@ -217,24 +219,25 @@ public class BlueNearAuto extends LinearOpMode {
                                 while (intakeTimer.milliseconds() < 500 && spindex.storedColors.get(1).ballColor == GameColors.NONE) {
                                     if (robotHardware.didBallDetectionBeamBreak()) {
                                         spindex.storedColors.get(1).ballColor = GameColors.UNKNOWN;
-                                        Log.i("BLUE NEAR AUTO", "RE INDEXED INDEX 1 AS UNKNOWN");
+                                        Log.i("RED NEAR AUTO", "RE INDEXED INDEX 1 AS UNKNOWN");
                                     } else {
                                         spindex.storedColors.get(1).ballColor = GameColors.NONE;
-                                        Log.i("BLUE NEAR AUTO", "RE INDEXED INDEX 1 AS NONE");
+                                        Log.i("RED NEAR AUTO", "RE INDEXED INDEX 1 AS NONE");
                                     }
                                     if (spindex.storedColors.get(0).ballColor == GameColors.UNKNOWN) {
                                         GameColors color = robotHardware.getDetectedBallColor();
                                         spindex.storedColors.get(0).ballColor = color;
-                                        Log.i("BLUE NEAR AUTO", "RE INDEXED INDEX 0 COLOR AS: " + color);
+                                        Log.i("RED NEAR AUTO", "RE INDEXED INDEX 0 COLOR AS: " + color);
                                     }
                                 }
                             }),
                             new SpindexAction(robotHardware, spindex.storedColors.get(2).intakePosition),
                             new SleepAction(0.75)
-                    )
+                    ),
+                    () -> launchSystem.AlignTurretToGoal()
             );
 
-            Actions.runBlocking(
+            runBlockingWithBackground(
                     new SequentialAction(
                             moveForwardToPickBall3,
                             new InstantAction(() -> {
@@ -242,22 +245,23 @@ public class BlueNearAuto extends LinearOpMode {
                                 while (intakeTimer.milliseconds() < 500 && spindex.storedColors.get(2).ballColor == GameColors.NONE) {
                                     if (robotHardware.didBallDetectionBeamBreak()) {
                                         spindex.storedColors.get(2).ballColor = GameColors.UNKNOWN;
-                                        Log.i("BLUE NEAR AUTO", "RE INDEXED INDEX 2 AS UNKNOWN");
+                                        Log.i("RED NEAR AUTO", "RE INDEXED INDEX 2 AS UNKNOWN");
                                     } else {
                                         spindex.storedColors.get(2).ballColor = GameColors.NONE;
-                                        Log.i("BLUE NEAR AUTO", "RE INDEXED INDEX 2 AS NONE");
+                                        Log.i("RED NEAR AUTO", "RE INDEXED INDEX 2 AS NONE");
                                     }
                                     if (spindex.storedColors.get(1).ballColor == GameColors.UNKNOWN) {
                                         GameColors color = robotHardware.getDetectedBallColor();
                                         spindex.storedColors.get(1).ballColor = color;
-                                        Log.i("BLUE NEAR AUTO", "RE INDEXED INDEX 1 COLOR AS: " + color);
+                                        Log.i("RED NEAR AUTO", "RE INDEXED INDEX 1 COLOR AS: " + color);
                                     }
                                 }
                             })
-                    )
+                    ),
+                    () -> launchSystem.AlignTurretToGoal()
             );
 
-            Actions.runBlocking(
+            runBlockingWithBackground(
                     new ParallelAction(
                             intakeSystem.getReverseIntakeAction(),
                             launchAfterPickingLine1,
@@ -268,20 +272,25 @@ public class BlueNearAuto extends LinearOpMode {
                                         if (spindex.storedColors.get(2).ballColor == GameColors.UNKNOWN) {
                                             GameColors color = robotHardware.getDetectedBallColor();
                                             spindex.storedColors.get(2).ballColor = color;
-                                            Log.i("BLUE NEAR AUTO", "RE INDEXED INDEX 2 COLOR AS: " + color);
+                                            Log.i("RED NEAR AUTO", "RE INDEXED INDEX 2 COLOR AS: " + color);
                                         }
                                     })
                             )
-                    )
+                    ),
+                    () -> launchSystem.AlignTurretToGoal()
             );
 
-            Actions.runBlocking(
-                    launchSystem.getBallPatternLaunchAction(pattern)
+            runBlockingWithBackground(
+                    launchSystem.getBallPatternLaunchAction(pattern),
+                    () -> launchSystem.AlignTurretToGoal()
             );
 
-            Actions.runBlocking(moveAwayFromLine);
+            runBlockingWithBackground(
+                    moveAwayFromLine,
+                    () -> launchSystem.AlignTurretToGoal()
+            );
 
-            Log.i("BLUE NEAR AUTO", "Elapsed time: " + timer.seconds());
+            Log.i("RED NEAR AUTO", "Elapsed time: " + timer.seconds());
 
 //
 //            Actions.runBlocking(
