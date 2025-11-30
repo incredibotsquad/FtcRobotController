@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.common;
+package org.firstinspires.ftc.teamcode.subsystems;
 
 import static org.firstinspires.ftc.teamcode.subsystems.Spindex.SPINDEX_MANUAL_DELTA;
 
@@ -10,9 +10,8 @@ import com.acmerobotics.roadrunner.SequentialAction;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.acmerobotics.dashboard.FtcDashboard;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.teamcode.subsystems.IntakeSystem;
-import org.firstinspires.ftc.teamcode.subsystems.LaunchSystem;
-import org.firstinspires.ftc.teamcode.subsystems.Spindex;
+import org.firstinspires.ftc.teamcode.common.LimelightAprilTagHelper;
+import org.firstinspires.ftc.teamcode.common.RobotHardware;
 
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import java.util.ArrayList;
@@ -24,12 +23,12 @@ public class MechanismControl {
     private Spindex spindex;
     private IntakeSystem intakeSystem;
     private LaunchSystem launchSystem;
+    private LimelightAprilTagHelper limelightAprilTagHelper;
+
 
     private List<Action> runningActions;
     private FtcDashboard dashboard;
     private Telemetry telemetry;
-
-    private AllianceColors allianceColor;
 
     private enum ROBOT_STATE {
         NONE,
@@ -48,14 +47,16 @@ public class MechanismControl {
     private ROBOT_STATE currentRobotState;
     private ROBOT_STATE targetRobotState;
     private boolean stateTransitionInProgress;
-
-    public MechanismControl(Gamepad gamepad, RobotHardware robotHardware, Telemetry telemetry) {
+    public MechanismControl(Gamepad gamepad, RobotHardware robotHardware, LimelightAprilTagHelper limelightAprilTagHelper, Telemetry telemetry) {
         gamepad2 = gamepad;
         this.telemetry = telemetry;
         this.robotHardware = robotHardware;
+        this.limelightAprilTagHelper = limelightAprilTagHelper;
+
         this.spindex = new Spindex(robotHardware);
+
         this.intakeSystem = new IntakeSystem(robotHardware, this.spindex);
-        this.launchSystem = new LaunchSystem(robotHardware, this.spindex);
+        this.launchSystem = new LaunchSystem(robotHardware, this.spindex, limelightAprilTagHelper);
 
         currentRobotState = ROBOT_STATE.NONE;
         targetRobotState = ROBOT_STATE.NONE;
@@ -64,12 +65,7 @@ public class MechanismControl {
         dashboard = FtcDashboard.getInstance();
     }
 
-    public void setAllianceColor(AllianceColors color) {
-        this.allianceColor = color;
-        launchSystem.setAllianceColor(color);
-    }
-
-    public void ProcessInputs() {
+    public void processInputs() {
         CreateStateFromButtonPress();
 
         CreateStateAutomatically();

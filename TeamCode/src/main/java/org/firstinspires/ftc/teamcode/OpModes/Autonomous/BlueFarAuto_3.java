@@ -9,15 +9,15 @@ import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
-import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction;
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.common.GamePattern;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
+import org.firstinspires.ftc.teamcode.common.LimelightAprilTagHelper;
+import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSystem;
@@ -46,13 +46,19 @@ public class BlueFarAuto_3 extends BaseAuto {
 
         this.spindex = new Spindex(robotHardware);
         this.spindex.initializeWithPPG();
-        this.intakeSystem = new IntakeSystem(robotHardware, this.spindex);
-        this.launchSystem = new LaunchSystem(robotHardware, this.spindex);
+        this.limelightAprilTagHelper = new LimelightAprilTagHelper(robotHardware);
 
-        if (multiplier == 1)
-            this.launchSystem.setAllianceColor(AllianceColors.RED);
-        else
-            this.launchSystem.setAllianceColor(AllianceColors.BLUE);
+        this.intakeSystem = new IntakeSystem(robotHardware, this.spindex);
+        this.launchSystem = new LaunchSystem(robotHardware, this.spindex, this.limelightAprilTagHelper);
+
+        if (multiplier == 1) {
+            this.limelightAprilTagHelper.setAllianceColor(AllianceColors.RED);
+            CrossOpModeStorage.allianceColor = AllianceColors.RED;
+        }
+        else {
+            this.limelightAprilTagHelper.setAllianceColor(AllianceColors.BLUE);
+            CrossOpModeStorage.allianceColor = AllianceColors.BLUE;
+        }
 
         mecanumDrive = new MecanumDrive(this.hardwareMap, INIT_POS);
 
@@ -80,17 +86,26 @@ public class BlueFarAuto_3 extends BaseAuto {
                             new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR),
                             spindex.moveToNextPurpleSlotAction()
                     ),
-                    () -> launchSystem.AlignTurretToGoal()
+                    () -> {
+                        CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
+                        launchSystem.AlignTurretToGoal();
+                    }
             );
 
             runBlockingWithBackground(
                     launchSystem.getBallPatternLaunchAction(pattern),
-                    () -> launchSystem.AlignTurretToGoal()
+                    () -> {
+                        CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
+                        launchSystem.AlignTurretToGoal();
+                    }
             );
 
             runBlockingWithBackground(
                     moveAwayFromLine,
-                    () -> launchSystem.AlignTurretToGoal()
+                    () -> {
+                        CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
+                        launchSystem.AlignTurretToGoal();
+                    }
             );
 
             Log.i("BLUE FAR AUTO", "Elapsed time: " + timer.seconds());

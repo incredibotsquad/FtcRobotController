@@ -36,6 +36,7 @@ public final class PinpointLocalizer implements Localizer {
         double mmPerTick = inPerTick * 25.4;
 //        driver.setEncoderResolution(1 / mmPerTick, DistanceUnit.MM);
         driver.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
+
         driver.setOffsets(-6, -12.5, DistanceUnit.INCH); //these are tuned for 3110-0002-0001 Product Insight #1
 
 //        driver.setOffsets(mmPerTick * PARAMS.parYTicks, mmPerTick * PARAMS.perpXTicks, DistanceUnit.MM);

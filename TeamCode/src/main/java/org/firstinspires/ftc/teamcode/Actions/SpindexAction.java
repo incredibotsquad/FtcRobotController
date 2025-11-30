@@ -58,7 +58,7 @@ public class SpindexAction implements Action {
             robotHardware.setSpindexPosition(position);
             initialized = true;
 
-            Log.i("SPINDEX ACTION", "OBJECT ID:" + this.hashCode() + " INITIALIZED");
+//            Log.i("SPINDEX ACTION", "OBJECT ID:" + this.hashCode() + " INITIALIZED");
 //            Log.i("SPINDEX ACTION", "OBJECT ID:" + this.hashCode() + " INITIALIZED. lastRecordedPositionForStallDetection: " + lastRecordedPositionForStallDetection);
 
         }
@@ -79,7 +79,7 @@ public class SpindexAction implements Action {
 //
         double newPos = robotHardware.getSpindexPositionFromEncoder();
 //
-        Log.i("SPINDEX ACTION", "OBJECT ID:" + this.hashCode() + " NEW SERVO POSITION: " + newPos);
+//        Log.i("SPINDEX ACTION", "OBJECT ID:" + this.hashCode() + " NEW SERVO POSITION: " + newPos);
 //
 //        //if spindexer hasnt moved significantly in the last 1 second.
 //        if (stallTimer.milliseconds() > SPINDEX_STALL_TIMER_MILLIS) {

@@ -11,6 +11,7 @@ import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.SleepAction;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction;
 import org.firstinspires.ftc.teamcode.Actions.LaunchKickAction;
 import org.firstinspires.ftc.teamcode.Actions.LaunchTurretAction;
@@ -68,11 +69,10 @@ public class LaunchSystem {
 
     public static double DELAY_BETWEEN_BALLS = 0.25;
 
-
-    public LaunchSystem(RobotHardware robotHardware, Spindex spindex) {
+    public LaunchSystem(RobotHardware robotHardware, Spindex spindex, LimelightAprilTagHelper limelightAprilTagHelper) {
         this.robotHardware = robotHardware;
         this.spindex = spindex;
-        this.limelightAprilTagHelper = new LimelightAprilTagHelper(robotHardware);
+        this.limelightAprilTagHelper = limelightAprilTagHelper;
         this.turretAlignmentThrottleTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
         this.turretTagNotFoundTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
         this.flywheelWarmerThrottleTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
@@ -80,11 +80,6 @@ public class LaunchSystem {
 
     //make default constructor private
     private LaunchSystem() {}
-
-    public void setAllianceColor(AllianceColors color) {
-        this.allianceColor = color;
-        limelightAprilTagHelper.setAllianceColor(color);
-    }
 
     public Action getKeepWarmAction() {
         Log.i("== LAUNCH SYSTEM ==", "Keep warm");
@@ -475,11 +470,9 @@ public class LaunchSystem {
                 //clear out the alignment light
                 robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
 
-
                 double servoDelta = ydt.yaw > 0 ? turretDelta : -1 * turretDelta;
 
 //                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalAndKeepLauncherWarm: servoDelta: " + servoDelta);
-
 
                 // Calculate the new potential servo position and constrain it
                 double newServoPosition = robotHardware.getLaunchTurretPosition() + servoDelta;
@@ -497,23 +490,18 @@ public class LaunchSystem {
                 robotHardware.setLaunchTurretPosition(newServoPosition);
 
             } else {
-
                 robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
                 Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalAndKeepLauncherWarm: Turret Aligned At: " + robotHardware.getLaunchTurretPosition());
-
             }
 
         } else {
-
             //No tag found - center the turret
 //            robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
             robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
 
             if (turretTagNotFoundTimer.milliseconds() > TURRET_TAG_NOT_FOUND_TIMER_MILLIS) {
                 robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
-
             }
-
 //            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: no tag found");
         }
     }

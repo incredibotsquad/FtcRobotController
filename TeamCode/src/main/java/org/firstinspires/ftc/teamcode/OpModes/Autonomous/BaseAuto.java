@@ -7,6 +7,7 @@ import com.acmerobotics.roadrunner.Action;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import org.firstinspires.ftc.teamcode.MecanumDrive;
+import org.firstinspires.ftc.teamcode.common.LimelightAprilTagHelper;
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSystem;
@@ -16,6 +17,7 @@ import org.firstinspires.ftc.teamcode.subsystems.Spindex;
 public abstract class BaseAuto extends LinearOpMode {
     public RobotHardware robotHardware;
     public Spindex spindex;
+    public LimelightAprilTagHelper limelightAprilTagHelper;
     public IntakeSystem intakeSystem;
     public LaunchSystem launchSystem;
     public MecanumDrive mecanumDrive;

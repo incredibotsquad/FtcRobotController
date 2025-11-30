@@ -49,7 +49,9 @@ public class MoveRobotAction implements Action {
         timer.reset();
 
         //get the current robot position
-        Pose2D currPos = robotHardware.getCurrentRobotPose();
+//        Pose2D currPos = robotHardware.getCurrentRobotPose();
+
+        Pose2D currPos = null;
 
         Log.i("Move Robot Action", "Target Heading: " + targetPosition.getHeading(AngleUnit.DEGREES));
         Log.i("Move Robot Action", "Current Heading: " + currPos.getHeading(AngleUnit.DEGREES));

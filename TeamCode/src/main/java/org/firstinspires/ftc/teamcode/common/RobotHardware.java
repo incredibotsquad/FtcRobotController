@@ -15,9 +15,6 @@ import com.qualcomm.robotcore.hardware.NormalizedRGBA;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
-import org.firstinspires.ftc.teamcode.GoBildaPinpointDriver;
-
 public class RobotHardware {
 
     public static double COLOR_DETECTION_RETRY_DURATION_MILLIS = 200;
@@ -43,8 +40,6 @@ public class RobotHardware {
     private DigitalChannel ballIntakeSensor;
 
     public boolean isSpindexStalled;
-
-    private GoBildaPinpointDriver odo; // Declare OpMode member for the Odometry Computer
 
     //making constructor
     public RobotHardware(HardwareMap hwMap) {
@@ -103,23 +98,12 @@ public class RobotHardware {
 
         isSpindexStalled = false;
 
-//        odo = hardwareMap.get(GoBildaPinpointDriver.class,"PinpointOdo");
-//        odo.setOffsets(20.0, -241.3, DistanceUnit.MM); //these are tuned for 3110-0002-0001 Product Insight #1
-//        odo.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
-//        odo.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.REVERSED, GoBildaPinpointDriver.EncoderDirection.FORWARD);
-//        odo.resetPosAndIMU();
-
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         limelight.setPollRateHz(100); // This sets how often we ask Limelight for data (100 times per second)
 //        limelight.updateRobotOrientation(0);
     }
 
-    public Pose2D getCurrentRobotPose() {
-        odo.update();
-        return odo.getPosition();
-    }
-
-    public LLResult GetLatestLimelightResults() {
+    public LLResult getLatestLimelightResults() {
 //        Log.i("== ROBOTHARDWARE ==", " GetLatestLimelightResults");
 
         LLResult result = null;
@@ -128,6 +112,10 @@ public class RobotHardware {
         }
 
         return result;
+    }
+
+    public void updateLimelightYaw(double yaw) {
+        limelight.updateRobotOrientation(yaw);
     }
 
     public void setLimelightPipeline(int pipeline) {
