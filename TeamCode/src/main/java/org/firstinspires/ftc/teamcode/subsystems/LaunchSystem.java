@@ -11,10 +11,8 @@ import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.SleepAction;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction;
 import org.firstinspires.ftc.teamcode.Actions.LaunchKickAction;
-import org.firstinspires.ftc.teamcode.Actions.LaunchTurretAction;
 import org.firstinspires.ftc.teamcode.Actions.LaunchVisorAction;
 import org.firstinspires.ftc.teamcode.Actions.SpindexAction;
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
@@ -91,7 +89,10 @@ public class LaunchSystem {
 
     public Action getTurnOffAction() {
         Log.i("== LAUNCH SYSTEM ==", "Turned Off");
-        return new LaunchFlywheelAction(robotHardware, 0);
+        return new ParallelAction(
+                new LaunchFlywheelAction(robotHardware, 0),
+                new InstantAction(() -> robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED))
+        ) ;
     }
 
     private Action getLaunchBallAction(RobotLaunchParameters robotLaunchParameters) {

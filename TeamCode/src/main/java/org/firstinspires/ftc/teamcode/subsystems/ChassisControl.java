@@ -19,7 +19,7 @@ import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
 
 @Config
-public class ChassisControlSystem {
+public class ChassisControl {
     private Gamepad gamepad1;
     private RobotHardware robotHardware;
     private LimelightAprilTagHelper limelightAprilTagHelper;
@@ -32,9 +32,9 @@ public class ChassisControlSystem {
     public double obeliskHeading = Math.toRadians(180); //this is same for both sides - do NOT need a multiplier
     public Pose2d PARK_POS;
     public static double DRIVETRAIN_POWER_RATIO = 1;
-    private ChassisControlSystem() {}
+    private ChassisControl() {}
 
-    public ChassisControlSystem(Gamepad gamepad, RobotHardware robotHardware, LimelightAprilTagHelper limelightAprilTagHelper) {
+    public ChassisControl(Gamepad gamepad, RobotHardware robotHardware, LimelightAprilTagHelper limelightAprilTagHelper) {
         this.gamepad1 = gamepad;
         this.robotHardware = robotHardware;
         this.limelightAprilTagHelper = limelightAprilTagHelper;
