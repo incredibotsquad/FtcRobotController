@@ -179,7 +179,7 @@ public class RedFarAuto_6 extends BaseAuto {
                                         Log.i("BLUE FAR AUTO", "RE INDEXED INDEX 1 AS NONE");
                                     }
                                     if (spindex.storedColors.get(0).ballColor == GameColors.UNKNOWN) {
-                                        GameColors color = robotHardware.getDetectedBallColor();
+                                        GameColors color = robotHardware.getDetectedBallColorFromLeftSensor();
                                         spindex.storedColors.get(0).ballColor = color;
                                         Log.i("BLUE FAR AUTO", "RE INDEXED INDEX 0 COLOR AS: " + color);
                                     }
@@ -209,7 +209,7 @@ public class RedFarAuto_6 extends BaseAuto {
                                         Log.i("BLUE FAR AUTO", "RE INDEXED INDEX 2 AS NONE");
                                     }
                                     if (spindex.storedColors.get(1).ballColor == GameColors.UNKNOWN) {
-                                        GameColors color = robotHardware.getDetectedBallColor();
+                                        GameColors color = robotHardware.getDetectedBallColorFromLeftSensor();
                                         spindex.storedColors.get(1).ballColor = color;
                                         Log.i("BLUE FAR AUTO", "RE INDEXED INDEX 1 COLOR AS: " + color);
                                     }
@@ -231,7 +231,7 @@ public class RedFarAuto_6 extends BaseAuto {
                                     new SleepAction(0.25),
                                     new InstantAction(() -> {
                                         if (spindex.storedColors.get(2).ballColor == GameColors.UNKNOWN) {
-                                            GameColors color = robotHardware.getDetectedBallColor();
+                                            GameColors color = robotHardware.getDetectedBallColorFromLeftSensor();
                                             spindex.storedColors.get(2).ballColor = color;
                                             Log.i("BLUE FAR AUTO", "RE INDEXED INDEX 2 COLOR AS: " + color);
                                         }

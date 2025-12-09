@@ -13,4 +13,6 @@ public class CrossOpModeStorage {
     public static Pose2d currentPose = new Pose2d(new Vector2d(0, 0), Math.toRadians(180));
 
     public static AllianceColors allianceColor = AllianceColors.BLUE;
+
+    public static int spindexerPosition = 0;
 }

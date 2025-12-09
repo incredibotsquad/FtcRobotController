@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.common;
 
 import android.util.Log;
 
+import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.hardware.AnalogInput;
@@ -13,33 +14,43 @@ import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.NormalizedRGBA;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+@Config
 public class RobotHardware {
 
     public static double COLOR_DETECTION_RETRY_DURATION_MILLIS = 200;
+    public static int SPINDEX_VELOCITY = 1250;
 
     public HardwareMap hardwareMap;
     private DcMotorEx frontRightDriveMotor;
     private DcMotorEx frontLeftDriveMotor;
     private DcMotorEx backRightDriveMotor;
     private DcMotorEx backLeftDriveMotor;
+
     private DcMotorEx intakeMotor;
-    private DcMotorEx flywheelMotor;
+    private Servo colorSensorLights;
+    private DigitalChannel ballIntakeSensor;
+    private ColorRangeSensor leftColorSensor;
+    private ColorRangeSensor rightColorSensor;
+    private ColorRangeSensor backColorSensor;
+
+
+    private DcMotorEx flywheelMotor1;
+    private DcMotorEx flywheelMotor2;
+
     private Servo launchTurretServo;
     private Servo launchVisorServo;
     private AnalogInput visorServoEncoder;
     private Servo launchKickServo;
-    private Servo spindexServo;
-    private AnalogInput spindexServoEncoder;
+
+    private DcMotorEx spindexMotor;
+    private TouchSensor spindexLimitSwitch;
+
     private Servo alignmentIndicatorLight;
-    private Servo colorSensorLight;
-
-    private ColorRangeSensor colorSensor;
     private Limelight3A limelight;
-    private DigitalChannel ballIntakeSensor;
 
-    public boolean isSpindexStalled;
 
     //making constructor
     public RobotHardware(HardwareMap hwMap) {
@@ -68,12 +79,22 @@ public class RobotHardware {
 
         //intake motor
         intakeMotor = hardwareMap.get(DcMotorEx.class, "IntakeMotor");
+        intakeMotor.setDirection(DcMotorSimple.Direction.REVERSE);
         intakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         //flywheel motor
-        flywheelMotor = hardwareMap.get(DcMotorEx.class, "LauncherMotor");
-        flywheelMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        flywheelMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        flywheelMotor1 = hardwareMap.get(DcMotorEx.class, "FlywheelMotor1");
+        flywheelMotor1.setDirection(DcMotorSimple.Direction.REVERSE);
+        flywheelMotor1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        flywheelMotor1.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+        flywheelMotor2 = hardwareMap.get(DcMotorEx.class, "FlywheelMotor2");
+        flywheelMotor2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        flywheelMotor2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        flywheelMotor2.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+//        flywheelMotor2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+//        flywheelMotor2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         //servos
         launchTurretServo = hardwareMap.get(Servo.class, "LaunchTurretServo");
@@ -82,21 +103,27 @@ public class RobotHardware {
         launchVisorServo = hardwareMap.get(Servo.class, "LaunchVisorServo");
         visorServoEncoder = hardwareMap.get(AnalogInput.class, "VisorServoEncoder");
 
-        spindexServo = hardwareMap.get(Servo.class, "SpindexServo");
-        spindexServoEncoder = hardwareMap.get(AnalogInput.class, "SpindexServoEncoder");
+        spindexMotor = hardwareMap.get(DcMotorEx.class, "SpindexMotor");
+        spindexMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        spindexMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+        spindexMotor.setTargetPosition(0);
+        spindexMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        spindexMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        spindexLimitSwitch = hardwareMap.get(TouchSensor.class, "SpindexLimitSwitch");
 
         alignmentIndicatorLight = hardwareMap.get(Servo.class, "AlignmentIndicatorLight");
-        colorSensorLight = hardwareMap.get(Servo.class, "ColorSensorLight");
-        colorSensorLight.setPosition(0.5);    //turn on for color sensing
+        colorSensorLights = hardwareMap.get(Servo.class, "ColorSensorLights");
+        colorSensorLights.setPosition(0.5);    //turn on for color sensing
 
         //color sensors
-        colorSensor = hardwareMap.get(ColorRangeSensor.class, "IntakeColorSensor");
+        leftColorSensor = hardwareMap.get(ColorRangeSensor.class, "LeftColorSensor");
+        rightColorSensor = hardwareMap.get(ColorRangeSensor.class, "RightColorSensor");
+        backColorSensor = hardwareMap.get(ColorRangeSensor.class, "BackColorSensor");
 
         //laser sensor
         ballIntakeSensor = hardwareMap.get(DigitalChannel.class, "BallIntakeSensor");;
         ballIntakeSensor.setMode(DigitalChannel.Mode.INPUT);
-
-        isSpindexStalled = false;
 
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         limelight.setPollRateHz(100); // This sets how often we ask Limelight for data (100 times per second)
@@ -154,6 +181,7 @@ public class RobotHardware {
         stopRobotChassis();
         setIntakeMotorPower(0);
         setFlywheelMotorVelocityInTPS(0);
+        stopSpindex();
     }
 
     public void setIntakeMotorPower(double power) {
@@ -163,12 +191,15 @@ public class RobotHardware {
 
     public double getFlywheelMotorVelocityInTPS() {
 //        Log.i("=== ROBOTHARDWARE  ===", " getFlywheelMotorVelocityInTPS: ");
-        return flywheelMotor.getVelocity();
+        //motor 1 is primary - we use encoder only on that.
+        return flywheelMotor2.getVelocity();
     }
 
     public void setFlywheelMotorVelocityInTPS(double velocity) {
 //        Log.i("=== ROBOTHARDWARE  ===", " setFlywheelMotorVelocityInTPS: " + velocity);
-        flywheelMotor.setVelocity(velocity);
+        //motor 1 just follows motor 2 - setvelocity on both but we read only from motor 2
+        flywheelMotor1.setVelocity(velocity);
+        flywheelMotor2.setVelocity(velocity);
     }
 
     public double getLaunchTurretPosition() {
@@ -200,23 +231,44 @@ public class RobotHardware {
         launchKickServo.setPosition(position);
     }
 
-    public double getSpindexPositionRaw() {
-        return spindexServo.getPosition();
+    public void stopSpindex()
+    {
+        Log.i("=== ROBOTHARDWARE  ===", " stopSpindex");
+        spindexMotor.setPower(0);
     }
 
-    public double getSpindexPositionFromEncoder() {
-//        Log.i("=== ROBOTHARDWARE  ===", " getSpindexPosition: ");
-
-        double voltage = spindexServoEncoder.getVoltage();
-        double position = 1 - (voltage / 3.3);  //position via encoder seems to be flipped
-
-//        Log.i("=== ROBOTHARDWARE  ===", " getSpindexPosition: " + position);
-        return position;
+    public int getSpindexPosition () {
+        Log.i("=== ROBOTHARDWARE ===", " getSpindexPosition: ");
+        return spindexMotor.getCurrentPosition();
     }
 
-    public void setSpindexPosition(double position) {
-//        Log.i("=== ROBOTHARDWARE  ===", " setSpindexPosition: " + position);
-        spindexServo.setPosition(position);
+    public void setSpindexPosition(int pos) {
+        Log.i("=== ROBOTHARDWARE ===", " setSpindexPosition: " + pos);
+        setSpindexPositionAndVelocity(pos, SPINDEX_VELOCITY);
+    }
+
+    public void setSpindexPositionAndVelocity(int pos, int velocity) {
+        spindexMotor.setTargetPosition(pos);
+        spindexMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        spindexMotor.setVelocity(velocity);
+        Log.i("=== ROBOTHARDWARE ===", " setSpindexPositionAndVelocity: " + pos + " AND VELOCITY: " + velocity);
+    }
+
+    public void stopSpindexAndResetEncoder()
+    {
+        Log.i("=== ROBOTHARDWARE  ===", " stopSpindexAndResetEncoder");
+        stopSpindex();
+        spindexMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        setSpindexPosition(0);
+    }
+
+    public boolean isSpindexLimitSwitchTriggered()
+    {
+        return spindexLimitSwitch.isPressed();
+    }
+
+    public boolean isSpindexBusy() {
+        return spindexMotor.isBusy();
     }
 
     public boolean didBallDetectionBeamBreak() {
@@ -227,12 +279,39 @@ public class RobotHardware {
         return detected;
     }
 
-    public GameColors getDetectedBallColor() {
+    public GameColors getDetectedBallColorFromLeftSensor() {
+        GameColors detectedColor = GameColors.UNKNOWN;
+
+        detectedColor = getDetectedColorFromSensor(leftColorSensor);
+        Log.i("=== ROBOTHARDWARE  ===", " Left Detected Color: " + detectedColor);
+
+        return detectedColor;
+    }
+
+    public GameColors getDetectedBallColorFromRightSensor() {
+        GameColors detectedColor = GameColors.UNKNOWN;
+
+        detectedColor = getDetectedColorFromSensor(rightColorSensor);
+        Log.i("=== ROBOTHARDWARE  ===", " Right Detected Color: " + detectedColor);
+
+        return detectedColor;
+    }
+
+    public GameColors getDetectedBallColorFromBackSensor() {
+        GameColors detectedColor = GameColors.UNKNOWN;
+
+        detectedColor = getDetectedColorFromSensor(backColorSensor);
+        Log.i("=== ROBOTHARDWARE  ===", " Back Detected Color: " + detectedColor);
+
+        return detectedColor;
+    }
+
+    private GameColors getDetectedColorFromSensor(ColorRangeSensor sensor) {
         GameColors detectedColor = GameColors.UNKNOWN;
         ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
         do {
-            NormalizedRGBA normalizedRGBA = colorSensor.getNormalizedColors();
+            NormalizedRGBA normalizedRGBA = sensor.getNormalizedColors();
 
 //            Log.i("=== ROBOTHARDWARE  ===", "COLOR SENSOR NORMALIZED R: " + normalizedRGBA.red + " G: " + normalizedRGBA.green + " B: " + normalizedRGBA.blue);
 
@@ -246,15 +325,15 @@ public class RobotHardware {
 
         } while (detectedColor == GameColors.UNKNOWN && timer.milliseconds() < COLOR_DETECTION_RETRY_DURATION_MILLIS);
 
-        Log.i("=== ROBOTHARDWARE  ===", " getDetectedBallColor: " + detectedColor);
         return detectedColor;
     }
+
 
     public void setAlignmentLightColor(double color) {
         alignmentIndicatorLight.setPosition(color);
     }
 
     public void setColorSensorLightColor(double color) {
-        colorSensorLight.setPosition(color);
+        colorSensorLights.setPosition(color);
     }
 }

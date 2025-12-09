@@ -13,17 +13,12 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Actions.IntakeWheelsAction;
 import org.firstinspires.ftc.teamcode.Actions.SpindexAction;
-import org.firstinspires.ftc.teamcode.common.BallEntry;
 import org.firstinspires.ftc.teamcode.common.GameColors;
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-
 @Config
 public class IntakeSystem {
-    public static double INTAKE_THROTTLE_TIME_MS = 900;
+    public static double INTAKE_THROTTLE_TIME_MS = 90;
     private RobotHardware robotHardware;
     private Spindex spindex;
     public boolean isOn;
@@ -79,88 +74,53 @@ public class IntakeSystem {
             return new NullAction();
 
         timeSinceLastIntake.reset();
-//
-//        if (robotHardware.isSpindexMoving) {
-//            Log.i("INTAKE SYSTEM: ", "checkForBallIntakeAndGetAction: SKIPPED SINCE SPINDEX MOVING ");
-//            return new NullAction();
-//        }
 
-        //check color sensors and if there is a ball there, there are things to do
-        //else null action
 
+        Action returnAction = new NullAction();
         boolean ballDetected = robotHardware.didBallDetectionBeamBreak();
 
-        if (isOn && ballDetected) {
-            //make sure the spindex is not stalled - the current position should be the intake position for the index at hand
-            if (Math.abs(robotHardware.getSpindexPositionFromEncoder() - spindex.storedColors.get(spindex.currentIndex).intakePosition) > SpindexAction.SPINDEX_POSITION_TOLERANCE)
-                return new NullAction();
-
+        if (isOn && ballDetected && spindex.isReadyForIntake()) {
 
             spindex.storeCurrentBall(GameColors.UNKNOWN);   //default to unknown - we will update color later
             Log.i("INTAKE SYSTEM", "checkForBallIntakeAndGetAction: Ball Detected: indexed as UNKNOWN ");
             Log.i("INTAKE SYSTEM", "checkForBallIntakeAndGetAction: current index: " + spindex.currentIndex);
 
-            return new SequentialAction(
-                    spindex.moveToNextEmptySlotAction(),
-//                    new InstantAction(()->Log.i("INTAKE SYSTEM", "checkForBallIntakeAndGetAction. Spindex after rotating: " + robotHardware.getSpindexPosition())),
-//                    new SleepAction(INTAKE_THROTTLE_TIME_MS/1000),   //wait for the ball to stabilize
-                    new InstantAction(()->Log.i("INTAKE SYSTEM", "checkForBallIntakeAndGetAction. Spindex after rotating: " + robotHardware.getSpindexPositionFromEncoder())),
-                    spindex.updateBallColorForPreviousIndex(),
-                    spindex.isFull() ?
-                            new SequentialAction(
-                                    getTurnOffAction(),
-                                    indexAnyUnknowns(),
-                                    spindex.moveToNextFullSlotAction()) : new NullAction()
-            );
+            if (spindex.isFull()) {
+                returnAction = new SequentialAction(
+                        spindex.moveToSlotZeroLaunchPosition(),
+                        new ParallelAction(
+                                getReverseIntakeAction(false),
+                                updateBallColors()
+                        )
+                );
+            } else {
+                returnAction = spindex.moveToNextEmptySlotAction();
+            }
         }
 
-        return new NullAction();
+        return returnAction;
     }
 
-    public Action indexAnyUnknowns() {
-        if (isUnknownIndexingOngoing) {
-            return new NullAction();
-        }
+    public Action updateBallColors() {
+        return new ParallelAction(
+                //slot 0 is back color sensor
+                new InstantAction(() -> {
+                    GameColors slot0Color = robotHardware.getDetectedBallColorFromBackSensor();
+                    spindex.storeCurrentBall(slot0Color);
+                }),
 
-        List<Action> actionsToRun = new ArrayList<>();
+                //slot 1 is left color sensor
+                new InstantAction(() -> {
+                    GameColors slot1Color = robotHardware.getDetectedBallColorFromLeftSensor();
+                    spindex.storeCurrentBall(slot1Color);
+                }),
 
-        //find all the unknown balls
-        List<BallEntry> unknownList = spindex.storedColors.stream()
-                .filter(entry -> entry.ballColor == GameColors.UNKNOWN)
-                .collect(Collectors.toList());
-
-        Log.i("INTAKE SYSTEM", "INDEXING ANY UNKNOWNS. FOUND: " + unknownList.size());
-
-        Action updateRunState = new InstantAction(() ->
-        {
-            Log.i("INTAKE SYSTEM", "SETTING LOCAL VARIABLE TO REPRESENT ON GOING INDEXING");
-            isUnknownIndexingOngoing = true;
-        });
-        actionsToRun.add(updateRunState);
-
-        for (BallEntry entry: unknownList) {
-
-            Log.i("INTAKE SYSTEM", "UNKNOWN FOUND AT: " + entry.index);
-
-            Action ballAction = new SequentialAction(
-                    new SpindexAction(robotHardware, entry.colorDetectionPosition),
-                    new SleepAction(0.25),   //wait for the ball to stabilize
-                    new InstantAction(() -> {
-                        final int entryIndex = entry.index;
-                        spindex.storedColors.get(entryIndex).ballColor = robotHardware.getDetectedBallColor();
-                    })
-            );
-
-            actionsToRun.add(ballAction);
-        }
-
-        Action clearRunState = new InstantAction(() -> {
-            Log.i("INTAKE SYSTEM", "SETTING LOCAL VARIABLE TO REPRESENT COMPLETED INDEXING");
-            isUnknownIndexingOngoing = false;
-        });
-        actionsToRun.add(clearRunState);
-
-        return new SequentialAction(actionsToRun);
+                //slot 2 is right color sensor
+                new InstantAction(() -> {
+                    GameColors slot2Color = robotHardware.getDetectedBallColorFromRightSensor();
+                    spindex.storeCurrentBall(slot2Color);
+                })
+        );
     }
 
     public Action ReIndexBalls() {
@@ -195,7 +155,7 @@ public class IntakeSystem {
                 }),
                 new InstantAction(() -> {
                     if (spindex.storedColors.get(0).ballColor == GameColors.UNKNOWN) {
-                        GameColors color = robotHardware.getDetectedBallColor();
+                        GameColors color = robotHardware.getDetectedBallColorFromLeftSensor();
                         spindex.storedColors.get(0).ballColor = color;
                         Log.i("INTAKE SYSTEM", "RE INDEXED INDEX 0 COLOR AS: " + color);
                     }
@@ -216,7 +176,7 @@ public class IntakeSystem {
                 }),
                 new InstantAction(() -> {
                     if (spindex.storedColors.get(1).ballColor == GameColors.UNKNOWN) {
-                        GameColors color = robotHardware.getDetectedBallColor();
+                        GameColors color = robotHardware.getDetectedBallColorFromLeftSensor();
                         spindex.storedColors.get(1).ballColor = color;
                         Log.i("INTAKE SYSTEM", "RE INDEXED INDEX 1 COLOR AS: " + color);
                     }
@@ -228,7 +188,7 @@ public class IntakeSystem {
                 new SleepAction(0.25),
                 new InstantAction(() -> {
                     if (spindex.storedColors.get(2).ballColor == GameColors.UNKNOWN) {
-                        GameColors color = robotHardware.getDetectedBallColor();
+                        GameColors color = robotHardware.getDetectedBallColorFromLeftSensor();
                         spindex.storedColors.get(2).ballColor = color;
                         Log.i("INTAKE SYSTEM", "RE INDEXED INDEX 2 COLOR AS: " + color);
                     }

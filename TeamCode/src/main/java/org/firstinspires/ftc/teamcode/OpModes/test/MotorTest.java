@@ -12,25 +12,30 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 //@Disabled
 
-@Disabled
 @Config
 @TeleOp(name="MotorTest", group="Tests")
 public class MotorTest extends LinearOpMode {
 
     // Declare OpMode members.
     public static String motorName = "LauncherMotor";
-    public static double motorPower = 0.5;
+    public static int motorPosition = 50;
+
+    public static double motorVelocity = 2000;
     private ElapsedTime runtime = new ElapsedTime();
-    private DcMotorEx flywheelMotor;
+    private DcMotorEx spindexMotor;
 
     @Override
     public void runOpMode() {
 
+        spindexMotor = hardwareMap.get(DcMotorEx.class, "SpindexMotor");
+        spindexMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        spindexMotor.setTargetPosition(0);
+//        spindexMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+        spindexMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        spindexMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
         while (opModeInInit()) {
 
-            flywheelMotor = hardwareMap.get(DcMotorEx.class, "LauncherMotor");
-            flywheelMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-            flywheelMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         }
 
         telemetry.addData("Status", "Initialized");
@@ -43,7 +48,9 @@ public class MotorTest extends LinearOpMode {
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
             if(gamepad1.aWasPressed()) {
-                flywheelMotor.setPower(motorPower);
+                spindexMotor.setTargetPosition(motorPosition);
+                spindexMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                spindexMotor.setVelocity(motorVelocity);
             }
 //            Servo1.setPosition(0);
 //            sleep(1500);

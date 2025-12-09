@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.Actions;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 
 import com.acmerobotics.dashboard.config.Config;
@@ -51,11 +53,11 @@ public class LaunchFlywheelAction implements Action {
 
             timer.reset();
 
-//            Log.i("LaunchFlywheelAction", "Target Velocity: " + targetVelocity);
+            Log.i("LaunchFlywheelAction", "Target Velocity: " + targetVelocity);
 
             double currentVelocity = robotHardware.getFlywheelMotorVelocityInTPS();
 
-//            Log.i("LaunchFlywheelAction", "Current Velocity: " + currentVelocity);
+            Log.i("LaunchFlywheelAction", "Current Velocity: " + currentVelocity);
 
             // wait till the difference is more than 30 TPS
             return (Math.abs( targetVelocity -  currentVelocity) > FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS);

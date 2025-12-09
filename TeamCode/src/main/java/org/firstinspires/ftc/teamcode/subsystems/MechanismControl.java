@@ -75,7 +75,7 @@ public class MechanismControl {
         ProcessActions();
 
         ProcessBackButton();
-        ProcessDPad();
+//        ProcessDPad();
 
         //this has to be done after translating any state into actions
         CheckForBallsToIntake();
@@ -272,8 +272,7 @@ public class MechanismControl {
     }
 
     private void CheckForBallsToIntake() {
-;        if (currentRobotState == ROBOT_STATE.INTAKE && !robotHardware.isSpindexStalled) {
-
+;        if (currentRobotState == ROBOT_STATE.INTAKE && intakeSystem.isOn) {
             if (!spindex.isFull())
             {
                 //set targetrobotstate to intake so that processactions does not clear it out
@@ -361,38 +360,29 @@ public class MechanismControl {
         }
     }
 
-    private void ProcessDPad() {
-        if (gamepad2.dpadDownWasPressed()) {
-            //this clears out any running actions
+//    private void ProcessDPad() {
+//        if (gamepad2.dpadDownWasPressed()) {
+//            //this clears out any running actions
+////            runningActions.clear();
+//            runningActions.add(intakeSystem.ReIndexBalls());
+//        }
+//
+//        if (gamepad2.dpadLeftWasPressed()) {
+//            int currentPos = robotHardware.getSpindexPosition();
+//            robotHardware.setSpindexPosition(currentPos - SPINDEX_MANUAL_DELTA);
+//        }
+//
+//        if (gamepad2.dpadRightWasPressed()) {
+//            int currentPos = robotHardware.getSpindexPosition();
+//            robotHardware.setSpindexPosition(currentPos + SPINDEX_MANUAL_DELTA);
+//        }
+//
+//        if (gamepad2.dpadUpWasPressed()) {
+//            //this is an emergency operation - we clear out the actions and we clear out state transition flag
+//            // so that the state change can actually happen.
 //            runningActions.clear();
-            runningActions.add(intakeSystem.ReIndexBalls());
-        }
-
-        if (gamepad2.dpadLeftWasPressed()) {
-            double currentPos = robotHardware.getSpindexPositionFromEncoder();
-            robotHardware.setSpindexPosition(Math.max(0, currentPos - SPINDEX_MANUAL_DELTA));
-        }
-
-        if (gamepad2.dpadRightWasPressed()) {
-            double currentPos = robotHardware.getSpindexPositionFromEncoder();
-            robotHardware.setSpindexPosition(Math.min(1, currentPos + SPINDEX_MANUAL_DELTA));
-        }
-
-        if (gamepad2.dpadUpWasPressed()) {
-            //this is an emergency operation - we clear out the actions and we clear out state transition flag
-            // so that the state change can actually happen.
-            runningActions.clear();
-            stateTransitionInProgress = false;
-            targetRobotState = ROBOT_STATE.INTAKE;
-        }
-    }
-
-    private void CheckForSpindexStall() {
-        if (!robotHardware.isSpindexStalled)
-            return;
-
-        runningActions.add(intakeSystem.getReverseIntakeAction(false));
-
-        robotHardware.isSpindexStalled = false;
-    }
+//            stateTransitionInProgress = false;
+//            targetRobotState = ROBOT_STATE.INTAKE;
+//        }
+//    }
 }

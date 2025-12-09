@@ -40,9 +40,9 @@ public class LaunchSystem {
     private ElapsedTime turretTagNotFoundTimer;
     private ElapsedTime flywheelWarmerThrottleTimer;
 
-    public static double TURRET_SERVO_MIN_POS = 0.25;
-    public static double TURRET_SERVO_CENTERED = 0.495;
-    public static double TURRET_SERVO_MAX_POS = 0.75;
+    public static double TURRET_SERVO_MIN_POS = 0.2;
+    public static double TURRET_SERVO_CENTERED = 0.5;
+    public static double TURRET_SERVO_MAX_POS = 0.8;
     public static double TURRET_SERVO_ADJUSTMENT_DELTA_NEAR = 0.004;
     public static double TURRET_SERVO_ADJUSTMENT_DELTA_FAR = 0.002;
     public static double TURRET_ALIGNMENT_THROTTLE_MILLIS = 50;
@@ -435,7 +435,7 @@ public class LaunchSystem {
         double targetVelocity = getRobotLaunchParametersBasedOnDistance().flywheelVelocity;
 
         if (Math.abs(targetVelocity - currentVelocity) > LaunchFlywheelAction.FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS) {
-            Log.i("LAUNCH SYSTEM", "WARMING UP FLYWHEEL: CURRENT VELOCITY: " + currentVelocity + " TARGET VELOCITY: " + targetVelocity);
+//            Log.i("LAUNCH SYSTEM", "WARMING UP FLYWHEEL: CURRENT VELOCITY: " + currentVelocity + " TARGET VELOCITY: " + targetVelocity);
             robotHardware.setFlywheelMotorVelocityInTPS(targetVelocity);
         }
     }
@@ -492,7 +492,7 @@ public class LaunchSystem {
 
             } else {
                 robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
-                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalAndKeepLauncherWarm: Turret Aligned At: " + robotHardware.getLaunchTurretPosition());
+//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalAndKeepLauncherWarm: Turret Aligned At: " + robotHardware.getLaunchTurretPosition());
             }
 
         } else {

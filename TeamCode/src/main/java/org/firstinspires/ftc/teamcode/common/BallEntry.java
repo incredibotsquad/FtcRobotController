@@ -2,15 +2,13 @@ package org.firstinspires.ftc.teamcode.common;
 
 public class BallEntry {
     public int index;
-    public double intakePosition;
-    public double colorDetectionPosition;
-    public double launchPosition;
+    public int intakePosition;
+    public int launchPosition;
     public GameColors ballColor;
 
-    public BallEntry(int index, double intakePosition, double colorDetectionPosition, double launchPosition, GameColors ballColor) {
+    public BallEntry(int index, int intakePosition, int launchPosition, GameColors ballColor) {
         this.index = index;
         this.intakePosition = intakePosition;
-        this.colorDetectionPosition = colorDetectionPosition;
         this.launchPosition = launchPosition;
         this.ballColor = ballColor;
     }
