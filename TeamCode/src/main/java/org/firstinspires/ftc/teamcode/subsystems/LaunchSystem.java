@@ -407,8 +407,8 @@ public class LaunchSystem {
         double visorPosition = DEFAULT_VISOR_POSITION;
 
         if (ydt != null) {
-            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: YAW: " + ydt.yaw);
-            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: DISTANCE: " + ydt.distance);
+//            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: YAW: " + ydt.yaw);
+//            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: DISTANCE: " + ydt.distance);
 
             if (ydt.distance < FLYWHEEL_POWER_BUCKET_THRESHOLD_LOW) {
                 targetFlywheelVelocityCoefficient = FLYWHEEL_POWER_COEFFICIENT_CLOSE;
@@ -422,8 +422,8 @@ public class LaunchSystem {
             }
         }
 
-        Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: FLYWHEEL POWER: " + targetFlywheelVelocityCoefficient);
-        Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: VISOR: " + visorPosition);
+//        Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: FLYWHEEL POWER: " + targetFlywheelVelocityCoefficient);
+//        Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: VISOR: " + visorPosition);
 
         return new RobotLaunchParameters(LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * targetFlywheelVelocityCoefficient, visorPosition);
     }

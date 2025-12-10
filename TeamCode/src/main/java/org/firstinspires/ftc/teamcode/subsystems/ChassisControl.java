@@ -51,7 +51,8 @@ public class ChassisControl {
         moveRobotWithGamePad();
 
         updateRobotPose();
-        augmentPinpointWithAprilTagData();
+
+//        augmentPinpointWithAprilTagData();
     }
 
     private void moveRobotWithGamePad() {
@@ -113,11 +114,11 @@ public class ChassisControl {
 
         Pose3D limelightBasedPosition = limelightAprilTagHelper.getRobotPoseFromAprilTags();
         if (limelightBasedPosition != null)
-            Log.i("PositionControlSystem", "Limelight position: X: " + limelightBasedPosition.getPosition().x * 39.37 + " Y: " + limelightBasedPosition.getPosition().y * 39.37 + " Yaw: " + limelightBasedPosition.getOrientation().getYaw(AngleUnit.DEGREES));
+            Log.i("Chassis Control", "Limelight position: X: " + limelightBasedPosition.getPosition().x * 39.37 + " Y: " + limelightBasedPosition.getPosition().y * 39.37 + " Yaw: " + limelightBasedPosition.getOrientation().getYaw(AngleUnit.DEGREES));
 
         Pose2d pinpointPosition = mecanumDrive.localizer.getPose();
         if (pinpointPosition != null)
-            Log.i("PositionControlSystem", "Pinpoint position: X: " + pinpointPosition.position.x + " Y: " + pinpointPosition.position.y + " Yaw: " + Math.toDegrees(pinpointPosition.heading.toDouble()));
+            Log.i("Chassis Control", "Pinpoint position: X: " + pinpointPosition.position.x + " Y: " + pinpointPosition.position.y + " Yaw: " + Math.toDegrees(pinpointPosition.heading.toDouble()));
     }
 
     public Action holdPosition() {

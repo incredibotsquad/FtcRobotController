@@ -238,8 +238,9 @@ public class RobotHardware {
     }
 
     public int getSpindexPosition () {
-        Log.i("=== ROBOTHARDWARE ===", " getSpindexPosition: ");
-        return spindexMotor.getCurrentPosition();
+        int retVal = spindexMotor.getCurrentPosition();
+        Log.i("=== ROBOTHARDWARE ===", " getSpindexPosition: " + retVal);
+        return retVal;
     }
 
     public void setSpindexPosition(int pos) {
@@ -268,7 +269,9 @@ public class RobotHardware {
     }
 
     public boolean isSpindexBusy() {
-        return spindexMotor.isBusy();
+        boolean retVal = spindexMotor.isBusy();
+        Log.i("=== ROBOTHARDWARE  ===", " isSpindexBusy: " + retVal);
+        return retVal;
     }
 
     public boolean didBallDetectionBeamBreak() {

@@ -170,15 +170,25 @@ public class Spindex {
 
     public boolean isReadyForIntake() {
         boolean retVal = false;
+
+        int currentPos = robotHardware.getSpindexPosition();
+//        Log.i("SPINDEXER", "isReadyForIntake: currentPos: " + currentPos);
+
         for (BallEntry entry: storedColors) {
-            if (Math.abs(entry.intakePosition - robotHardware.getSpindexPosition()) < SpindexAction.SPINDEX_POSITION_TOLERANCE)
+//            Log.i("SPINDEXER", "isReadyForIntake: Entry Position: " + entry.intakePosition);
+
+            if (Math.abs(entry.intakePosition - currentPos) < SpindexAction.SPINDEX_POSITION_TOLERANCE && entry.ballColor == GameColors.NONE) {
+//                Log.i("SPINDEXER", "isReadyForIntake: we are at an intake position: ");
                 retVal = true;
-            break;
+                break;
+            }
         }
+
+//        Log.i("SPINDEXER", "isReadyForIntake: " + retVal);
 
         retVal = retVal && !robotHardware.isSpindexBusy();
 
-        Log.i("SPINDEXER", "isReadyForIntake: " + retVal);
+//        Log.i("SPINDEXER", "isReadyForIntake: " + retVal);
 
         //spindex should not be busy moving and should be at an intake position
         return retVal;
