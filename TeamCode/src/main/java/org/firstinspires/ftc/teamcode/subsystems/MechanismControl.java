@@ -10,7 +10,6 @@ import com.acmerobotics.roadrunner.SequentialAction;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.acmerobotics.dashboard.FtcDashboard;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.teamcode.Actions.ResetSpindexerAction;
 import org.firstinspires.ftc.teamcode.common.LimelightAprilTagHelper;
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
 
@@ -42,7 +41,8 @@ public class MechanismControl {
         LAUNCH_MANUAL_ONE_CLOSE,
         LAUNCH_MANUAL_ONE_MID,
         LAUNCH_MANUAL_ONE_FAR,
-        PARK
+        PARK,
+        RESET_SPINDEXER
     }
 
     private ROBOT_STATE currentRobotState;
@@ -138,6 +138,11 @@ public class MechanismControl {
 
         if (gamepad2.left_trigger > 0.5 && gamepad2.bWasPressed()) {
             newTargetRobotState = ROBOT_STATE.LAUNCH_MANUAL_ONE_FAR;
+        }
+
+        if (gamepad2.dpadDownWasPressed()) {
+            Log.i("== MECHANISM CONTROL ==", "GAMEPAD INPUTS RECEIVED FOR DPAD DOWN");
+            newTargetRobotState = ROBOT_STATE.RESET_SPINDEXER;
         }
 
         if (newTargetRobotState != ROBOT_STATE.NONE) {
@@ -273,6 +278,15 @@ public class MechanismControl {
                             launchSystem.getTurnOffAction()
                     ));
                     break;
+
+                case RESET_SPINDEXER:
+                    Log.i("== MECHANISM CONTROL ==", "PROCESSING STATE: RESET SPINDEXER");
+
+                    runningActions.add(
+                            intakeSystem.getResetAction()
+                    );
+
+                    break;
             }
         }
     }
@@ -367,18 +381,6 @@ public class MechanismControl {
     }
 
     private void ProcessDPad() {
-        if (gamepad2.dpadDownWasPressed()) {
-            //this clears out any running actions
-            runningActions.clear();
-            runningActions.add(
-                    new ResetSpindexerAction(robotHardware)
-//
-//                    new SequentialAction(
-//                            new ResetSpindexerAction(robotHardware),
-//                            intakeSystem.ReIndexBalls()
-//                    )
-            );
-        }
 
         if (gamepad2.dpadLeftWasPressed()) {
             int currentPos = robotHardware.getSpindexPosition();

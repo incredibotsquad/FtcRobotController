@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 public class Spindex {
 
     public static int DELTA_BETWEEN_POSITIONS = 465;
+    public static int SPINDEX_VELOCITY = 1350;
 
     public static int INTAKE_POS_1 = 698;
     public static int INTAKE_POS_3 = INTAKE_POS_1 - DELTA_BETWEEN_POSITIONS;

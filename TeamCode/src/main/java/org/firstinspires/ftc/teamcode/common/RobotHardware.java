@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.common;
 
+import static org.firstinspires.ftc.teamcode.subsystems.Spindex.SPINDEX_VELOCITY;
+
 import android.util.Log;
 
 import com.acmerobotics.dashboard.config.Config;
@@ -21,7 +23,6 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 public class RobotHardware {
 
     public static double COLOR_DETECTION_RETRY_DURATION_MILLIS = 200;
-    public static int SPINDEX_VELOCITY = 1500;
 
     public HardwareMap hardwareMap;
     private DcMotorEx frontRightDriveMotor;
@@ -102,7 +103,6 @@ public class RobotHardware {
 
         spindexMotor = hardwareMap.get(DcMotorEx.class, "SpindexMotor");
         spindexMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        spindexMotor.setDirection(DcMotorSimple.Direction.REVERSE);
         spindexMotor.setTargetPosition(0);
         spindexMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         spindexMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -267,7 +267,7 @@ public class RobotHardware {
 
     public boolean isSpindexBusy() {
         boolean retVal = spindexMotor.isBusy();
-        Log.i("=== ROBOTHARDWARE  ===", " isSpindexBusy: " + retVal);
+//        Log.i("=== ROBOTHARDWARE  ===", " isSpindexBusy: " + retVal);
         return retVal;
     }
 
@@ -275,7 +275,7 @@ public class RobotHardware {
         // Read the sensor state (true = HIGH, false = LOW)
         // HIGH means an object is detected
         boolean detected = ballIntakeSensor.getState();
-        Log.i("=== ROBOTHARDWARE  ===", " isBallPresentInIntake: " + detected);
+//        Log.i("=== ROBOTHARDWARE  ===", " isBallPresentInIntake: " + detected);
         return detected;
     }
 
