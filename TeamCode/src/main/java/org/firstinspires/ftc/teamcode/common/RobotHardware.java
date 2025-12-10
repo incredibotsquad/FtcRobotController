@@ -21,7 +21,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 public class RobotHardware {
 
     public static double COLOR_DETECTION_RETRY_DURATION_MILLIS = 200;
-    public static int SPINDEX_VELOCITY = 1250;
+    public static int SPINDEX_VELOCITY = 1500;
 
     public HardwareMap hardwareMap;
     private DcMotorEx frontRightDriveMotor;
@@ -92,9 +92,6 @@ public class RobotHardware {
         flywheelMotor2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         flywheelMotor2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         flywheelMotor2.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
-//        flywheelMotor2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-//        flywheelMotor2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         //servos
         launchTurretServo = hardwareMap.get(Servo.class, "LaunchTurretServo");

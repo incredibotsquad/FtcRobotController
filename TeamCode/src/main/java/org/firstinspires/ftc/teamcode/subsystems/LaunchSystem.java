@@ -46,6 +46,7 @@ public class LaunchSystem {
     public static double TURRET_SERVO_ADJUSTMENT_DELTA_NEAR = 0.004;
     public static double TURRET_SERVO_ADJUSTMENT_DELTA_FAR = 0.002;
     public static double TURRET_ALIGNMENT_THROTTLE_MILLIS = 50;
+    public static double TURRET_SERVO_ADJUSTMENT_SCALE = 0.25;
     public static double FLYWHEEL_WARM_THROTTLE_MILLIS = 50;
     public static double TURRET_ALIGNMENT_TOLERANCE_DEGREES_NEAR = 3;
     public static double TURRET_ALIGNMENT_TOLERANCE_DEGREES_FAR = 2;
@@ -65,7 +66,6 @@ public class LaunchSystem {
     public static double VISOR_POSITION_FAR = 0.75;
     public static double DEFAULT_VISOR_POSITION = VISOR_POSITION_MID;
 
-    public static double DELAY_BETWEEN_BALLS = 0.25;
 
     public LaunchSystem(RobotHardware robotHardware, Spindex spindex, LimelightAprilTagHelper limelightAprilTagHelper) {
         this.robotHardware = robotHardware;
@@ -446,6 +446,13 @@ public class LaunchSystem {
 
     public void AlignTurretToGoal() {
 
+        /*
+        * Turret pulley is 123 teeth. The Servo pulley is 24 tooth. it takes 123/24 = 5.125 turns of the servo for a full 360 of the turret
+        * The servo is 5 turns so in 5 turns, it will turn the turret 351 degrees.
+        * if we divide the servo movement into 1000 steps, each .001 increment of the position will turn the turret .351 degrees
+        * We scale the servo adjustment with the yaw difference in order to keep up with the change
+        * */
+
         if (turretAlignmentThrottleTimer.milliseconds() < TURRET_ALIGNMENT_THROTTLE_MILLIS)
             return;
 
@@ -468,14 +475,19 @@ public class LaunchSystem {
                 turretDelta = TURRET_SERVO_ADJUSTMENT_DELTA_FAR;
             }
 
+            double difference = Math.abs(ydt.yaw) - turretTolerance;
+
             // move the servo to account for the yaw.
             // Move the servo if the error is outside the tolerance
-            if (Math.abs(ydt.yaw) > turretTolerance) {
+            if (difference > 0) {
 
                 //clear out the alignment light
                 robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
 
                 double servoDelta = ydt.yaw > 0 ? turretDelta : -1 * turretDelta;
+
+                //scale the delta to 25% of the difference
+                servoDelta = TURRET_SERVO_ADJUSTMENT_SCALE * difference * servoDelta;
 
 //                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalAndKeepLauncherWarm: servoDelta: " + servoDelta);
 
