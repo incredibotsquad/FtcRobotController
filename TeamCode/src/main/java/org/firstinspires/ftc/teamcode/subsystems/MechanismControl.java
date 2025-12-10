@@ -10,6 +10,7 @@ import com.acmerobotics.roadrunner.SequentialAction;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.acmerobotics.dashboard.FtcDashboard;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.teamcode.Actions.ResetSpindexerAction;
 import org.firstinspires.ftc.teamcode.common.LimelightAprilTagHelper;
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
 
@@ -75,7 +76,7 @@ public class MechanismControl {
         ProcessActions();
 
         ProcessBackButton();
-//        ProcessDPad();
+        ProcessDPad();
 
         //this has to be done after translating any state into actions
         CheckForBallsToIntake();
@@ -89,6 +90,11 @@ public class MechanismControl {
         if ((currentRobotState == ROBOT_STATE.INTAKE || targetRobotState == ROBOT_STATE.INTAKE) && (!stateTransitionInProgress))
             launchSystem.KeepLauncherWarm();
 
+
+        //TODO: this is for profiling flywheel velocity at launches
+        if (currentRobotState != ROBOT_STATE.LAUNCH_ALL && targetRobotState == ROBOT_STATE.LAUNCH_ALL && stateTransitionInProgress) {
+            Log.i("MECHANISM CONTROL" , "FLYWHEEL VELOCITY: " + robotHardware.getFlywheelMotorVelocityInTPS());
+        }
 //        CheckForSpindexStall();
     }
 
@@ -228,7 +234,7 @@ public class MechanismControl {
                     runningActions.add(
                             new ParallelAction(
                                     intakeSystem.getTurnOffAction(),
-                                    launchSystem.getLaunchAllBallsAction()
+                                    launchSystem.getLaunchAllBallsQuickAction()
                             ));
                     break;
 
@@ -360,29 +366,36 @@ public class MechanismControl {
         }
     }
 
-//    private void ProcessDPad() {
-//        if (gamepad2.dpadDownWasPressed()) {
-//            //this clears out any running actions
-////            runningActions.clear();
-//            runningActions.add(intakeSystem.ReIndexBalls());
-//        }
+    private void ProcessDPad() {
+        if (gamepad2.dpadDownWasPressed()) {
+            //this clears out any running actions
+            runningActions.clear();
+            runningActions.add(
+                    new ResetSpindexerAction(robotHardware)
 //
-//        if (gamepad2.dpadLeftWasPressed()) {
-//            int currentPos = robotHardware.getSpindexPosition();
-//            robotHardware.setSpindexPosition(currentPos - SPINDEX_MANUAL_DELTA);
-//        }
-//
-//        if (gamepad2.dpadRightWasPressed()) {
-//            int currentPos = robotHardware.getSpindexPosition();
-//            robotHardware.setSpindexPosition(currentPos + SPINDEX_MANUAL_DELTA);
-//        }
-//
-//        if (gamepad2.dpadUpWasPressed()) {
-//            //this is an emergency operation - we clear out the actions and we clear out state transition flag
-//            // so that the state change can actually happen.
-//            runningActions.clear();
-//            stateTransitionInProgress = false;
-//            targetRobotState = ROBOT_STATE.INTAKE;
-//        }
-//    }
+//                    new SequentialAction(
+//                            new ResetSpindexerAction(robotHardware),
+//                            intakeSystem.ReIndexBalls()
+//                    )
+            );
+        }
+
+        if (gamepad2.dpadLeftWasPressed()) {
+            int currentPos = robotHardware.getSpindexPosition();
+            robotHardware.setSpindexPosition(currentPos - SPINDEX_MANUAL_DELTA);
+        }
+
+        if (gamepad2.dpadRightWasPressed()) {
+            int currentPos = robotHardware.getSpindexPosition();
+            robotHardware.setSpindexPosition(currentPos + SPINDEX_MANUAL_DELTA);
+        }
+
+        if (gamepad2.dpadUpWasPressed()) {
+            //this is an emergency operation - we clear out the actions and we clear out state transition flag
+            // so that the state change can actually happen.
+            runningActions.clear();
+            stateTransitionInProgress = false;
+            targetRobotState = ROBOT_STATE.INTAKE;
+        }
+    }
 }

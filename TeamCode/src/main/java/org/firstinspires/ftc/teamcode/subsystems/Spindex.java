@@ -3,9 +3,7 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import android.util.Log;
 
 import com.acmerobotics.roadrunner.Action;
-import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.NullAction;
-import com.acmerobotics.roadrunner.SequentialAction;
 
 import org.firstinspires.ftc.teamcode.Actions.SpindexAction;
 import org.firstinspires.ftc.teamcode.common.BallEntry;
@@ -13,8 +11,6 @@ import org.firstinspires.ftc.teamcode.common.GameColors;
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 public class Spindex {
@@ -180,8 +176,12 @@ public class Spindex {
             break;
         }
 
+        retVal = retVal && !robotHardware.isSpindexBusy();
+
+        Log.i("SPINDEXER", "isReadyForIntake: " + retVal);
+
         //spindex should not be busy moving and should be at an intake position
-        return (!robotHardware.isSpindexBusy() && retVal);
+        return retVal;
     }
 
 
@@ -198,9 +198,14 @@ public class Spindex {
         return storedColors.stream().noneMatch(ballEntry -> ballEntry.ballColor != GameColors.NONE);
     }
 
-    public void storeCurrentBall(GameColors color) {
+    public void updateBallColorAtCurrentIndex(GameColors color) {
 //        Log.i("SPINDEXER", "STORE CURRENT BALL: " + color);
         storedColors.get(currentIndex).ballColor = color;
+    }
+
+    public void updateBallColorAtIndex(int index, GameColors color) {
+//        Log.i("SPINDEXER", "STORE CURRENT BALL: " + color);
+        storedColors.get(index).ballColor = color;
     }
 
     public void clearCurrentBall() {

@@ -24,14 +24,12 @@ public class IntakeSystem {
     public boolean isOn;
     private ElapsedTime timeSinceLastIntake;
 
-    private boolean isUnknownIndexingOngoing;
 
     public IntakeSystem(RobotHardware robotHardware, Spindex spindex) {
         this.robotHardware = robotHardware;
         this.spindex = spindex;
         this.isOn = false;
         timeSinceLastIntake = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
-        this.isUnknownIndexingOngoing = false;
     }
 
     //make the default constructor private
@@ -81,7 +79,7 @@ public class IntakeSystem {
 
         if (isOn && ballDetected && spindex.isReadyForIntake()) {
 
-            spindex.storeCurrentBall(GameColors.UNKNOWN);   //default to unknown - we will update color later
+            spindex.updateBallColorAtCurrentIndex(GameColors.UNKNOWN);   //default to unknown - we will update color later
             Log.i("INTAKE SYSTEM", "checkForBallIntakeAndGetAction: Ball Detected: indexed as UNKNOWN ");
             Log.i("INTAKE SYSTEM", "checkForBallIntakeAndGetAction: current index: " + spindex.currentIndex);
 
@@ -106,19 +104,22 @@ public class IntakeSystem {
                 //slot 0 is back color sensor
                 new InstantAction(() -> {
                     GameColors slot0Color = robotHardware.getDetectedBallColorFromBackSensor();
-                    spindex.storeCurrentBall(slot0Color);
+                    if (spindex.storedColors.get(0).ballColor == GameColors.UNKNOWN)
+                        spindex.updateBallColorAtIndex(0, slot0Color);
                 }),
 
                 //slot 1 is left color sensor
                 new InstantAction(() -> {
                     GameColors slot1Color = robotHardware.getDetectedBallColorFromLeftSensor();
-                    spindex.storeCurrentBall(slot1Color);
+                    if (spindex.storedColors.get(1).ballColor == GameColors.UNKNOWN)
+                        spindex.updateBallColorAtIndex(1, slot1Color);
                 }),
 
                 //slot 2 is right color sensor
                 new InstantAction(() -> {
                     GameColors slot2Color = robotHardware.getDetectedBallColorFromRightSensor();
-                    spindex.storeCurrentBall(slot2Color);
+                    if (spindex.storedColors.get(2).ballColor == GameColors.UNKNOWN)
+                        spindex.updateBallColorAtIndex(2, slot2Color);
                 })
         );
     }

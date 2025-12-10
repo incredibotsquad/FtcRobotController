@@ -14,7 +14,7 @@ public class ResetSpindexerAction implements Action {
     private RobotHardware robotHardware;
     private boolean initialized = false;
 
-    public static int SPINDEXER_INCREMENT = 200;
+    public static int SPINDEXER_INCREMENT = 20;
 
     public ResetSpindexerAction(RobotHardware robotHardware) {
         this.robotHardware = robotHardware;

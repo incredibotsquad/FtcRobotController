@@ -275,7 +275,7 @@ public class RobotHardware {
         // Read the sensor state (true = HIGH, false = LOW)
         // HIGH means an object is detected
         boolean detected = ballIntakeSensor.getState();
-//        Log.i("=== ROBOTHARDWARE  ===", " isBallPresentInIntake: " + detected);
+        Log.i("=== ROBOTHARDWARE  ===", " isBallPresentInIntake: " + detected);
         return detected;
     }
 
