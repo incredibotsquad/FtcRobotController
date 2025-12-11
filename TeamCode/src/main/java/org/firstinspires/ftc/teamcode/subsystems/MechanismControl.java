@@ -1,6 +1,6 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
-import static org.firstinspires.ftc.teamcode.subsystems.Spindex.SPINDEX_MANUAL_DELTA;
+import static org.firstinspires.ftc.teamcode.Actions.ResetSpindexerAction.SPINDEXER_INCREMENT;
 
 import android.util.Log;
 
@@ -171,7 +171,9 @@ public class MechanismControl {
                 && currentRobotState != ROBOT_STATE.INTAKE
                 && targetRobotState != ROBOT_STATE.INTAKE
                 && currentRobotState != ROBOT_STATE.PARK
-                && targetRobotState != ROBOT_STATE.PARK) {
+                && targetRobotState != ROBOT_STATE.PARK
+                && currentRobotState != ROBOT_STATE.RESET_SPINDEXER
+                && targetRobotState != ROBOT_STATE.RESET_SPINDEXER) {
 
             Log.i("== MECHANISM CONTROL ==", "CreateStateAutomatically - setting to INTAKE");
             targetRobotState = ROBOT_STATE.INTAKE;
@@ -203,8 +205,11 @@ public class MechanismControl {
 
                 case REVERSE_INTAKE:
                     Log.i("== MECHANISM CONTROL ==", "PROCESSING STATE: REVERSE_INTAKE");
-                    runningActions.add(intakeSystem.getReverseIntakeAction());
-
+                    runningActions.add(
+                            new SequentialAction(
+                                    spindex.moveToNextFullSlotAction(),
+                                    intakeSystem.getReverseIntakeAction()
+                            ));
                     break;
 
                 case LAUNCH_ONE:
@@ -239,7 +244,7 @@ public class MechanismControl {
                     runningActions.add(
                             new ParallelAction(
                                     intakeSystem.getTurnOffAction(),
-                                    launchSystem.getLaunchAllBallsQuickAction()
+                                    launchSystem.getLaunchAllBallsAction()
                             ));
                     break;
 
@@ -384,12 +389,12 @@ public class MechanismControl {
 
         if (gamepad2.dpadLeftWasPressed()) {
             int currentPos = robotHardware.getSpindexPosition();
-            robotHardware.setSpindexPosition(currentPos - SPINDEX_MANUAL_DELTA);
+            robotHardware.setSpindexPosition(currentPos - SPINDEXER_INCREMENT);
         }
 
         if (gamepad2.dpadRightWasPressed()) {
             int currentPos = robotHardware.getSpindexPosition();
-            robotHardware.setSpindexPosition(currentPos + SPINDEX_MANUAL_DELTA);
+            robotHardware.setSpindexPosition(currentPos + SPINDEXER_INCREMENT);
         }
 
         if (gamepad2.dpadUpWasPressed()) {

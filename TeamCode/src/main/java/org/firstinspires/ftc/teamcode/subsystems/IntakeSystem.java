@@ -19,7 +19,7 @@ import org.firstinspires.ftc.teamcode.common.RobotHardware;
 
 @Config
 public class IntakeSystem {
-    public static double INTAKE_THROTTLE_TIME_MS = 90;
+    public static double INTAKE_THROTTLE_TIME_MS = 45;
     private RobotHardware robotHardware;
     private Spindex spindex;
     public boolean isOn;

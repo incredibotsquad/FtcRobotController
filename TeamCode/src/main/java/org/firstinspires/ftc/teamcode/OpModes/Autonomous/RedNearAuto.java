@@ -166,11 +166,7 @@ public class RedNearAuto extends BaseAuto {
                                     new InstantAction(() -> robotHardware.setFlywheelMotorVelocityInTPS(LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_CLOSE)),
                                     new InstantAction(() -> robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED))
                             )
-                    ),
-                    () -> {
-                            CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
-                            launchSystem.AlignTurretToGoal();
-                    }
+                    )
             );
 
 
@@ -181,19 +177,11 @@ public class RedNearAuto extends BaseAuto {
                     new ParallelAction(
                             intakeSystem.getTurnOffAction(),
                             launchFromTagRead
-                    ),
-                    () -> {
-                        CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
-                        launchSystem.AlignTurretToGoal();
-                    }
+                    )
             );
 
             runBlockingWithBackground(
-                    launchSystem.getBallPatternLaunchAction(pattern),
-                    () -> {
-                        CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
-                        launchSystem.AlignTurretToGoal();
-                    }
+                    launchSystem.getBallPatternLaunchAction(pattern)
             );
 
 
@@ -219,11 +207,7 @@ public class RedNearAuto extends BaseAuto {
                             }),
                             new SpindexAction(robotHardware, spindex.storedColors.get(1).intakePosition),
                             new SleepAction(0.5)
-                    ),
-                    () -> {
-                        CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
-                        launchSystem.AlignTurretToGoal();
-                    }
+                    )
             );
 
             runBlockingWithBackground(
@@ -248,11 +232,7 @@ public class RedNearAuto extends BaseAuto {
                             }),
                             new SpindexAction(robotHardware, spindex.storedColors.get(2).intakePosition),
                             new SleepAction(0.75)
-                    ),
-                    () -> {
-                        CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
-                        launchSystem.AlignTurretToGoal();
-                    }
+                    )
             );
 
             runBlockingWithBackground(
@@ -275,11 +255,7 @@ public class RedNearAuto extends BaseAuto {
                                     }
                                 }
                             })
-                    ),
-                    () -> {
-                        CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
-                        launchSystem.AlignTurretToGoal();
-                    }
+                    )
             );
 
             runBlockingWithBackground(
@@ -297,27 +273,15 @@ public class RedNearAuto extends BaseAuto {
                                         }
                                     })
                             )
-                    ),
-                    () -> {
-                        CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
-                        launchSystem.AlignTurretToGoal();
-                    }
+                    )
             );
 
             runBlockingWithBackground(
-                    launchSystem.getBallPatternLaunchAction(pattern),
-                    () -> {
-                        CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
-                        launchSystem.AlignTurretToGoal();
-                    }
+                    launchSystem.getBallPatternLaunchAction(pattern)
             );
 
             runBlockingWithBackground(
-                    moveAwayFromLine,
-                    () -> {
-                        CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
-                        launchSystem.AlignTurretToGoal();
-                    }
+                    moveAwayFromLine
             );
 
             Log.i("RED NEAR AUTO", "Elapsed time: " + timer.seconds());

@@ -28,7 +28,6 @@ public class Spindex {
 
     public static int COLOR_DETECTION_POS = LAUNCH_POS_1;
 
-    public static int SPINDEX_MANUAL_DELTA = 20;
     public List<BallEntry> storedColors = List.of(
             new BallEntry(0, INTAKE_POS_1, LAUNCH_POS_1, GameColors.NONE),
             new BallEntry(1, INTAKE_POS_2, LAUNCH_POS_2, GameColors.NONE),
@@ -83,7 +82,6 @@ public class Spindex {
                     nextFullSlotIndex = entry.index;
                 }
             }
-
 //            nextFullSlotIndex = list.get(0).index;
         }
 
@@ -219,9 +217,15 @@ public class Spindex {
         storedColors.get(index).ballColor = color;
     }
 
-    public void clearCurrentBall() {
+    public void clearBallAtCurrentIndex() {
 
         Log.i("SPINDEXER", "CLEAR CURRENT BALL");
         storedColors.get(currentIndex).ballColor = GameColors.NONE;
+    }
+
+    public void clearBallAtIndex(int index) {
+
+        Log.i("SPINDEXER", "CLEAR BALL AT INDEX");
+        storedColors.get(index).ballColor = GameColors.NONE;
     }
 }

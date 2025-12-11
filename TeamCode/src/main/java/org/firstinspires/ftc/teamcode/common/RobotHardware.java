@@ -236,12 +236,12 @@ public class RobotHardware {
 
     public int getSpindexPosition () {
         int retVal = spindexMotor.getCurrentPosition();
-        Log.i("=== ROBOTHARDWARE ===", " getSpindexPosition: " + retVal);
+//        Log.i("=== ROBOTHARDWARE ===", " getSpindexPosition: " + retVal);
         return retVal;
     }
 
     public void setSpindexPosition(int pos) {
-        Log.i("=== ROBOTHARDWARE ===", " setSpindexPosition: " + pos);
+//        Log.i("=== ROBOTHARDWARE ===", " setSpindexPosition: " + pos);
         setSpindexPositionAndVelocity(pos, SPINDEX_VELOCITY);
     }
 

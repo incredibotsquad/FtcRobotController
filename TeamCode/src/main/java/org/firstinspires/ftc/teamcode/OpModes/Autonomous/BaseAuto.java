@@ -7,6 +7,7 @@ import com.acmerobotics.roadrunner.Action;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import org.firstinspires.ftc.teamcode.MecanumDrive;
+import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 import org.firstinspires.ftc.teamcode.common.LimelightAprilTagHelper;
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSystem;
@@ -22,7 +23,7 @@ public abstract class BaseAuto extends LinearOpMode {
     public LaunchSystem launchSystem;
     public MecanumDrive mecanumDrive;
 
-    public static void runBlockingWithBackground(Action mainAction, Runnable backgroundTask) {
+    private static void runBlockingWithBackground(Action mainAction, Runnable backgroundTask) {
         boolean running = true;
         while (running && !Thread.currentThread().isInterrupted()) {
             // Run a single step of the main action
@@ -35,5 +36,20 @@ public abstract class BaseAuto extends LinearOpMode {
             // Optional: Send telemetry packet to dashboard
              FtcDashboard.getInstance().sendTelemetryPacket(packet);
         }
+    }
+
+    public void runBlockingWithBackground(Action mainAction) {
+        runBlockingWithBackground(mainAction, getBackgroundTask());
+    }
+
+    private Runnable getBackgroundTask() {
+        return new Runnable() {
+            @Override
+            public void run() {
+                CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
+                CrossOpModeStorage.spindexerPosition = robotHardware.getSpindexPosition();
+                launchSystem.AlignTurretToGoal();
+            }
+        };
     }
 }

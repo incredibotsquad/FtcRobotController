@@ -8,7 +8,6 @@ import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.NullAction;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SequentialAction;
-import com.acmerobotics.roadrunner.SleepAction;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction;
@@ -22,10 +21,11 @@ import org.firstinspires.ftc.teamcode.common.GamePattern;
 import org.firstinspires.ftc.teamcode.common.LimelightLaunchParameters;
 import org.firstinspires.ftc.teamcode.common.LimelightAprilTagHelper;
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
-import org.firstinspires.ftc.teamcode.common.RobotLaunchParameters;
+import org.firstinspires.ftc.teamcode.common.BallLaunchParameters;
 
-import java.net.PortUnreachableException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Config
@@ -47,7 +47,6 @@ public class LaunchSystem {
     public static double TURRET_SERVO_ADJUSTMENT_DELTA_FAR = 0.002;
     public static double TURRET_ALIGNMENT_THROTTLE_MILLIS = 50;
     public static double TURRET_SERVO_ADJUSTMENT_SCALE = 0.25;
-    public static double FLYWHEEL_WARM_THROTTLE_MILLIS = 50;
     public static double TURRET_ALIGNMENT_TOLERANCE_DEGREES_NEAR = 3;
     public static double TURRET_ALIGNMENT_TOLERANCE_DEGREES_FAR = 2;
     public static double TURRET_TAG_NOT_FOUND_TIMER_MILLIS = 2000;
@@ -55,17 +54,48 @@ public class LaunchSystem {
     public static double ROBOT_ALIGNED_TO_SHOOT_LIGHT = 0.5;    //GREEN
 
 
+    public static double FLYWHEEL_WARM_THROTTLE_MILLIS = 50;
+
+    public static double FLYWHEEL_POWER_BUCKET_THRESHOLD_LOW = 0;
+    public static double FLYWHEEL_POWER_BUCKET_THRESHOLD_MID = 60;
+    public static double FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR = 100;
+
     public static double FLYWHEEL_POWER_COEFFICIENT_CLOSE = 0.45;
     public static double FLYWHEEL_POWER_COEFFICIENT_MID = 0.5;
     public static double FLYWHEEL_POWER_COEFFICIENT_FAR = 0.58;
-    public static double FLYWHEEL_POWER_BUCKET_THRESHOLD_LOW = 60;
-    public static double FLYWHEEL_POWER_BUCKET_THRESHOLD_MID = 100;
-    public static double DEFAULT_FLYWHEEL_POWER_COEFFICIENT = FLYWHEEL_POWER_COEFFICIENT_MID;
-    public static double VISOR_POSITION_CLOSE = 0.22;
-    public static double VISOR_POSITION_MID = 0.53;
-    public static double VISOR_POSITION_FAR = 0.75;
-    public static double DEFAULT_VISOR_POSITION = VISOR_POSITION_MID;
 
+    public static double DEFAULT_FLYWHEEL_POWER_COEFFICIENT = FLYWHEEL_POWER_COEFFICIENT_MID;
+
+    public static double VISOR_POSITION_CLOSE_1 = 0.22;
+    public static double VISOR_POSITION_CLOSE_2 = 0.22;
+    public static double VISOR_POSITION_CLOSE_3 = 0.22;
+
+    public static double VISOR_POSITION_MID_1 = 0.53;
+    public static double VISOR_POSITION_MID_2 = 0.53;
+    public static double VISOR_POSITION_MID_3 = 0.53;
+
+    public static double VISOR_POSITION_FAR_1 = 0.75;
+    public static double VISOR_POSITION_FAR_2 = 0.7;
+    public static double VISOR_POSITION_FAR_3 = 0.75;
+    public static double DEFAULT_VISOR_POSITION = VISOR_POSITION_MID_1;
+
+    Map<Double, BallLaunchParameters> distancePowerVisorMap = Map.of(
+            FLYWHEEL_POWER_BUCKET_THRESHOLD_LOW, new BallLaunchParameters(
+                    LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_CLOSE,
+                    VISOR_POSITION_CLOSE_1,
+                    VISOR_POSITION_CLOSE_2,
+                    VISOR_POSITION_CLOSE_3),
+            FLYWHEEL_POWER_BUCKET_THRESHOLD_MID, new BallLaunchParameters(
+                    LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_MID,
+                    VISOR_POSITION_MID_1,
+                    VISOR_POSITION_MID_2,
+                    VISOR_POSITION_MID_3),
+            FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR, new BallLaunchParameters(
+                    LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR,
+                    VISOR_POSITION_FAR_1,
+                    VISOR_POSITION_FAR_2,
+                    VISOR_POSITION_FAR_3)
+    );
 
     public LaunchSystem(RobotHardware robotHardware, Spindex spindex, LimelightAprilTagHelper limelightAprilTagHelper) {
         this.robotHardware = robotHardware;
@@ -82,8 +112,7 @@ public class LaunchSystem {
     public Action getKeepWarmAction() {
         Log.i("== LAUNCH SYSTEM ==", "Keep warm");
         return new ParallelAction(
-                new LaunchFlywheelAction(robotHardware, getRobotLaunchParametersBasedOnDistance().flywheelVelocity, false),
-                new InstantAction(() -> robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED))
+                new LaunchFlywheelAction(robotHardware, getRobotLaunchParametersBasedOnDistance().flywheelVelocity, false)
         );
     }
 
@@ -95,13 +124,13 @@ public class LaunchSystem {
         ) ;
     }
 
-    private Action getLaunchBallAction(RobotLaunchParameters robotLaunchParameters) {
+    private Action getLaunchBallAction(BallLaunchParameters ballLaunchParameters) {
         Log.i("== LAUNCH SYSTEM ==", "getLaunchBallAction");
         return new SequentialAction(
-                new LaunchFlywheelAction(robotHardware, robotLaunchParameters.flywheelVelocity),
-                new LaunchVisorAction(robotHardware, robotLaunchParameters.visorPosition),
+                new LaunchFlywheelAction(robotHardware, ballLaunchParameters.flywheelVelocity),
+                new LaunchVisorAction(robotHardware, ballLaunchParameters.visorPositions.get(0)),
                 new LaunchKickAction(robotHardware),
-                new LaunchVisorAction(robotHardware, VISOR_POSITION_CLOSE, false)
+                new LaunchVisorAction(robotHardware, VISOR_POSITION_CLOSE_1, false)
         );
     }
 
@@ -110,30 +139,30 @@ public class LaunchSystem {
         return getLaunchNextBallAction(getRobotLaunchParametersBasedOnDistance());
     }
 
-    public Action getLaunchNextBallAction(RobotLaunchParameters robotLaunchParameters) {
+    public Action getLaunchNextBallAction(BallLaunchParameters ballLaunchParameters) {
         Log.i("== LAUNCH SYSTEM ==", "Launch Next Ball Action");
 
         return spindex.isEmpty() ? new NullAction() :
                 new SequentialAction(
                 spindex.moveToNextFullSlotAction(),
-                getLaunchBallAction(robotLaunchParameters),
-                new InstantAction(() -> spindex.clearCurrentBall())
+                getLaunchBallAction(ballLaunchParameters),
+                new InstantAction(() -> spindex.clearBallAtCurrentIndex())
         );
     }
 
     public Action getLaunchNextBallCloseAction() {
         Log.i("== LAUNCH SYSTEM ==", "Launch Next Ball Close Action");
-        return getLaunchNextBallAction(new RobotLaunchParameters(LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_CLOSE, VISOR_POSITION_CLOSE));
+        return getLaunchNextBallAction(distancePowerVisorMap.get(FLYWHEEL_POWER_BUCKET_THRESHOLD_LOW));
     }
 
     public Action getLaunchNextBallMidAction() {
         Log.i("== LAUNCH SYSTEM ==", "Launch Next Ball Mid Action");
-        return getLaunchNextBallAction(new RobotLaunchParameters(LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_MID, VISOR_POSITION_MID));
+        return getLaunchNextBallAction(distancePowerVisorMap.get(FLYWHEEL_POWER_BUCKET_THRESHOLD_MID));
     }
 
     public Action getLaunchNextBallFarAction() {
         Log.i("== LAUNCH SYSTEM ==", "Launch Next Ball Far Action");
-        return getLaunchNextBallAction(new RobotLaunchParameters(LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR, VISOR_POSITION_FAR));
+        return getLaunchNextBallAction(distancePowerVisorMap.get(FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR));
     }
 
     public Action getLaunchGreenBallAction() {
@@ -141,12 +170,12 @@ public class LaunchSystem {
         return getLaunchGreenBallAction(getRobotLaunchParametersBasedOnDistance());
     }
 
-    public Action getLaunchGreenBallAction(RobotLaunchParameters robotLaunchParameters) {
+    public Action getLaunchGreenBallAction(BallLaunchParameters ballLaunchParameters) {
         Log.i("== LAUNCH SYSTEM ==", "Launch Green Ball Action");
         return  new SequentialAction(
                 spindex.moveToNextGreenSlotAction(),
-                getLaunchBallAction(robotLaunchParameters),
-                new InstantAction(() -> spindex.clearCurrentBall())
+                getLaunchBallAction(ballLaunchParameters),
+                new InstantAction(() -> spindex.clearBallAtCurrentIndex())
         );
     }
 
@@ -155,12 +184,12 @@ public class LaunchSystem {
         return getLaunchPurpleBallAction(getRobotLaunchParametersBasedOnDistance());
     }
 
-    public Action getLaunchPurpleBallAction(RobotLaunchParameters robotLaunchParameters) {
+    public Action getLaunchPurpleBallAction(BallLaunchParameters ballLaunchParameters) {
         Log.i("== LAUNCH SYSTEM ==", "Launch Purple Ball Action");
         return new SequentialAction(
                 spindex.moveToNextPurpleSlotAction(),
-                getLaunchBallAction(robotLaunchParameters),
-                new InstantAction(() -> spindex.clearCurrentBall())
+                getLaunchBallAction(ballLaunchParameters),
+                new InstantAction(() -> spindex.clearBallAtCurrentIndex())
         );
     }
 
@@ -201,231 +230,142 @@ public class LaunchSystem {
     }
 
     public Action getLaunchGPPAction() {
+        List<BallEntry> greenSlots = spindex.storedColors.stream().filter(entry -> entry.ballColor == GameColors.GREEN).collect(Collectors.toList());
+        List<BallEntry> purpleSlots = spindex.storedColors.stream().filter(entry -> entry.ballColor == GameColors.PURPLE).collect(Collectors.toList());
 
-        RobotLaunchParameters robotLaunchParameters = getRobotLaunchParametersBasedOnDistance();
-        Action ball1 = new NullAction();
-        Action ball2 = new NullAction();
-        Action ball3 = new NullAction();
-
-        int greenSlot = spindex.getNextGreenSlotIndex();
-        List<BallEntry> purpleSlots = spindex.storedColors.stream().filter(c -> c.index != greenSlot).collect(Collectors.toList());
-
-        if ((greenSlot < 0) || purpleSlots.size() < 2)
+        if ((greenSlots.isEmpty()) || purpleSlots.size() < 2)
             return getLaunchAllBallsAction();
 
-        ball1 = new SequentialAction(
-                new SpindexAction(robotHardware, spindex.storedColors.get(greenSlot).launchPosition),
-                getLaunchBallAction(robotLaunchParameters),
-                new InstantAction(() -> spindex.storedColors.get(greenSlot).ballColor = GameColors.NONE)
-        );
-
-
-        ball2 = new SequentialAction(
-                new SpindexAction(robotHardware, spindex.storedColors.get(purpleSlots.get(0).index).launchPosition),
-                getLaunchBallAction(robotLaunchParameters),
-                new InstantAction(() -> spindex.storedColors.get(purpleSlots.get(0).index).ballColor = GameColors.NONE));
-
-        if (purpleSlots.size() == 2) {
-            ball3 = new SequentialAction(
-                    new SpindexAction(robotHardware, spindex.storedColors.get(purpleSlots.get(1).index).launchPosition),
-                    getLaunchBallAction(robotLaunchParameters),
-                    new InstantAction(() -> spindex.storedColors.get(purpleSlots.get(1).index).ballColor = GameColors.NONE)
-            );
-        }
-
-        return new SequentialAction(
-                ball1,
-                ball2,
-                ball3
-        );
+        return getLaunchAllBallsInSequenceAction(List.of(greenSlots.get(0).index, purpleSlots.get(0).index, purpleSlots.get(1).index));
     }
 
     public Action getLaunchPGPAction() {
 
-        RobotLaunchParameters robotLaunchParameters = getRobotLaunchParametersBasedOnDistance();
-        Action ball1 = new NullAction();
-        Action ball2 = new NullAction();
-        Action ball3 = new NullAction();
+        List<BallEntry> greenSlots = spindex.storedColors.stream().filter(entry -> entry.ballColor == GameColors.GREEN).collect(Collectors.toList());
+        List<BallEntry> purpleSlots = spindex.storedColors.stream().filter(entry -> entry.ballColor == GameColors.PURPLE).collect(Collectors.toList());
 
-        int greenSlot = spindex.getNextGreenSlotIndex();
-        List<BallEntry> purpleSlots = spindex.storedColors.stream().filter(c -> c.index != greenSlot).collect(Collectors.toList());
-
-        if ((greenSlot < 0) || purpleSlots.size() < 2)
+        if ((greenSlots.isEmpty()) || purpleSlots.size() < 2)
             return getLaunchAllBallsAction();
 
-        ball1 = new SequentialAction(
-                new SpindexAction(robotHardware, spindex.storedColors.get(greenSlot).launchPosition),
-                getLaunchBallAction(robotLaunchParameters),
-                new InstantAction(() -> spindex.storedColors.get(greenSlot).ballColor = GameColors.NONE)
-        );
-
-        ball2 = new SequentialAction(
-                new SpindexAction(robotHardware, spindex.storedColors.get(purpleSlots.get(0).index).launchPosition),
-                getLaunchBallAction(robotLaunchParameters),
-                new InstantAction(() -> spindex.storedColors.get(purpleSlots.get(0).index).ballColor = GameColors.NONE));
-
-        if (purpleSlots.size() == 2) {
-            ball3 = new SequentialAction(
-                    new SpindexAction(robotHardware, spindex.storedColors.get(purpleSlots.get(1).index).launchPosition),
-                    getLaunchBallAction(robotLaunchParameters),
-                    new InstantAction(() -> spindex.storedColors.get(purpleSlots.get(1).index).ballColor = GameColors.NONE)
-            );
-        }
-
-        return new SequentialAction(
-                ball2,
-                ball1,
-                ball3
-        );
+        return getLaunchAllBallsInSequenceAction(List.of(purpleSlots.get(0).index, greenSlots.get(0).index, purpleSlots.get(1).index));
     }
 
     public Action getLaunchPPGAction() {
-        RobotLaunchParameters robotLaunchParameters = getRobotLaunchParametersBasedOnDistance();
 
-        Action ball1 = new NullAction();
-        Action ball2 = new NullAction();
-        Action ball3 = new NullAction();
+        List<BallEntry> greenSlots = spindex.storedColors.stream().filter(entry -> entry.ballColor == GameColors.GREEN).collect(Collectors.toList());
+        List<BallEntry> purpleSlots = spindex.storedColors.stream().filter(entry -> entry.ballColor == GameColors.PURPLE).collect(Collectors.toList());
 
-        int greenSlot = spindex.getNextGreenSlotIndex();
-        List<BallEntry> purpleSlots = spindex.storedColors.stream().filter(c -> c.index != greenSlot).collect(Collectors.toList());
-
-        if ((greenSlot < 0) || purpleSlots.size() < 2)
+        if ((greenSlots.isEmpty()) || purpleSlots.size() < 2)
             return getLaunchAllBallsAction();
 
-        ball1 = new SequentialAction(
-                new SpindexAction(robotHardware, spindex.storedColors.get(greenSlot).launchPosition),
-                getLaunchBallAction(robotLaunchParameters),
-                new InstantAction(() -> spindex.storedColors.get(greenSlot).ballColor = GameColors.NONE)
-        );
-
-        ball2 = new SequentialAction(
-                new SpindexAction(robotHardware, spindex.storedColors.get(purpleSlots.get(0).index).launchPosition),
-                getLaunchBallAction(robotLaunchParameters),
-                new InstantAction(() -> spindex.storedColors.get(purpleSlots.get(0).index).ballColor = GameColors.NONE));
-
-        if (purpleSlots.size() == 2) {
-            ball3 = new SequentialAction(
-                    new SpindexAction(robotHardware, spindex.storedColors.get(purpleSlots.get(1).index).launchPosition),
-                    getLaunchBallAction(robotLaunchParameters),
-                    new InstantAction(() -> spindex.storedColors.get(purpleSlots.get(1).index).ballColor = GameColors.NONE)
-            );
-        }
-
-        return new SequentialAction(
-                ball2,
-                ball3,
-                ball1
-        );
+        return getLaunchAllBallsInSequenceAction(List.of(purpleSlots.get(0).index, purpleSlots.get(1).index, greenSlots.get(0).index));
     }
 
+    private Action getLaunchAllBallsInSequenceAction(List<Integer> sequence) {
+        Log.i("== LAUNCH SYSTEM ==", "getLaunchAllBallsInSequenceAction ");
 
-    public Action getLaunchAllBallsAction() {
-        Log.i("== LAUNCH SYSTEM ==", "Launch all Balls Action");
+        BallLaunchParameters ballLaunchParameters = getRobotLaunchParametersBasedOnDistance();
+        List<Action> actionsToRun = new ArrayList<>();
 
-        return getLaunchAllBallsAction(getRobotLaunchParametersBasedOnDistance());
-    }
+        actionsToRun.add(new LaunchFlywheelAction(robotHardware, ballLaunchParameters.flywheelVelocity));
 
-    public Action getLaunchAllBallsQuickAction() {
-        Log.i("== LAUNCH SYSTEM ==", "getLaunchAllBallsQuickAction " + spindex.fullSlotCount() + " Balls Action: ");
-
-        RobotLaunchParameters robotLaunchParameters = getRobotLaunchParametersBasedOnDistance();
-
-        Action allBalls = new SequentialAction(
-                //first ball
-                new ParallelAction(
-                    spindex.moveToNextFullSlotAction(),
-//                    new SpindexAction(robotHardware, spindex.storedColors.get(2).launchPosition),
-                    new LaunchFlywheelAction(robotHardware, robotLaunchParameters.flywheelVelocity)
-                ),
-                new LaunchVisorAction(robotHardware, robotLaunchParameters.visorPosition),
-                new LaunchKickAction(robotHardware),
-                new LaunchVisorAction(robotHardware, VISOR_POSITION_CLOSE, false),
-                new InstantAction(() -> spindex.clearCurrentBall()),
-                //second ball
-                spindex.moveToNextFullSlotAction(),
-                new LaunchVisorAction(robotHardware, robotLaunchParameters.visorPosition),
-                new LaunchKickAction(robotHardware),
-                new LaunchVisorAction(robotHardware, VISOR_POSITION_CLOSE, false),
-                new InstantAction(() -> spindex.clearCurrentBall()),
-                //third ball
-                spindex.moveToNextFullSlotAction(),
-                new LaunchVisorAction(robotHardware, robotLaunchParameters.visorPosition),
-                new LaunchKickAction(robotHardware),
-                new LaunchVisorAction(robotHardware, VISOR_POSITION_CLOSE, false),
-                new InstantAction(() -> spindex.clearCurrentBall())
-            );
-
-        return allBalls;
-    }
-
-    public Action getLaunchAllBallsAction(RobotLaunchParameters robotLaunchParameters) {
-        Log.i("== LAUNCH SYSTEM ==", "Launching " + spindex.fullSlotCount() + " Balls Action: ");
-
-        Action ball1 = new NullAction();
-        Action ball2 = new NullAction();
-        Action ball3 = new NullAction();
-
-        if (spindex.storedColors.get(2).ballColor != GameColors.NONE){
-            Log.i("== LAUNCH SYSTEM ==", "Launch all Balls. Third");
-            ball3 = new SequentialAction(
-                    new SpindexAction(robotHardware, spindex.storedColors.get(2).launchPosition),
-                    getLaunchBallAction(robotLaunchParameters),
-                    new InstantAction(() -> spindex.storedColors.get(2).ballColor = GameColors.NONE)
-            );
-        }
-
-        if (spindex.storedColors.get(1).ballColor != GameColors.NONE){
-            Log.i("== LAUNCH SYSTEM ==", "Launch all Balls. Second");
-            ball2 = new SequentialAction(
-                    new SpindexAction(robotHardware, spindex.storedColors.get(1).launchPosition),
-                    getLaunchBallAction(robotLaunchParameters),
-                    new InstantAction(() -> spindex.storedColors.get(1).ballColor = GameColors.NONE)
-            );
-        }
-
-        if (spindex.storedColors.get(0).ballColor != GameColors.NONE){
-            Log.i("== LAUNCH SYSTEM ==", "Launch all Balls. First");
-
-            ball1 = new SequentialAction(
-                    new SpindexAction(robotHardware, spindex.storedColors.get(0).launchPosition),
-                    getLaunchBallAction(robotLaunchParameters),
-                    new InstantAction(() -> spindex.storedColors.get(0).ballColor = GameColors.NONE)
-            );
-        }
-
-        return new SequentialAction(
-                ball3,
-                ball2,
-                ball1
-        );
-    }
-
-    private RobotLaunchParameters getRobotLaunchParametersBasedOnDistance() {
-        LimelightLaunchParameters ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
-
-        double targetFlywheelVelocityCoefficient = DEFAULT_FLYWHEEL_POWER_COEFFICIENT;
-        double visorPosition = DEFAULT_VISOR_POSITION;
-
-        if (ydt != null) {
-//            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: YAW: " + ydt.yaw);
-//            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: DISTANCE: " + ydt.distance);
-
-            if (ydt.distance < FLYWHEEL_POWER_BUCKET_THRESHOLD_LOW) {
-                targetFlywheelVelocityCoefficient = FLYWHEEL_POWER_COEFFICIENT_CLOSE;
-                visorPosition = VISOR_POSITION_CLOSE;
-            } else if (ydt.distance < FLYWHEEL_POWER_BUCKET_THRESHOLD_MID) {
-                targetFlywheelVelocityCoefficient = FLYWHEEL_POWER_COEFFICIENT_MID;
-                visorPosition = VISOR_POSITION_MID;
-            } else {
-                targetFlywheelVelocityCoefficient = FLYWHEEL_POWER_COEFFICIENT_FAR;
-                visorPosition = VISOR_POSITION_FAR;
+        for (int index = 0; index < sequence.size(); index++) {
+            BallEntry entry = spindex.storedColors.get(index);
+            if (entry.ballColor != GameColors.NONE) {
+                actionsToRun.add(new SequentialAction(
+                        new SpindexAction(robotHardware, entry.launchPosition),
+                        new LaunchVisorAction(robotHardware, ballLaunchParameters.visorPositions.get(index)),
+                        new LaunchKickAction(robotHardware),
+                        new InstantAction(() -> spindex.clearBallAtIndex(entry.index))
+                ));
             }
         }
 
-//        Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: FLYWHEEL POWER: " + targetFlywheelVelocityCoefficient);
-//        Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: VISOR: " + visorPosition);
+        //bring the visor back
+        actionsToRun.add(new LaunchVisorAction(robotHardware, VISOR_POSITION_CLOSE_1, false));
 
-        return new RobotLaunchParameters(LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * targetFlywheelVelocityCoefficient, visorPosition);
+        return new SequentialAction(actionsToRun);
+
+    }
+
+    public Action getLaunchAllBallsAction() {
+        Log.i("== LAUNCH SYSTEM ==", "getLaunchAllBallsQuickAction " + spindex.fullSlotCount() + " Balls Action: ");
+
+        List<Integer> list = spindex.storedColors.stream()
+                .filter(entry -> entry.ballColor != GameColors.NONE)
+                .map(entry -> entry.index)
+                .collect(Collectors.toList());
+
+        return getLaunchAllBallsInSequenceAction(list);
+
+    }
+
+//    public Action getLaunchAllBallsQuickAction() {
+//        Log.i("== LAUNCH SYSTEM ==", "getLaunchAllBallsSpecialAction " + spindex.fullSlotCount() + " Balls Action: ");
+//
+//        RobotLaunchParameters robotLaunchParameters = getRobotLaunchParametersBasedOnDistance();
+//
+//        List<Action> actionsToRun = new ArrayList<>();
+//
+//        List<BallEntry> list = spindex.storedColors.stream()
+//                .filter(entry -> entry.ballColor != GameColors.NONE)
+//                .collect(Collectors.toList());
+//
+//        actionsToRun.add(new LaunchFlywheelAction(robotHardware, robotLaunchParameters.flywheelVelocity));
+//
+//        actionsToRun.add(new SequentialAction(
+//                new SpindexAction(robotHardware, list.get(0).launchPosition),
+//                new LaunchVisorAction(robotHardware, SHOT1_HOOD),
+//                new LaunchKickAction(robotHardware),
+////                    new LaunchVisorAction(robotHardware, VISOR_POSITION_CLOSE, false),
+//                new InstantAction(() -> spindex.clearBallAtIndex(0))
+//        ));
+//
+//        actionsToRun.add(new SequentialAction(
+//                new SpindexAction(robotHardware, list.get(1).launchPosition),
+//                new LaunchVisorAction(robotHardware, SHOT2_HOOD),
+//                new LaunchKickAction(robotHardware),
+////                    new LaunchVisorAction(robotHardware, VISOR_POSITION_CLOSE, false),
+//                new InstantAction(() -> spindex.clearBallAtIndex(1))
+//        ));
+//
+//        actionsToRun.add(new SequentialAction(
+//                new SpindexAction(robotHardware, list.get(2).launchPosition),
+//                new LaunchVisorAction(robotHardware, SHOT3_HOOD),
+//                new LaunchKickAction(robotHardware),
+////                    new LaunchVisorAction(robotHardware, VISOR_POSITION_CLOSE, false),
+//                new InstantAction(() -> spindex.clearBallAtIndex(2))
+//        ));
+//
+//
+//        return new SequentialAction(actionsToRun);
+//    }
+
+
+    private BallLaunchParameters getRobotLaunchParametersBasedOnDistance() {
+        LimelightLaunchParameters ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
+
+        BallLaunchParameters launchParameters = distancePowerVisorMap.get(FLYWHEEL_POWER_BUCKET_THRESHOLD_MID);
+
+        if (ydt != null) {
+            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: YAW: " + ydt.yaw);
+            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: DISTANCE: " + ydt.distance);
+
+            if (ydt.distance < FLYWHEEL_POWER_BUCKET_THRESHOLD_MID) {
+
+                launchParameters = distancePowerVisorMap.get(FLYWHEEL_POWER_BUCKET_THRESHOLD_LOW);
+            } else if (ydt.distance < FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR) {
+
+                launchParameters = distancePowerVisorMap.get(FLYWHEEL_POWER_BUCKET_THRESHOLD_MID);
+            } else {
+                launchParameters = distancePowerVisorMap.get(FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR);
+            }
+        }
+
+        Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: FLYWHEEL POWER: " + launchParameters.flywheelVelocity / LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC);
+        Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: VISOR: " + launchParameters.visorPositions.get(0));
+
+        return launchParameters;
     }
 
     public void KeepLauncherWarm() {
@@ -470,7 +410,7 @@ public class LaunchSystem {
             double turretTolerance = TURRET_ALIGNMENT_TOLERANCE_DEGREES_NEAR;
             double turretDelta = TURRET_SERVO_ADJUSTMENT_DELTA_NEAR;
 
-            if (ydt.distance > FLYWHEEL_POWER_BUCKET_THRESHOLD_MID) {
+            if (ydt.distance > FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR) {
                 turretTolerance = TURRET_ALIGNMENT_TOLERANCE_DEGREES_FAR;
                 turretDelta = TURRET_SERVO_ADJUSTMENT_DELTA_FAR;
             }

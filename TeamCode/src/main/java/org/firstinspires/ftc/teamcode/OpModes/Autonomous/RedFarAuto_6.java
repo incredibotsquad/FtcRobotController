@@ -120,19 +120,11 @@ public class RedFarAuto_6 extends BaseAuto {
                             new InstantAction(() -> robotHardware.setLaunchTurretPosition(0.425)),
                             new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR),
                             spindex.moveToNextPurpleSlotAction()
-                    ),
-                    () -> {
-                        CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
-                        launchSystem.AlignTurretToGoal();
-                    }
+                    )
             );
 
             runBlockingWithBackground(
-                    launchSystem.getBallPatternLaunchAction(pattern),
-                    () -> {
-                        CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
-                        launchSystem.AlignTurretToGoal();
-                    }
+                    launchSystem.getBallPatternLaunchAction(pattern)
             );
 
             runBlockingWithBackground(
@@ -157,11 +149,7 @@ public class RedFarAuto_6 extends BaseAuto {
                             }),
                             new SpindexAction(robotHardware, spindex.storedColors.get(1).intakePosition),
                             new SleepAction(0.5)
-                    ),
-                    () -> {
-                        CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
-                        launchSystem.AlignTurretToGoal();
-                    }
+                    )
             );
 
             //Need an action to index balls
@@ -187,11 +175,7 @@ public class RedFarAuto_6 extends BaseAuto {
                             }),
                             new SpindexAction(robotHardware, spindex.storedColors.get(2).intakePosition),
                             new SleepAction(0.75)
-                    ),
-                    () -> {
-                        CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
-                        launchSystem.AlignTurretToGoal();
-                    }
+                    )
             );
 
 
@@ -215,11 +199,7 @@ public class RedFarAuto_6 extends BaseAuto {
                                     }
                                 }
                             })
-                    ),
-                    () -> {
-                        CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
-                        launchSystem.AlignTurretToGoal();
-                    }
+                    )
             );
 
             runBlockingWithBackground(
@@ -237,27 +217,15 @@ public class RedFarAuto_6 extends BaseAuto {
                                         }
                                     })
                             )
-                    ),
-                    () -> {
-                        CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
-                        launchSystem.AlignTurretToGoal();
-                    }
+                    )
             );
 
             runBlockingWithBackground(
-                    launchSystem.getBallPatternLaunchAction(pattern),
-                    () -> {
-                        CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
-                        launchSystem.AlignTurretToGoal();
-                    }
+                    launchSystem.getBallPatternLaunchAction(pattern)
             );
 
             runBlockingWithBackground(
-                    moveAwayFromLine,
-                    () -> {
-                        CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
-                        launchSystem.AlignTurretToGoal();
-                    }
+                    moveAwayFromLine
             );
 
             Log.i("BLUE FAR AUTO", "Elapsed time: " + timer.seconds());

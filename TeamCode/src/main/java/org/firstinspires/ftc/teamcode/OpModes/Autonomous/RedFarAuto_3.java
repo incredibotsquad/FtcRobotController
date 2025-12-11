@@ -83,27 +83,15 @@ public class RedFarAuto_3 extends BaseAuto {
                             new InstantAction(() -> robotHardware.setLaunchTurretPosition(0.563)),
                             new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR),
                             spindex.moveToNextPurpleSlotAction()
-                    ),
-                    () -> {
-                        CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
-                        launchSystem.AlignTurretToGoal();
-                    }
+                    )
             );
 
             runBlockingWithBackground(
-                    launchSystem.getBallPatternLaunchAction(pattern),
-                    () -> {
-                        CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
-                        launchSystem.AlignTurretToGoal();
-                    }
+                    launchSystem.getBallPatternLaunchAction(pattern)
             );
 
             runBlockingWithBackground(
-                    moveAwayFromLine,
-                    () -> {
-                        CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
-                        launchSystem.AlignTurretToGoal();
-                    }
+                    moveAwayFromLine
             );
 
             Log.i("RED FAR AUTO", "Elapsed time: " + timer.seconds());

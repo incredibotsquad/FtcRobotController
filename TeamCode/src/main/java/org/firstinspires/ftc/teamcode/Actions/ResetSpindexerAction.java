@@ -28,13 +28,13 @@ public class ResetSpindexerAction implements Action {
     @Override
     public boolean run (@NonNull TelemetryPacket packet) {
 
-        Log.i("ResetSpindexerAction", " Setting spindexer position by increment");
+//        Log.i("ResetSpindexerAction", " Setting spindexer position by increment");
 
         robotHardware.setSpindexPositionAndVelocity(robotHardware.getSpindexPosition() - SPINDEXER_INCREMENT, SPINDEXER_RESET_VELOCITY);
 
         if (robotHardware.isSpindexLimitSwitchTriggered())
         {
-            Log.i("ResetSpindexerAction", " spindexer limit switch triggered");
+//            Log.i("ResetSpindexerAction", " spindexer limit switch triggered");
 
             robotHardware.stopSpindexAndResetEncoder();
             return false;
