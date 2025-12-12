@@ -20,7 +20,8 @@ public class LaunchFlywheelAction implements Action {
     public static double FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS = 30;
     private double targetVelocity;
     private boolean waitForAction;
-    private ElapsedTime timer;
+    private ElapsedTime throttleTimer;
+    private ElapsedTime actionDuration;
 
     public LaunchFlywheelAction(RobotHardware robotHardware, double flywheelVelocityTPS) {
         this(robotHardware, flywheelVelocityTPS, true);
@@ -41,7 +42,8 @@ public class LaunchFlywheelAction implements Action {
             if (Math.abs( targetVelocity -  robotHardware.getFlywheelMotorVelocityInTPS()) > FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS)
                 robotHardware.setFlywheelMotorVelocityInTPS(targetVelocity);
 
-            timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+            throttleTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+            actionDuration = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
             initialized = true;
         }
 
@@ -49,18 +51,26 @@ public class LaunchFlywheelAction implements Action {
             return false;
 
         if (targetVelocity > 0) {
-            if (timer.milliseconds() < 20) return true; //check no frequent than 20 ms
+            if (throttleTimer.milliseconds() < 20) return true; //check no frequent than 20 ms
 
-            timer.reset();
+            throttleTimer.reset();
 
-            Log.i("LaunchFlywheelAction", "Target Velocity: " + targetVelocity);
+//            Log.i("LaunchFlywheelAction", "Target Velocity: " + targetVelocity);
 
             double currentVelocity = robotHardware.getFlywheelMotorVelocityInTPS();
 
-            Log.i("LaunchFlywheelAction", "Current Velocity: " + currentVelocity);
+//            Log.i("LaunchFlywheelAction", "Current Velocity: " + currentVelocity);
+
+            boolean retVal = (Math.abs( targetVelocity -  currentVelocity) > FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS);
+
+            if (!retVal)
+                Log.i("LAUNCH FLYWHEEL ACTION", "Total Time taken: " + actionDuration.milliseconds());
+            else
+                Log.i("LAUNCH FLYWHEEL ACTION", "Current Velocity: " + currentVelocity + " Target velocity: " + targetVelocity);
+
 
             // wait till the difference is more than 30 TPS
-            return (Math.abs( targetVelocity -  currentVelocity) > FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS);
+            return retVal;
         }
 
 //        Log.i("LaunchFlywheelAction", "Current Velocity: this would return false");

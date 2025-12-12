@@ -52,7 +52,7 @@ public class LaunchSystem {
     public static double TURRET_SERVO_ADJUSTMENT_SCALE = 0.25;
     public static double TURRET_ALIGNMENT_TOLERANCE_DEGREES_NEAR = 3;
     public static double TURRET_ALIGNMENT_TOLERANCE_DEGREES_FAR = 2;
-    public static double TURRET_TAG_NOT_FOUND_TIMER_MILLIS = 2000;
+    public static double TURRET_TAG_NOT_FOUND_TIMER_MILLIS = 4000;
     public static double ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT = 0.3;    //RED
     public static double ROBOT_ALIGNED_TO_SHOOT_LIGHT = 0.5;    //GREEN
 
@@ -270,17 +270,27 @@ public class LaunchSystem {
     private Action getLaunchAllBallsInSequenceAction(List<Integer> sequence) {
         Log.i("== LAUNCH SYSTEM ==", "getLaunchAllBallsInSequenceAction ");
 
+        if (sequence.isEmpty())
+            return new NullAction();
+
         BallLaunchParameters ballLaunchParameters = getRobotLaunchParametersBasedOnDistance();
         List<Action> actionsToRun = new ArrayList<>();
 
-        actionsToRun.add(new LaunchFlywheelAction(robotHardware, ballLaunchParameters.flywheelVelocity));
+        //flywheel and spindex for first one can happen in parallel
+        actionsToRun.add(
+                new ParallelAction(
+                        new LaunchFlywheelAction(robotHardware, ballLaunchParameters.flywheelVelocity),
+                        new SpindexAction(robotHardware, spindex.storedColors.get(sequence.get(0)).launchPosition)
+                )
+        );
 
         for (int index = 0; index < sequence.size(); index++) {
             BallEntry entry = spindex.storedColors.get(index);
             if (entry.ballColor != GameColors.NONE) {
                 actionsToRun.add(new SequentialAction(
-                        new LaunchVisorAction(robotHardware, ballLaunchParameters.visorPositions.get(index)),
-                        new SpindexAction(robotHardware, entry.launchPosition),
+                        new ParallelAction(
+                                new LaunchVisorAction(robotHardware, ballLaunchParameters.visorPositions.get(index)),
+                                new SpindexAction(robotHardware, entry.launchPosition)),
                         new LaunchKickAction(robotHardware),
                         new InstantAction(() -> spindex.clearBallAtIndex(entry.index))
                 ));
@@ -343,7 +353,7 @@ public class LaunchSystem {
         double targetVelocity = getRobotLaunchParametersBasedOnDistance().flywheelVelocity;
 
         if (Math.abs(targetVelocity - currentVelocity) > LaunchFlywheelAction.FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS) {
-//            Log.i("LAUNCH SYSTEM", "WARMING UP FLYWHEEL: CURRENT VELOCITY: " + currentVelocity + " TARGET VELOCITY: " + targetVelocity);
+            Log.i("LAUNCH SYSTEM", "WARMING UP FLYWHEEL: CURRENT VELOCITY: " + currentVelocity + " TARGET VELOCITY: " + targetVelocity);
             robotHardware.setFlywheelMotorVelocityInTPS(targetVelocity);
         }
     }
@@ -413,13 +423,13 @@ public void AlignTurretToGoal() {
 
             servoDelta = ydt.yaw > 0 ? servoDelta : -1 * servoDelta;
 
-//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalAndKeepLauncherWarm: servoDelta: " + servoDelta);
+//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: servoDelta: " + servoDelta);
 
             // Calculate the new potential servo position and constrain it
             double newServoPosition = robotHardware.getLaunchTurretPosition() + servoDelta;
             newServoPosition = Math.max(TURRET_SERVO_MIN_POS, Math.min(TURRET_SERVO_MAX_POS, newServoPosition));
 
-//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalAndKeepLauncherWarm: Adjusting... New Position: " + newServoPosition);
+//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: Adjusting... New Position: " + newServoPosition);
 
             //the cycle might be so fast that the servo is still turning
             //since we are not using an encoder on the turret, the get position will return
@@ -428,11 +438,12 @@ public void AlignTurretToGoal() {
             if (robotHardware.getLaunchTurretPosition() == newServoPosition)
                 return;
 
+            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: calling to change servo position to: " + newServoPosition);
             robotHardware.setLaunchTurretPosition(newServoPosition);
 
         } else {
             robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
-//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalAndKeepLauncherWarm: Turret Aligned At: " + robotHardware.getLaunchTurretPosition());
+//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: Turret Aligned At: " + robotHardware.getLaunchTurretPosition());
         }
 
     } else {

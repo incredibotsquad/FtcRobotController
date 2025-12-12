@@ -87,8 +87,10 @@ public class MechanismControl {
         }
 
         //keep warm only if we are intake mode. Else this will interfere with launch parameters
-        if ((currentRobotState == ROBOT_STATE.INTAKE || targetRobotState == ROBOT_STATE.INTAKE) && (!stateTransitionInProgress))
+        if ((currentRobotState == ROBOT_STATE.INTAKE || targetRobotState == ROBOT_STATE.INTAKE) && (!stateTransitionInProgress)) {
+            Log.i("== MECHANISM CONTROL ==", "Calling to keep launcher warm from main loop. Current state:" + currentRobotState + " target state: " + targetRobotState);
             launchSystem.KeepLauncherWarm();
+        }
 
 
         //TODO: this is for profiling flywheel velocity at launches

@@ -16,13 +16,14 @@ public class LaunchVisorAction implements Action {
     private RobotHardware robotHardware;
     private double position;
     private boolean initialized = false;
-    public static double LAUNCH_VISOR_RESTING = 0.2;
-    public static double LAUNCH_VISOR_MAX = 0.84;
+    public static double LAUNCH_VISOR_RESTING = 0.15;
+    public static double LAUNCH_VISOR_MAX = 0.8;
     public static double LAUNCH_VISOR_MID = (LAUNCH_VISOR_RESTING + LAUNCH_VISOR_MAX)/2;
 
     public static double VISOR_POSITION_TOLERANCE = 0.0005;
     private boolean waitForAction;
     private ElapsedTime timer;
+    private ElapsedTime actionDuration;
 
     public LaunchVisorAction(RobotHardware robotHardware, double position) {
         this(robotHardware, position, true);
@@ -41,6 +42,7 @@ public class LaunchVisorAction implements Action {
             timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
             robotHardware.setLaunchVisorPosition(position);
             initialized = true;
+            actionDuration = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
         }
 
         if (!waitForAction)
@@ -53,6 +55,15 @@ public class LaunchVisorAction implements Action {
         double visorPos = robotHardware.getLaunchVisorPositionFromEncoder();
 //        Log.i("LAUNCH VISOR ACTION", "POSITION: " + visorPos);
 
-        return (Math.abs(robotHardware.getLaunchVisorPositionFromEncoder() - visorPos) > VISOR_POSITION_TOLERANCE);
+        boolean retVal = (Math.abs(position - visorPos) > VISOR_POSITION_TOLERANCE);
+
+
+        if (!retVal)
+            Log.i("LAUNCH VISOR ACTION", "Total time taken: " + actionDuration.milliseconds());
+        else
+            Log.i("LAUNCH VISOR ACTION", "Curret: " + visorPos + " Target: " + position);
+
+
+        return retVal;
     }
 }

@@ -7,6 +7,7 @@ import androidx.annotation.NonNull;
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
 
@@ -18,6 +19,7 @@ public class SpindexAction implements Action {
     private boolean initialized = false;
     private boolean waitForAction = false;
     public static int SPINDEX_POSITION_TOLERANCE = 40;
+    private ElapsedTime actionDuration;
 
     public SpindexAction(RobotHardware robotHardware, int position) {
         this(robotHardware, position, true);
@@ -36,10 +38,16 @@ public class SpindexAction implements Action {
         if (!initialized) {
             robotHardware.setSpindexPosition(position);
             initialized = true;
+            actionDuration = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
         }
 
         if (waitForAction) {
-            return (Math.abs(robotHardware.getSpindexPosition() - position) > SPINDEX_POSITION_TOLERANCE);
+            boolean retVal = (Math.abs(robotHardware.getSpindexPosition() - position) > SPINDEX_POSITION_TOLERANCE);
+
+            if (!retVal)
+                Log.i("SPINDEX ACTION", "Total Time Taken: " + actionDuration.milliseconds());
+
+            return retVal;
         }
 
         return false;
