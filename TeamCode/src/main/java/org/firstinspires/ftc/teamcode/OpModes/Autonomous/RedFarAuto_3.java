@@ -13,6 +13,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction;
+import org.firstinspires.ftc.teamcode.Actions.ResetSpindexerAction;
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.common.GamePattern;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
@@ -91,7 +92,10 @@ public class RedFarAuto_3 extends BaseAuto {
             );
 
             runBlockingWithBackground(
-                    moveAwayFromLine
+                    new ParallelAction(
+                            moveAwayFromLine,
+                            new ResetSpindexerAction(robotHardware)
+                    )
             );
 
             Log.i("RED FAR AUTO", "Elapsed time: " + timer.seconds());

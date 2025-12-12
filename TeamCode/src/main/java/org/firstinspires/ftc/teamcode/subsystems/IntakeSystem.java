@@ -25,6 +25,10 @@ public class IntakeSystem {
     public boolean isOn;
     private ElapsedTime timeSinceLastIntake;
 
+    public static double ZERO_BALL_COLOR = 0.2;
+    public static double ONE_BALL_COLOR = 0.2;
+    public static double TWO_BALL_COLOR = 0.2;
+    public static double THREE_BALL_COLOR = 0.2;
 
     public IntakeSystem(RobotHardware robotHardware, Spindex spindex) {
         this.robotHardware = robotHardware;
@@ -134,7 +138,24 @@ public class IntakeSystem {
     public Action getResetAction() {
         return new ResetSpindexerAction(robotHardware);
     }
-    
+
+    public void updateStatusLight() {
+        double color =  ZERO_BALL_COLOR;
+
+        switch (spindex.fullSlotCount()) {
+            case 1:
+                color = ONE_BALL_COLOR;
+                break;
+            case 2:
+                color = TWO_BALL_COLOR;
+                break;
+            case 3:
+                color = THREE_BALL_COLOR;
+                break;
+        }
+
+        robotHardware.setLaunchVisorPosition(color);
+    }
     public Action ReIndexBalls() {
         Log.i("INTAKE SYSTEM", "RE INDEXING");
 

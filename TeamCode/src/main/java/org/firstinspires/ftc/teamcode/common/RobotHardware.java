@@ -50,6 +50,7 @@ public class RobotHardware {
     private TouchSensor spindexLimitSwitch;
 
     private Servo alignmentIndicatorLight;
+    private Servo spindexStatusLight;
     private Limelight3A limelight;
 
 
@@ -109,7 +110,6 @@ public class RobotHardware {
 
         spindexLimitSwitch = hardwareMap.get(TouchSensor.class, "SpindexLimitSwitch");
 
-        alignmentIndicatorLight = hardwareMap.get(Servo.class, "AlignmentIndicatorLight");
         colorSensorLights = hardwareMap.get(Servo.class, "ColorSensorLights");
         colorSensorLights.setPosition(0.5);    //turn on for color sensing
 
@@ -121,6 +121,10 @@ public class RobotHardware {
         //laser sensor
         ballIntakeSensor = hardwareMap.get(DigitalChannel.class, "BallIntakeSensor");;
         ballIntakeSensor.setMode(DigitalChannel.Mode.INPUT);
+
+        //signal lights
+        alignmentIndicatorLight = hardwareMap.get(Servo.class, "AlignmentIndicatorLight");
+        spindexStatusLight = hardwareMap.get(Servo.class, "SpindexStatusLight");
 
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         limelight.setPollRateHz(100); // This sets how often we ask Limelight for data (100 times per second)
@@ -331,6 +335,10 @@ public class RobotHardware {
 
     public void setAlignmentLightColor(double color) {
         alignmentIndicatorLight.setPosition(color);
+    }
+
+    public void setspindexStatusLightColor(double color) {
+        spindexStatusLight.setPosition(color);
     }
 
     public void setColorSensorLightColor(double color) {

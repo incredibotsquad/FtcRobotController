@@ -27,7 +27,7 @@
             <Servo name="LaunchKickServo" port="1" />
             <Servo name="LaunchVisorServo" port="2" />
             <Servo name="AlignmentIndicatorLight" port="3" />
-            <Servo name="ExtraLight" port="4" />
+            <Servo name="SpindexStatusLight" port="4" />
 
             <AnalogInput name="VisorServoEncoder" port="0" />
 

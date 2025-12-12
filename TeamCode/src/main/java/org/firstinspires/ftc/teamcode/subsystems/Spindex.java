@@ -18,13 +18,21 @@ public class Spindex {
     public static int DELTA_BETWEEN_POSITIONS = 465;
     public static int SPINDEX_VELOCITY = 1350;
 
-    public static int INTAKE_POS_1 = 698;
-    public static int INTAKE_POS_3 = INTAKE_POS_1 - DELTA_BETWEEN_POSITIONS;
-    public static int INTAKE_POS_2 = INTAKE_POS_3 - DELTA_BETWEEN_POSITIONS;
+    public static int INTAKE_POS_1 = DELTA_BETWEEN_POSITIONS / 2;
+    public static int INTAKE_POS_2 = INTAKE_POS_1 + DELTA_BETWEEN_POSITIONS;
+    public static int INTAKE_POS_3 = INTAKE_POS_2 + DELTA_BETWEEN_POSITIONS;
 
-    public static int LAUNCH_POS_1 = 0;
-    public static int LAUNCH_POS_2 = LAUNCH_POS_1 + DELTA_BETWEEN_POSITIONS;
-    public static int LAUNCH_POS_3 = LAUNCH_POS_2 + DELTA_BETWEEN_POSITIONS;
+    public static int LAUNCH_POS_1 = INTAKE_POS_3 - (DELTA_BETWEEN_POSITIONS / 2);
+    public static int LAUNCH_POS_3 = LAUNCH_POS_1 - DELTA_BETWEEN_POSITIONS;
+    public static int LAUNCH_POS_2 = LAUNCH_POS_3 - DELTA_BETWEEN_POSITIONS;
+
+//    public static int INTAKE_POS_1 = 698;
+//    public static int INTAKE_POS_3 = INTAKE_POS_1 - DELTA_BETWEEN_POSITIONS;
+//    public static int INTAKE_POS_2 = INTAKE_POS_3 - DELTA_BETWEEN_POSITIONS;
+//
+//    public static int LAUNCH_POS_1 = 0;
+//    public static int LAUNCH_POS_2 = LAUNCH_POS_1 + DELTA_BETWEEN_POSITIONS;
+//    public static int LAUNCH_POS_3 = LAUNCH_POS_2 + DELTA_BETWEEN_POSITIONS;
 
     public static int COLOR_DETECTION_POS = LAUNCH_POS_1;
 
@@ -36,6 +44,7 @@ public class Spindex {
     private int previousIndex;
     public int currentIndex;
     private RobotHardware robotHardware;
+
     public Spindex(RobotHardware robotHardware){
         this.previousIndex = -1;
         this.currentIndex = -1; //to ensure the first move happens
@@ -185,7 +194,7 @@ public class Spindex {
 
 //        Log.i("SPINDEXER", "isReadyForIntake: " + retVal);
 
-        retVal = retVal && !robotHardware.isSpindexBusy();
+        retVal = retVal && !robotHardware.isSpindexBusy() && !isFull();
 
 //        Log.i("SPINDEXER", "isReadyForIntake: " + retVal);
 

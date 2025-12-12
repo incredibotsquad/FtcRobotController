@@ -83,10 +83,10 @@ public class MechanismControl {
 
         //process the yaw and rotate the turret always - except when parking
         if (currentRobotState != ROBOT_STATE.PARK && targetRobotState != ROBOT_STATE.PARK) {
-//            Log.i("MECHANISM CONTROL", "ALIGNING TURRET");
             launchSystem.AlignTurretToGoal();
         }
 
+        //keep warm only if we are intake mode. Else this will interfere with launch parameters
         if ((currentRobotState == ROBOT_STATE.INTAKE || targetRobotState == ROBOT_STATE.INTAKE) && (!stateTransitionInProgress))
             launchSystem.KeepLauncherWarm();
 
@@ -95,7 +95,9 @@ public class MechanismControl {
         if (currentRobotState != ROBOT_STATE.LAUNCH_ALL && targetRobotState == ROBOT_STATE.LAUNCH_ALL && stateTransitionInProgress) {
             Log.i("MECHANISM CONTROL" , "FLYWHEEL VELOCITY: " + robotHardware.getFlywheelMotorVelocityInTPS());
         }
-//        CheckForSpindexStall();
+
+        //update the light to reflect the number of balls in the spindex.
+        intakeSystem.updateStatusLight();
     }
 
 
@@ -298,7 +300,7 @@ public class MechanismControl {
 
     private void CheckForBallsToIntake() {
 ;        if (currentRobotState == ROBOT_STATE.INTAKE && intakeSystem.isOn) {
-            if (!spindex.isFull())
+//            if (!spindex.isFull())
             {
                 //set targetrobotstate to intake so that processactions does not clear it out
                 //running the actions with target robot state = none will set the current to none

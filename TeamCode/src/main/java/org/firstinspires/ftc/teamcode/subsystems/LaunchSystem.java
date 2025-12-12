@@ -45,7 +45,7 @@ public class LaunchSystem {
     public static double TURRET_SERVO_MAX_POS = 0.8;
     public static double TURRET_SERVO_ADJUSTMENT_DELTA_NEAR = 0.004;
     public static double TURRET_SERVO_ADJUSTMENT_DELTA_FAR = 0.002;
-    public static double TURRET_ALIGNMENT_THROTTLE_MILLIS = 50;
+    public static double TURRET_ALIGNMENT_THROTTLE_MILLIS = 20;
     public static double TURRET_SERVO_ADJUSTMENT_SCALE = 0.25;
     public static double TURRET_ALIGNMENT_TOLERANCE_DEGREES_NEAR = 3;
     public static double TURRET_ALIGNMENT_TOLERANCE_DEGREES_FAR = 2;
@@ -70,9 +70,9 @@ public class LaunchSystem {
     public static double VISOR_POSITION_CLOSE_2 = 0.22;
     public static double VISOR_POSITION_CLOSE_3 = 0.22;
 
-    public static double VISOR_POSITION_MID_1 = 0.53;
-    public static double VISOR_POSITION_MID_2 = 0.53;
-    public static double VISOR_POSITION_MID_3 = 0.53;
+    public static double VISOR_POSITION_MID_1 = 0.45;
+    public static double VISOR_POSITION_MID_2 = 0.35;
+    public static double VISOR_POSITION_MID_3 = 0.45;
 
     public static double VISOR_POSITION_FAR_1 = 0.75;
     public static double VISOR_POSITION_FAR_2 = 0.7;

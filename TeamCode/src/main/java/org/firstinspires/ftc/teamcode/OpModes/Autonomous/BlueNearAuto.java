@@ -17,6 +17,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction;
+import org.firstinspires.ftc.teamcode.Actions.ResetSpindexerAction;
 import org.firstinspires.ftc.teamcode.Actions.SpindexAction;
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.common.GameColors;
@@ -281,7 +282,10 @@ public class BlueNearAuto extends BaseAuto {
             );
 
             runBlockingWithBackground(
-                    moveAwayFromLine
+                    new ParallelAction(
+                            moveAwayFromLine,
+                            new ResetSpindexerAction(robotHardware)
+                    )
             );
 
             Log.i("RED NEAR AUTO", "Elapsed time: " + timer.seconds());

@@ -46,9 +46,14 @@ public abstract class BaseAuto extends LinearOpMode {
         return new Runnable() {
             @Override
             public void run() {
+                //storing robot and spindexer positions
                 CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
                 CrossOpModeStorage.spindexerPosition = robotHardware.getSpindexPosition();
+
+                //keep the turret aligned to the goal
                 launchSystem.AlignTurretToGoal();
+                //update the light to reflect the number of balls in the spindex.
+                intakeSystem.updateStatusLight();
             }
         };
     }
