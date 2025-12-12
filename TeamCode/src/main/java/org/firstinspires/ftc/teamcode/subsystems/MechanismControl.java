@@ -92,9 +92,9 @@ public class MechanismControl {
 
 
         //TODO: this is for profiling flywheel velocity at launches
-        if (currentRobotState != ROBOT_STATE.LAUNCH_ALL && targetRobotState == ROBOT_STATE.LAUNCH_ALL && stateTransitionInProgress) {
-            Log.i("MECHANISM CONTROL" , "FLYWHEEL VELOCITY: " + robotHardware.getFlywheelMotorVelocityInTPS());
-        }
+//        if (currentRobotState != ROBOT_STATE.LAUNCH_ALL && targetRobotState == ROBOT_STATE.LAUNCH_ALL && stateTransitionInProgress) {
+//            Log.i("MECHANISM CONTROL" , "FLYWHEEL VELOCITY: " + robotHardware.getFlywheelMotorVelocityInTPS());
+//        }
 
         //update the light to reflect the number of balls in the spindex.
         intakeSystem.updateStatusLight();
@@ -200,7 +200,7 @@ public class MechanismControl {
                     //get the list of actions and put it in running actions
                     runningActions.add(
                             new SequentialAction(
-                                    launchSystem.getKeepWarmAction(),
+//                                    launchSystem.getKeepWarmAction(),
                                     intakeSystem.getTurnOnAction()
                             ));
                     break;
@@ -209,8 +209,8 @@ public class MechanismControl {
                     Log.i("== MECHANISM CONTROL ==", "PROCESSING STATE: REVERSE_INTAKE");
                     runningActions.add(
                             new SequentialAction(
-                                    spindex.moveToNextFullSlotAction(),
-                                    intakeSystem.getReverseIntakeAction()
+                                    spindex.moveToNextFullSlotAction(), //move to full slot so we dont end up spitting out a ball that we took in
+                                    intakeSystem.getReverseIntakeAction(true)
                             ));
                     break;
 

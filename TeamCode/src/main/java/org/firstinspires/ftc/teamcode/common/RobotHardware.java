@@ -253,7 +253,7 @@ public class RobotHardware {
         spindexMotor.setTargetPosition(pos);
         spindexMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         spindexMotor.setVelocity(velocity);
-        Log.i("=== ROBOTHARDWARE ===", " setSpindexPositionAndVelocity: " + pos + " AND VELOCITY: " + velocity);
+//        Log.i("=== ROBOTHARDWARE ===", " setSpindexPositionAndVelocity: " + pos + " AND VELOCITY: " + velocity);
     }
 
     public void stopSpindexAndResetEncoder()

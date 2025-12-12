@@ -25,10 +25,10 @@ public class IntakeSystem {
     public boolean isOn;
     private ElapsedTime timeSinceLastIntake;
 
-    public static double ZERO_BALL_COLOR = 0.2;
-    public static double ONE_BALL_COLOR = 0.2;
-    public static double TWO_BALL_COLOR = 0.2;
-    public static double THREE_BALL_COLOR = 0.2;
+    public static double ZERO_BALL_COLOR = 0;
+    public static double ONE_BALL_COLOR = 0.29; //RED
+    public static double TWO_BALL_COLOR = 0.388; //YELLOW
+    public static double THREE_BALL_COLOR = 0.5; //GREEN
 
     public IntakeSystem(RobotHardware robotHardware, Spindex spindex) {
         this.robotHardware = robotHardware;
@@ -61,7 +61,7 @@ public class IntakeSystem {
         return new SequentialAction(
                 getTurnOffAction(),
                 new IntakeWheelsAction(robotHardware, true, -1),
-                new SleepAction(2),
+                new SleepAction(1.5),
                 getTurnOffAction(),
                 getTurnOnAction(moveSpindexToEmptySlot)
         );
@@ -94,7 +94,8 @@ public class IntakeSystem {
                         new ParallelAction(
                                 getReverseIntakeAction(false),
                                 updateBallColorsAction()
-                        )
+                        ),
+                        getTurnOffAction()
                 );
             } else {
                 returnAction = spindex.moveToNextEmptySlotAction();
@@ -140,6 +141,8 @@ public class IntakeSystem {
     }
 
     public void updateStatusLight() {
+//        Log.i("Intake System: ", "updateStatusLight: Full slots: " + spindex.fullSlotCount());
+
         double color =  ZERO_BALL_COLOR;
 
         switch (spindex.fullSlotCount()) {
@@ -154,7 +157,9 @@ public class IntakeSystem {
                 break;
         }
 
-        robotHardware.setLaunchVisorPosition(color);
+//        Log.i("Intake System: ", "updateStatusLight: Color: " + color);
+
+        robotHardware.setspindexStatusLightColor(color);
     }
     public Action ReIndexBalls() {
         Log.i("INTAKE SYSTEM", "RE INDEXING");

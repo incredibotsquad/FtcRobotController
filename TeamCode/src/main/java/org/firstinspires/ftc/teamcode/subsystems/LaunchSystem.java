@@ -10,12 +10,15 @@ import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SequentialAction;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction;
 import org.firstinspires.ftc.teamcode.Actions.LaunchKickAction;
 import org.firstinspires.ftc.teamcode.Actions.LaunchVisorAction;
 import org.firstinspires.ftc.teamcode.Actions.SpindexAction;
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.common.BallEntry;
+import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 import org.firstinspires.ftc.teamcode.common.GameColors;
 import org.firstinspires.ftc.teamcode.common.GamePattern;
 import org.firstinspires.ftc.teamcode.common.LimelightLaunchParameters;
@@ -43,14 +46,14 @@ public class LaunchSystem {
     public static double TURRET_SERVO_MIN_POS = 0.2;
     public static double TURRET_SERVO_CENTERED = 0.5;
     public static double TURRET_SERVO_MAX_POS = 0.8;
-    public static double TURRET_SERVO_ADJUSTMENT_DELTA_NEAR = 0.004;
-    public static double TURRET_SERVO_ADJUSTMENT_DELTA_FAR = 0.002;
+    public static double TURRET_SERVO_ADJUSTMENT_DELTA_NEAR = 0.002;
+    public static double TURRET_SERVO_ADJUSTMENT_DELTA_FAR = 0.001;
     public static double TURRET_ALIGNMENT_THROTTLE_MILLIS = 20;
     public static double TURRET_SERVO_ADJUSTMENT_SCALE = 0.25;
     public static double TURRET_ALIGNMENT_TOLERANCE_DEGREES_NEAR = 3;
     public static double TURRET_ALIGNMENT_TOLERANCE_DEGREES_FAR = 2;
     public static double TURRET_TAG_NOT_FOUND_TIMER_MILLIS = 2000;
-    public static double ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT = 0.277;    //RED
+    public static double ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT = 0.3;    //RED
     public static double ROBOT_ALIGNED_TO_SHOOT_LIGHT = 0.5;    //GREEN
 
 
@@ -104,6 +107,7 @@ public class LaunchSystem {
         this.turretAlignmentThrottleTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
         this.turretTagNotFoundTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
         this.flywheelWarmerThrottleTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+        this.allianceColor = CrossOpModeStorage.allianceColor;
     }
 
     //make default constructor private
@@ -127,8 +131,10 @@ public class LaunchSystem {
     private Action getLaunchBallAction(BallLaunchParameters ballLaunchParameters) {
         Log.i("== LAUNCH SYSTEM ==", "getLaunchBallAction");
         return new SequentialAction(
-                new LaunchFlywheelAction(robotHardware, ballLaunchParameters.flywheelVelocity),
-                new LaunchVisorAction(robotHardware, ballLaunchParameters.visorPositions.get(0)),
+                new ParallelAction(
+                        new LaunchVisorAction(robotHardware, ballLaunchParameters.visorPositions.get(0)),
+                        new LaunchFlywheelAction(robotHardware, ballLaunchParameters.flywheelVelocity)
+                ),
                 new LaunchKickAction(robotHardware),
                 new LaunchVisorAction(robotHardware, VISOR_POSITION_CLOSE_1, false)
         );
@@ -273,8 +279,8 @@ public class LaunchSystem {
             BallEntry entry = spindex.storedColors.get(index);
             if (entry.ballColor != GameColors.NONE) {
                 actionsToRun.add(new SequentialAction(
-                        new SpindexAction(robotHardware, entry.launchPosition),
                         new LaunchVisorAction(robotHardware, ballLaunchParameters.visorPositions.get(index)),
+                        new SpindexAction(robotHardware, entry.launchPosition),
                         new LaunchKickAction(robotHardware),
                         new InstantAction(() -> spindex.clearBallAtIndex(entry.index))
                 ));
@@ -289,7 +295,7 @@ public class LaunchSystem {
     }
 
     public Action getLaunchAllBallsAction() {
-        Log.i("== LAUNCH SYSTEM ==", "getLaunchAllBallsQuickAction " + spindex.fullSlotCount() + " Balls Action: ");
+        Log.i("== LAUNCH SYSTEM ==", "getLaunchAllBallsAction " + spindex.fullSlotCount() + " Balls Action: ");
 
         List<Integer> list = spindex.storedColors.stream()
                 .filter(entry -> entry.ballColor != GameColors.NONE)
@@ -300,56 +306,14 @@ public class LaunchSystem {
 
     }
 
-//    public Action getLaunchAllBallsQuickAction() {
-//        Log.i("== LAUNCH SYSTEM ==", "getLaunchAllBallsSpecialAction " + spindex.fullSlotCount() + " Balls Action: ");
-//
-//        RobotLaunchParameters robotLaunchParameters = getRobotLaunchParametersBasedOnDistance();
-//
-//        List<Action> actionsToRun = new ArrayList<>();
-//
-//        List<BallEntry> list = spindex.storedColors.stream()
-//                .filter(entry -> entry.ballColor != GameColors.NONE)
-//                .collect(Collectors.toList());
-//
-//        actionsToRun.add(new LaunchFlywheelAction(robotHardware, robotLaunchParameters.flywheelVelocity));
-//
-//        actionsToRun.add(new SequentialAction(
-//                new SpindexAction(robotHardware, list.get(0).launchPosition),
-//                new LaunchVisorAction(robotHardware, SHOT1_HOOD),
-//                new LaunchKickAction(robotHardware),
-////                    new LaunchVisorAction(robotHardware, VISOR_POSITION_CLOSE, false),
-//                new InstantAction(() -> spindex.clearBallAtIndex(0))
-//        ));
-//
-//        actionsToRun.add(new SequentialAction(
-//                new SpindexAction(robotHardware, list.get(1).launchPosition),
-//                new LaunchVisorAction(robotHardware, SHOT2_HOOD),
-//                new LaunchKickAction(robotHardware),
-////                    new LaunchVisorAction(robotHardware, VISOR_POSITION_CLOSE, false),
-//                new InstantAction(() -> spindex.clearBallAtIndex(1))
-//        ));
-//
-//        actionsToRun.add(new SequentialAction(
-//                new SpindexAction(robotHardware, list.get(2).launchPosition),
-//                new LaunchVisorAction(robotHardware, SHOT3_HOOD),
-//                new LaunchKickAction(robotHardware),
-////                    new LaunchVisorAction(robotHardware, VISOR_POSITION_CLOSE, false),
-//                new InstantAction(() -> spindex.clearBallAtIndex(2))
-//        ));
-//
-//
-//        return new SequentialAction(actionsToRun);
-//    }
-
-
     private BallLaunchParameters getRobotLaunchParametersBasedOnDistance() {
         LimelightLaunchParameters ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
 
         BallLaunchParameters launchParameters = distancePowerVisorMap.get(FLYWHEEL_POWER_BUCKET_THRESHOLD_MID);
 
         if (ydt != null) {
-            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: YAW: " + ydt.yaw);
-            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: DISTANCE: " + ydt.distance);
+//            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: YAW: " + ydt.yaw);
+//            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: DISTANCE: " + ydt.distance);
 
             if (ydt.distance < FLYWHEEL_POWER_BUCKET_THRESHOLD_MID) {
 
@@ -362,8 +326,8 @@ public class LaunchSystem {
             }
         }
 
-        Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: FLYWHEEL POWER: " + launchParameters.flywheelVelocity / LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC);
-        Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: VISOR: " + launchParameters.visorPositions.get(0));
+//        Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: FLYWHEEL POWER: " + launchParameters.flywheelVelocity / LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC);
+//        Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: VISOR: " + launchParameters.visorPositions.get(0));
 
         return launchParameters;
     }
@@ -384,82 +348,137 @@ public class LaunchSystem {
         }
     }
 
-    public void AlignTurretToGoal() {
+public void AlignTurretToGoal() {
 
-        /*
-        * Turret pulley is 123 teeth. The Servo pulley is 24 tooth. it takes 123/24 = 5.125 turns of the servo for a full 360 of the turret
-        * The servo is 5 turns so in 5 turns, it will turn the turret 351 degrees.
-        * if we divide the servo movement into 1000 steps, each .001 increment of the position will turn the turret .351 degrees
-        * We scale the servo adjustment with the yaw difference in order to keep up with the change
-        * */
+    /*
+     * Turret pulley is 123 teeth. The Servo pulley is 24 tooth. it takes 123/24 = 5.125 turns of the servo for a full 360 of the turret
+     * The servo is 5 turns so in 5 turns, it will turn the turret 351 degrees.
+     * if we divide the servo movement into 1000 steps, each .001 increment of the position will turn the turret .351 degrees
+     * We scale the servo adjustment with the yaw difference in order to keep up with the change
+     * */
 
-        if (turretAlignmentThrottleTimer.milliseconds() < TURRET_ALIGNMENT_THROTTLE_MILLIS)
-            return;
+    if (turretAlignmentThrottleTimer.milliseconds() < TURRET_ALIGNMENT_THROTTLE_MILLIS)
+        return;
 
-        turretAlignmentThrottleTimer.reset();
+    turretAlignmentThrottleTimer.reset();
 
 //        Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: PASSED TIME THRESHOLD");
 
-        //get the yaw from the april tag helper
-        LimelightLaunchParameters ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
+    //get the yaw from the april tag helper
+    LimelightLaunchParameters ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
 
-        if (ydt != null) {
+    if (ydt != null) {
 //            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: YDT FOUND");
+//        Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: YAW: " + ydt.yaw);
 
-            turretTagNotFoundTimer.reset();
-            double turretTolerance = TURRET_ALIGNMENT_TOLERANCE_DEGREES_NEAR;
-            double turretDelta = TURRET_SERVO_ADJUSTMENT_DELTA_NEAR;
+        turretTagNotFoundTimer.reset();
+        double turretTolerance = TURRET_ALIGNMENT_TOLERANCE_DEGREES_NEAR;
+        double turretDelta = TURRET_SERVO_ADJUSTMENT_DELTA_NEAR;
 
-            if (ydt.distance > FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR) {
-                turretTolerance = TURRET_ALIGNMENT_TOLERANCE_DEGREES_FAR;
-                turretDelta = TURRET_SERVO_ADJUSTMENT_DELTA_FAR;
-            }
+        if (ydt.distance > FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR) {
+            turretTolerance = TURRET_ALIGNMENT_TOLERANCE_DEGREES_FAR;
+            turretDelta = TURRET_SERVO_ADJUSTMENT_DELTA_FAR;
+        }
 
-            double difference = Math.abs(ydt.yaw) - turretTolerance;
+        int isRobotToLeftOfCenterLine = isRobotToLeftOfCenterLine();
 
-            // move the servo to account for the yaw.
-            // Move the servo if the error is outside the tolerance
-            if (difference > 0) {
+        //robot is to left of line - extra bias to stay to the left
+        if (isRobotToLeftOfCenterLine == 1) {
+//            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: POINT TO LEFT OF LINE: ");
 
-                //clear out the alignment light
-                robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
+            ydt.yaw = ydt.yaw - turretTolerance;
+        }
 
-                double servoDelta = ydt.yaw > 0 ? turretDelta : -1 * turretDelta;
+        //robot is to the right of the line - extra bias to the right
+        if (isRobotToLeftOfCenterLine == -1) {
+//            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: POINT TO RIGHT OF LINE: ");
 
-                //scale the delta to 25% of the difference
-                servoDelta = TURRET_SERVO_ADJUSTMENT_SCALE * difference * servoDelta;
+            ydt.yaw = ydt.yaw + turretTolerance;
+        }
+
+        double difference = Math.abs(ydt.yaw) - turretTolerance;
+
+        // move the servo to account for the yaw.
+        // Move the servo if the error is outside the tolerance
+        if (difference > 0) {
+
+            //clear out the alignment light
+            robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
+
+            //scale the delta to 25% of the difference
+            double servoDelta = TURRET_SERVO_ADJUSTMENT_SCALE * difference * turretDelta;
+
+            //servoDelta = Math.max(servoDelta, turretDelta); //move at least by turret delta - scaling to a fraction can reduce it.
+            servoDelta = Math.min(servoDelta, 5 * turretDelta); //dont move more than 5 times the turret delta
+
+            servoDelta = ydt.yaw > 0 ? servoDelta : -1 * servoDelta;
 
 //                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalAndKeepLauncherWarm: servoDelta: " + servoDelta);
 
-                // Calculate the new potential servo position and constrain it
-                double newServoPosition = robotHardware.getLaunchTurretPosition() + servoDelta;
-                newServoPosition = Math.max(TURRET_SERVO_MIN_POS, Math.min(TURRET_SERVO_MAX_POS, newServoPosition));
+            // Calculate the new potential servo position and constrain it
+            double newServoPosition = robotHardware.getLaunchTurretPosition() + servoDelta;
+            newServoPosition = Math.max(TURRET_SERVO_MIN_POS, Math.min(TURRET_SERVO_MAX_POS, newServoPosition));
 
 //                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalAndKeepLauncherWarm: Adjusting... New Position: " + newServoPosition);
 
-                //the cycle might be so fast that the servo is still turning
-                //since we are not using an encoder on the turret, the get position will return
-                //the last position that the servo was told to go to. So if the calculation is the same,
-                //no need to call the command on the servo again - this should prevent jitter.
-                if (robotHardware.getLaunchTurretPosition() == newServoPosition)
-                    return;
+            //the cycle might be so fast that the servo is still turning
+            //since we are not using an encoder on the turret, the get position will return
+            //the last position that the servo was told to go to. So if the calculation is the same,
+            //no need to call the command on the servo again - this should prevent jitter.
+            if (robotHardware.getLaunchTurretPosition() == newServoPosition)
+                return;
 
-                robotHardware.setLaunchTurretPosition(newServoPosition);
-
-            } else {
-                robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
-//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalAndKeepLauncherWarm: Turret Aligned At: " + robotHardware.getLaunchTurretPosition());
-            }
+            robotHardware.setLaunchTurretPosition(newServoPosition);
 
         } else {
-            //No tag found - center the turret
-//            robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
-            robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
-
-            if (turretTagNotFoundTimer.milliseconds() > TURRET_TAG_NOT_FOUND_TIMER_MILLIS) {
-                robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
-            }
-//            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: no tag found");
+            robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
+//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalAndKeepLauncherWarm: Turret Aligned At: " + robotHardware.getLaunchTurretPosition());
         }
+
+    } else {
+        //No tag found - center the turret
+//            robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
+        robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
+
+        if (turretTagNotFoundTimer.milliseconds() > TURRET_TAG_NOT_FOUND_TIMER_MILLIS) {
+            robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
+        }
+//            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: no tag found");
+    }
+}
+
+
+    //0 means no idea. 1 means yes, -1 means no.
+    private int isRobotToLeftOfCenterLine() {
+        //center line coordinates
+        int x1 = 72;
+        int y1 = -72;
+        int x2 = -72;
+        int y2 = 72;
+
+        double currX = 0;
+        double currY = 0;
+
+//        Log.i("== LAUNCH SYSTEM ==", "Alliance color: " + allianceColor);
+
+        if (allianceColor == AllianceColors.BLUE) {
+            y1 = 72;
+            y2 = -72;
+        }
+
+        //get the robot pose from limelight
+        Pose3D limelightBasedPosition = limelightAprilTagHelper.getRobotPoseFromAprilTags();
+
+        if (limelightBasedPosition == null)
+            return 0;
+
+        currX = limelightBasedPosition.getPosition().x * 39.37;
+        currY = limelightBasedPosition.getPosition().y * 39.37;
+//        Log.i("== LAUNCH SYSTEM ==", "Limelight position: X: " + currX + " Y: " + currY + " Yaw: " + limelightBasedPosition.getOrientation().getYaw(AngleUnit.DEGREES));
+
+        double d = (x2 - x1) * (currY - y1) - (y2 - y1) * (currX - x1);
+
+        //if d > 0, point is to the left of the line.
+        return (d > 0)? 1 : -1;
     }
 }

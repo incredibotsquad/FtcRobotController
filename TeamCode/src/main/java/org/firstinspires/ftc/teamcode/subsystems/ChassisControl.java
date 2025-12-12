@@ -11,6 +11,7 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
@@ -45,6 +46,11 @@ public class ChassisControl {
 
         mecanumDrive = new MecanumDrive(this.robotHardware.hardwareMap, CrossOpModeStorage.currentPose);
         allianceColor = CrossOpModeStorage.allianceColor;
+
+        if (allianceColor == AllianceColors.RED) {
+            multiplier = -1;
+        }
+        PARK_POS = new Pose2d(31, 33 * multiplier, obeliskHeading);
     }
 
     public void processInputs() {
@@ -52,6 +58,7 @@ public class ChassisControl {
 
         updateRobotPose();
 
+        parkRobot();
 //        augmentPinpointWithAprilTagData();
     }
 
@@ -87,20 +94,9 @@ public class ChassisControl {
         robotHardware.setDriveMotorPowers(rightFrontPower, leftFrontPower, rightBackPower, leftBackPower);
     }
 
-    public void setAllianceColor(AllianceColors color) {
-        this.allianceColor = color;
-        if (allianceColor == AllianceColors.RED) {
-            multiplier = -1;
-        }
-
-        Log.i("PositionControlSystem", "setAllianceColor: " + color);
-
-        PARK_POS = new Pose2d(31, 33 * multiplier, obeliskHeading);
-    }
-
-
     public void updateRobotPose() {
 //        Log.i("PositionControlSystem", "updateRobotPose: using encoders to update pose in mecanumdrive");
+        mecanumDrive.localizer.getPose();
         mecanumDrive.updatePoseEstimate();
     }
 
@@ -131,7 +127,11 @@ public class ChassisControl {
         if (gamepad1.startWasPressed()) {
 
             if (PARK_POS != null) {
-                park = mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                Pose2d startingPose = mecanumDrive.localizer.getPose();
+
+                Log.i("Chassis Control", "position before parking: x: " + startingPose.position.x + " y: " + startingPose.position.y);
+
+                park = mecanumDrive.actionBuilder(startingPose)
                         .strafeToLinearHeading(PARK_POS.position, PARK_POS.heading)
                         .build();
             }

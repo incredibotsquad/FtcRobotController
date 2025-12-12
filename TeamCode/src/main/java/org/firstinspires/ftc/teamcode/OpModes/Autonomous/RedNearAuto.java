@@ -67,21 +67,20 @@ public class RedNearAuto extends BaseAuto {
     public void runOpMode() throws InterruptedException {
 
         robotHardware = new RobotHardware(this.hardwareMap);
+
+        if (multiplier == 1) {
+            CrossOpModeStorage.allianceColor = AllianceColors.RED;
+        }
+        else {
+            CrossOpModeStorage.allianceColor = AllianceColors.BLUE;
+        }
+
         this.limelightAprilTagHelper = new LimelightAprilTagHelper(robotHardware);
 
         this.spindex = new Spindex(robotHardware);
         this.spindex.initializeWithPPG();
         this.intakeSystem = new IntakeSystem(robotHardware, this.spindex);
         this.launchSystem = new LaunchSystem(robotHardware, this.spindex, this.limelightAprilTagHelper);
-
-        if (multiplier == 1) {
-            this.limelightAprilTagHelper.setAllianceColor(AllianceColors.RED);
-            CrossOpModeStorage.allianceColor = AllianceColors.RED;
-        }
-        else {
-            this.limelightAprilTagHelper.setAllianceColor(AllianceColors.BLUE);
-            CrossOpModeStorage.allianceColor = AllianceColors.BLUE;
-        }
 
         mecanumDrive = new MecanumDrive(this.hardwareMap, INIT_POS);
 

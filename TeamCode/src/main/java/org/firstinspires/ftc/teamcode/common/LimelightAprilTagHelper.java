@@ -5,6 +5,7 @@ import android.util.Log;
 import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
@@ -15,23 +16,20 @@ import java.util.stream.Collectors;
 @Config
 public class LimelightAprilTagHelper  {
 
-    public static double BASE_YAW_TOLERANCE = 5.0; // Base tolerance in degrees
     public static double TARGET_AREA_INCHES = 16.0; // 8 inches on either side of center
     public static double MIN_TOLERANCE = 2.0; // Minimum tolerance at far distances
     public static double MAX_TOLERANCE = 10.0; // Maximum tolerance at close distances
     public static double TOLERANCE_SCALING_DISTANCE = 40.0; // Distance in inches for scaling
 
+    private ElapsedTime timeSinceLastYawPull;
+    public static int YAW_NORMALIZATION_THRESHOLD_MILLIS = 50;
+    private double oldZYaw;
     private RobotHardware robotHardware;
     private AllianceColors allianceColor;
 
     public LimelightAprilTagHelper(RobotHardware robotHardware) {
         this.robotHardware = robotHardware;
         this.allianceColor = CrossOpModeStorage.allianceColor;
-    }
-
-    public void setAllianceColor(AllianceColors allianceColor) {
-        this.allianceColor = allianceColor;
-        Log.i("LimelightAprilTagHelper", "Alliance Color: " + allianceColor);
     }
 
     public Pose3D getRobotPoseFromAprilTags() {
@@ -123,6 +121,10 @@ public class LimelightAprilTagHelper  {
 
     public LimelightLaunchParameters getGoalYawDistanceToleranceFromCurrentPosition() {
 
+//        if (timeSinceLastYawPull == null) {
+//            timeSinceLastYawPull = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+//        }
+
         LLResultTypes.FiducialResult primaryTarget = getAllianceSpecificAprilTag();
 
         if (primaryTarget != null) {
@@ -145,6 +147,13 @@ public class LimelightAprilTagHelper  {
             double xyaw = Math.toDegrees(Math.atan2(rawX, rawY));
 
             double zyaw = Math.toDegrees(Math.atan2(rawX, rawZ));
+
+            //normalize yaw to smooth out jumps
+//            if (timeSinceLastYawPull.milliseconds() < YAW_NORMALIZATION_THRESHOLD_MILLIS) {
+//                zyaw = (0.25 * zyaw) + (0.75 * oldZYaw);
+//                oldZYaw = zyaw;
+//                timeSinceLastYawPull.reset();
+//            }
 
             // For TARGET POSE IN CAMERA SPACE, Limelight returns METERS
             // Convert to inches for our calculations

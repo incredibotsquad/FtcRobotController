@@ -7,6 +7,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.acmerobotics.dashboard.config.Config;
 
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
+import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 import org.firstinspires.ftc.teamcode.common.LimelightAprilTagHelper;
 import org.firstinspires.ftc.teamcode.subsystems.MechanismControl;
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
@@ -28,28 +29,26 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
         // Initialize the hardware variables. Note that the strings used here must correspond
         // to the names assigned during the robot configuration step on the DS or RC devices.
         robotHardware = new RobotHardware(this.hardwareMap);
-        this.limelightAprilTagHelper = new LimelightAprilTagHelper(robotHardware);
         robotHardware.startLimelight();
         robotHardware.setLimelightPipeline(6);
 
-        this.chassisControl = new ChassisControl(gamepad1, robotHardware, this.limelightAprilTagHelper);
-        this.mechanismControl = new MechanismControl(gamepad2, robotHardware, this.limelightAprilTagHelper, telemetry);
-
         while (opModeInInit()) {
             if (gamepad1.xWasPressed() || gamepad2.xWasPressed()) {
-                this.limelightAprilTagHelper.setAllianceColor(AllianceColors.BLUE);
-                this.chassisControl.setAllianceColor(AllianceColors.BLUE);
+                CrossOpModeStorage.allianceColor = AllianceColors.BLUE;
                 telemetry.addData("Alliance Color", "Blue");
                 telemetry.update();
             }
 
             if (gamepad1.bWasPressed() || gamepad2.bWasPressed()) {
-                this.limelightAprilTagHelper.setAllianceColor(AllianceColors.RED);
-                this.chassisControl.setAllianceColor(AllianceColors.RED);
+                CrossOpModeStorage.allianceColor = AllianceColors.RED;
                 telemetry.addData("Alliance Color", "Red");
                 telemetry.update();
             }
         }
+
+        this.limelightAprilTagHelper = new LimelightAprilTagHelper(robotHardware);
+        this.chassisControl = new ChassisControl(gamepad1, robotHardware, this.limelightAprilTagHelper);
+        this.mechanismControl = new MechanismControl(gamepad2, robotHardware, this.limelightAprilTagHelper, telemetry);
 
         telemetry.addData("Status", "Initialized");
         telemetry.update();
