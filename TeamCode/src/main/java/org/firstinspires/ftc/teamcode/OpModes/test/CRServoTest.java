@@ -10,7 +10,7 @@ import com.qualcomm.robotcore.hardware.CRServo;
 import org.firstinspires.ftc.teamcode.common.EncodedCRServo;
 
 // TeleOp test class for manual tuning and testing
-@TeleOp(name = "Cont. Rotation Axon Test", group = "test")
+@TeleOp(name = "Cont. Rotation Axon Test", group = "Tests")
 public class CRServoTest extends LinearOpMode {
 
     @Override

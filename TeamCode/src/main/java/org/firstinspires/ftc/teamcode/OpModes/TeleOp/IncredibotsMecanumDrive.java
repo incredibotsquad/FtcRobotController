@@ -65,6 +65,8 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
             //control robot mechanisms
             mechanismControl.processInputs();
 
+            robotHardware.keepFlywheelMotorsInSync();
+
             idle();
         }
 

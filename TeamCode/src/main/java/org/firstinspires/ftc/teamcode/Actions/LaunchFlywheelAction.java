@@ -39,8 +39,8 @@ public class LaunchFlywheelAction implements Action {
     public boolean run (@NonNull TelemetryPacket packet) {
         if (!initialized) {
             //we are warming up, there might not be a need to set the velocity again
-            if (Math.abs( targetVelocity -  robotHardware.getFlywheelMotorVelocityInTPS()) > FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS)
-                robotHardware.setFlywheelMotorVelocityInTPS(targetVelocity);
+            if (Math.abs( targetVelocity -  robotHardware.getFlywheelVelocityInTPS()) > FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS)
+                robotHardware.setFlywheelVelocityInTPS(targetVelocity);
 
             throttleTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
             actionDuration = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
@@ -57,7 +57,7 @@ public class LaunchFlywheelAction implements Action {
 
 //            Log.i("LaunchFlywheelAction", "Target Velocity: " + targetVelocity);
 
-            double currentVelocity = robotHardware.getFlywheelMotorVelocityInTPS();
+            double currentVelocity = robotHardware.getFlywheelVelocityInTPS();
 
 //            Log.i("LaunchFlywheelAction", "Current Velocity: " + currentVelocity);
 
@@ -65,9 +65,6 @@ public class LaunchFlywheelAction implements Action {
 
             if (!retVal)
                 Log.i("LAUNCH FLYWHEEL ACTION", "Total Time taken: " + actionDuration.milliseconds());
-            else
-                Log.i("LAUNCH FLYWHEEL ACTION", "Current Velocity: " + currentVelocity + " Target velocity: " + targetVelocity);
-
 
             // wait till the difference is more than 30 TPS
             return retVal;

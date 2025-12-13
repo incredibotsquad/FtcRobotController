@@ -163,7 +163,7 @@ public class RedNearAuto extends BaseAuto {
                             new ParallelAction(
                                     spindex.moveToNextFullSlotAction(),
                                     moveToReadTag,
-                                    new InstantAction(() -> robotHardware.setFlywheelMotorVelocityInTPS(LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_CLOSE)),
+                                    new InstantAction(() -> robotHardware.setFlywheelVelocityInTPS(LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_CLOSE)),
                                     new InstantAction(() -> robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED))
                             )
                     )

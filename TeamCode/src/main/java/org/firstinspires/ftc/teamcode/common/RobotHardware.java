@@ -16,6 +16,7 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.NormalizedRGBA;
+import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -25,6 +26,7 @@ import java.util.List;
 @Config
 public class RobotHardware {
 
+    public static double FLYWHEEL_FOLLOWER_POWER_RATIO = 1;
     public static double COLOR_DETECTION_RETRY_DURATION_MILLIS = 200;
 
     public HardwareMap hardwareMap;
@@ -56,6 +58,10 @@ public class RobotHardware {
     private Servo spindexStatusLight;
     private Limelight3A limelight;
 
+    public static double FLYWHEEL_P = 40.0;
+    public static double FLYWHEEL_I = 3.0;
+    public static double FLYWHEEL_D = 2.0;
+    public static double FLYWHEEL_F = 14.0;
 
     //making constructor
     public RobotHardware(HardwareMap hwMap) {
@@ -103,6 +109,10 @@ public class RobotHardware {
         flywheelMotor2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         flywheelMotor2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         flywheelMotor2.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+//        PIDFCoefficients customPIDF = new PIDFCoefficients(FLYWHEEL_P, FLYWHEEL_I, FLYWHEEL_D, FLYWHEEL_F);
+//        flywheelMotor1.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, customPIDF);
+//        flywheelMotor2.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, customPIDF);
 
         //servos
         launchTurretServo = hardwareMap.get(Servo.class, "LaunchTurretServo");
@@ -190,7 +200,7 @@ public class RobotHardware {
         Log.i("=== ROBOTHARDWARE  ===", " stopRobotAndMechanisms");
         stopRobotChassis();
         setIntakeMotorPower(0);
-        setFlywheelMotorVelocityInTPS(0);
+        setFlywheelVelocityInTPS(0);
         stopSpindex();
     }
 
@@ -199,17 +209,21 @@ public class RobotHardware {
         intakeMotor.setPower(power);
     }
 
-    public double getFlywheelMotorVelocityInTPS() {
+    public double getFlywheelVelocityInTPS() {
 //        Log.i("=== ROBOTHARDWARE  ===", " getFlywheelMotorVelocityInTPS: ");
         //motor 1 is primary - we use encoder only on that.
         return flywheelMotor2.getVelocity();
     }
 
-    public void setFlywheelMotorVelocityInTPS(double velocity) {
+    public void setFlywheelVelocityInTPS(double velocity) {
 //        Log.i("=== ROBOTHARDWARE  ===", " setFlywheelMotorVelocityInTPS: " + velocity);
         //motor 1 just follows motor 2 - setvelocity on both but we read only from motor 2
-        flywheelMotor1.setVelocity(velocity);
+//        flywheelMotor1.setVelocity(velocity);
         flywheelMotor2.setVelocity(velocity);
+    }
+
+    public void keepFlywheelMotorsInSync() {
+        flywheelMotor1.setPower(flywheelMotor2.getPower() * FLYWHEEL_FOLLOWER_POWER_RATIO);
     }
 
     public double getLaunchTurretPosition() {

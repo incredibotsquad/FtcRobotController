@@ -20,7 +20,7 @@ public class LaunchVisorAction implements Action {
     public static double LAUNCH_VISOR_MAX = 0.8;
     public static double LAUNCH_VISOR_MID = (LAUNCH_VISOR_RESTING + LAUNCH_VISOR_MAX)/2;
 
-    public static double VISOR_POSITION_TOLERANCE = 0.0005;
+    public static double VISOR_POSITION_TOLERANCE = 0.05;
     private boolean waitForAction;
     private ElapsedTime timer;
     private ElapsedTime actionDuration;
@@ -57,12 +57,8 @@ public class LaunchVisorAction implements Action {
 
         boolean retVal = (Math.abs(position - visorPos) > VISOR_POSITION_TOLERANCE);
 
-
         if (!retVal)
             Log.i("LAUNCH VISOR ACTION", "Total time taken: " + actionDuration.milliseconds());
-        else
-            Log.i("LAUNCH VISOR ACTION", "Curret: " + visorPos + " Target: " + position);
-
 
         return retVal;
     }

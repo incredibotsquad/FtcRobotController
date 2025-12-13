@@ -88,7 +88,7 @@ public class MechanismControl {
 
         //keep warm only if we are intake mode. Else this will interfere with launch parameters
         if ((currentRobotState == ROBOT_STATE.INTAKE || targetRobotState == ROBOT_STATE.INTAKE) && (!stateTransitionInProgress)) {
-            Log.i("== MECHANISM CONTROL ==", "Calling to keep launcher warm from main loop. Current state:" + currentRobotState + " target state: " + targetRobotState);
+//            Log.i("== MECHANISM CONTROL ==", "Calling to keep launcher warm from main loop. Current state:" + currentRobotState + " target state: " + targetRobotState);
             launchSystem.KeepLauncherWarm();
         }
 
@@ -202,7 +202,7 @@ public class MechanismControl {
                     //get the list of actions and put it in running actions
                     runningActions.add(
                             new SequentialAction(
-//                                    launchSystem.getKeepWarmAction(),
+                                    launchSystem.getKeepWarmAction(),
                                     intakeSystem.getTurnOnAction()
                             ));
                     break;

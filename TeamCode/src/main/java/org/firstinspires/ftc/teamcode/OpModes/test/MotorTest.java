@@ -1,13 +1,10 @@
 package org.firstinspires.ftc.teamcode.OpModes.test;
 
 import com.acmerobotics.dashboard.config.Config;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 //@Disabled
@@ -22,17 +19,17 @@ public class MotorTest extends LinearOpMode {
 
     public static double motorVelocity = 2000;
     private ElapsedTime runtime = new ElapsedTime();
-    private DcMotorEx spindexMotor;
+    private DcMotorEx testMotor;
 
     @Override
     public void runOpMode() {
 
-        spindexMotor = hardwareMap.get(DcMotorEx.class, "SpindexMotor");
-        spindexMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        spindexMotor.setTargetPosition(0);
+        testMotor = hardwareMap.get(DcMotorEx.class, motorName);
+        testMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        testMotor.setTargetPosition(0);
 //        spindexMotor.setDirection(DcMotorSimple.Direction.REVERSE);
-        spindexMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        spindexMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        testMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        testMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
         while (opModeInInit()) {
 
@@ -48,9 +45,9 @@ public class MotorTest extends LinearOpMode {
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
             if(gamepad1.aWasPressed()) {
-                spindexMotor.setTargetPosition(motorPosition);
-                spindexMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                spindexMotor.setVelocity(motorVelocity);
+                testMotor.setTargetPosition(motorPosition);
+                testMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                testMotor.setVelocity(motorVelocity);
             }
 //            Servo1.setPosition(0);
 //            sleep(1500);
