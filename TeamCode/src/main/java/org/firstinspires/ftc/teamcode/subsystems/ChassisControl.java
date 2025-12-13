@@ -6,6 +6,8 @@ import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.NullAction;
 import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.PoseVelocity2d;
+import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -42,7 +44,7 @@ public class ChassisControl {
 
         this.positionCheckTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
-        Log.i("PositionControlSystem", "Seeded mecanum drive with: X: " + CrossOpModeStorage.currentPose.position.x + " Y: " + CrossOpModeStorage.currentPose.position.y + " Heading: " + Math.toDegrees(CrossOpModeStorage.currentPose.heading.toDouble()));
+        Log.i("Chassis Control", "Seeded mecanum drive with: X: " + CrossOpModeStorage.currentPose.position.x + " Y: " + CrossOpModeStorage.currentPose.position.y + " Heading: " + Math.toDegrees(CrossOpModeStorage.currentPose.heading.toDouble()));
 
         mecanumDrive = new MecanumDrive(this.robotHardware.hardwareMap, CrossOpModeStorage.currentPose);
         allianceColor = CrossOpModeStorage.allianceColor;
@@ -56,49 +58,66 @@ public class ChassisControl {
     public void processInputs() {
         moveRobotWithGamePad();
 
-        updateRobotPose();
+//        updateRobotPose();
 
         parkRobot();
 //        augmentPinpointWithAprilTagData();
     }
 
     private void moveRobotWithGamePad() {
-        double max;
+        mecanumDrive.setDrivePowers(new PoseVelocity2d(
+                new Vector2d(
+                        -gamepad1.left_stick_y,
+                        -gamepad1.left_stick_x
+                ),
+                -gamepad1.right_stick_x
+        ));
 
-        // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
-        double axial   = -gamepad1.left_stick_y  * DRIVETRAIN_POWER_RATIO;  // Note: pushing stick forward gives negative value
-        double lateral =  gamepad1.left_stick_x * DRIVETRAIN_POWER_RATIO;
-        double yaw     =  gamepad1.right_stick_x * DRIVETRAIN_POWER_RATIO;
-
-        // Combine the joystick requests for each axis-motion to determine each wheel's power.
-        // Set up a variable for each drive wheel to save the power level for telemetry.
-        double leftFrontPower  = axial + lateral + yaw;
-        double rightFrontPower = axial - lateral - yaw;
-        double leftBackPower   = axial - lateral + yaw;
-        double rightBackPower  = axial + lateral - yaw;
-
-        // Normalize the values so no wheel power exceeds 100%
-        // This ensures that the robot maintains the desired motion.
-        max = Math.max(Math.abs(leftFrontPower), Math.abs(rightFrontPower));
-        max = Math.max(max, Math.abs(leftBackPower));
-        max = Math.max(max, Math.abs(rightBackPower));
-
-        if (max > 1.0) {
-            leftFrontPower  /= max;
-            rightFrontPower /= max;
-            leftBackPower   /= max;
-            rightBackPower  /= max;
-        }
-
-        // Sets the drive motor powers
-        robotHardware.setDriveMotorPowers(rightFrontPower, leftFrontPower, rightBackPower, leftBackPower);
-    }
-
-    public void updateRobotPose() {
-//        Log.i("PositionControlSystem", "updateRobotPose: using encoders to update pose in mecanumdrive");
-        mecanumDrive.localizer.getPose();
         mecanumDrive.updatePoseEstimate();
+
+        Pose2d pose = mecanumDrive.localizer.getPose();
+//        Log.i("Chassis Control", "position before parking: x: " + pose.position.x + " y: " + pose.position.y);
+
     }
+
+//    private void moveRobotWithGamePad() {
+//        double max;
+//
+//        // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
+//        double axial   = -gamepad1.left_stick_y  * DRIVETRAIN_POWER_RATIO;  // Note: pushing stick forward gives negative value
+//        double lateral =  gamepad1.left_stick_x * DRIVETRAIN_POWER_RATIO;
+//        double yaw     =  gamepad1.right_stick_x * DRIVETRAIN_POWER_RATIO;
+//
+//        // Combine the joystick requests for each axis-motion to determine each wheel's power.
+//        // Set up a variable for each drive wheel to save the power level for telemetry.
+//        double leftFrontPower  = axial + lateral + yaw;
+//        double rightFrontPower = axial - lateral - yaw;
+//        double leftBackPower   = axial - lateral + yaw;
+//        double rightBackPower  = axial + lateral - yaw;
+//
+//        // Normalize the values so no wheel power exceeds 100%
+//        // This ensures that the robot maintains the desired motion.
+//        max = Math.max(Math.abs(leftFrontPower), Math.abs(rightFrontPower));
+//        max = Math.max(max, Math.abs(leftBackPower));
+//        max = Math.max(max, Math.abs(rightBackPower));
+//
+//        if (max > 1.0) {
+//            leftFrontPower  /= max;
+//            rightFrontPower /= max;
+//            leftBackPower   /= max;
+//            rightBackPower  /= max;
+//        }
+//
+//        // Sets the drive motor powers
+//        robotHardware.setDriveMotorPowers(rightFrontPower, leftFrontPower, rightBackPower, leftBackPower);
+//    }
+
+
+
+//    public void updateRobotPose() {
+////        Log.i("Chassis Control", "updateRobotPose: using encoders to update pose in mecanumdrive");
+//        mecanumDrive.updatePoseEstimate();
+//    }
 
     public void augmentPinpointWithAprilTagData() {
         if (positionCheckTimer.milliseconds() < POSITION_CHECK_THROTTLE_MILLIS)

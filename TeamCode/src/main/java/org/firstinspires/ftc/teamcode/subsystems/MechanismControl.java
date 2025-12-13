@@ -301,7 +301,7 @@ public class MechanismControl {
     }
 
     private void CheckForBallsToIntake() {
-;        if (currentRobotState == ROBOT_STATE.INTAKE && intakeSystem.isOn) {
+;        if (currentRobotState == ROBOT_STATE.INTAKE && targetRobotState != ROBOT_STATE.REVERSE_INTAKE && intakeSystem.isOn) {
 //            if (!spindex.isFull())
             {
                 //set targetrobotstate to intake so that processactions does not clear it out
