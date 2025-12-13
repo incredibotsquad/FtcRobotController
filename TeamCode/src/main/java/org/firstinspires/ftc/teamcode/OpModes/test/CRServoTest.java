@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.OpModes.test;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.AnalogInput;
@@ -10,6 +11,7 @@ import com.qualcomm.robotcore.hardware.CRServo;
 import org.firstinspires.ftc.teamcode.common.EncodedCRServo;
 
 // TeleOp test class for manual tuning and testing
+@Disabled
 @TeleOp(name = "Cont. Rotation Axon Test", group = "Tests")
 public class CRServoTest extends LinearOpMode {
 
