@@ -25,8 +25,8 @@ public class Spindex {
     public static int INTAKE_POS_3 = INTAKE_POS_2 + DELTA_BETWEEN_POSITIONS;
 
     public static int LAUNCH_POS_1 = INTAKE_POS_3 - (DELTA_BETWEEN_POSITIONS / 2);
-    public static int LAUNCH_POS_2 = LAUNCH_POS_1 - DELTA_BETWEEN_POSITIONS;
-    public static int LAUNCH_POS_3 = LAUNCH_POS_2 - DELTA_BETWEEN_POSITIONS;
+    public static int LAUNCH_POS_3 = LAUNCH_POS_1 - DELTA_BETWEEN_POSITIONS;
+    public static int LAUNCH_POS_2 = LAUNCH_POS_3 - DELTA_BETWEEN_POSITIONS;
 
 //    public static int INTAKE_POS_1 = 698;
 //    public static int INTAKE_POS_3 = INTAKE_POS_1 - DELTA_BETWEEN_POSITIONS;

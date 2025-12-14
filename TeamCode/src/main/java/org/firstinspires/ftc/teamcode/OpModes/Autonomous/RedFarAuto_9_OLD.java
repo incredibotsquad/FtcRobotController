@@ -16,6 +16,7 @@ import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.SleepAction;
 import com.acmerobotics.roadrunner.TranslationalVelConstraint;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction;
@@ -33,7 +34,7 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchSystem;
 import org.firstinspires.ftc.teamcode.subsystems.Spindex;
 
 /**
- * BLUE FAR AUTO - 9 BALL STRATEGY
+ * RED FAR AUTO - 9 BALL STRATEGY
  * 
  * Sequence:
  * 1. Start at far position, read obelisk pattern
@@ -52,11 +53,12 @@ import org.firstinspires.ftc.teamcode.subsystems.Spindex;
  * - Higher velocity for return-to-launch movements
  * - Color detection during transit when possible
  */
-@Autonomous(name = "Blue_Far_Auto_9", group = "Autonomous")
-public class BlueFarAuto_9 extends BaseAuto {
+@Disabled
+@Autonomous(name = "RedFarAuto_9_OLD", group = "Autonomous")
+public class RedFarAuto_9_OLD extends BaseAuto {
 
-    private static final int multiplier = -1;    // Red = 1, Blue = -1
-    private static final String TAG = "BLUE_FAR_AUTO_9";
+    private static final int multiplier = 1;    // Red = 1, Blue = -1
+    private static final String TAG = "RED_FAR_AUTO_9";
 
     // Headings
     public double robotHeading = Math.toRadians(180 * multiplier);
@@ -102,7 +104,7 @@ public class BlueFarAuto_9 extends BaseAuto {
     public void runOpMode() throws InterruptedException {
 
         robotHardware = new RobotHardware(this.hardwareMap);
-        CrossOpModeStorage.allianceColor = AllianceColors.BLUE;
+        CrossOpModeStorage.allianceColor = AllianceColors.RED;
 
         this.limelightAprilTagHelper = new LimelightAprilTagHelper(robotHardware);
         this.spindex = new Spindex(robotHardware);
@@ -187,13 +189,15 @@ public class BlueFarAuto_9 extends BaseAuto {
 
         // ========== WAIT FOR START ==========
         while (opModeInInit()) {
-            telemetry.addLine("BLUE FAR AUTO - 9 BALL");
+            telemetry.addLine("RED FAR AUTO - 9 BALL");
             telemetry.addLine("Ready to start");
             telemetry.update();
         }
 
         waitForStart();
+
         robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
+
 
         while (opModeIsActive() && !isStopRequested()) {
             ElapsedTime totalTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);

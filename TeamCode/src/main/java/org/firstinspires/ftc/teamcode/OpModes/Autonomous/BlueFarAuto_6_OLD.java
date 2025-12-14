@@ -15,6 +15,7 @@ import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.SleepAction;
 import com.acmerobotics.roadrunner.TranslationalVelConstraint;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction;
@@ -32,8 +33,9 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchSystem;
 import org.firstinspires.ftc.teamcode.subsystems.Spindex;
 
 
-@Autonomous(name = "Blue_Far_Auto_6", group = "Autonomous")
-public class BlueFarAuto_6 extends BaseAuto {
+@Disabled
+@Autonomous(name = "BlueFarAuto_6_OLD", group = "Autonomous")
+public class BlueFarAuto_6_OLD extends BaseAuto {
 
     private static final int multiplier = -1;    //used to flip coordinates between red (1), Blue (-1)
 

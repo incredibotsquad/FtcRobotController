@@ -124,6 +124,7 @@ public class RobotHardware {
         spindexMotor = hardwareMap.get(DcMotorEx.class, "SpindexMotor");
         spindexMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         spindexMotor.setTargetPosition(0);
+        spindexMotor.setDirection(DcMotorSimple.Direction.REVERSE);
         spindexMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         spindexMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 

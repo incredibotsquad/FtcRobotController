@@ -6,6 +6,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 //@Disabled
@@ -32,6 +33,7 @@ public class MotorTest extends LinearOpMode {
 //        spindexMotor.setDirection(DcMotorSimple.Direction.REVERSE);
         testMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         testMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        testMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
         while (opModeInInit()) {
 
