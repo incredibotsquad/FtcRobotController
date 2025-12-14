@@ -32,10 +32,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Config
-@Autonomous(name = "Red_Far_Auto_6", group = "Autonomous")
-public class RedFarAuto_6 extends BaseAuto {
+@Autonomous(name = "Blue_Far_Auto_6", group = "Autonomous")
+public class BlueFarAuto_6 extends BaseAuto {
 
-    private static final int multiplier = 1;    //used to flip coordinates between red (1), Blue (-1)
+    private static final int multiplier = -1;    //used to flip coordinates between red (1), Blue (-1)
 
     public double robotHeading = Math.toRadians(180 * multiplier);
     public double artifactHeading = Math.toRadians(90 * multiplier);

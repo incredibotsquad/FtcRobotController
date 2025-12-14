@@ -15,6 +15,7 @@ import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.ProfileAccelConstraint;
 import com.acmerobotics.roadrunner.TranslationalVelConstraint;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction;
@@ -31,8 +32,9 @@ import org.firstinspires.ftc.teamcode.subsystems.Spindex;
 import java.util.ArrayList;
 import java.util.List;
 
+@Disabled
 @Config
-@Autonomous(name = "RedFarAuto_9", group = "Autonomous")
+@Autonomous(name = "Red_Far_Auto_9", group = "Autonomous")
 public class RedFarAuto_9 extends BaseAuto {
 
     private static final int multiplier = 1;    //used to flip coordinates between red (1), Blue (-1)
@@ -43,7 +45,7 @@ public class RedFarAuto_9 extends BaseAuto {
     public double obeliskHeading = Math.toRadians(180); //this is same for both sides - do NOT need a multiplier
     public double oppositeToObeliskHeading = Math.toRadians(0);
 
-    public int LINE_DEPTH = 34;
+    public int LINE_DEPTH = 31;
 
     public Pose2d INIT_POS = new Pose2d(55, 16 * multiplier, robotHeading);
     public Pose2d LAUNCH_POS = new Pose2d(45, 16 * multiplier, robotHeading);

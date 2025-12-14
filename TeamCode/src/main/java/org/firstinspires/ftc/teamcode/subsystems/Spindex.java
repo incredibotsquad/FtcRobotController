@@ -148,9 +148,9 @@ public class Spindex {
         return new SpindexAction(robotHardware, storedColors.get(currentIndex).intakePosition);
     }
 
-    public Action moveToSlotOneLaunchPosition() {
+    public Action moveToSlotZeroLaunchPosition() {
         previousIndex = currentIndex;
-        currentIndex = 1;
+        currentIndex = 0;
 
         return new SpindexAction(robotHardware, storedColors.get(currentIndex).launchPosition);
     }

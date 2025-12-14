@@ -16,6 +16,7 @@ import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.SleepAction;
 import com.acmerobotics.roadrunner.TranslationalVelConstraint;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction;
@@ -53,6 +54,7 @@ import org.firstinspires.ftc.teamcode.subsystems.Spindex;
  * - Color detection during transit when possible
  * - Uses closer launch position for faster cycle times
  */
+@Disabled
 @Autonomous(name = "Red_Near_Auto_9", group = "Autonomous")
 public class RedNearAuto_9 extends BaseAuto {
 

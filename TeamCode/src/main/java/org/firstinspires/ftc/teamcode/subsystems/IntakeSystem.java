@@ -137,7 +137,7 @@ public class IntakeSystem {
 
             if (spindex.isFull()) {
                 returnAction = new SequentialAction(
-                        spindex.moveToSlotOneLaunchPosition(),
+                        spindex.moveToSlotZeroLaunchPosition(),
                         new ParallelAction(
                                 getReverseIntakeAction(false),
                                 updateBallColorsAction()
