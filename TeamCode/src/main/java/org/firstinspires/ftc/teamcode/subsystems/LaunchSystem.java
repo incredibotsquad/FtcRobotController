@@ -253,8 +253,15 @@ public class LaunchSystem {
         List<BallEntry> greenSlots = spindex.storedColors.stream().filter(entry -> entry.ballColor == GameColors.GREEN).collect(Collectors.toList());
         List<BallEntry> purpleSlots = spindex.storedColors.stream().filter(entry -> entry.ballColor == GameColors.PURPLE).collect(Collectors.toList());
 
+        Log.i("== LAUNCH SYSTEM ==", "getLaunchPGPAction");
+
         if ((greenSlots.isEmpty()) || purpleSlots.size() < 2)
             return getLaunchAllBallsAction();
+
+
+        Log.i("== LAUNCH SYSTEM ==", "getLaunchPGPAction. Green slot: " + greenSlots.get(0).index);
+        Log.i("== LAUNCH SYSTEM ==", "getLaunchPGPAction. Purple slot 1: " + purpleSlots.get(0).index);
+        Log.i("== LAUNCH SYSTEM ==", "getLaunchPGPAction. Purple slot 2: " + purpleSlots.get(1).index);
 
         return getLaunchAllBallsInSequenceAction(List.of(purpleSlots.get(0).index, greenSlots.get(0).index, purpleSlots.get(1).index));
     }
@@ -289,12 +296,14 @@ public class LaunchSystem {
 
         for (int index = 0; index < sequence.size(); index++) {
             BallEntry entry = spindex.storedColors.get(sequence.get(index));
+            Log.i("== LAUNCH SYSTEM ==", "getLaunchAllBallsInSequenceAction. entry: " + index + " Color: " + entry.ballColor);
+
             if (entry.ballColor != GameColors.NONE) {
                 actionsToRun.add(new SequentialAction(
                         new ParallelAction(
                                 new LaunchVisorAction(robotHardware, ballLaunchParameters.visorPositions.get(index)),
                                 new SpindexAction(robotHardware, entry.launchPosition)),
-                        new InstantAction(() -> Log.i("== LAUNCH SYSTEM ==", "RPM Before kick:" + robotHardware.getFlywheelVelocityInTPS())),
+//                        new InstantAction(() -> Log.i("== LAUNCH SYSTEM ==", "RPM Before kick:" + robotHardware.getFlywheelVelocityInTPS())),
                         new LaunchKickAction(robotHardware),
                         new InstantAction(() -> spindex.clearBallAtIndex(entry.index))
                 ));
@@ -449,7 +458,7 @@ public void AlignTurretToGoal() {
             // Calculate the new potential servo position and constrain it
             double newServoPosition = robotHardware.getLaunchTurretPosition() + servoDelta;
 
-            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: calling to change servo position to: " + newServoPosition);
+//            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: calling to change servo position to: " + newServoPosition);
 
             newServoPosition = Math.max(TURRET_SERVO_MIN_POS, Math.min(TURRET_SERVO_MAX_POS, newServoPosition));
 
@@ -462,7 +471,7 @@ public void AlignTurretToGoal() {
             if (robotHardware.getLaunchTurretPosition() == newServoPosition)
                 return;
 
-            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: clamped servo position being changed to: " + newServoPosition);
+//            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: clamped servo position being changed to: " + newServoPosition);
             robotHardware.setLaunchTurretPosition(newServoPosition);
 
         } else {

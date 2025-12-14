@@ -317,7 +317,7 @@ public class MechanismControl {
                 //targetRobotState = ROBOT_STATE.INTAKE;
 
 //                Log.i("Mechanism Control", "Adding CheckForBallsToIntake Action Automatically");
-                runningActions.add(intakeSystem.checkForBallIntakeAndGetAction());
+                runningActions.add(intakeSystem.checkForBallIntakeAndGetActionTeleop());
             }
 //            else
 //            {

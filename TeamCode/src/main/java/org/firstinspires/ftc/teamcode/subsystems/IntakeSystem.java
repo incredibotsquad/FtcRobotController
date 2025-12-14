@@ -10,6 +10,8 @@ import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.SleepAction;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
+import androidx.annotation.NonNull;
 
 import org.firstinspires.ftc.teamcode.Actions.IntakeWheelsAction;
 import org.firstinspires.ftc.teamcode.Actions.ResetSpindexerAction;
@@ -19,7 +21,7 @@ import org.firstinspires.ftc.teamcode.common.RobotHardware;
 
 @Config
 public class IntakeSystem {
-    public static double INTAKE_THROTTLE_TIME_MS = 45;
+    public static double INTAKE_THROTTLE_TIME_MS = 25;
     private RobotHardware robotHardware;
     private Spindex spindex;
     public boolean isOn;
@@ -39,6 +41,48 @@ public class IntakeSystem {
 
     //make the default constructor private
     private IntakeSystem() {}
+
+    public class AutoIntake implements Action {
+        private boolean initialized = false;
+        private ElapsedTime timer;
+
+        private double timeTorunMillis;
+
+        private Action checkForIntake;
+
+        private boolean isActionRunning;
+
+        public AutoIntake(double timeTorunMillis) {
+            initialized = false;
+            this.timeTorunMillis = timeTorunMillis;
+            checkForIntake =  checkForBallIntakeAndGetAction();
+            isActionRunning = false;
+        }
+
+        @Override
+        public boolean run(@NonNull TelemetryPacket packet) {
+            if (!initialized) {
+                initialized = true;
+                timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+            }
+
+            isActionRunning = checkForIntake.run(packet);
+
+            if (spindex.fullSlotCount() < 3 && timer.milliseconds() < timeTorunMillis) {
+                //restart action if it completed
+                if (!isActionRunning) {
+                    Log.i("AUTO INTAKE", " REFRESHIING ACTION");
+                    checkForIntake =  checkForBallIntakeAndGetAction(); //refresh from state
+//                    isActionRunning = checkForIntake.run(packet);
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+    }
+
 
     public Action getTurnOnAction(boolean moveSpindexToEmptySlot) {
         isOn = true;
@@ -71,14 +115,17 @@ public class IntakeSystem {
         return getReverseIntakeAction(true);
     }
 
-    public Action checkForBallIntakeAndGetAction() {
+    public Action checkForBallIntakeAndGetActionTeleop() {
         //we dont want this to be every loop
         if (timeSinceLastIntake.milliseconds() < INTAKE_THROTTLE_TIME_MS)
             return new NullAction();
 
         timeSinceLastIntake.reset();
 
+        return checkForBallIntakeAndGetAction();
+    }
 
+    private Action checkForBallIntakeAndGetAction() {
         Action returnAction = new NullAction();
         boolean ballDetected = robotHardware.didBallDetectionBeamBreak();
 
@@ -90,7 +137,7 @@ public class IntakeSystem {
 
             if (spindex.isFull()) {
                 returnAction = new SequentialAction(
-                        spindex.moveToSlotZeroLaunchPosition(),
+                        spindex.moveToSlotOneLaunchPosition(),
                         new ParallelAction(
                                 getReverseIntakeAction(false),
                                 updateBallColorsAction()
@@ -105,23 +152,27 @@ public class IntakeSystem {
         return returnAction;
     }
 
+    public Action checkForBallIntakeAndGetActionAuto(double millisToRun) {
+        return new AutoIntake(millisToRun);
+    }
+
     public Action updateBallColorsAction() {
         return new ParallelAction(
-                //slot 0 is back color sensor
+                //slot 1 is back color sensor
                 new InstantAction(() -> {
-                    GameColors slot0Color = robotHardware.getDetectedBallColorFromBackSensor();
-                    if (spindex.storedColors.get(0).ballColor == GameColors.UNKNOWN) {
-                        Log.i("Intake System: ", "updateBallColors: Slot 0 color: " + slot0Color);
-                        spindex.updateBallColorAtIndex(0, slot0Color);
-                    }
-                }),
-
-                //slot 1 is left color sensor
-                new InstantAction(() -> {
-                    GameColors slot1Color = robotHardware.getDetectedBallColorFromLeftSensor();
+                    GameColors slot1Color = robotHardware.getDetectedBallColorFromBackSensor();
                     if (spindex.storedColors.get(1).ballColor == GameColors.UNKNOWN) {
                         Log.i("Intake System: ", "updateBallColors: Slot 1 color: " + slot1Color);
                         spindex.updateBallColorAtIndex(1, slot1Color);
+                    }
+                }),
+
+                //slot 0 is left color sensor
+                new InstantAction(() -> {
+                    GameColors slot0Color = robotHardware.getDetectedBallColorFromLeftSensor();
+                    if (spindex.storedColors.get(0).ballColor == GameColors.UNKNOWN) {
+                        Log.i("Intake System: ", "updateBallColors: Slot 0 color: " + slot0Color);
+                        spindex.updateBallColorAtIndex(0, slot0Color);
                     }
                 }),
 

@@ -151,6 +151,7 @@ public class BlueNearAuto extends BaseAuto {
 
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
+        robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
 
         while (opModeIsActive() && !isStopRequested()) {
             ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);

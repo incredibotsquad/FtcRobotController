@@ -202,6 +202,7 @@ public class BlueNearAuto_9 extends BaseAuto {
         }
 
         waitForStart();
+        robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
 
         while (opModeIsActive() && !isStopRequested()) {
             ElapsedTime totalTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);

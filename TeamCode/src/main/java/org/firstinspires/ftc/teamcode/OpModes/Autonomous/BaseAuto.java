@@ -39,10 +39,10 @@ public abstract class BaseAuto extends LinearOpMode {
     }
 
     public void runBlockingWithBackground(Action mainAction) {
-        runBlockingWithBackground(mainAction, getBackgroundTask());
+        runBlockingWithBackground(mainAction, getBackgroundTasks());
     }
 
-    private Runnable getBackgroundTask() {
+    public Runnable getBackgroundTasks() {
         return new Runnable() {
             @Override
             public void run() {
@@ -52,8 +52,15 @@ public abstract class BaseAuto extends LinearOpMode {
 
                 //keep the turret aligned to the goal
                 launchSystem.AlignTurretToGoal();
+
+                //keep tha launcher warm
+                launchSystem.KeepLauncherWarm();
+
                 //update the light to reflect the number of balls in the spindex.
                 intakeSystem.updateStatusLight();
+
+                //keep flywheel motors in sync
+                robotHardware.keepFlywheelMotorsInSync();
             }
         };
     }

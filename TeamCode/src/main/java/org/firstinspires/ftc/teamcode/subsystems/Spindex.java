@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.subsystems;
 
 import android.util.Log;
 
+import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.NullAction;
 
@@ -13,6 +14,7 @@ import org.firstinspires.ftc.teamcode.common.RobotHardware;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Config
 public class Spindex {
 
     public static int DELTA_BETWEEN_POSITIONS = 465;
@@ -57,6 +59,12 @@ public class Spindex {
         storedColors.get(0).ballColor = GameColors.PURPLE;
         storedColors.get(1).ballColor = GameColors.PURPLE;
         storedColors.get(2).ballColor = GameColors.GREEN;
+    }
+
+    public void initializeWithUnknowns() {
+        storedColors.get(0).ballColor = GameColors.UNKNOWN;
+        storedColors.get(1).ballColor = GameColors.UNKNOWN;
+        storedColors.get(2).ballColor = GameColors.UNKNOWN;
     }
 
     private int getNextEmptySlotIndex() {
@@ -140,9 +148,9 @@ public class Spindex {
         return new SpindexAction(robotHardware, storedColors.get(currentIndex).intakePosition);
     }
 
-    public Action moveToSlotZeroLaunchPosition() {
+    public Action moveToSlotOneLaunchPosition() {
         previousIndex = currentIndex;
-        currentIndex = 0;
+        currentIndex = 1;
 
         return new SpindexAction(robotHardware, storedColors.get(currentIndex).launchPosition);
     }

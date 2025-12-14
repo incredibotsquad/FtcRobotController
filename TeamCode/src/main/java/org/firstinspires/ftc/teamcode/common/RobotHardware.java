@@ -16,7 +16,6 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.NormalizedRGBA;
-import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -116,6 +115,7 @@ public class RobotHardware {
 
         //servos
         launchTurretServo = hardwareMap.get(Servo.class, "LaunchTurretServo");
+
         launchKickServo = hardwareMap.get(Servo.class, "LaunchKickServo");
 
         launchVisorServo = hardwareMap.get(Servo.class, "LaunchVisorServo");
@@ -220,6 +220,11 @@ public class RobotHardware {
         //motor 1 just follows motor 2 - setvelocity on both but we read only from motor 2
 //        flywheelMotor1.setVelocity(velocity);
         flywheelMotor2.setVelocity(velocity);
+    }
+
+    public void setFlywheelMotorPowers(double power) {
+        flywheelMotor1.setPower(power);
+        flywheelMotor2.setPower(power);
     }
 
     public void keepFlywheelMotorsInSync() {

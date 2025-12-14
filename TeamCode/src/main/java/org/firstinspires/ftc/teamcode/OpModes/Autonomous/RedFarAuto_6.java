@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.OpModes.Autonomous;
 
 import static org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC;
 import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.FLYWHEEL_POWER_COEFFICIENT_FAR;
+import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.TURRET_SERVO_CENTERED;
 
 import android.util.Log;
 
@@ -43,12 +44,13 @@ public class RedFarAuto_6 extends BaseAuto {
     public double obeliskHeading = Math.toRadians(180); //this is same for both sides - do NOT need a multiplier
 
     public Pose2d INIT_POS = new Pose2d(55, 16 * multiplier, robotHeading);
+    public Pose2d LAUNCH_POS = new Pose2d(45, 16 * multiplier, robotHeading);
 
-    public int FORWARD_DELTA_TO_COLLECT_BALL_STEP = 8; //this is repeated for each ball
+    public int FORWARD_DELTA_TO_COLLECT_BALL_STEP = 20; //this is repeated for each ball
     public Pose2d COLLECT_LINE_1_START = new Pose2d(36, 38 * multiplier, artifactHeading);
     public Pose2d COLLECT_LINE_1_LOW = new Pose2d(COLLECT_LINE_1_START.position.x, COLLECT_LINE_1_START.position.y + (FORWARD_DELTA_TO_COLLECT_BALL_STEP * multiplier), artifactHeading);
-    public Pose2d COLLECT_LINE_1_MID = new Pose2d(COLLECT_LINE_1_LOW.position.x, COLLECT_LINE_1_LOW.position.y + ((FORWARD_DELTA_TO_COLLECT_BALL_STEP - 3) * multiplier), artifactHeading);
-    public Pose2d COLLECT_LINE_1_END = new Pose2d(COLLECT_LINE_1_MID.position.x, COLLECT_LINE_1_MID.position.y + ((FORWARD_DELTA_TO_COLLECT_BALL_STEP - 3) * multiplier), artifactHeading);
+    public Pose2d COLLECT_LINE_1_MID = new Pose2d(COLLECT_LINE_1_LOW.position.x, COLLECT_LINE_1_LOW.position.y + ((FORWARD_DELTA_TO_COLLECT_BALL_STEP) * multiplier), artifactHeading);
+    public Pose2d COLLECT_LINE_1_END = new Pose2d(COLLECT_LINE_1_MID.position.x, COLLECT_LINE_1_MID.position.y + ((FORWARD_DELTA_TO_COLLECT_BALL_STEP) * multiplier), artifactHeading);
 
     public Pose2d MOVE_OFF_LINE = new Pose2d(53, 36  * multiplier, obeliskHeading);
 
@@ -66,8 +68,10 @@ public class RedFarAuto_6 extends BaseAuto {
         }
 
         this.limelightAprilTagHelper = new LimelightAprilTagHelper(robotHardware);
+
         this.spindex = new Spindex(robotHardware);
         this.spindex.initializeWithPPG();
+
         this.intakeSystem = new IntakeSystem(robotHardware, this.spindex);
         this.launchSystem = new LaunchSystem(robotHardware, this.spindex, this.limelightAprilTagHelper);
 
@@ -76,7 +80,11 @@ public class RedFarAuto_6 extends BaseAuto {
         robotHardware.startLimelight();
         robotHardware.setLimelightPipeline(6);
 
-        Action pickLine1AfterLaunch = mecanumDrive.actionBuilder(INIT_POS)
+        Action moveToLaunchPreload = mecanumDrive.actionBuilder(INIT_POS)
+                .lineToX(LAUNCH_POS.position.x)
+                .build();
+
+        Action pickLine1AfterLaunch = mecanumDrive.actionBuilder(LAUNCH_POS)
                 .setTangent(splineHeading)
                 .splineToLinearHeading(COLLECT_LINE_1_START, COLLECT_LINE_1_START.heading)
                 .build();
@@ -96,10 +104,10 @@ public class RedFarAuto_6 extends BaseAuto {
                 .build();
 
         Action launchAfterPickingLine1 = mecanumDrive.actionBuilder(COLLECT_LINE_1_END)
-                .strafeToLinearHeading(INIT_POS.position, INIT_POS.heading, new TranslationalVelConstraint(50), new ProfileAccelConstraint(-50, 50))
+                .strafeToLinearHeading(LAUNCH_POS.position, LAUNCH_POS.heading, new TranslationalVelConstraint(50), new ProfileAccelConstraint(-50, 50))
                 .build();
 
-        Action moveAwayFromLine = mecanumDrive.actionBuilder(INIT_POS)
+        Action moveAwayFromLine = mecanumDrive.actionBuilder(LAUNCH_POS)
                 .strafeToLinearHeading(MOVE_OFF_LINE.position, MOVE_OFF_LINE.heading)
                 .build();
 
@@ -109,6 +117,8 @@ public class RedFarAuto_6 extends BaseAuto {
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
 
+        robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
+
         while (opModeIsActive() && !isStopRequested()) {
             ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
@@ -116,9 +126,9 @@ public class RedFarAuto_6 extends BaseAuto {
 
             runBlockingWithBackground(
                     new ParallelAction(
-                            new InstantAction(() -> robotHardware.setLaunchTurretPosition(0.425)),
+                            moveToLaunchPreload,
                             new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR),
-                            spindex.moveToNextPurpleSlotAction()
+                            intakeSystem.updateBallColorsAction()
                     )
             );
 
@@ -130,96 +140,19 @@ public class RedFarAuto_6 extends BaseAuto {
                     new SequentialAction(
                             new ParallelAction(
                                     pickLine1AfterLaunch,
-                                    intakeSystem.getTurnOnAction(false),
-                                    new SpindexAction(robotHardware, spindex.storedColors.get(0).intakePosition)
+                                    intakeSystem.getTurnOnAction()
                             ),
-                            moveForwardToPickBall1,
-                            new InstantAction(() -> {
-                                ElapsedTime intakeTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
-                                while (intakeTimer.milliseconds() < 500 && spindex.storedColors.get(0).ballColor == GameColors.NONE) {
-                                    if (robotHardware.didBallDetectionBeamBreak()) {
-                                        spindex.storedColors.get(0).ballColor = GameColors.UNKNOWN;
-                                        Log.i("BLUE FAR AUTO", "RE INDEXED INDEX 0 AS UNKNOWN");
-                                    } else {
-                                        spindex.storedColors.get(0).ballColor = GameColors.NONE;
-                                        Log.i("BLUE FAR AUTO", "RE INDEXED INDEX 0 AS NONE");
-                                    }
-                                }
-                            }),
-                            new SpindexAction(robotHardware, spindex.storedColors.get(1).intakePosition),
-                            new SleepAction(0.5)
-                    )
-            );
-
-            //Need an action to index balls
-            runBlockingWithBackground(
-                    new SequentialAction(
-                            moveForwardToPickBall2,
-                            new InstantAction(() -> {
-                                ElapsedTime intakeTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
-                                while (intakeTimer.milliseconds() < 500 && spindex.storedColors.get(1).ballColor == GameColors.NONE) {
-                                    if (robotHardware.didBallDetectionBeamBreak()) {
-                                        spindex.storedColors.get(1).ballColor = GameColors.UNKNOWN;
-                                        Log.i("BLUE FAR AUTO", "RE INDEXED INDEX 1 AS UNKNOWN");
-                                    } else {
-                                        spindex.storedColors.get(1).ballColor = GameColors.NONE;
-                                        Log.i("BLUE FAR AUTO", "RE INDEXED INDEX 1 AS NONE");
-                                    }
-                                    if (spindex.storedColors.get(0).ballColor == GameColors.UNKNOWN) {
-                                        GameColors color = robotHardware.getDetectedBallColorFromLeftSensor();
-                                        spindex.storedColors.get(0).ballColor = color;
-                                        Log.i("BLUE FAR AUTO", "RE INDEXED INDEX 0 COLOR AS: " + color);
-                                    }
-                                }
-                            }),
-                            new SpindexAction(robotHardware, spindex.storedColors.get(2).intakePosition),
-                            new SleepAction(0.75)
-                    )
-            );
-
-
-            runBlockingWithBackground(
-                    new SequentialAction(
-                            moveForwardToPickBall3,
-                            new InstantAction(() -> {
-                                ElapsedTime intakeTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
-                                while (intakeTimer.milliseconds() < 500 && spindex.storedColors.get(2).ballColor == GameColors.NONE) {
-                                    if (robotHardware.didBallDetectionBeamBreak()) {
-                                        spindex.storedColors.get(2).ballColor = GameColors.UNKNOWN;
-                                        Log.i("BLUE FAR AUTO", "RE INDEXED INDEX 2 AS UNKNOWN");
-                                    } else {
-                                        spindex.storedColors.get(2).ballColor = GameColors.NONE;
-                                        Log.i("BLUE FAR AUTO", "RE INDEXED INDEX 2 AS NONE");
-                                    }
-                                    if (spindex.storedColors.get(1).ballColor == GameColors.UNKNOWN) {
-                                        GameColors color = robotHardware.getDetectedBallColorFromLeftSensor();
-                                        spindex.storedColors.get(1).ballColor = color;
-                                        Log.i("BLUE FAR AUTO", "RE INDEXED INDEX 1 COLOR AS: " + color);
-                                    }
-                                }
-                            })
-                    )
-            );
-
-            runBlockingWithBackground(
-                    new ParallelAction(
-                            intakeSystem.getReverseIntakeAction(),
-                            launchAfterPickingLine1,
-                            new SequentialAction(
-                                    new SpindexAction(robotHardware, spindex.storedColors.get(0).intakePosition),
-                                    new SleepAction(0.25),
-                                    new InstantAction(() -> {
-                                        if (spindex.storedColors.get(2).ballColor == GameColors.UNKNOWN) {
-                                            GameColors color = robotHardware.getDetectedBallColorFromLeftSensor();
-                                            spindex.storedColors.get(2).ballColor = color;
-                                            Log.i("BLUE FAR AUTO", "RE INDEXED INDEX 2 COLOR AS: " + color);
-                                        }
-                                    })
+                            new ParallelAction(
+                                    intakeSystem.checkForBallIntakeAndGetActionAuto(5000),
+                                    moveForwardToPickBall1
                             )
                     )
             );
 
+
+
             runBlockingWithBackground(
+
                     launchSystem.getBallPatternLaunchAction(pattern)
             );
 

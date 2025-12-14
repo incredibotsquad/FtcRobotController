@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.OpModes.Autonomous;
 
 import static org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC;
 import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.FLYWHEEL_POWER_COEFFICIENT_FAR;
+import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.TURRET_SERVO_CENTERED;
 
 import android.util.Log;
 
@@ -37,6 +38,8 @@ public class RedFarAuto_3 extends BaseAuto {
 
     public Pose2d INIT_POS = new Pose2d(55, 16 * multiplier, robotHeading);
 
+    public Pose2d LAUNCH_POS = new Pose2d(45, 16 * multiplier, robotHeading);
+
     public Pose2d MOVE_OFF_LINE = new Pose2d(53, 36  * multiplier, obeliskHeading);
 
 
@@ -56,6 +59,7 @@ public class RedFarAuto_3 extends BaseAuto {
 
         this.spindex = new Spindex(robotHardware);
         this.spindex.initializeWithPPG();
+
         this.intakeSystem = new IntakeSystem(robotHardware, this.spindex);
         this.launchSystem = new LaunchSystem(robotHardware, this.spindex, this.limelightAprilTagHelper);
         mecanumDrive = new MecanumDrive(this.hardwareMap, INIT_POS);
@@ -63,7 +67,11 @@ public class RedFarAuto_3 extends BaseAuto {
         robotHardware.startLimelight();
         robotHardware.setLimelightPipeline(6);
 
-        Action moveAwayFromLine = mecanumDrive.actionBuilder(INIT_POS)
+        Action moveToLaunchPosition = mecanumDrive.actionBuilder(INIT_POS)
+                .lineToX(LAUNCH_POS.position.x)
+                .build();
+
+        Action moveAwayFromLine = mecanumDrive.actionBuilder(LAUNCH_POS)
                 .strafeToLinearHeading(MOVE_OFF_LINE.position, MOVE_OFF_LINE.heading)
                 .build();
 
@@ -73,6 +81,8 @@ public class RedFarAuto_3 extends BaseAuto {
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
 
+        robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
+
         while (opModeIsActive() && !isStopRequested()) {
             ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
@@ -80,9 +90,9 @@ public class RedFarAuto_3 extends BaseAuto {
 
             runBlockingWithBackground(
                     new ParallelAction(
-                            new InstantAction(() -> robotHardware.setLaunchTurretPosition(0.563)),
-                            new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR),
-                            spindex.moveToNextPurpleSlotAction()
+                            moveToLaunchPosition,
+                            new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR, false),
+                            intakeSystem.updateBallColorsAction()
                     )
             );
 
