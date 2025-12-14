@@ -97,7 +97,7 @@ public class RedFarAuto_3 extends BaseAuto {
             );
 
             runBlockingWithBackground(
-                    launchSystem.getBallPatternLaunchAction(pattern)
+                    launchSystem.getPerformLaunchOnAllSlots()
             );
 
             runBlockingWithBackground(

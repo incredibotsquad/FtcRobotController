@@ -7,6 +7,9 @@ import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.TURRET_SERV
 
 import android.util.Log;
 
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.config.Config;
+import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.ParallelAction;
@@ -16,386 +19,428 @@ import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.SleepAction;
 import com.acmerobotics.roadrunner.TranslationalVelConstraint;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction;
-import org.firstinspires.ftc.teamcode.Actions.ResetSpindexerAction;
-import org.firstinspires.ftc.teamcode.Actions.SpindexAction;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
-import org.firstinspires.ftc.teamcode.common.GameColors;
+import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 import org.firstinspires.ftc.teamcode.common.GamePattern;
 import org.firstinspires.ftc.teamcode.common.LimelightAprilTagHelper;
-import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSystem;
 import org.firstinspires.ftc.teamcode.subsystems.Spindex;
 
-/**
- * RED NEAR AUTO - 9 BALL STRATEGY
- * 
- * Starting from near position (closer to goal), this auto:
- * 1. Moves to read obelisk pattern
- * 2. Moves to close launch position and launches 3 preloaded balls
- * 3. Collects 3 balls from spike line 1 (near - X = -7)
- * 4. Returns to launch position, launches 3 balls
- * 5. Collects 3 balls from spike line 2 (middle - X = 12)
- * 6. Returns to launch position, launches 3 balls
- * 7. Parks off spike marks
- * 
- * OPTIMIZATIONS:
- * - Pre-spin flywheel during robot movement
- * - Parallel actions for spindexer rotation during transit
- * - Optimized path planning with spline curves
- * - Reduced sleep times where safe
- * - Higher velocity for return-to-launch movements
- * - Color detection during transit when possible
- * - Uses closer launch position for faster cycle times
- */
-@Disabled
+import java.util.ArrayList;
+import java.util.List;
+
+@Config
 @Autonomous(name = "Red_Near_Auto_9", group = "Autonomous")
 public class RedNearAuto_9 extends BaseAuto {
 
-    private static final int multiplier = 1;    // Red = 1, Blue = -1
-    private static final String TAG = "RED_NEAR_AUTO_9";
+    private static final int multiplier = 1;    //used to flip coordinates between red (1), Blue (-1)
 
-    // Headings
     public double robotHeading = Math.toRadians(135 * multiplier);
-    public double goalHeading = Math.toRadians(135 * multiplier);
-    public double splineHeading = Math.toRadians(0);
-    public double obeliskHeading = Math.toRadians(180);
-    public double artifactHeading = Math.toRadians(90 * multiplier);
+    public double goalHeading = Math.toRadians(125 * multiplier);
 
-    // Key Positions
+    public double artifactHeading = Math.toRadians(90 * multiplier);
+    public double reverseArtifactHeading = Math.toRadians(270 * multiplier);
+
+    public double obeliskHeading = Math.toRadians(200); //this is same for both sides - do NOT need a multiplier
+    public double splineHeading = Math.toRadians(0);
+
+    public int LINE_DEPTH_SHALLOW = 25;
+
+    public int LINE_DEPTH = 33;
+
     public Pose2d INIT_POS = new Pose2d(-54, 54 * multiplier, robotHeading);
     public Pose2d TAG_READ_POS = new Pose2d(-36, 15 * multiplier, obeliskHeading);
-    public Pose2d LAUNCH_POS = new Pose2d(-26, 26 * multiplier, goalHeading);
 
-    // Ball collection step size (optimized for reliable intake)
-    public int FORWARD_DELTA_TO_COLLECT_BALL_STEP = 7;
+    public Pose2d LAUNCH_POS = new Pose2d(-20, 30 * multiplier, goalHeading);
 
-    // Spike Line 1 (Near - X = -7)
-    public Pose2d COLLECT_LINE_1_START = new Pose2d(-7, 38 * multiplier, artifactHeading);
-    public Pose2d COLLECT_LINE_1_BALL_1 = new Pose2d(-7, (38 + FORWARD_DELTA_TO_COLLECT_BALL_STEP) * multiplier, artifactHeading);
-    public Pose2d COLLECT_LINE_1_BALL_2 = new Pose2d(-7, (38 + 2 * FORWARD_DELTA_TO_COLLECT_BALL_STEP - 2) * multiplier, artifactHeading);
-    public Pose2d COLLECT_LINE_1_BALL_3 = new Pose2d(-7, (38 + 3 * FORWARD_DELTA_TO_COLLECT_BALL_STEP - 4) * multiplier, artifactHeading);
+    public Pose2d COLLECT_LINE_1_START = new Pose2d(-12, 38 * multiplier, artifactHeading);
+    public Pose2d COLLECT_LINE_1_END = new Pose2d(COLLECT_LINE_1_START.position.x,  COLLECT_LINE_1_START.position.y + (LINE_DEPTH_SHALLOW * multiplier), artifactHeading);
+    public Pose2d COLLECT_LINE_2_START = new Pose2d(16, 38 * multiplier, artifactHeading);
+    public Pose2d COLLECT_LINE_2_END = new Pose2d(COLLECT_LINE_2_START.position.x,  COLLECT_LINE_2_START.position.y + (LINE_DEPTH * multiplier), artifactHeading);
 
-    // Spike Line 2 (Middle - X = 12)
-    public Pose2d COLLECT_LINE_2_START = new Pose2d(12, 38 * multiplier, artifactHeading);
-    public Pose2d COLLECT_LINE_2_BALL_1 = new Pose2d(12, (38 + FORWARD_DELTA_TO_COLLECT_BALL_STEP) * multiplier, artifactHeading);
-    public Pose2d COLLECT_LINE_2_BALL_2 = new Pose2d(12, (38 + 2 * FORWARD_DELTA_TO_COLLECT_BALL_STEP - 2) * multiplier, artifactHeading);
-    public Pose2d COLLECT_LINE_2_BALL_3 = new Pose2d(12, (38 + 3 * FORWARD_DELTA_TO_COLLECT_BALL_STEP - 4) * multiplier, artifactHeading);
+    public Pose2d MOVE_OFF_LINE = new Pose2d(-48, 24  * multiplier, artifactHeading);
 
-    // Park position (off spike marks)
-    public Pose2d PARK_POS = new Pose2d(-48, 24 * multiplier, artifactHeading);
 
-    // OPTIMIZATION: Velocity/acceleration constraints tuned for speed vs reliability
-    private static final double FAST_VEL = 55;
-    private static final double FAST_ACCEL = 55;
-    private static final double INTAKE_VEL = 18;  // Slower for reliable ball pickup
-    private static final double INTAKE_ACCEL = 12;
-    
-    // OPTIMIZATION: Reduced wait times (tuned for reliability)
-    private static final double BALL_DETECT_TIMEOUT_MS = 400;
-    private static final double SPINDEX_SETTLE_TIME = 0.35;
+    // ========== TIMEOUTS (tunable via FTC Dashboard) ==========
+    public static double TIMEOUT_INIT_MS = 0;      // INIT state timeout
+    public static double TIMEOUT_INTAKE_MS = 6000;   // Intake states timeout (longer to collect balls)
+    public static double STATE_TIMEOUT_MS = 6000;     // All other states timeout
+
+    // ========== STATE MACHINE ==========
+    private enum AutoState {
+        INIT,
+        DRIVE_TO_READ_SEQUENCE,
+        DRIVE_TO_LAUNCH_PRELOAD,
+        LAUNCH_ALL_PRELOAD,
+        DRIVE_TO_INTAKE_1,
+        INTAKE_BALLS_1,
+        DRIVE_TO_LAUNCH_1,
+        LAUNCH_ALL_1,
+        DRIVE_TO_INTAKE_2,
+        INTAKE_BALLS_2,
+        DRIVE_TO_LAUNCH_2,
+        LAUNCH_ALL_2,
+        MOVE_AWAY_FROM_LINE,
+        DONE
+    }
+
+    private AutoState currentState = AutoState.INIT;
+    private boolean stateTransitionInProgress = false;
+    private List<Action> runningActions = new ArrayList<>();
+    private ElapsedTime stateTimer = new ElapsedTime();
+
+    // ========== SUBSYSTEMS (same as TeleOp) ==========
+    private FtcDashboard dashboard;
+
+    private ElapsedTime totalTime;
+
+    GamePattern pattern;
 
     @Override
-    public void runOpMode() throws InterruptedException {
+    public void runOpMode() {
+        // ========== INIT ==========
+        robotHardware = new RobotHardware(hardwareMap);
 
-        robotHardware = new RobotHardware(this.hardwareMap);
-        CrossOpModeStorage.allianceColor = AllianceColors.RED;
-
-        this.limelightAprilTagHelper = new LimelightAprilTagHelper(robotHardware);
-        this.spindex = new Spindex(robotHardware);
-        this.spindex.initializeWithPPG();
-        this.intakeSystem = new IntakeSystem(robotHardware, this.spindex);
-        this.launchSystem = new LaunchSystem(robotHardware, this.spindex, this.limelightAprilTagHelper);
-
-        mecanumDrive = new MecanumDrive(this.hardwareMap, INIT_POS);
+        if (multiplier == 1) {
+            CrossOpModeStorage.allianceColor = AllianceColors.RED;
+        }
+        else {
+            CrossOpModeStorage.allianceColor = AllianceColors.BLUE;
+        }
 
         robotHardware.startLimelight();
-        robotHardware.setLimelightPipeline(6);
+        mecanumDrive = new MecanumDrive(hardwareMap, INIT_POS);
 
-        // ========== BUILD ALL TRAJECTORIES DURING INIT (OPTIMIZATION) ==========
-        
-        Action moveToReadTag = mecanumDrive.actionBuilder(INIT_POS)
-                .strafeToLinearHeading(TAG_READ_POS.position, TAG_READ_POS.heading)
-                .build();
+        spindex = new Spindex(robotHardware);
+        spindex.initializeWithUnknowns();
 
-        Action launchFromTagRead = mecanumDrive.actionBuilder(TAG_READ_POS)
-                .strafeToLinearHeading(LAUNCH_POS.position, LAUNCH_POS.heading)
-                .build();
+        limelightAprilTagHelper = new LimelightAprilTagHelper(robotHardware);
+        intakeSystem = new IntakeSystem(robotHardware, spindex);
+        launchSystem = new LaunchSystem(robotHardware, spindex, limelightAprilTagHelper);
 
-        // Line 1 trajectories
-        Action toLine1Start = mecanumDrive.actionBuilder(LAUNCH_POS)
-                .setTangent(splineHeading)
-                .splineToLinearHeading(COLLECT_LINE_1_START, COLLECT_LINE_1_START.heading)
-                .build();
+        dashboard = FtcDashboard.getInstance();
 
-        Action line1Ball1 = mecanumDrive.actionBuilder(COLLECT_LINE_1_START)
-                .setTangent(artifactHeading)
-                .lineToY(COLLECT_LINE_1_BALL_1.position.y, 
-                        new TranslationalVelConstraint(INTAKE_VEL), 
-                        new ProfileAccelConstraint(-INTAKE_ACCEL, INTAKE_ACCEL))
-                .build();
+        // Alliance selection during init
+        while (opModeInInit()) {}
 
-        Action line1Ball2 = mecanumDrive.actionBuilder(COLLECT_LINE_1_BALL_1)
-                .setTangent(artifactHeading)
-                .lineToY(COLLECT_LINE_1_BALL_2.position.y, 
-                        new TranslationalVelConstraint(INTAKE_VEL), 
-                        new ProfileAccelConstraint(-INTAKE_ACCEL, INTAKE_ACCEL))
-                .build();
+        waitForStart();
 
-        Action line1Ball3 = mecanumDrive.actionBuilder(COLLECT_LINE_1_BALL_2)
-                .lineToY(COLLECT_LINE_1_BALL_3.position.y, 
-                        new TranslationalVelConstraint(INTAKE_VEL), 
-                        new ProfileAccelConstraint(-INTAKE_ACCEL, INTAKE_ACCEL))
-                .build();
+        stateTimer.reset();
+        currentState = AutoState.INIT;
 
-        Action line1ToLaunch = mecanumDrive.actionBuilder(COLLECT_LINE_1_BALL_3)
-                .strafeToLinearHeading(LAUNCH_POS.position, LAUNCH_POS.heading, 
-                        new TranslationalVelConstraint(FAST_VEL), 
-                        new ProfileAccelConstraint(-FAST_ACCEL, FAST_ACCEL))
-                .build();
+        robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
 
-        // Line 2 trajectories
-        Action launchToLine2 = mecanumDrive.actionBuilder(LAUNCH_POS)
-                .setTangent(splineHeading)
-                .splineToLinearHeading(COLLECT_LINE_2_START, COLLECT_LINE_2_START.heading)
-                .build();
+        totalTime = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
-        Action line2Ball1 = mecanumDrive.actionBuilder(COLLECT_LINE_2_START)
-                .setTangent(artifactHeading)
-                .lineToY(COLLECT_LINE_2_BALL_1.position.y, 
-                        new TranslationalVelConstraint(INTAKE_VEL), 
-                        new ProfileAccelConstraint(-INTAKE_ACCEL, INTAKE_ACCEL))
-                .build();
+        // ========== MAIN LOOP (Non-Blocking) ==========
+        while (opModeIsActive() && currentState != AutoState.DONE) {
 
-        Action line2Ball2 = mecanumDrive.actionBuilder(COLLECT_LINE_2_BALL_1)
-                .setTangent(artifactHeading)
-                .lineToY(COLLECT_LINE_2_BALL_2.position.y, 
-                        new TranslationalVelConstraint(INTAKE_VEL), 
-                        new ProfileAccelConstraint(-INTAKE_ACCEL, INTAKE_ACCEL))
-                .build();
+            // Background tasks (same as TeleOp)
+            getBackgroundTasks().run();
 
-        Action line2Ball3 = mecanumDrive.actionBuilder(COLLECT_LINE_2_BALL_2)
-                .lineToY(COLLECT_LINE_2_BALL_3.position.y, 
-                        new TranslationalVelConstraint(INTAKE_VEL), 
-                        new ProfileAccelConstraint(-INTAKE_ACCEL, INTAKE_ACCEL))
-                .build();
+            // Process current state
+            processState();
 
-        Action line2ToLaunch = mecanumDrive.actionBuilder(COLLECT_LINE_2_BALL_3)
-                .strafeToLinearHeading(LAUNCH_POS.position, LAUNCH_POS.heading, 
-                        new TranslationalVelConstraint(FAST_VEL), 
-                        new ProfileAccelConstraint(-FAST_ACCEL, FAST_ACCEL))
-                .build();
+            //add auxiliary actions
+            CheckForBallsToIntake();
 
-        Action toPark = mecanumDrive.actionBuilder(LAUNCH_POS)
-                .strafeToLinearHeading(PARK_POS.position, PARK_POS.heading)
-                .build();
+            // Run actions (non-blocking)
+            processActions();
 
-        // ========== WAIT FOR START ==========
-        while (opModeInInit()) {
-            telemetry.addLine("RED NEAR AUTO - 9 BALL");
-            telemetry.addLine("Ready to start");
+            // Telemetry
+            telemetry.addData("State", currentState);
+            telemetry.addData("Actions Running", runningActions.size());
+            telemetry.addData("Balls in Spindex", spindex.fullSlotCount());
             telemetry.update();
         }
 
-        waitForStart();
-        robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
+        Log.w("RedNearAuto_9", "total time: " + totalTime.milliseconds());
+        // Cleanup
+        robotHardware.stopRobotAndMechanisms();
+//        robotHardware.stopLimelight();
+    }
 
-        while (opModeIsActive() && !isStopRequested()) {
-            ElapsedTime totalTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
-
-            // ========== PHASE 1: MOVE TO READ TAG, READ PATTERN ==========
-            runBlockingWithBackground(
-                    new SequentialAction(
-                            new ParallelAction(
-                                    spindex.moveToNextFullSlotAction(),
-                                    moveToReadTag,
-                                    new InstantAction(() -> robotHardware.setFlywheelVelocityInTPS(FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_CLOSE)),
-                                    new InstantAction(() -> robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED))
-                            )
-                    )
-            );
-
-            GamePattern pattern = launchSystem.readGamePattern();
-            Log.i(TAG, "Pattern detected: " + (pattern != null ? pattern.tagId : "null"));
-
-            // ========== PHASE 2: MOVE TO LAUNCH & LAUNCH PRELOADED ==========
-            runBlockingWithBackground(
-                    new ParallelAction(
-                            intakeSystem.getTurnOffAction(),
-                            launchFromTagRead,
-                            new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_CLOSE)
-                    )
-            );
-
-            runBlockingWithBackground(launchSystem.getBallPatternLaunchAction(pattern));
-            Log.i(TAG, "Phase 1-2 complete - 3 balls launched. Time: " + totalTimer.seconds());
-
-            // ========== PHASE 3: COLLECT LINE 1 (3 balls) ==========
-            runBlockingWithBackground(
-                    new SequentialAction(
-                            new ParallelAction(
-                                    toLine1Start,
-                                    intakeSystem.getTurnOnAction(false),
-                                    new SpindexAction(robotHardware, spindex.storedColors.get(0).intakePosition),
-                                    // OPTIMIZATION: Pre-spin flywheel during transit
-                                    new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_CLOSE, false)
-                            ),
-                            line1Ball1,
-                            createBallDetectionAction(0),
-                            new SpindexAction(robotHardware, spindex.storedColors.get(1).intakePosition),
-                            new SleepAction(SPINDEX_SETTLE_TIME)
-                    )
-            );
-
-            runBlockingWithBackground(
-                    new SequentialAction(
-                            line1Ball2,
-                            createBallDetectionWithColorAction(1, 0),
-                            new SpindexAction(robotHardware, spindex.storedColors.get(2).intakePosition),
-                            new SleepAction(SPINDEX_SETTLE_TIME + 0.15)
-                    )
-            );
-
-            runBlockingWithBackground(
-                    new SequentialAction(
-                            line1Ball3,
-                            createBallDetectionWithColorAction(2, 1)
-                    )
-            );
-
-            // Return to launch position with color detection
-            runBlockingWithBackground(
-                    new ParallelAction(
-                            intakeSystem.getReverseIntakeAction(),
-                            line1ToLaunch,
-                            new SequentialAction(
-                                    new SpindexAction(robotHardware, spindex.storedColors.get(0).intakePosition),
-                                    new SleepAction(0.2),
-                                    new InstantAction(() -> detectColorForSlot(2))
-                            ),
-                            new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_CLOSE)
-                    )
-            );
-
-            runBlockingWithBackground(launchSystem.getBallPatternLaunchAction(pattern));
-            Log.i(TAG, "Phase 3 complete - 6 balls launched. Time: " + totalTimer.seconds());
-
-            // ========== PHASE 4: COLLECT LINE 2 (3 balls) ==========
-            runBlockingWithBackground(
-                    new SequentialAction(
-                            new ParallelAction(
-                                    launchToLine2,
-                                    intakeSystem.getTurnOnAction(false),
-                                    new SpindexAction(robotHardware, spindex.storedColors.get(0).intakePosition),
-                                    new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_MID, false)
-                            ),
-                            line2Ball1,
-                            createBallDetectionAction(0),
-                            new SpindexAction(robotHardware, spindex.storedColors.get(1).intakePosition),
-                            new SleepAction(SPINDEX_SETTLE_TIME)
-                    )
-            );
-
-            runBlockingWithBackground(
-                    new SequentialAction(
-                            line2Ball2,
-                            createBallDetectionWithColorAction(1, 0),
-                            new SpindexAction(robotHardware, spindex.storedColors.get(2).intakePosition),
-                            new SleepAction(SPINDEX_SETTLE_TIME + 0.15)
-                    )
-            );
-
-            runBlockingWithBackground(
-                    new SequentialAction(
-                            line2Ball3,
-                            createBallDetectionWithColorAction(2, 1)
-                    )
-            );
-
-            // Return to launch position
-            runBlockingWithBackground(
-                    new ParallelAction(
-                            intakeSystem.getReverseIntakeAction(),
-                            line2ToLaunch,
-                            new SequentialAction(
-                                    new SpindexAction(robotHardware, spindex.storedColors.get(0).intakePosition),
-                                    new SleepAction(0.2),
-                                    new InstantAction(() -> detectColorForSlot(2))
-                            ),
-                            new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_MID)
-                    )
-            );
-
-            runBlockingWithBackground(launchSystem.getBallPatternLaunchAction(pattern));
-            Log.i(TAG, "Phase 4 complete - 9 balls launched. Time: " + totalTimer.seconds());
-
-            // ========== PHASE 5: PARK ==========
-            runBlockingWithBackground(
-                    new ParallelAction(
-                            toPark,
-                            new ResetSpindexerAction(robotHardware)
-                    )
-            );
-
-            Log.i(TAG, "AUTO COMPLETE! Total time: " + totalTimer.seconds() + " seconds");
-            
-            break;
+    private void CheckForBallsToIntake() {
+        if ((currentState == AutoState.INTAKE_BALLS_1 || currentState == AutoState.INTAKE_BALLS_2) && intakeSystem.isOn && !spindex.isFull()) {
+            runningActions.add(intakeSystem.checkForBallIntakeAndGetActionTeleop());
         }
     }
 
     /**
-     * OPTIMIZATION: Reusable ball detection action with timeout
+     * State machine - creates actions based on current state
      */
-    private Action createBallDetectionAction(int slotIndex) {
-        return new InstantAction(() -> {
-            ElapsedTime intakeTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
-            while (intakeTimer.milliseconds() < BALL_DETECT_TIMEOUT_MS 
-                    && spindex.storedColors.get(slotIndex).ballColor == GameColors.NONE) {
-                if (robotHardware.didBallDetectionBeamBreak()) {
-                    spindex.storedColors.get(slotIndex).ballColor = GameColors.UNKNOWN;
-                    Log.i(TAG, "Ball detected at slot " + slotIndex);
-                    break;
+    private void processState() {
+        // Don't process new state if actions are running
+        if (stateTransitionInProgress) return;
+
+        // Timeout protection - uses per-state timeout values
+        if (stateTimer.milliseconds() > getTimeoutForState(currentState)) {
+            Log.w("RedNearAuto_9", "State timeout! Advancing from: " + currentState);
+            runningActions.clear();
+            stateTransitionInProgress = false;
+            advanceToNextState();
+            return;
+        }
+
+        switch (currentState) {
+            case DRIVE_TO_READ_SEQUENCE:
+                Log.i("RedNearAuto_9", "Starting DRIVE_TO_READ_SEQUENCE");
+                runningActions.add(
+                        new SequentialAction(
+                                new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_MID, false),
+                                mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                                    .strafeToLinearHeading(LAUNCH_POS.position, obeliskHeading)
+                                    .build(),
+                                new InstantAction(() -> {
+                                    ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+                                    while (pattern == null && timer.milliseconds() < 20) {
+                                        pattern = launchSystem.readGamePattern();   //read for 200 ms
+                                        Log.i("RedNearAuto_9", "Trying to read pattern " + pattern != null? "found it" : "null");
+                                    }
+                                })
+                        )
+                );
+                stateTransitionInProgress = true;
+                break;
+                
+            case DRIVE_TO_LAUNCH_PRELOAD:
+                Log.i("RedNearAuto_9", "Starting DRIVE_TO_LAUNCH_PRELOAD");
+                runningActions.add(
+                        new SequentialAction(
+                                new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_MID, false),
+                                mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+//                                        .turnTo(LAUNCH_POS.heading)
+                                        .splineToLinearHeading(LAUNCH_POS, LAUNCH_POS.heading)
+                                        .build()
+                        ));
+                stateTransitionInProgress = true;
+                break;
+
+            case LAUNCH_ALL_PRELOAD:
+                Log.i("RedNearAuto_9", "Starting LAUNCH_ALL_PRELOAD");
+                // Same as TeleOp LAUNCH_ALL state
+                runningActions.add(
+                        launchSystem.getPerformLaunchOnAllSlots()
+                );
+                stateTransitionInProgress = true;
+                break;
+
+            case DRIVE_TO_INTAKE_1:
+                Log.i("RedNearAuto_9", "Starting DRIVE_TO_INTAKE_1");
+                runningActions.add(
+                        new ParallelAction(
+                                mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                                        .splineToLinearHeading(COLLECT_LINE_1_START, COLLECT_LINE_1_START.heading)
+                                        .build(),
+                                intakeSystem.getTurnOnAction()
+                        )
+                );
+                stateTransitionInProgress = true;
+                break;
+
+            case INTAKE_BALLS_1:
+                Log.i("RedNearAuto_9", "Starting INTAKE_BALLS_1");
+                // Just wait and check for balls - intake already on from previous state
+                if (spindex.isFull()) {
+                    advanceToNextState();
+                } else {
+                    // Add ball check action (same as TeleOp)
+                    runningActions.add(
+                            new ParallelAction(
+                                    mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                                            .lineToY(COLLECT_LINE_1_END.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(-10, 10))
+                                            .build(),
+                                    intakeSystem.checkForBallIntakeAndGetActionTeleop()
+                            ));
+                    stateTransitionInProgress = true;
                 }
-            }
-        });
+                break;
+
+            case DRIVE_TO_LAUNCH_1:
+                Log.i("RedNearAuto_9", "Starting DRIVE_TO_LAUNCH_1");
+                runningActions.add(
+                        new ParallelAction(
+                                spindex.moveToNextFullSlotAction(), //move to full slot so we don't end up spitting out a ball that we took in
+                                mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                                        .strafeToLinearHeading(LAUNCH_POS.position, LAUNCH_POS.heading)
+                                        .build(),
+                                intakeSystem.getReverseIntakeAction(false),
+                                intakeSystem.updateBallColorsAction(),
+                                new InstantAction(() -> robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED))
+                        )
+                );
+                stateTransitionInProgress = true;
+                break;
+
+            case LAUNCH_ALL_1:
+                Log.i("RedNearAuto_9", "Starting LAUNCH_ALL_1");
+                runningActions.add(
+                        launchSystem.getPerformLaunchOnAllSlots()
+                );
+                stateTransitionInProgress = true;
+                break;
+
+            case DRIVE_TO_INTAKE_2:
+                Log.i("RedNearAuto_9", "Starting DRIVE_TO_INTAKE_2");
+                runningActions.add(
+                        new ParallelAction(
+                                intakeSystem.getTurnOnAction(),
+                                mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                                        .setTangent(splineHeading)
+                                        .splineToLinearHeading(COLLECT_LINE_2_START, COLLECT_LINE_2_START.heading)
+                                        .build()
+                        ));
+
+                stateTransitionInProgress = true;
+                break;
+            case INTAKE_BALLS_2:
+                Log.i("RedNearAuto_9", "Starting INTAKE_BALLS_2");
+                if (spindex.isFull()) {
+                    advanceToNextState();
+                } else {
+                    // Add ball check action (same as TeleOp)
+                    runningActions.add(
+                            new ParallelAction(
+                                    mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                                            .lineToY(COLLECT_LINE_2_END.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(-10, 10))
+                                            .build(),
+                                    intakeSystem.checkForBallIntakeAndGetActionTeleop()
+                            ));
+                    stateTransitionInProgress = true;
+                }
+                break;
+            case DRIVE_TO_LAUNCH_2:
+                Log.i("RedNearAuto_9", "Starting DRIVE_TO_LAUNCH_2");
+                runningActions.add(
+                        new ParallelAction(
+                                spindex.moveToNextFullSlotAction(), //move to full slot so we don't end up spitting out a ball that we took in
+                                mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                                        .setTangent(reverseArtifactHeading)
+                                        .splineToLinearHeading(LAUNCH_POS, LAUNCH_POS.heading)
+                                        .build(),
+                                intakeSystem.getReverseIntakeAction(false),
+                                intakeSystem.updateBallColorsAction(),
+                                new InstantAction(() -> robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED))
+                        )
+                );
+                stateTransitionInProgress = true;
+                break;
+
+            case LAUNCH_ALL_2:
+                Log.i("RedNearAuto_9", "Starting LAUNCH_ALL_2");
+                runningActions.add(
+                        launchSystem.getPerformLaunchOnAllSlots()
+                );
+                stateTransitionInProgress = true;
+                break;
+
+            case MOVE_AWAY_FROM_LINE:
+                Log.i("RedNearAuto_9", "Starting MOVE_AWAY_FROM_LINE");
+                runningActions.add(
+                        mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                                .splineToConstantHeading(MOVE_OFF_LINE.position, MOVE_OFF_LINE.heading)
+                                .build());
+                stateTransitionInProgress = true;
+                break;
+
+            case DONE:
+                Log.i("RedNearAuto_9", "Auto complete!");
+                break;
+        }
     }
 
     /**
-     * OPTIMIZATION: Combined ball detection and color sensing for previous ball
+     * Process actions - same pattern as TeleOp MechanismControl.ProcessActions()
      */
-    private Action createBallDetectionWithColorAction(int currentSlot, int previousSlot) {
-        return new InstantAction(() -> {
-            ElapsedTime intakeTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
-            while (intakeTimer.milliseconds() < BALL_DETECT_TIMEOUT_MS 
-                    && spindex.storedColors.get(currentSlot).ballColor == GameColors.NONE) {
-                if (robotHardware.didBallDetectionBeamBreak()) {
-                    spindex.storedColors.get(currentSlot).ballColor = GameColors.UNKNOWN;
-                    Log.i(TAG, "Ball detected at slot " + currentSlot);
-                }
-                // OPTIMIZATION: Detect color of previous ball while waiting
-                if (spindex.storedColors.get(previousSlot).ballColor == GameColors.UNKNOWN) {
-                    GameColors color = robotHardware.getDetectedBallColorFromLeftSensor();
-                    spindex.storedColors.get(previousSlot).ballColor = color;
-                    Log.i(TAG, "Color detected for slot " + previousSlot + ": " + color);
-                }
+    private void processActions() {
+        if (runningActions.isEmpty()) return;
+
+        TelemetryPacket packet = new TelemetryPacket();
+        List<Action> newActions = new ArrayList<>();
+
+        for (Action action : runningActions) {
+            action.preview(packet.fieldOverlay());
+            if (action.run(packet)) {
+                newActions.add(action);  // Keep running
             }
-        });
+        }
+
+        dashboard.sendTelemetryPacket(packet);
+        runningActions = newActions;
+
+        // All actions complete - advance state
+        if (runningActions.isEmpty() && stateTransitionInProgress) {
+            stateTransitionInProgress = false;
+            advanceToNextState();
+        }
     }
 
     /**
-     * Helper to detect color for a specific slot
+     * Simple state progression
      */
-    private void detectColorForSlot(int slot) {
-        if (spindex.storedColors.get(slot).ballColor == GameColors.UNKNOWN) {
-            GameColors color = robotHardware.getDetectedBallColorFromLeftSensor();
-            spindex.storedColors.get(slot).ballColor = color;
-            Log.i(TAG, "Color detected for slot " + slot + ": " + color);
+    private void advanceToNextState() {
+        stateTimer.reset();
+
+        switch (currentState) {
+            case INIT:
+                currentState = AutoState.DRIVE_TO_LAUNCH_PRELOAD;
+                break;
+            case DRIVE_TO_READ_SEQUENCE:
+                currentState = AutoState.DRIVE_TO_LAUNCH_PRELOAD;
+                break;
+            case DRIVE_TO_LAUNCH_PRELOAD:
+                currentState = AutoState.LAUNCH_ALL_PRELOAD;
+                break;
+            case LAUNCH_ALL_PRELOAD:
+                currentState = AutoState.DRIVE_TO_INTAKE_1;
+                break;
+            case DRIVE_TO_INTAKE_1:
+                currentState = AutoState.INTAKE_BALLS_1;
+                break;
+            case INTAKE_BALLS_1:
+                currentState = AutoState.DRIVE_TO_LAUNCH_1;
+                break;
+            case DRIVE_TO_LAUNCH_1:
+                currentState = AutoState.LAUNCH_ALL_1;
+                break;
+            case LAUNCH_ALL_1:
+                currentState = AutoState.DRIVE_TO_INTAKE_2;
+                break;
+            case DRIVE_TO_INTAKE_2:
+                currentState = AutoState.INTAKE_BALLS_2;
+                break;
+            case INTAKE_BALLS_2:
+                currentState = AutoState.DRIVE_TO_LAUNCH_2;
+                break;
+            case DRIVE_TO_LAUNCH_2:
+                currentState = AutoState.LAUNCH_ALL_2;
+                break;
+            case LAUNCH_ALL_2:
+                currentState = AutoState.MOVE_AWAY_FROM_LINE;
+                break;
+            default:
+                currentState = AutoState.DONE;
+        }
+
+        Log.i("RedNearAuto_9", "Advanced to state: " + currentState);
+    }
+
+    private double getTimeoutForState(AutoState state) {
+        switch (state) {
+            case INIT:
+                return TIMEOUT_INIT_MS;
+            case INTAKE_BALLS_1:
+            case INTAKE_BALLS_2:
+                // Add more intake states here if needed (e.g., INTAKE_BALLS_2)
+                return TIMEOUT_INTAKE_MS;
+            default:
+                return STATE_TIMEOUT_MS;
         }
     }
 }

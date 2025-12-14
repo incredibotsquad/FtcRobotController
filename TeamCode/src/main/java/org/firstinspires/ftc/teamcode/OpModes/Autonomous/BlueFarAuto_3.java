@@ -97,7 +97,7 @@ public class BlueFarAuto_3 extends BaseAuto {
             );
 
             runBlockingWithBackground(
-                    launchSystem.getBallPatternLaunchAction(pattern)
+                    launchSystem.getPerformLaunchOnAllSlots()
             );
 
             runBlockingWithBackground(

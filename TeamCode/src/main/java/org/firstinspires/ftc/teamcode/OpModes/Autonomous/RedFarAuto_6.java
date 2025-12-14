@@ -104,14 +104,14 @@ public class RedFarAuto_6 extends BaseAuto {
 
         robotHardware.startLimelight();
         mecanumDrive = new MecanumDrive(hardwareMap, INIT_POS);
-        
+
         spindex = new Spindex(robotHardware);
         spindex.initializeWithUnknowns();
 
         limelightAprilTagHelper = new LimelightAprilTagHelper(robotHardware);
         intakeSystem = new IntakeSystem(robotHardware, spindex);
         launchSystem = new LaunchSystem(robotHardware, spindex, limelightAprilTagHelper);
-        
+
         dashboard = FtcDashboard.getInstance();
 
         // Alliance selection during init
@@ -130,7 +130,7 @@ public class RedFarAuto_6 extends BaseAuto {
 
         // ========== MAIN LOOP (Non-Blocking) ==========
         while (opModeIsActive() && currentState != AutoState.DONE) {
-            
+
             // Background tasks (same as TeleOp)
             getBackgroundTasks().run();
 
@@ -198,7 +198,7 @@ public class RedFarAuto_6 extends BaseAuto {
                 Log.i("RedFarAuto_6", "Starting LAUNCH_ALL_PRELOAD");
                 // Same as TeleOp LAUNCH_ALL state
                 runningActions.add(
-                        launchSystem.getBallPatternLaunchAction(pattern)
+                        launchSystem.getPerformLaunchOnAllSlots()
                 );
                 stateTransitionInProgress = true;
                 break;
@@ -210,7 +210,8 @@ public class RedFarAuto_6 extends BaseAuto {
                                 mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
                                         .splineToLinearHeading(COLLECT_LINE_1_START, COLLECT_LINE_1_START.heading)
                                         .build(),
-                                intakeSystem.getTurnOnAction()
+                                intakeSystem.getTurnOnAction(),
+                                new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR, false)
                         )
                 );
                 stateTransitionInProgress = true;
@@ -226,9 +227,10 @@ public class RedFarAuto_6 extends BaseAuto {
                     runningActions.add(
                             new ParallelAction(
                                     mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                                                    .lineToY(COLLECT_LINE_1_END.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(-10, 10))
-                                                    .build(),
-                                    intakeSystem.checkForBallIntakeAndGetActionTeleop()
+                                            .lineToY(COLLECT_LINE_1_END.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(-10, 10))
+                                            .build(),
+                                    intakeSystem.checkForBallIntakeAndGetActionTeleop(),
+                                    new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR, false)
                             ));
                     stateTransitionInProgress = true;
                 }
@@ -243,7 +245,8 @@ public class RedFarAuto_6 extends BaseAuto {
                                         .strafeToLinearHeading(LAUNCH_POS.position, LAUNCH_POS.heading)
                                         .build(),
                                 intakeSystem.getReverseIntakeAction(false),
-                                intakeSystem.updateBallColorsAction()
+                                intakeSystem.updateBallColorsAction(),
+                                new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR, false)
                         )
                 );
                 stateTransitionInProgress = true;
@@ -252,7 +255,7 @@ public class RedFarAuto_6 extends BaseAuto {
             case LAUNCH_ALL_1:
                 Log.i("RedFarAuto_6", "Starting LAUNCH_ALL_1");
                 runningActions.add(
-                        launchSystem.getBallPatternLaunchAction(pattern)
+                        launchSystem.getPerformLaunchOnAllSlots()
                 );
                 stateTransitionInProgress = true;
                 break;
@@ -302,7 +305,7 @@ public class RedFarAuto_6 extends BaseAuto {
             case LAUNCH_ALL_2:
                 Log.i("RedFarAuto_6", "Starting LAUNCH_ALL_2");
                 runningActions.add(
-                        launchSystem.getBallPatternLaunchAction(pattern)
+                        launchSystem.getPerformLaunchOnAllSlots()
                 );
                 stateTransitionInProgress = true;
                 break;
@@ -353,7 +356,7 @@ public class RedFarAuto_6 extends BaseAuto {
      */
     private void advanceToNextState() {
         stateTimer.reset();
-        
+
         switch (currentState) {
             case INIT:
                 currentState = AutoState.DRIVE_TO_LAUNCH_PRELOAD;

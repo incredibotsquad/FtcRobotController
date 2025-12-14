@@ -14,6 +14,7 @@ import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.SleepAction;
 import com.acmerobotics.roadrunner.TranslationalVelConstraint;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction;
@@ -30,6 +31,8 @@ import org.firstinspires.ftc.teamcode.subsystems.IntakeSystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSystem;
 import org.firstinspires.ftc.teamcode.subsystems.Spindex;
 
+
+@Disabled
 @Autonomous(name = "Blue_Near_Auto", group = "Autonomous")
 public class BlueNearAuto extends BaseAuto {
 
@@ -168,7 +171,6 @@ public class BlueNearAuto extends BaseAuto {
                             )
                     )
             );
-
 
             pattern = launchSystem.readGamePattern();
             Log.i("READING OBELISK", "PATTERN ID: " + pattern.tagId);

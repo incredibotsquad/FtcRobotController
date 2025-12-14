@@ -1,7 +1,7 @@
 package org.firstinspires.ftc.teamcode.OpModes.Autonomous;
 
 import static org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC;
-import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.FLYWHEEL_POWER_COEFFICIENT_FAR;
+import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.FLYWHEEL_POWER_COEFFICIENT_MID;
 import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.TURRET_SERVO_CENTERED;
 
 import android.util.Log;
@@ -10,9 +10,11 @@ import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
+import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.ProfileAccelConstraint;
+import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.TranslationalVelConstraint;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -32,38 +34,46 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Config
-@Autonomous(name = "Blue_Far_Auto_6", group = "Autonomous")
-public class BlueFarAuto_6 extends BaseAuto {
+@Autonomous(name = "Blue_Near_Auto_6", group = "Autonomous")
+public class BlueNearAuto_6 extends BaseAuto {
 
     private static final int multiplier = -1;    //used to flip coordinates between red (1), Blue (-1)
 
-    public double robotHeading = Math.toRadians(180 * multiplier);
+    public double robotHeading = Math.toRadians(135 * multiplier);
+    public double goalHeading = Math.toRadians(125 * multiplier);
+
     public double artifactHeading = Math.toRadians(90 * multiplier);
+    public double reverseArtifactHeading = Math.toRadians(270 * multiplier);
 
-    public double obeliskHeading = Math.toRadians(180); //this is same for both sides - do NOT need a multiplier
-    public double oppositeToObeliskHeading = Math.toRadians(0);
+    public double obeliskHeading = Math.toRadians(200); //this is same for both sides - do NOT need a multiplier
+    public double splineHeading = Math.toRadians(0);
 
-    public int LINE_DEPTH = 31;
+    public int LINE_DEPTH_SHALLOW = 25;
 
-    public Pose2d INIT_POS = new Pose2d(55, 16 * multiplier, robotHeading);
-    public Pose2d LAUNCH_POS = new Pose2d(45, 16 * multiplier, robotHeading);
+    public int LINE_DEPTH = 33;
 
-    public Pose2d COLLECT_LINE_1_START = new Pose2d(36, 38 * multiplier, artifactHeading);
-    public Pose2d COLLECT_LINE_1_END = new Pose2d(36,  COLLECT_LINE_1_START.position.y + (LINE_DEPTH * multiplier), artifactHeading);
+    public Pose2d INIT_POS = new Pose2d(-54, 54 * multiplier, robotHeading);
+    public Pose2d TAG_READ_POS = new Pose2d(-36, 15 * multiplier, obeliskHeading);
 
-    public Pose2d COLLECT_LINE_2_START = new Pose2d(48, 60 * multiplier, oppositeToObeliskHeading);
-    public Pose2d COLLECT_LINE_2_END = new Pose2d(COLLECT_LINE_2_START.position.x + LINE_DEPTH,  COLLECT_LINE_2_START.position.y, oppositeToObeliskHeading);
+    public Pose2d LAUNCH_POS = new Pose2d(-20, 30 * multiplier, goalHeading);
 
-    public Pose2d MOVE_OFF_LINE = new Pose2d(53, 36  * multiplier, obeliskHeading);
+    public Pose2d COLLECT_LINE_1_START = new Pose2d(-12, 38 * multiplier, artifactHeading);
+    public Pose2d COLLECT_LINE_1_END = new Pose2d(COLLECT_LINE_1_START.position.x,  COLLECT_LINE_1_START.position.y + (LINE_DEPTH_SHALLOW * multiplier), artifactHeading);
+    public Pose2d COLLECT_LINE_2_START = new Pose2d(16, 38 * multiplier, artifactHeading);
+    public Pose2d COLLECT_LINE_2_END = new Pose2d(COLLECT_LINE_2_START.position.x,  COLLECT_LINE_2_START.position.y + (LINE_DEPTH * multiplier), artifactHeading);
+
+    public Pose2d MOVE_OFF_LINE = new Pose2d(-48, 24  * multiplier, artifactHeading);
+
 
     // ========== TIMEOUTS (tunable via FTC Dashboard) ==========
     public static double TIMEOUT_INIT_MS = 0;      // INIT state timeout
-    public static double TIMEOUT_INTAKE_MS = 10000;   // Intake states timeout (longer to collect balls)
+    public static double TIMEOUT_INTAKE_MS = 6000;   // Intake states timeout (longer to collect balls)
     public static double STATE_TIMEOUT_MS = 6000;     // All other states timeout
 
     // ========== STATE MACHINE ==========
     private enum AutoState {
         INIT,
+        DRIVE_TO_READ_SEQUENCE,
         DRIVE_TO_LAUNCH_PRELOAD,
         LAUNCH_ALL_PRELOAD,
         DRIVE_TO_INTAKE_1,
@@ -104,14 +114,14 @@ public class BlueFarAuto_6 extends BaseAuto {
 
         robotHardware.startLimelight();
         mecanumDrive = new MecanumDrive(hardwareMap, INIT_POS);
-        
+
         spindex = new Spindex(robotHardware);
         spindex.initializeWithUnknowns();
 
         limelightAprilTagHelper = new LimelightAprilTagHelper(robotHardware);
         intakeSystem = new IntakeSystem(robotHardware, spindex);
         launchSystem = new LaunchSystem(robotHardware, spindex, limelightAprilTagHelper);
-        
+
         dashboard = FtcDashboard.getInstance();
 
         // Alliance selection during init
@@ -119,25 +129,23 @@ public class BlueFarAuto_6 extends BaseAuto {
 
         waitForStart();
 
-        robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
-
         stateTimer.reset();
         currentState = AutoState.INIT;
 
-        pattern = launchSystem.readGamePattern();
+        robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
 
         totalTime = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
         // ========== MAIN LOOP (Non-Blocking) ==========
         while (opModeIsActive() && currentState != AutoState.DONE) {
-            
+
             // Background tasks (same as TeleOp)
             getBackgroundTasks().run();
 
             // Process current state
             processState();
 
-            //add auxillary actions
+            //add auxiliary actions
             CheckForBallsToIntake();
 
             // Run actions (non-blocking)
@@ -150,7 +158,7 @@ public class BlueFarAuto_6 extends BaseAuto {
             telemetry.update();
         }
 
-        Log.w("BlueFarAuto_6", "total time: " + totalTime.milliseconds());
+        Log.w("BlueNearAuto_6", "total time: " + totalTime.milliseconds());
         // Cleanup
         robotHardware.stopRobotAndMechanisms();
 //        robotHardware.stopLimelight();
@@ -171,7 +179,7 @@ public class BlueFarAuto_6 extends BaseAuto {
 
         // Timeout protection - uses per-state timeout values
         if (stateTimer.milliseconds() > getTimeoutForState(currentState)) {
-            Log.w("BlueFarAuto_6", "State timeout! Advancing from: " + currentState);
+            Log.w("BlueNearAuto_6", "State timeout! Advancing from: " + currentState);
             runningActions.clear();
             stateTransitionInProgress = false;
             advanceToNextState();
@@ -179,23 +187,41 @@ public class BlueFarAuto_6 extends BaseAuto {
         }
 
         switch (currentState) {
-
-            case DRIVE_TO_LAUNCH_PRELOAD:
-                Log.i("BlueFarAuto_6", "Starting DRIVE_TO_LAUNCH_PRELOAD");
+            case DRIVE_TO_READ_SEQUENCE:
+                Log.i("BlueNearAuto_6", "Starting DRIVE_TO_READ_SEQUENCE");
                 runningActions.add(
-                        new ParallelAction(
+                        new SequentialAction(
+                                new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_MID, false),
                                 mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                                        .lineToX(LAUNCH_POS.position.x)
-                                        .build(),
-                                intakeSystem.updateBallColorsAction(),
-                                new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR, false)
+                                    .strafeToLinearHeading(LAUNCH_POS.position, obeliskHeading)
+                                    .build(),
+                                new InstantAction(() -> {
+                                    ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+                                    while (pattern == null && timer.milliseconds() < 20) {
+                                        pattern = launchSystem.readGamePattern();   //read for 200 ms
+                                        Log.i("BlueNearAuto_6", "Trying to read pattern " + pattern != null? "found it" : "null");
+                                    }
+                                })
                         )
                 );
                 stateTransitionInProgress = true;
                 break;
+                
+            case DRIVE_TO_LAUNCH_PRELOAD:
+                Log.i("BlueNearAuto_6", "Starting DRIVE_TO_LAUNCH_PRELOAD");
+                runningActions.add(
+                        new SequentialAction(
+                                new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_MID, false),
+                                mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+//                                        .turnTo(LAUNCH_POS.heading)
+                                        .splineToLinearHeading(LAUNCH_POS, LAUNCH_POS.heading)
+                                        .build()
+                        ));
+                stateTransitionInProgress = true;
+                break;
 
             case LAUNCH_ALL_PRELOAD:
-                Log.i("BlueFarAuto_6", "Starting LAUNCH_ALL_PRELOAD");
+                Log.i("BlueNearAuto_6", "Starting LAUNCH_ALL_PRELOAD");
                 // Same as TeleOp LAUNCH_ALL state
                 runningActions.add(
                         launchSystem.getPerformLaunchOnAllSlots()
@@ -204,21 +230,20 @@ public class BlueFarAuto_6 extends BaseAuto {
                 break;
 
             case DRIVE_TO_INTAKE_1:
-                Log.i("BlueFarAuto_6", "Starting DRIVE_TO_INTAKE_1");
+                Log.i("BlueNearAuto_6", "Starting DRIVE_TO_INTAKE_1");
                 runningActions.add(
                         new ParallelAction(
                                 mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
                                         .splineToLinearHeading(COLLECT_LINE_1_START, COLLECT_LINE_1_START.heading)
                                         .build(),
-                                intakeSystem.getTurnOnAction(),
-                                new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR, false)
+                                intakeSystem.getTurnOnAction()
                         )
                 );
                 stateTransitionInProgress = true;
                 break;
 
             case INTAKE_BALLS_1:
-                Log.i("BlueFarAuto_6", "Starting INTAKE_BALLS_1");
+                Log.i("BlueNearAuto_6", "Starting INTAKE_BALLS_1");
                 // Just wait and check for balls - intake already on from previous state
                 if (spindex.isFull()) {
                     advanceToNextState();
@@ -227,17 +252,16 @@ public class BlueFarAuto_6 extends BaseAuto {
                     runningActions.add(
                             new ParallelAction(
                                     mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                                                    .lineToY(COLLECT_LINE_1_END.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(-10, 10))
-                                                    .build(),
-                                    intakeSystem.checkForBallIntakeAndGetActionTeleop(),
-                                    new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR, false)
+                                            .lineToY(COLLECT_LINE_1_END.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(-10, 10))
+                                            .build(),
+                                    intakeSystem.checkForBallIntakeAndGetActionTeleop()
                             ));
                     stateTransitionInProgress = true;
                 }
                 break;
 
             case DRIVE_TO_LAUNCH_1:
-                Log.i("BlueFarAuto_6", "Starting DRIVE_TO_LAUNCH_1");
+                Log.i("BlueNearAuto_6", "Starting DRIVE_TO_LAUNCH_1");
                 runningActions.add(
                         new ParallelAction(
                                 spindex.moveToNextFullSlotAction(), //move to full slot so we don't end up spitting out a ball that we took in
@@ -246,14 +270,14 @@ public class BlueFarAuto_6 extends BaseAuto {
                                         .build(),
                                 intakeSystem.getReverseIntakeAction(false),
                                 intakeSystem.updateBallColorsAction(),
-                                new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR, false)
+                                new InstantAction(() -> robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED))
                         )
                 );
                 stateTransitionInProgress = true;
                 break;
 
             case LAUNCH_ALL_1:
-                Log.i("BlueFarAuto_6", "Starting LAUNCH_ALL_1");
+                Log.i("BlueNearAuto_6", "Starting LAUNCH_ALL_1");
                 runningActions.add(
                         launchSystem.getPerformLaunchOnAllSlots()
                 );
@@ -261,17 +285,20 @@ public class BlueFarAuto_6 extends BaseAuto {
                 break;
 
             case DRIVE_TO_INTAKE_2:
-                Log.i("BlueFarAuto_6", "Starting DRIVE_TO_INTAKE_2");
+                Log.i("BlueNearAuto_6", "Starting DRIVE_TO_INTAKE_2");
                 runningActions.add(
-                        mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                                .setTangent(obeliskHeading)
-                                .splineToLinearHeading(COLLECT_LINE_2_START, COLLECT_LINE_2_START.heading)
-                                .build());
+                        new ParallelAction(
+                                intakeSystem.getTurnOnAction(),
+                                mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                                        .setTangent(splineHeading)
+                                        .splineToLinearHeading(COLLECT_LINE_2_START, COLLECT_LINE_2_START.heading)
+                                        .build()
+                        ));
 
                 stateTransitionInProgress = true;
                 break;
             case INTAKE_BALLS_2:
-                Log.i("BlueFarAuto_6", "Starting INTAKE_BALLS_2");
+                Log.i("BlueNearAuto_6", "Starting INTAKE_BALLS_2");
                 if (spindex.isFull()) {
                     advanceToNextState();
                 } else {
@@ -279,7 +306,7 @@ public class BlueFarAuto_6 extends BaseAuto {
                     runningActions.add(
                             new ParallelAction(
                                     mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                                            .lineToX(COLLECT_LINE_2_END.position.x, new TranslationalVelConstraint(20), new ProfileAccelConstraint(-10, 10))
+                                            .lineToY(COLLECT_LINE_2_END.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(-10, 10))
                                             .build(),
                                     intakeSystem.checkForBallIntakeAndGetActionTeleop()
                             ));
@@ -287,23 +314,24 @@ public class BlueFarAuto_6 extends BaseAuto {
                 }
                 break;
             case DRIVE_TO_LAUNCH_2:
-                Log.i("BlueFarAuto_6", "Starting DRIVE_TO_LAUNCH_2");
+                Log.i("BlueNearAuto_6", "Starting DRIVE_TO_LAUNCH_2");
                 runningActions.add(
                         new ParallelAction(
                                 spindex.moveToNextFullSlotAction(), //move to full slot so we don't end up spitting out a ball that we took in
                                 mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                                        .setTangent(obeliskHeading)
-                                        .strafeToLinearHeading(LAUNCH_POS.position, LAUNCH_POS.heading)
+                                        .setTangent(reverseArtifactHeading)
+                                        .splineToLinearHeading(LAUNCH_POS, LAUNCH_POS.heading)
                                         .build(),
                                 intakeSystem.getReverseIntakeAction(false),
-                                intakeSystem.updateBallColorsAction()
+                                intakeSystem.updateBallColorsAction(),
+                                new InstantAction(() -> robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED))
                         )
                 );
                 stateTransitionInProgress = true;
                 break;
 
             case LAUNCH_ALL_2:
-                Log.i("BlueFarAuto_6", "Starting LAUNCH_ALL_2");
+                Log.i("BlueNearAuto_6", "Starting LAUNCH_ALL_2");
                 runningActions.add(
                         launchSystem.getPerformLaunchOnAllSlots()
                 );
@@ -311,7 +339,7 @@ public class BlueFarAuto_6 extends BaseAuto {
                 break;
 
             case MOVE_AWAY_FROM_LINE:
-                Log.i("BlueFarAuto_6", "Starting MOVE_AWAY_FROM_LINE");
+                Log.i("BlueNearAuto_6", "Starting MOVE_AWAY_FROM_LINE");
                 runningActions.add(
                         mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
                                 .splineToConstantHeading(MOVE_OFF_LINE.position, MOVE_OFF_LINE.heading)
@@ -320,7 +348,7 @@ public class BlueFarAuto_6 extends BaseAuto {
                 break;
 
             case DONE:
-                Log.i("BlueFarAuto_6", "Auto complete!");
+                Log.i("BlueNearAuto_6", "Auto complete!");
                 break;
         }
     }
@@ -356,9 +384,12 @@ public class BlueFarAuto_6 extends BaseAuto {
      */
     private void advanceToNextState() {
         stateTimer.reset();
-        
+
         switch (currentState) {
             case INIT:
+                currentState = AutoState.DRIVE_TO_LAUNCH_PRELOAD;
+                break;
+            case DRIVE_TO_READ_SEQUENCE:
                 currentState = AutoState.DRIVE_TO_LAUNCH_PRELOAD;
                 break;
             case DRIVE_TO_LAUNCH_PRELOAD:
@@ -395,7 +426,7 @@ public class BlueFarAuto_6 extends BaseAuto {
                 currentState = AutoState.DONE;
         }
 
-        Log.i("BlueFarAuto_6", "Advanced to state: " + currentState);
+        Log.i("BlueNearAuto_6", "Advanced to state: " + currentState);
     }
 
     private double getTimeoutForState(AutoState state) {
@@ -403,6 +434,7 @@ public class BlueFarAuto_6 extends BaseAuto {
             case INIT:
                 return TIMEOUT_INIT_MS;
             case INTAKE_BALLS_1:
+            case INTAKE_BALLS_2:
                 // Add more intake states here if needed (e.g., INTAKE_BALLS_2)
                 return TIMEOUT_INTAKE_MS;
             default:

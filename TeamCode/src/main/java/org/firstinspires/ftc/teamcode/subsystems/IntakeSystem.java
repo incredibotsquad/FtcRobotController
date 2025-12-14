@@ -188,7 +188,10 @@ public class IntakeSystem {
     }
 
     public Action getResetAction() {
-        return new ResetSpindexerAction(robotHardware);
+        return new SequentialAction(
+                new ResetSpindexerAction(robotHardware),
+                ReIndexBalls()
+        );
     }
 
     public void updateStatusLight() {
@@ -212,10 +215,12 @@ public class IntakeSystem {
 
         robotHardware.setspindexStatusLightColor(color);
     }
-    public Action ReIndexBalls() {
+    private Action ReIndexBalls() {
         Log.i("INTAKE SYSTEM", "RE INDEXING");
 
+        //spindex will be in a position where 0 is left, 1 is center, and 2 is right.
 
+        //move to 1 and see if there is a ball there.
         Action ball1Action = new SequentialAction(
                 new SpindexAction(robotHardware, spindex.storedColors.get(0).intakePosition),
                 new SleepAction(0.25),
@@ -230,6 +235,7 @@ public class IntakeSystem {
                 })
         );
 
+        //move to 2 and see if there is a ball there.
         Action ball2Action = new SequentialAction(
                 new SpindexAction(robotHardware, spindex.storedColors.get(1).intakePosition),
                 new SleepAction(0.25),
@@ -241,16 +247,10 @@ public class IntakeSystem {
                         spindex.storedColors.get(1).ballColor = GameColors.NONE;
                         Log.i("INTAKE SYSTEM", "RE INDEXED INDEX 1 AS NONE");
                     }
-                }),
-                new InstantAction(() -> {
-                    if (spindex.storedColors.get(0).ballColor == GameColors.UNKNOWN) {
-                        GameColors color = robotHardware.getDetectedBallColorFromLeftSensor();
-                        spindex.storedColors.get(0).ballColor = color;
-                        Log.i("INTAKE SYSTEM", "RE INDEXED INDEX 0 COLOR AS: " + color);
-                    }
                 })
         );
 
+        //move to 3 and see if there is a ball there.
         Action ball3Action = new SequentialAction(
                 new SpindexAction(robotHardware, spindex.storedColors.get(2).intakePosition),
                 new SleepAction(0.25),
@@ -262,33 +262,20 @@ public class IntakeSystem {
                         Log.i("INTAKE SYSTEM", "RE INDEXED INDEX 2 AS NONE");
                         spindex.storedColors.get(2).ballColor = GameColors.NONE;
                     }
-                }),
-                new InstantAction(() -> {
-                    if (spindex.storedColors.get(1).ballColor == GameColors.UNKNOWN) {
-                        GameColors color = robotHardware.getDetectedBallColorFromLeftSensor();
-                        spindex.storedColors.get(1).ballColor = color;
-                        Log.i("INTAKE SYSTEM", "RE INDEXED INDEX 1 COLOR AS: " + color);
-                    }
                 })
         );
 
-        Action colorForBall3Action = new SequentialAction(
-                new SpindexAction(robotHardware, spindex.storedColors.get(0).intakePosition),
-                new SleepAction(0.25),
-                new InstantAction(() -> {
-                    if (spindex.storedColors.get(2).ballColor == GameColors.UNKNOWN) {
-                        GameColors color = robotHardware.getDetectedBallColorFromLeftSensor();
-                        spindex.storedColors.get(2).ballColor = color;
-                        Log.i("INTAKE SYSTEM", "RE INDEXED INDEX 2 COLOR AS: " + color);
-                    }
-                })
+        Action colorForAllBallsAction = new SequentialAction(
+            new SpindexAction(robotHardware, spindex.storedColors.get(1).launchPosition),
+            new SleepAction(0.25),
+            updateBallColorsAction()
         );
 
         return new SequentialAction(
                 ball1Action,
                 ball2Action,
                 ball3Action,
-                colorForBall3Action);
+                colorForAllBallsAction);
     }
 
 }

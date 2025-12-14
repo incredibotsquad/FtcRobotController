@@ -329,6 +329,39 @@ public class LaunchSystem {
 
     }
 
+    public Action getPerformLaunchOnAllSlots() {
+        Log.i("== LAUNCH SYSTEM ==", "getPerformLaunchOnAllSlots Action");
+        BallLaunchParameters ballLaunchParameters = getRobotLaunchParametersBasedOnDistance();
+
+        List<Action> actionsToRun = new ArrayList<>();
+
+        //flywheel and spindex for first one can happen in parallel
+        actionsToRun.add(
+                new ParallelAction(
+                        new LaunchFlywheelAction(robotHardware, ballLaunchParameters.flywheelVelocity),
+                        new SpindexAction(robotHardware, spindex.storedColors.get(0).launchPosition)
+                )
+        );
+
+        for (int index = 0; index < spindex.storedColors.size(); index++) {
+            BallEntry entry = spindex.storedColors.get(index);
+
+            actionsToRun.add(new SequentialAction(
+                    new ParallelAction(
+                            new LaunchVisorAction(robotHardware, ballLaunchParameters.visorPositions.get(index)),
+                            new SpindexAction(robotHardware, entry.launchPosition)),
+//                        new InstantAction(() -> Log.i("== LAUNCH SYSTEM ==", "RPM Before kick:" + robotHardware.getFlywheelVelocityInTPS())),
+                    new LaunchKickAction(robotHardware),
+                    new InstantAction(() -> spindex.clearBallAtIndex(entry.index))
+            ));
+        }
+
+        //bring the visor back
+        actionsToRun.add(new LaunchVisorAction(robotHardware, VISOR_POSITION_CLOSE_1, false));
+
+        return new SequentialAction(actionsToRun);
+    }
+
     private BallLaunchParameters getRobotLaunchParametersBasedOnDistance() {
         LimelightLaunchParameters ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
 
