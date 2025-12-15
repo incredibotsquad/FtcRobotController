@@ -77,9 +77,9 @@ public class LaunchSystem {
     public static double VISOR_POSITION_MID_2 = 0.24;
     public static double VISOR_POSITION_MID_3 = 0.24;
 
-    public static double VISOR_POSITION_FAR_1 = 0.63;
-    public static double VISOR_POSITION_FAR_2 = 0.59;
-    public static double VISOR_POSITION_FAR_3 = 0.55;
+    public static double VISOR_POSITION_FAR_1 = 0.69;
+    public static double VISOR_POSITION_FAR_2 = 0.65;
+    public static double VISOR_POSITION_FAR_3 = 0.61;
     public static double DEFAULT_VISOR_POSITION = VISOR_POSITION_MID_1;
 
     BallLaunchParameters oldLaunchParameters;

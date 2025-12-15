@@ -2,6 +2,7 @@
 
 package org.firstinspires.ftc.teamcode.OpModes.TeleOp;
 
+import static org.firstinspires.ftc.teamcode.Actions.LaunchKickAction.LAUNCH_KICK_RESTING;
 import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.TURRET_SERVO_CENTERED;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -57,6 +58,8 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
 
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
+
+        robotHardware.setLaunchKickPosition(LAUNCH_KICK_RESTING);
 
         robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
 

@@ -248,7 +248,7 @@ public class MechanismControl {
                     runningActions.add(
                             new ParallelAction(
                                     intakeSystem.getTurnOffAction(),
-                                    launchSystem.getLaunchAllBallsAction()
+                                    launchSystem.getPerformLaunchOnAllSlots()
                             ));
                     break;
 
