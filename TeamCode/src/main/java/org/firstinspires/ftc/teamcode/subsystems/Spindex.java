@@ -17,26 +17,15 @@ import java.util.stream.Collectors;
 @Config
 public class Spindex {
 
-    public static int DELTA_BETWEEN_POSITIONS = 465;
-    public static int SPINDEX_VELOCITY = 1350;
+    public static double SPINDEXER_INCREMENT = 0.1;
+    public static double DELTA_BETWEEN_POSITIONS = 0.375;
+    public static double INTAKE_POS_1 = 0.2275;
+    public static double INTAKE_POS_2 = INTAKE_POS_1 + DELTA_BETWEEN_POSITIONS; //0.6025;
+    public static double INTAKE_POS_3 = INTAKE_POS_2 + DELTA_BETWEEN_POSITIONS; //0.9775;
 
-    public static int INTAKE_POS_1 = DELTA_BETWEEN_POSITIONS / 2;
-    public static int INTAKE_POS_2 = INTAKE_POS_1 + DELTA_BETWEEN_POSITIONS;
-    public static int INTAKE_POS_3 = INTAKE_POS_2 + DELTA_BETWEEN_POSITIONS;
-
-    public static int LAUNCH_POS_1 = INTAKE_POS_3 - (DELTA_BETWEEN_POSITIONS / 2);
-    public static int LAUNCH_POS_3 = LAUNCH_POS_1 - DELTA_BETWEEN_POSITIONS;
-    public static int LAUNCH_POS_2 = LAUNCH_POS_3 - DELTA_BETWEEN_POSITIONS;
-
-//    public static int INTAKE_POS_1 = 698;
-//    public static int INTAKE_POS_3 = INTAKE_POS_1 - DELTA_BETWEEN_POSITIONS;
-//    public static int INTAKE_POS_2 = INTAKE_POS_3 - DELTA_BETWEEN_POSITIONS;
-//
-//    public static int LAUNCH_POS_1 = 0;
-//    public static int LAUNCH_POS_2 = LAUNCH_POS_1 + DELTA_BETWEEN_POSITIONS;
-//    public static int LAUNCH_POS_3 = LAUNCH_POS_2 + DELTA_BETWEEN_POSITIONS;
-
-    public static int COLOR_DETECTION_POS = LAUNCH_POS_1;
+    public static double LAUNCH_POS_1 =  INTAKE_POS_1 + (DELTA_BETWEEN_POSITIONS * 1.5); //0.79;
+    public static double LAUNCH_POS_3 = LAUNCH_POS_1 - DELTA_BETWEEN_POSITIONS; // 0.415;
+    public static double LAUNCH_POS_2 = LAUNCH_POS_3 - DELTA_BETWEEN_POSITIONS; //0.04;
 
     public List<BallEntry> storedColors = List.of(
             new BallEntry(0, INTAKE_POS_1, LAUNCH_POS_1, GameColors.NONE),
@@ -74,8 +63,19 @@ public class Spindex {
 
         int nextEmptySlotIndex = -1;
 
-        if (!list.isEmpty())
-            nextEmptySlotIndex = list.get(0).index;
+        if (!list.isEmpty()) {
+            double distance = 5000;
+            double currPos = robotHardware.getSpindexPosition();
+
+            //this gets the closest empty slot to current position
+            for (BallEntry entry: list) {
+                if (Math.abs(entry.intakePosition - currPos) < distance) {
+                    distance = Math.abs(entry.intakePosition - currPos);
+                    nextEmptySlotIndex = entry.index;
+                }
+            }
+//            nextEmptySlotIndex = list.get(0).index;
+        }
 
 //        Log.i("SPINDEXER", "NEXT EMPTY SLOT INDEX: " + nextEmptySlotIndex);
         return nextEmptySlotIndex;
@@ -113,8 +113,19 @@ public class Spindex {
 
         int nextGreenSlotIndex = -1;
 
-        if (!list.isEmpty())
-            nextGreenSlotIndex = list.get(0).index;
+        if (!list.isEmpty()) {
+            double distance = 5000;
+            double currPos = robotHardware.getSpindexPosition();
+
+            //this gets the closest full slot to current position
+            for (BallEntry entry: list) {
+                if (Math.abs(entry.launchPosition - currPos) < distance) {
+                    distance = Math.abs(entry.launchPosition - currPos);
+                    nextGreenSlotIndex = entry.index;
+                }
+            }
+//            nextGreenSlotIndex = list.get(0).index;
+        }
 
 //        Log.i("SPINDEXER", "NEXT GREEN SLOT INDEX: " + nextGreenSlotIndex);
         return nextGreenSlotIndex;
@@ -127,8 +138,20 @@ public class Spindex {
 
         int nextPurpleSlotIndex = -1;
 
-        if (!list.isEmpty())
-            nextPurpleSlotIndex = list.get(0).index;
+        if (!list.isEmpty()) {
+            double distance = 5000;
+            double currPos = robotHardware.getSpindexPosition();
+
+            //this gets the closest full slot to current position
+            for (BallEntry entry: list) {
+                if (Math.abs(entry.launchPosition - currPos) < distance) {
+                    distance = Math.abs(entry.launchPosition - currPos);
+                    nextPurpleSlotIndex = entry.index;
+                }
+            }
+
+//            nextPurpleSlotIndex = list.get(0).index;
+        }
 
 //        Log.i("SPINDEXER", "NEXT GREEN SLOT INDEX: " + nextPurpleSlotIndex);
         return nextPurpleSlotIndex;
@@ -143,7 +166,6 @@ public class Spindex {
         currentIndex = nextIndex;
 
         Log.i("SPINDEXER", "moveToNextEmptySlotAction: current index: " + currentIndex);
-
 
         return new SpindexAction(robotHardware, storedColors.get(currentIndex).intakePosition);
     }
@@ -187,7 +209,7 @@ public class Spindex {
     public boolean isReadyForIntake() {
         boolean retVal = false;
 
-        int currentPos = robotHardware.getSpindexPosition();
+        double currentPos = robotHardware.getSpindexPosition();
 //        Log.i("SPINDEXER", "isReadyForIntake: currentPos: " + currentPos);
 
         for (BallEntry entry: storedColors) {

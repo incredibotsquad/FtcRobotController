@@ -7,14 +7,12 @@ import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.TURRET_SERV
 import android.util.Log;
 
 import com.acmerobotics.roadrunner.Action;
-import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction;
-import org.firstinspires.ftc.teamcode.Actions.ResetSpindexerAction;
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.common.GamePattern;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
@@ -101,10 +99,7 @@ public class BlueFarAuto_3 extends BaseAuto {
             );
 
             runBlockingWithBackground(
-                    new ParallelAction(
-                            moveAwayFromLine,
-                            new ResetSpindexerAction(robotHardware)
-                    )
+                    moveAwayFromLine
             );
 
             Log.i("RED FAR AUTO", "Elapsed time: " + timer.seconds());

@@ -43,8 +43,10 @@ public class LaunchSystem {
     private ElapsedTime turretTagNotFoundTimer;
     private ElapsedTime flywheelWarmerThrottleTimer;
 
+    public static int TURRET_VELOCITY = 1350;
+
     public static double TURRET_SERVO_MIN_POS = 0.2;
-    public static double TURRET_SERVO_CENTERED = 0.5;
+    public static int TURRET_SERVO_CENTERED = 0;
     public static double TURRET_SERVO_MAX_POS = 0.8;
     public static double TURRET_SERVO_ADJUSTMENT_DELTA_NEAR = 0.002;
     public static double TURRET_SERVO_ADJUSTMENT_DELTA_FAR = 0.001;
@@ -125,10 +127,7 @@ public class LaunchSystem {
 
     public Action getTurnOffAction() {
         Log.i("== LAUNCH SYSTEM ==", "Turned Off");
-        return new ParallelAction(
-                new LaunchFlywheelAction(robotHardware, 0),
-                new InstantAction(() -> robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED))
-        ) ;
+        return new LaunchFlywheelAction(robotHardware, 0, false);
     }
 
     private Action getLaunchBallAction(BallLaunchParameters ballLaunchParameters) {
@@ -421,108 +420,172 @@ public class LaunchSystem {
         }
     }
 
-public void AlignTurretToGoal() {
+    public void AlignTurretToGoalNew() {
+        /*
+         * Turret pulley is 123 teeth. The Servo pulley is 24 tooth.
+         * it takes 123/24 = 5.125 turns of the driver unit for a full 360 of the turret
+         * So in 1 turn of the driving pulley, the turret would turn 360 / 5.125 = 70.24390244 degrees
+         * An 435 motor has 384.5 Ticks Per Rev
+         * so in 384.5 ticks, the turret would turn 70.24390244 degrees.
+         * so in 1 tick, the turret turns 70.24390244 / 384.5 = 0.18268895 degrees
+         * We would cover 350 degrees (wire management) in 350 / 0.18268895 = 1916 ticks
+         * half a rotation would be 1916 / 2 = 958 ticks positive or negative to constrain to a 180 degree plane
+         * */
 
-    /*
-     * Turret pulley is 123 teeth. The Servo pulley is 24 tooth. it takes 123/24 = 5.125 turns of the servo for a full 360 of the turret
-     * The servo is 5 turns so in 5 turns, it will turn the turret 351 degrees.
-     * if we divide the servo movement into 1000 steps, each .001 increment of the position will turn the turret .351 degrees
-     * We scale the servo adjustment with the yaw difference in order to keep up with the change
-     * */
+        double degreesPerTick = 0.18268895;
+        int maxTicksBeforeStop = 958;
 
-    if (turretAlignmentThrottleTimer.milliseconds() < TURRET_ALIGNMENT_THROTTLE_MILLIS)
-        return;
+        LimelightLaunchParameters ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
+        if (ydt != null) {
 
-    turretAlignmentThrottleTimer.reset();
+            double turretTolerance = TURRET_ALIGNMENT_TOLERANCE_DEGREES_NEAR;
 
-//        Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: PASSED TIME THRESHOLD");
+            if (ydt.distance > FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR) {
+                turretTolerance = TURRET_ALIGNMENT_TOLERANCE_DEGREES_FAR;
+            }
 
-    //get the yaw from the april tag helper
-    LimelightLaunchParameters ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
+            int isRobotToLeftOfCenterLine = isRobotToLeftOfCenterLine();
 
-    if (ydt != null) {
-//            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: YDT FOUND");
-//        Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: YAW: " + ydt.yaw);
+            //robot is to left of line - extra bias to stay to the left
+            if (isRobotToLeftOfCenterLine == 1) {
+                //            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: POINT TO LEFT OF LINE: ");
+                ydt.yaw = ydt.yaw - turretTolerance;
+            }
 
-        turretTagNotFoundTimer.reset();
-        double turretTolerance = TURRET_ALIGNMENT_TOLERANCE_DEGREES_NEAR;
-        double turretDelta = TURRET_SERVO_ADJUSTMENT_DELTA_NEAR;
+            //robot is to the right of the line - extra bias to the right
+            if (isRobotToLeftOfCenterLine == -1) {
+                //            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: POINT TO RIGHT OF LINE: ");
+                ydt.yaw = ydt.yaw + turretTolerance;
+            }
 
-        if (ydt.distance > FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR) {
-            turretTolerance = TURRET_ALIGNMENT_TOLERANCE_DEGREES_FAR;
-            turretDelta = TURRET_SERVO_ADJUSTMENT_DELTA_FAR;
+            double difference = Math.abs(ydt.yaw) - turretTolerance;
+
+            if (difference > 0) {
+                robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
+
+                int differenceToCoverInTicks = (int)((difference / 2) / degreesPerTick);
+
+                if (ydt.yaw < 0)
+                    differenceToCoverInTicks = -1 * differenceToCoverInTicks;
+
+                int newMotorPosition = robotHardware.getLaunchTurretPosition() + differenceToCoverInTicks;
+
+                if (newMotorPosition < 0)
+                    newMotorPosition = Math.max( -1* maxTicksBeforeStop, newMotorPosition);
+                else
+                    newMotorPosition = Math.min(maxTicksBeforeStop, newMotorPosition);
+
+                robotHardware.setLaunchTurretPosition(newMotorPosition);
+
+            }
+            else {
+                robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
+            }
         }
+    }
 
-        int isRobotToLeftOfCenterLine = isRobotToLeftOfCenterLine();
+    public void AlignTurretToGoal() {
 
-        //robot is to left of line - extra bias to stay to the left
-        if (isRobotToLeftOfCenterLine == 1) {
-//            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: POINT TO LEFT OF LINE: ");
+        /*
+         * Turret pulley is 123 teeth. The Servo pulley is 24 tooth. it takes 123/24 = 5.125 turns of the servo for a full 360 of the turret
+         * The servo is 5 turns so in 5 turns, it will turn the turret 351 degrees.
+         * if we divide the servo movement into 1000 steps, each .001 increment of the position will turn the turret .351 degrees
+         * We scale the servo adjustment with the yaw difference in order to keep up with the change
+         * */
 
-            ydt.yaw = ydt.yaw - turretTolerance;
-        }
+        if (turretAlignmentThrottleTimer.milliseconds() < TURRET_ALIGNMENT_THROTTLE_MILLIS)
+            return;
 
-        //robot is to the right of the line - extra bias to the right
-        if (isRobotToLeftOfCenterLine == -1) {
-//            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: POINT TO RIGHT OF LINE: ");
+        turretAlignmentThrottleTimer.reset();
 
-            ydt.yaw = ydt.yaw + turretTolerance;
-        }
+    //        Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: PASSED TIME THRESHOLD");
 
-        double difference = Math.abs(ydt.yaw) - turretTolerance;
+        //get the yaw from the april tag helper
+        LimelightLaunchParameters ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
 
-        // move the servo to account for the yaw.
-        // Move the servo if the error is outside the tolerance
-        if (difference > 0) {
+        if (ydt != null) {
+    //            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: YDT FOUND");
+    //        Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: YAW: " + ydt.yaw);
 
-            //clear out the alignment light
-            robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
+            turretTagNotFoundTimer.reset();
+            double turretTolerance = TURRET_ALIGNMENT_TOLERANCE_DEGREES_NEAR;
+            double turretDelta = TURRET_SERVO_ADJUSTMENT_DELTA_NEAR;
 
-            //scale the delta to 25% of the difference
-            double servoDelta = TURRET_SERVO_ADJUSTMENT_SCALE * difference * turretDelta;
+            if (ydt.distance > FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR) {
+                turretTolerance = TURRET_ALIGNMENT_TOLERANCE_DEGREES_FAR;
+                turretDelta = TURRET_SERVO_ADJUSTMENT_DELTA_FAR;
+            }
 
-            //servoDelta = Math.max(servoDelta, turretDelta); //move at least by turret delta - scaling to a fraction can reduce it.
-            servoDelta = Math.min(servoDelta, 5 * turretDelta); //dont move more than 5 times the turret delta
+            int isRobotToLeftOfCenterLine = isRobotToLeftOfCenterLine();
 
-            servoDelta = ydt.yaw > 0 ? servoDelta : -1 * servoDelta;
+            //robot is to left of line - extra bias to stay to the left
+            if (isRobotToLeftOfCenterLine == 1) {
+    //            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: POINT TO LEFT OF LINE: ");
 
-//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: servoDelta: " + servoDelta);
+                ydt.yaw = ydt.yaw - turretTolerance;
+            }
 
-            // Calculate the new potential servo position and constrain it
-            double newServoPosition = robotHardware.getLaunchTurretPosition() + servoDelta;
+            //robot is to the right of the line - extra bias to the right
+            if (isRobotToLeftOfCenterLine == -1) {
+    //            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: POINT TO RIGHT OF LINE: ");
 
-//            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: calling to change servo position to: " + newServoPosition);
+                ydt.yaw = ydt.yaw + turretTolerance;
+            }
 
-            newServoPosition = Math.max(TURRET_SERVO_MIN_POS, Math.min(TURRET_SERVO_MAX_POS, newServoPosition));
+            double difference = Math.abs(ydt.yaw) - turretTolerance;
 
-//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: Adjusting... New Position: " + newServoPosition);
+            // move the servo to account for the yaw.
+            // Move the servo if the error is outside the tolerance
+            if (difference > 0) {
 
-            //the cycle might be so fast that the servo is still turning
-            //since we are not using an encoder on the turret, the get position will return
-            //the last position that the servo was told to go to. So if the calculation is the same,
-            //no need to call the command on the servo again - this should prevent jitter.
-            if (robotHardware.getLaunchTurretPosition() == newServoPosition)
-                return;
+                //clear out the alignment light
+                robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
 
-//            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: clamped servo position being changed to: " + newServoPosition);
-            robotHardware.setLaunchTurretPosition(newServoPosition);
+                //scale the delta to 25% of the difference
+                double servoDelta = TURRET_SERVO_ADJUSTMENT_SCALE * difference * turretDelta;
+
+                //servoDelta = Math.max(servoDelta, turretDelta); //move at least by turret delta - scaling to a fraction can reduce it.
+                servoDelta = Math.min(servoDelta, 5 * turretDelta); //dont move more than 5 times the turret delta
+
+                servoDelta = ydt.yaw > 0 ? servoDelta : -1 * servoDelta;
+
+    //                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: servoDelta: " + servoDelta);
+
+                // Calculate the new potential servo position and constrain it
+                double newServoPosition = robotHardware.getLaunchTurretPosition() + servoDelta;
+
+    //            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: calling to change servo position to: " + newServoPosition);
+
+                newServoPosition = Math.max(TURRET_SERVO_MIN_POS, Math.min(TURRET_SERVO_MAX_POS, newServoPosition));
+
+    //                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: Adjusting... New Position: " + newServoPosition);
+
+                //the cycle might be so fast that the servo is still turning
+                //since we are not using an encoder on the turret, the get position will return
+                //the last position that the servo was told to go to. So if the calculation is the same,
+                //no need to call the command on the servo again - this should prevent jitter.
+                if (robotHardware.getLaunchTurretPosition() == newServoPosition)
+                    return;
+
+    //            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: clamped servo position being changed to: " + newServoPosition);
+//                robotHardware.setLaunchTurretPosition(newServoPosition);
+
+            } else {
+                robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
+    //                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: Turret Aligned At: " + robotHardware.getLaunchTurretPosition());
+            }
 
         } else {
-            robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
-//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: Turret Aligned At: " + robotHardware.getLaunchTurretPosition());
-        }
+            //No tag found - center the turret
+    //            robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
+            robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
 
-    } else {
-        //No tag found - center the turret
-//            robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
-        robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
-
-        if (turretTagNotFoundTimer.milliseconds() > TURRET_TAG_NOT_FOUND_TIMER_MILLIS) {
-            robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
+            if (turretTagNotFoundTimer.milliseconds() > TURRET_TAG_NOT_FOUND_TIMER_MILLIS) {
+                robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
+            }
+    //            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: no tag found");
         }
-//            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: no tag found");
     }
-}
 
 
     //0 means no idea. 1 means yes, -1 means no.

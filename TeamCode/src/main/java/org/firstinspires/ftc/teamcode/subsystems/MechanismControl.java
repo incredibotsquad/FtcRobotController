@@ -1,6 +1,6 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
-import static org.firstinspires.ftc.teamcode.Actions.ResetSpindexerAction.SPINDEXER_INCREMENT;
+import static org.firstinspires.ftc.teamcode.subsystems.Spindex.SPINDEXER_INCREMENT;
 
 import android.util.Log;
 
@@ -392,12 +392,12 @@ public class MechanismControl {
     private void ProcessDPad() {
 
         if (gamepad2.dpadLeftWasPressed()) {
-            int currentPos = robotHardware.getSpindexPosition();
+            double currentPos = robotHardware.getSpindexPosition();
             robotHardware.setSpindexPosition(currentPos - SPINDEXER_INCREMENT);
         }
 
         if (gamepad2.dpadRightWasPressed()) {
-            int currentPos = robotHardware.getSpindexPosition();
+            double currentPos = robotHardware.getSpindexPosition();
             robotHardware.setSpindexPosition(currentPos + SPINDEXER_INCREMENT);
         }
 

@@ -6,8 +6,10 @@ import static org.firstinspires.ftc.teamcode.Actions.LaunchKickAction.LAUNCH_KIC
 import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.TURRET_SERVO_CENTERED;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.acmerobotics.dashboard.config.Config;
+import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
@@ -29,6 +31,8 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
     @Override
     public void runOpMode() {
 
+
+
         // Initialize the hardware variables. Note that the strings used here must correspond
         // to the names assigned during the robot configuration step on the DS or RC devices.
         robotHardware = new RobotHardware(this.hardwareMap);
@@ -49,6 +53,8 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
             }
         }
 
+        //NOTE: THESE OBJECTS USE THE ALLIANCE COLOR FROM CROSS OPMODE STORAGE.
+        // THATS WHY THESE ARE INITIALIZED AFTER A CHANCE TO CHANGE ALLIANCE COLOR
         this.limelightAprilTagHelper = new LimelightAprilTagHelper(robotHardware);
         this.chassisControl = new ChassisControl(gamepad1, robotHardware, this.limelightAprilTagHelper);
         this.mechanismControl = new MechanismControl(gamepad2, robotHardware, this.limelightAprilTagHelper, telemetry);
@@ -62,6 +68,7 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
         robotHardware.setLaunchKickPosition(LAUNCH_KICK_RESTING);
 
         robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
+        //TODO: READ THE POSITION FROM CROSS OPMODE STORAGE,
 
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive() && !isStopRequested()) {
@@ -71,8 +78,6 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
 
             //control robot mechanisms
             mechanismControl.processInputs();
-
-            robotHardware.keepFlywheelMotorsInSync();
 
             idle();
         }

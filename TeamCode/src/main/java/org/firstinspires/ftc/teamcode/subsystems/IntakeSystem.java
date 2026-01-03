@@ -14,7 +14,6 @@ import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import androidx.annotation.NonNull;
 
 import org.firstinspires.ftc.teamcode.Actions.IntakeWheelsAction;
-import org.firstinspires.ftc.teamcode.Actions.ResetSpindexerAction;
 import org.firstinspires.ftc.teamcode.Actions.SpindexAction;
 import org.firstinspires.ftc.teamcode.common.GameColors;
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
@@ -41,47 +40,6 @@ public class IntakeSystem {
 
     //make the default constructor private
     private IntakeSystem() {}
-
-    public class AutoIntake implements Action {
-        private boolean initialized = false;
-        private ElapsedTime timer;
-
-        private double timeTorunMillis;
-
-        private Action checkForIntake;
-
-        private boolean isActionRunning;
-
-        public AutoIntake(double timeTorunMillis) {
-            initialized = false;
-            this.timeTorunMillis = timeTorunMillis;
-            checkForIntake =  checkForBallIntakeAndGetAction();
-            isActionRunning = false;
-        }
-
-        @Override
-        public boolean run(@NonNull TelemetryPacket packet) {
-            if (!initialized) {
-                initialized = true;
-                timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
-            }
-
-            isActionRunning = checkForIntake.run(packet);
-
-            if (spindex.fullSlotCount() < 3 && timer.milliseconds() < timeTorunMillis) {
-                //restart action if it completed
-                if (!isActionRunning) {
-                    Log.i("AUTO INTAKE", " REFRESHIING ACTION");
-                    checkForIntake =  checkForBallIntakeAndGetAction(); //refresh from state
-//                    isActionRunning = checkForIntake.run(packet);
-                }
-
-                return true;
-            }
-
-            return false;
-        }
-    }
 
 
     public Action getTurnOnAction(boolean moveSpindexToEmptySlot) {
@@ -152,9 +110,6 @@ public class IntakeSystem {
         return returnAction;
     }
 
-    public Action checkForBallIntakeAndGetActionAuto(double millisToRun) {
-        return new AutoIntake(millisToRun);
-    }
 
     public Action updateBallColorsAction() {
         return new ParallelAction(
@@ -188,10 +143,7 @@ public class IntakeSystem {
     }
 
     public Action getResetAction() {
-        return new SequentialAction(
-                new ResetSpindexerAction(robotHardware),
-                ReIndexBalls()
-        );
+        return ReIndexBalls();
     }
 
     public void updateStatusLight() {

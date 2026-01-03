@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode.OpModes.test;
 import android.util.Log;
 
 import com.acmerobotics.dashboard.config.Config;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.AnalogInput;
@@ -23,23 +22,24 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  * Remove or comment out the @Disabled line to add this OpMode to the Driver Station OpMode list
  */
 
-@Disabled
 @Config
 @TeleOp(name="ServoWithEncoderTest", group="Tests")
 public class ServoWithEncoderTest extends LinearOpMode {
 
     // Declare OpMode members.
-    public static double spindexServoPosition = 0.5;
-    public static double visorServoPosition = 0.5;
+    public static double servo1Position = 0.5;
+    public static double servo2Position = 0.5;
 
-    public static String servo1Name = "SpindexServo";
+    public static String servo1Name = "LaunchTurretServo";
+    public static String servo1EncName = "LaunchTurretServoEncoder";
     public static String servo2Name = "LaunchVisorServo";
+    public static String servo2EncName = "VisorServoEncoder";
 
     public static boolean enableServo2 = false;
 
     private ElapsedTime runtime;
-    private Servo spindexServo;
-    private Servo visorServo;
+    private Servo servo1;
+    private Servo servo2;
 
     private boolean init = false;
 
@@ -53,11 +53,11 @@ public class ServoWithEncoderTest extends LinearOpMode {
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
 
-        spindexServo = hardwareMap.get(Servo.class, servo1Name);
-        visorServo = hardwareMap.get(Servo.class, servo2Name);
+        servo1 = hardwareMap.get(Servo.class, servo1Name);
+        servo2 = hardwareMap.get(Servo.class, servo2Name);
 
-        AnalogInput spindexEnc = hardwareMap.get(AnalogInput.class, "SpindexServoEncoder");
-        AnalogInput visorEnc = hardwareMap.get(AnalogInput.class, "VisorServoEncoder");
+        AnalogInput spindexEnc = hardwareMap.get(AnalogInput.class, servo1EncName);
+        AnalogInput visorEnc = hardwareMap.get(AnalogInput.class, servo2EncName);
 
         // Wait for the game to start (driver presses START)
         waitForStart();
@@ -70,10 +70,10 @@ public class ServoWithEncoderTest extends LinearOpMode {
         while (opModeIsActive()) {
 
             if (!init) {
-                spindexServo.setPosition(spindexServoPosition);
+                servo1.setPosition(servo1Position);
 
                 if (enableServo2)
-                    visorServo.setPosition(visorServoPosition);
+                    servo2.setPosition(servo2Position);
 
                 init = true;
             }

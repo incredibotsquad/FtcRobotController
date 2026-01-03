@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.common;
 
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.Vector2d;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 /**
  * Simple static field serving as a storage medium for the bot's pose and alliance color.
@@ -14,5 +15,8 @@ public class CrossOpModeStorage {
 
     public static AllianceColors allianceColor = AllianceColors.BLUE;
 
-    public static int spindexerPosition = 0;
+    public static double turretPosition = 0;
+
+    public static DcMotorEx launchTurretMotor = null;
+
 }

@@ -12,13 +12,13 @@ import org.firstinspires.ftc.teamcode.common.RobotHardware;
 @Config
 public class LaunchTurretAction implements Action {
     private RobotHardware robotHardware;
-    private double position;
+    private int position;
     private boolean initialized = false;
     public static double LAUNCH_TURRET_CENTER = 0.5;
     public static double LAUNCH_TURRET_ACTION_DELAY_MILLIS = 200;
     private ElapsedTime timer;
 
-    public LaunchTurretAction(RobotHardware robotHardware, double position) {
+    public LaunchTurretAction(RobotHardware robotHardware, int position) {
         this.robotHardware = robotHardware;
         this.position = position;
         this.initialized = false;

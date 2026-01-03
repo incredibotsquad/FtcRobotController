@@ -5,14 +5,19 @@
                 <goBILDA5202SeriesMotor name="FLMotor" port="0" />
                 <goBILDA5202SeriesMotor name="IntakeMotor" port="1" />
                 <goBILDA5202SeriesMotor name="FRMotor" port="2" />
-                <goBILDA5202SeriesMotor name="SpindexMotor" port="3" />
+
+                <goBILDA5202SeriesMotor name="LaunchTurretMotor" port="3" />
 
                 <RevColorSensorV3 name="LeftColorSensor" port="0" bus="0" />
                 <RevColorSensorV3 name="RightColorSensor" port="1" bus="1" />
 
                 <Servo name="ColorSensorLights" port="0" />
+                <Servo name="SpindexStatusLight" port="1" />
+                <Servo name="RightLiftServo" port="2" />
+
                 <DigitalDevice name="BallIntakeSensor" port="0" />
-                <RevTouchSensor name="SpindexLimitSwitch" port="2" />
+
+<!--            <RevTouchSensor name="SpindexLimitSwitch" port="2" />-->
         </LynxModule>
         <LynxModule name="Control Hub" port="173">
             <goBILDA5202SeriesMotor name="BLMotor" port="0" />
@@ -23,13 +28,17 @@
 
             <RevColorSensorV3 name="BackColorSensor" port="0" bus="0" />
 
-            <Servo name="LaunchTurretServo" port="0" />
-            <Servo name="LaunchKickServo" port="1" />
-            <Servo name="LaunchVisorServo" port="2" />
-            <Servo name="AlignmentIndicatorLight" port="3" />
-            <Servo name="SpindexStatusLight" port="4" />
+            <Servo name="SpindexServo" port="0" />
+            <AnalogInput name="SpindexServoEncoder" port="2" />
 
+
+            <Servo name="LaunchKickServo" port="1" />
+
+            <Servo name="LaunchVisorServo" port="2" />
             <AnalogInput name="VisorServoEncoder" port="0" />
+
+            <Servo name="AlignmentIndicatorLight" port="3" />
+            <Servo name="LeftLiftServo" port="4" />
 
             <goBILDAPinpoint name="PinpointOdo" port="1" bus="1"/>
 

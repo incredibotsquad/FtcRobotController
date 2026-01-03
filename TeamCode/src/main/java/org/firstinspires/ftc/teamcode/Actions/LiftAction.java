@@ -12,20 +12,22 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
 
 @Config
-public class SpindexAction implements Action {
+public class LiftAction implements Action {
+
+    public static double LIFT_POSITION = 0.4;
+    public static double LIFT_RESET = 0;
 
     private RobotHardware robotHardware;
     private double position;
     private boolean initialized = false;
     private boolean waitForAction = true;
-    public static double SPINDEX_POSITION_TOLERANCE = 0.05;
     private ElapsedTime actionDuration;
 
-    public SpindexAction(RobotHardware robotHardware, double position) {
+    public LiftAction(RobotHardware robotHardware, double position) {
         this(robotHardware, position, true);
     }
 
-    public SpindexAction(RobotHardware robotHardware, double position, boolean waitForAction) {
+    public LiftAction(RobotHardware robotHardware, double position, boolean waitForAction) {
         this.robotHardware = robotHardware;
         this.position = position;
         this.initialized = false;
@@ -36,16 +38,16 @@ public class SpindexAction implements Action {
     public boolean run (@NonNull TelemetryPacket packet) {
 
         if (!initialized) {
-            robotHardware.setSpindexPosition(position);
+            robotHardware.setLiftPosition(position);
             initialized = true;
             actionDuration = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
         }
 
         if (waitForAction) {
-            boolean retVal = (Math.abs(robotHardware.getSpindexPositionFromEncoder() - position) > SPINDEX_POSITION_TOLERANCE);
+            boolean retVal = (actionDuration.milliseconds() < 500);
 
             if (!retVal)
-                Log.i("SPINDEX ACTION", "Total Time Taken: " + actionDuration.milliseconds());
+                Log.i("Lift ACTION", "Total Time Taken: " + actionDuration.milliseconds());
 
             return retVal;
         }

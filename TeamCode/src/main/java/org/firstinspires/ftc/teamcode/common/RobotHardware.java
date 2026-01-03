@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.common;
 
-import static org.firstinspires.ftc.teamcode.subsystems.Spindex.SPINDEX_VELOCITY;
+import static org.firstinspires.ftc.teamcode.Actions.SpindexAction.SPINDEX_POSITION_TOLERANCE;
+import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.TURRET_VELOCITY;
 
 import android.util.Log;
 
@@ -16,6 +17,7 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.NormalizedRGBA;
+import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -45,21 +47,21 @@ public class RobotHardware {
     private DcMotorEx flywheelMotor1;
     private DcMotorEx flywheelMotor2;
 
-    private Servo launchTurretServo;
+    private Servo spindexServo;
+    private AnalogInput spindexServoEncoder;
+
     private Servo launchVisorServo;
     private AnalogInput visorServoEncoder;
     private Servo launchKickServo;
-
-    private DcMotorEx spindexMotor;
-    private TouchSensor spindexLimitSwitch;
-
+    private Servo leftLiftServo;
+    private Servo rightLiftServo;
     private Servo alignmentIndicatorLight;
     private Servo spindexStatusLight;
     private Limelight3A limelight;
 
-    public static double FLYWHEEL_P = 40.0;
-    public static double FLYWHEEL_I = 3.0;
-    public static double FLYWHEEL_D = 2.0;
+    public static double FLYWHEEL_P = 270;
+    public static double FLYWHEEL_I = 0;
+    public static double FLYWHEEL_D = 0;
     public static double FLYWHEEL_F = 14.0;
 
     //making constructor
@@ -98,7 +100,7 @@ public class RobotHardware {
         intakeMotor.setDirection(DcMotorSimple.Direction.REVERSE);
         intakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        //flywheel motor
+        //flywheel motors
         flywheelMotor1 = hardwareMap.get(DcMotorEx.class, "FlywheelMotor1");
         flywheelMotor1.setDirection(DcMotorSimple.Direction.REVERSE);
         flywheelMotor1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -109,29 +111,40 @@ public class RobotHardware {
         flywheelMotor2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         flywheelMotor2.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-//        PIDFCoefficients customPIDF = new PIDFCoefficients(FLYWHEEL_P, FLYWHEEL_I, FLYWHEEL_D, FLYWHEEL_F);
-//        flywheelMotor1.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, customPIDF);
-//        flywheelMotor2.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, customPIDF);
+        PIDFCoefficients customPIDF = new PIDFCoefficients(FLYWHEEL_P, FLYWHEEL_I, FLYWHEEL_D, FLYWHEEL_F);
+        flywheelMotor1.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, customPIDF);
+        flywheelMotor2.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, customPIDF);
 
-        //servos
-        launchTurretServo = hardwareMap.get(Servo.class, "LaunchTurretServo");
+        if (CrossOpModeStorage.launchTurretMotor == null) {
+            CrossOpModeStorage.launchTurretMotor = hardwareMap.get(DcMotorEx.class, "LaunchTurretMotor");
+            CrossOpModeStorage.launchTurretMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+            CrossOpModeStorage.launchTurretMotor.setTargetPosition(0);
+            CrossOpModeStorage.launchTurretMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            CrossOpModeStorage.launchTurretMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        }
 
-        launchKickServo = hardwareMap.get(Servo.class, "LaunchKickServo");
+        //spindex and encoder
+        spindexServo = hardwareMap.get(Servo.class, "SpindexServo");
+        spindexServoEncoder = hardwareMap.get(AnalogInput.class, "SpindexServoEncoder");
 
+        //visor and encoder
         launchVisorServo = hardwareMap.get(Servo.class, "LaunchVisorServo");
         visorServoEncoder = hardwareMap.get(AnalogInput.class, "VisorServoEncoder");
 
-        spindexMotor = hardwareMap.get(DcMotorEx.class, "SpindexMotor");
-        spindexMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        spindexMotor.setTargetPosition(0);
-        spindexMotor.setDirection(DcMotorSimple.Direction.REVERSE);
-        spindexMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        spindexMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        //kicker
+        launchKickServo = hardwareMap.get(Servo.class, "LaunchKickServo");
 
-        spindexLimitSwitch = hardwareMap.get(TouchSensor.class, "SpindexLimitSwitch");
+        //lift linear servos
+        leftLiftServo = hardwareMap.get(Servo.class, "LeftLiftServo");
+        rightLiftServo = hardwareMap.get(Servo.class, "RightLiftServo");
 
+        //diffused lights
         colorSensorLights = hardwareMap.get(Servo.class, "ColorSensorLights");
         colorSensorLights.setPosition(0.5);    //turn on for color sensing
+
+        //signal lights
+        alignmentIndicatorLight = hardwareMap.get(Servo.class, "AlignmentIndicatorLight");
+        spindexStatusLight = hardwareMap.get(Servo.class, "SpindexStatusLight");
 
         //color sensors
         leftColorSensor = hardwareMap.get(ColorRangeSensor.class, "LeftColorSensor");
@@ -141,10 +154,6 @@ public class RobotHardware {
         //laser sensor
         ballIntakeSensor = hardwareMap.get(DigitalChannel.class, "BallIntakeSensor");;
         ballIntakeSensor.setMode(DigitalChannel.Mode.INPUT);
-
-        //signal lights
-        alignmentIndicatorLight = hardwareMap.get(Servo.class, "AlignmentIndicatorLight");
-        spindexStatusLight = hardwareMap.get(Servo.class, "SpindexStatusLight");
 
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         limelight.setPollRateHz(100); // This sets how often we ask Limelight for data (100 times per second)
@@ -202,7 +211,6 @@ public class RobotHardware {
         stopRobotChassis();
         setIntakeMotorPower(0);
         setFlywheelVelocityInTPS(0);
-        stopSpindex();
     }
 
     public void setIntakeMotorPower(double power) {
@@ -219,27 +227,8 @@ public class RobotHardware {
     public void setFlywheelVelocityInTPS(double velocity) {
 //        Log.i("=== ROBOTHARDWARE  ===", " setFlywheelMotorVelocityInTPS: " + velocity);
         //motor 1 just follows motor 2 - setvelocity on both but we read only from motor 2
-//        flywheelMotor1.setVelocity(velocity);
+        flywheelMotor1.setVelocity(velocity);
         flywheelMotor2.setVelocity(velocity);
-    }
-
-    public void setFlywheelMotorPowers(double power) {
-        flywheelMotor1.setPower(power);
-        flywheelMotor2.setPower(power);
-    }
-
-    public void keepFlywheelMotorsInSync() {
-        flywheelMotor1.setPower(flywheelMotor2.getPower() * FLYWHEEL_FOLLOWER_POWER_RATIO);
-    }
-
-    public double getLaunchTurretPosition() {
-        double position = launchTurretServo.getPosition();
-//        Log.i("=== ROBOTHARDWARE  ===", " getLaunchTurretServoPosition: " + position);
-        return position;
-    }
-    public void setLaunchTurretPosition(double position) {
-//        Log.i("=== ROBOTHARDWARE  ===", " setLaunchTurretServoPosition: " + position);
-        launchTurretServo.setPosition(position);
     }
 
     public double getLaunchVisorPositionFromEncoder() {
@@ -261,47 +250,81 @@ public class RobotHardware {
         launchKickServo.setPosition(position);
     }
 
-    public void stopSpindex()
-    {
-        Log.i("=== ROBOTHARDWARE  ===", " stopSpindex");
-        spindexMotor.setPower(0);
+    public double getSpindexPosition() {
+        double position = spindexServo.getPosition();
+
+//        Log.i("=== ROBOTHARDWARE  ===", " getSpindexPosition: " + position);
+        return position;
     }
 
-    public int getSpindexPosition () {
-        int retVal = spindexMotor.getCurrentPosition();
-//        Log.i("=== ROBOTHARDWARE ===", " getSpindexPosition: " + retVal);
-        return retVal;
+    public double getSpindexPositionFromEncoder() {
+        double voltage = spindexServoEncoder.getVoltage();
+        double position = 1 - (voltage / 3.3);  //position via encoder seems to be flipped
+
+//        Log.i("=== ROBOTHARDWARE  ===", " getSpindexPositionFromEncoder: " + position);
+        return position;
     }
 
-    public void setSpindexPosition(int pos) {
-//        Log.i("=== ROBOTHARDWARE ===", " setSpindexPosition: " + pos);
-        setSpindexPositionAndVelocity(pos, SPINDEX_VELOCITY);
-    }
-
-    public void setSpindexPositionAndVelocity(int pos, int velocity) {
-        spindexMotor.setTargetPosition(pos);
-        spindexMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        spindexMotor.setVelocity(velocity);
-//        Log.i("=== ROBOTHARDWARE ===", " setSpindexPositionAndVelocity: " + pos + " AND VELOCITY: " + velocity);
-    }
-
-    public void stopSpindexAndResetEncoder()
-    {
-        Log.i("=== ROBOTHARDWARE  ===", " stopSpindexAndResetEncoder");
-        stopSpindex();
-        spindexMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        setSpindexPosition(0);
-    }
-
-    public boolean isSpindexLimitSwitchTriggered()
-    {
-        return spindexLimitSwitch.isPressed();
+    public void setSpindexPosition(double position) {
+//        Log.i("=== ROBOTHARDWARE  ===", " setSpindexPosition: " + position);
+        spindexServo.setPosition(position);
     }
 
     public boolean isSpindexBusy() {
-        boolean retVal = spindexMotor.isBusy();
+        boolean retVal = false;
+
+        //if position from encoder and the last setposition differ by more than delta, spindex is busy moving
+        if (Math.abs(getSpindexPosition() - getSpindexPositionFromEncoder()) > SPINDEX_POSITION_TOLERANCE) {
+            retVal = true;
+        }
+
 //        Log.i("=== ROBOTHARDWARE  ===", " isSpindexBusy: " + retVal);
+
         return retVal;
+    }
+
+    public void stopLaunchTurret()
+    {
+        Log.i("=== ROBOTHARDWARE  ===", " stopLaunchTurret");
+        CrossOpModeStorage.launchTurretMotor.setPower(0);
+    }
+
+    public int getLaunchTurretPosition () {
+        int retVal = CrossOpModeStorage.launchTurretMotor.getCurrentPosition();
+//        Log.i("=== ROBOTHARDWARE ===", " getLaunchTurretPosition: " + retVal);
+        return retVal;
+    }
+
+    public void setLaunchTurretPosition(int pos) {
+//        Log.i("=== ROBOTHARDWARE ===", " setLaunchTurretPosition: " + pos);
+        setLaunchTurretPositionAndVelocity(pos, TURRET_VELOCITY);
+    }
+
+    public void setLaunchTurretPositionAndVelocity(int pos, int velocity) {
+        CrossOpModeStorage.launchTurretMotor.setTargetPosition(pos);
+        CrossOpModeStorage.launchTurretMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        CrossOpModeStorage.launchTurretMotor.setVelocity(velocity);
+//        Log.i("=== ROBOTHARDWARE ===", " setLaunchTurretPositionAndVelocity: " + pos + " AND VELOCITY: " + velocity);
+    }
+
+    public void stopLaunchTurretAndResetEncoder()
+    {
+        Log.i("=== ROBOTHARDWARE  ===", " stopLaunchTurretAndResetEncoder");
+        stopLaunchTurret();
+        CrossOpModeStorage.launchTurretMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        setLaunchTurretPosition(0);
+    }
+
+    public double getLiftPosition() {
+        double pos = Math.min(leftLiftServo.getPosition(), rightLiftServo.getPosition());
+        Log.i("=== ROBOTHARDWARE  ===", " getLiftPosition: " + pos);
+        return pos;
+    }
+
+    public void setLiftPosition(double position) {
+        Log.i("=== ROBOTHARDWARE  ===", " setLiftPosition: ");
+        leftLiftServo.setPosition(position);
+        rightLiftServo.setPosition(position);
     }
 
     public boolean didBallDetectionBeamBreak() {
