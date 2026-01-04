@@ -7,20 +7,23 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 //@Disabled
 
-@Disabled
 @Config
 @TeleOp(name="MotorTest", group="Tests")
 public class MotorTest extends LinearOpMode {
 
     // Declare OpMode members.
-    public static String motorName = "LauncherMotor";
-    public static int motorPosition = 50;
-
-    public static double motorVelocity = 2000;
+    public static String motorName = "LaunchTurretMotor";
+    public static int motorPosition = 200;
+    public static double FLYWHEEL_P = 10;
+    public static double FLYWHEEL_I = 3;
+    public static double FLYWHEEL_D = 0;
+    public static double FLYWHEEL_F = 12.0;
+    public static double motorVelocity = 4000;
     private ElapsedTime runtime = new ElapsedTime();
     private DcMotorEx testMotor;
 
@@ -33,7 +36,6 @@ public class MotorTest extends LinearOpMode {
 //        spindexMotor.setDirection(DcMotorSimple.Direction.REVERSE);
         testMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         testMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        testMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
         while (opModeInInit()) {
 
@@ -49,6 +51,9 @@ public class MotorTest extends LinearOpMode {
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
             if(gamepad1.aWasPressed()) {
+                PIDFCoefficients customPIDF = new PIDFCoefficients(FLYWHEEL_P, FLYWHEEL_I, FLYWHEEL_D, FLYWHEEL_F);
+//                testMotor.setPIDFCoefficients(DcMotor.RunMode.RUN_TO_POSITION, customPIDF);
+
                 testMotor.setTargetPosition(motorPosition);
                 testMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 testMotor.setVelocity(motorVelocity);

@@ -8,7 +8,6 @@ import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.NullAction;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SequentialAction;
-import com.qualcomm.robotcore.hardware.ColorRangeSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
@@ -43,7 +42,7 @@ public class LaunchSystem {
     private ElapsedTime turretTagNotFoundTimer;
     private ElapsedTime flywheelWarmerThrottleTimer;
 
-    public static int TURRET_VELOCITY = 1350;
+    public static int TURRET_VELOCITY = 4000;
 
     public static double TURRET_SERVO_MIN_POS = 0.2;
     public static int TURRET_SERVO_CENTERED = 0;
@@ -55,12 +54,15 @@ public class LaunchSystem {
     public static double TURRET_ALIGNMENT_TOLERANCE_DEGREES_NEAR = 3;
     public static double TURRET_ALIGNMENT_TOLERANCE_DEGREES_FAR = 2;
     public static double TURRET_TAG_NOT_FOUND_TIMER_MILLIS = 4000;
+
+
+    public static double TURRET_FRACTION_OF_DIFFERENCE_TO_COVER = 0.9;
+
     public static double ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT = 0.3;    //RED
     public static double ROBOT_ALIGNED_TO_SHOOT_LIGHT = 0.5;    //GREEN
 
 
     public static double FLYWHEEL_WARM_THROTTLE_MILLIS = 50;
-
     public static double FLYWHEEL_POWER_BUCKET_THRESHOLD_LOW = 0;
     public static double FLYWHEEL_POWER_BUCKET_THRESHOLD_MID = 60;
     public static double FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR = 100;
@@ -180,8 +182,14 @@ public class LaunchSystem {
 
     public Action getLaunchGreenBallAction(BallLaunchParameters ballLaunchParameters) {
         Log.i("== LAUNCH SYSTEM ==", "Launch Green Ball Action");
+
+        //this will be null if there is no known green slot
+        Action spindexAction = spindex.moveToNextGreenSlotAction();
+        if (spindexAction.getClass() == NullAction.class)
+            return new NullAction();
+
         return  new SequentialAction(
-                spindex.moveToNextGreenSlotAction(),
+                spindexAction,
                 getLaunchBallAction(ballLaunchParameters),
                 new InstantAction(() -> spindex.clearBallAtCurrentIndex())
         );
@@ -194,8 +202,14 @@ public class LaunchSystem {
 
     public Action getLaunchPurpleBallAction(BallLaunchParameters ballLaunchParameters) {
         Log.i("== LAUNCH SYSTEM ==", "Launch Purple Ball Action");
+
+        //this will be null if there is no known purple slot
+        Action spindexAction = spindex.moveToNextPurpleSlotAction();
+        if (spindexAction.getClass() == NullAction.class)
+            return new NullAction();
+
         return new SequentialAction(
-                spindex.moveToNextPurpleSlotAction(),
+                spindexAction,
                 getLaunchBallAction(ballLaunchParameters),
                 new InstantAction(() -> spindex.clearBallAtCurrentIndex())
         );
@@ -218,7 +232,7 @@ public class LaunchSystem {
     public Action getBallPatternLaunchAction(GamePattern pattern) {
         Log.i("== LAUNCH SYSTEM ==", "getPatternBallLaunchAction");
 
-        if (pattern == null) return getLaunchAllBallsAction();
+        if (pattern == null) return getPerformLaunchOnAllSlots();
 
         Log.i("== LAUNCH SYSTEM ==", "getPatternBallLaunchAction. Detected ID: " + pattern.tagId);
 
@@ -234,7 +248,7 @@ public class LaunchSystem {
             return getLaunchPPGAction();
         }
 
-        return getLaunchAllBallsAction();
+        return getPerformLaunchOnAllSlots();
     }
 
     public Action getLaunchGPPAction() {
@@ -242,7 +256,7 @@ public class LaunchSystem {
         List<BallEntry> purpleSlots = spindex.storedColors.stream().filter(entry -> entry.ballColor == GameColors.PURPLE).collect(Collectors.toList());
 
         if ((greenSlots.isEmpty()) || purpleSlots.size() < 2)
-            return getLaunchAllBallsAction();
+            return getPerformLaunchOnAllSlots();
 
         return getLaunchAllBallsInSequenceAction(List.of(greenSlots.get(0).index, purpleSlots.get(0).index, purpleSlots.get(1).index));
     }
@@ -255,7 +269,7 @@ public class LaunchSystem {
         Log.i("== LAUNCH SYSTEM ==", "getLaunchPGPAction");
 
         if ((greenSlots.isEmpty()) || purpleSlots.size() < 2)
-            return getLaunchAllBallsAction();
+            return getPerformLaunchOnAllSlots();
 
 
         Log.i("== LAUNCH SYSTEM ==", "getLaunchPGPAction. Green slot: " + greenSlots.get(0).index);
@@ -271,7 +285,7 @@ public class LaunchSystem {
         List<BallEntry> purpleSlots = spindex.storedColors.stream().filter(entry -> entry.ballColor == GameColors.PURPLE).collect(Collectors.toList());
 
         if ((greenSlots.isEmpty()) || purpleSlots.size() < 2)
-            return getLaunchAllBallsAction();
+            return getPerformLaunchOnAllSlots();
 
         return getLaunchAllBallsInSequenceAction(List.of(purpleSlots.get(0).index, purpleSlots.get(1).index, greenSlots.get(0).index));
     }
@@ -297,54 +311,6 @@ public class LaunchSystem {
             BallEntry entry = spindex.storedColors.get(sequence.get(index));
             Log.i("== LAUNCH SYSTEM ==", "getLaunchAllBallsInSequenceAction. entry: " + index + " Color: " + entry.ballColor);
 
-            if (entry.ballColor != GameColors.NONE) {
-                actionsToRun.add(new SequentialAction(
-                        new ParallelAction(
-                                new LaunchVisorAction(robotHardware, ballLaunchParameters.visorPositions.get(index)),
-                                new SpindexAction(robotHardware, entry.launchPosition)),
-//                        new InstantAction(() -> Log.i("== LAUNCH SYSTEM ==", "RPM Before kick:" + robotHardware.getFlywheelVelocityInTPS())),
-                        new LaunchKickAction(robotHardware),
-                        new InstantAction(() -> spindex.clearBallAtIndex(entry.index))
-                ));
-            }
-        }
-
-        //bring the visor back
-        actionsToRun.add(new LaunchVisorAction(robotHardware, VISOR_POSITION_CLOSE_1, false));
-
-        return new SequentialAction(actionsToRun);
-
-    }
-
-    public Action getLaunchAllBallsAction() {
-        Log.i("== LAUNCH SYSTEM ==", "getLaunchAllBallsAction " + spindex.fullSlotCount() + " Balls Action: ");
-
-        List<Integer> list = spindex.storedColors.stream()
-                .filter(entry -> entry.ballColor != GameColors.NONE)
-                .map(entry -> entry.index)
-                .collect(Collectors.toList());
-
-        return getLaunchAllBallsInSequenceAction(list);
-
-    }
-
-    public Action getPerformLaunchOnAllSlots() {
-        Log.i("== LAUNCH SYSTEM ==", "getPerformLaunchOnAllSlots Action");
-        BallLaunchParameters ballLaunchParameters = getRobotLaunchParametersBasedOnDistance();
-
-        List<Action> actionsToRun = new ArrayList<>();
-
-        //flywheel and spindex for first one can happen in parallel
-        actionsToRun.add(
-                new ParallelAction(
-                        new LaunchFlywheelAction(robotHardware, ballLaunchParameters.flywheelVelocity),
-                        new SpindexAction(robotHardware, spindex.storedColors.get(0).launchPosition)
-                )
-        );
-
-        for (int index = 0; index < spindex.storedColors.size(); index++) {
-            BallEntry entry = spindex.storedColors.get(index);
-
             actionsToRun.add(new SequentialAction(
                     new ParallelAction(
                             new LaunchVisorAction(robotHardware, ballLaunchParameters.visorPositions.get(index)),
@@ -359,6 +325,12 @@ public class LaunchSystem {
         actionsToRun.add(new LaunchVisorAction(robotHardware, VISOR_POSITION_CLOSE_1, false));
 
         return new SequentialAction(actionsToRun);
+    }
+
+    public Action getPerformLaunchOnAllSlots() {
+        Log.i("== LAUNCH SYSTEM ==", "getPerformLaunchOnAllSlots Action");
+
+        return getLaunchAllBallsInSequenceAction(List.of(0, 2, 1));     //this order is the most efficient
     }
 
     private BallLaunchParameters getRobotLaunchParametersBasedOnDistance() {
@@ -425,7 +397,7 @@ public class LaunchSystem {
          * Turret pulley is 123 teeth. The Servo pulley is 24 tooth.
          * it takes 123/24 = 5.125 turns of the driver unit for a full 360 of the turret
          * So in 1 turn of the driving pulley, the turret would turn 360 / 5.125 = 70.24390244 degrees
-         * An 435 motor has 384.5 Ticks Per Rev
+         * A 435 motor has 384.5 Ticks Per Rev
          * so in 384.5 ticks, the turret would turn 70.24390244 degrees.
          * so in 1 tick, the turret turns 70.24390244 / 384.5 = 0.18268895 degrees
          * We would cover 350 degrees (wire management) in 350 / 0.18268895 = 1916 ticks
@@ -463,17 +435,21 @@ public class LaunchSystem {
             if (difference > 0) {
                 robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
 
-                int differenceToCoverInTicks = (int)((difference / 2) / degreesPerTick);
+                int differenceToCoverInTicks = (int)((difference / TURRET_FRACTION_OF_DIFFERENCE_TO_COVER) / degreesPerTick);
 
                 if (ydt.yaw < 0)
                     differenceToCoverInTicks = -1 * differenceToCoverInTicks;
 
                 int newMotorPosition = robotHardware.getLaunchTurretPosition() + differenceToCoverInTicks;
 
+                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: new motor position: " + newMotorPosition);
+
                 if (newMotorPosition < 0)
                     newMotorPosition = Math.max( -1* maxTicksBeforeStop, newMotorPosition);
                 else
                     newMotorPosition = Math.min(maxTicksBeforeStop, newMotorPosition);
+
+                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: clamped motor position: " + newMotorPosition);
 
                 robotHardware.setLaunchTurretPosition(newMotorPosition);
 
