@@ -54,7 +54,7 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
         }
 
         //NOTE: THESE OBJECTS USE THE ALLIANCE COLOR FROM CROSS OPMODE STORAGE.
-        // THATS WHY THESE ARE INITIALIZED AFTER A CHANCE TO CHANGE ALLIANCE COLOR
+        // THAT'S WHY THESE ARE INITIALIZED AFTER A CHANCE TO CHANGE ALLIANCE COLOR
         this.limelightAprilTagHelper = new LimelightAprilTagHelper(robotHardware);
         this.chassisControl = new ChassisControl(gamepad1, robotHardware, this.limelightAprilTagHelper);
         this.mechanismControl = new MechanismControl(gamepad2, robotHardware, this.limelightAprilTagHelper, telemetry);

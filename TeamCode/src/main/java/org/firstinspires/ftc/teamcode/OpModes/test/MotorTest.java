@@ -19,10 +19,10 @@ public class MotorTest extends LinearOpMode {
     // Declare OpMode members.
     public static String motorName = "LaunchTurretMotor";
     public static int motorPosition = 200;
-    public static double FLYWHEEL_P = 10;
-    public static double FLYWHEEL_I = 3;
+    public static double FLYWHEEL_P = 270;
+    public static double FLYWHEEL_I = 0;
     public static double FLYWHEEL_D = 0;
-    public static double FLYWHEEL_F = 12.0;
+    public static double FLYWHEEL_F = 14.0;
     public static double motorVelocity = 4000;
     private ElapsedTime runtime = new ElapsedTime();
     private DcMotorEx testMotor;
@@ -52,7 +52,7 @@ public class MotorTest extends LinearOpMode {
         while (opModeIsActive()) {
             if(gamepad1.aWasPressed()) {
                 PIDFCoefficients customPIDF = new PIDFCoefficients(FLYWHEEL_P, FLYWHEEL_I, FLYWHEEL_D, FLYWHEEL_F);
-//                testMotor.setPIDFCoefficients(DcMotor.RunMode.RUN_TO_POSITION, customPIDF);
+                testMotor.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, customPIDF);
 
                 testMotor.setTargetPosition(motorPosition);
                 testMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);

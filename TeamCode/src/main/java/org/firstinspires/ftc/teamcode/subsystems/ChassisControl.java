@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+
 import android.util.Log;
 
 import com.acmerobotics.dashboard.config.Config;
@@ -15,6 +16,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
+import org.firstinspires.ftc.teamcode.Actions.LiftAction;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.common.LimelightAprilTagHelper;
@@ -141,23 +143,25 @@ public class ChassisControl {
     }
 
     public void parkRobot() {
-        Action park = new NullAction();
+//        Action park = new NullAction();
 
         if (gamepad1.startWasPressed()) {
 
-            if (PARK_POS != null) {
-                Pose2d startingPose = mecanumDrive.localizer.getPose();
+            robotHardware.setLiftPosition(LiftAction.LIFT_ROBOT);
 
-                Log.i("Chassis Control", "position before parking: x: " + startingPose.position.x + " y: " + startingPose.position.y);
-
-                park = mecanumDrive.actionBuilder(startingPose)
-                        .strafeToLinearHeading(PARK_POS.position, PARK_POS.heading)
-                        .build();
-            }
-
-            //TODO: ADD EXTRA CORRECTION
-
-            Actions.runBlocking(park);
+//            if (PARK_POS != null) {
+//                Pose2d startingPose = mecanumDrive.localizer.getPose();
+//
+//                Log.i("Chassis Control", "position before parking: x: " + startingPose.position.x + " y: " + startingPose.position.y);
+//
+//                park = mecanumDrive.actionBuilder(startingPose)
+//                        .strafeToLinearHeading(PARK_POS.position, PARK_POS.heading)
+//                        .build();
+//            }
+//
+//            //TODO: ADD EXTRA CORRECTION
+//
+//            Actions.runBlocking(park);
         }
     }
 }

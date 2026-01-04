@@ -57,6 +57,7 @@ public class LaunchSystem {
 
 
     public static double TURRET_FRACTION_OF_DIFFERENCE_TO_COVER = 0.9;
+    public static double TURRET_PULSES_PER_REV = 751.8;
 
     public static double ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT = 0.3;    //RED
     public static double ROBOT_ALIGNED_TO_SHOOT_LIGHT = 0.5;    //GREEN
@@ -404,8 +405,9 @@ public class LaunchSystem {
          * half a rotation would be 1916 / 2 = 958 ticks positive or negative to constrain to a 180 degree plane
          * */
 
-        double degreesPerTick = 0.18268895;
-        int maxTicksBeforeStop = 958;
+        double turretAnglePerPulleyRotation = 360.0 / (123.0 / 24.0);
+        double degreesPerTick = turretAnglePerPulleyRotation / TURRET_PULSES_PER_REV;
+        int maxTicksBeforeClamp = (int)(180.0 / degreesPerTick);
 
         LimelightLaunchParameters ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
         if (ydt != null) {
@@ -435,19 +437,23 @@ public class LaunchSystem {
             if (difference > 0) {
                 robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
 
-                int differenceToCoverInTicks = (int)((difference / TURRET_FRACTION_OF_DIFFERENCE_TO_COVER) / degreesPerTick);
+                int differenceToCoverInTicks = (int)((difference * TURRET_FRACTION_OF_DIFFERENCE_TO_COVER) / degreesPerTick);
+
+                int previousPos = robotHardware.getLaunchTurretPosition();
+
+                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: old motor position: " + previousPos);
 
                 if (ydt.yaw < 0)
                     differenceToCoverInTicks = -1 * differenceToCoverInTicks;
 
-                int newMotorPosition = robotHardware.getLaunchTurretPosition() + differenceToCoverInTicks;
+                int newMotorPosition = previousPos + differenceToCoverInTicks;
 
                 Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: new motor position: " + newMotorPosition);
 
                 if (newMotorPosition < 0)
-                    newMotorPosition = Math.max( -1* maxTicksBeforeStop, newMotorPosition);
+                    newMotorPosition = Math.max( -1* maxTicksBeforeClamp, newMotorPosition);
                 else
-                    newMotorPosition = Math.min(maxTicksBeforeStop, newMotorPosition);
+                    newMotorPosition = Math.min(maxTicksBeforeClamp, newMotorPosition);
 
                 Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: clamped motor position: " + newMotorPosition);
 
@@ -457,6 +463,9 @@ public class LaunchSystem {
             else {
                 robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
             }
+        }
+        else {
+            robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
         }
     }
 
