@@ -83,7 +83,8 @@ public class MechanismControl {
 
         //process the yaw and rotate the turret always - except when parking
         if (currentRobotState != ROBOT_STATE.PARK && targetRobotState != ROBOT_STATE.PARK) {
-            launchSystem.AlignTurretToGoal();
+//            launchSystem.AlignTurretToGoal();
+            launchSystem.AlignTurretToGoalNew();
         }
 
         //keep warm only if we are intake mode. Else this will interfere with launch parameters
@@ -197,7 +198,7 @@ public class MechanismControl {
             switch (targetRobotState) {
 
                 case INTAKE:
-                    Log.i("== MECHANISM CONTROL ==", "PROCESSING STATE: INTAKE");
+//                    Log.i("== MECHANISM CONTROL ==", "PROCESSING STATE: INTAKE");
 
                     //get the list of actions and put it in running actions
                     runningActions.add(

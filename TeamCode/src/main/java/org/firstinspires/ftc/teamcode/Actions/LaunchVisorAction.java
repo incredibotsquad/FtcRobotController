@@ -16,8 +16,8 @@ public class LaunchVisorAction implements Action {
     private RobotHardware robotHardware;
     private double position;
     private boolean initialized = false;
-    public static double LAUNCH_VISOR_RESTING = 0.15;
-    public static double LAUNCH_VISOR_MAX = 0.8;
+    public static double LAUNCH_VISOR_RESTING = 0.01;
+    public static double LAUNCH_VISOR_MAX = 0.75;
     public static double LAUNCH_VISOR_MID = (LAUNCH_VISOR_RESTING + LAUNCH_VISOR_MAX)/2;
 
     public static double VISOR_POSITION_TOLERANCE = 0.05;

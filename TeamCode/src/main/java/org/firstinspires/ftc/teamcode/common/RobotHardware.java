@@ -27,7 +27,6 @@ import java.util.List;
 @Config
 public class RobotHardware {
 
-    public static double FLYWHEEL_FOLLOWER_POWER_RATIO = 1;
     public static double COLOR_DETECTION_RETRY_DURATION_MILLIS = 200;
 
     public HardwareMap hardwareMap;
@@ -63,6 +62,11 @@ public class RobotHardware {
     public static double FLYWHEEL_I = 0;
     public static double FLYWHEEL_D = 0;
     public static double FLYWHEEL_F = 14.0;
+
+    public static double TURRET_P = 12.0;
+    public static double TURRET_I = 3.0;
+    public static double TURRET_D = 0;
+    public static double TURRET_F = 0;
 
     //making constructor
     public RobotHardware(HardwareMap hwMap) {
@@ -121,6 +125,9 @@ public class RobotHardware {
             CrossOpModeStorage.launchTurretMotor.setTargetPosition(0);
             CrossOpModeStorage.launchTurretMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
             CrossOpModeStorage.launchTurretMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+            customPIDF = new PIDFCoefficients(TURRET_P, TURRET_I, TURRET_D, TURRET_F);
+            CrossOpModeStorage.launchTurretMotor.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, customPIDF);
         }
 
         //spindex and encoder
