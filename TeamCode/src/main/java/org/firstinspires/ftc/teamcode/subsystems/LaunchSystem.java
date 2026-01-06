@@ -441,21 +441,21 @@ public class LaunchSystem {
 
                 int previousPos = robotHardware.getLaunchTurretPosition();
 
-                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: old motor position: " + previousPos);
+//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: old motor position: " + previousPos);
 
                 if (ydt.yaw < 0)
                     differenceToCoverInTicks = -1 * differenceToCoverInTicks;
 
                 int newMotorPosition = previousPos + differenceToCoverInTicks;
 
-                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: new motor position: " + newMotorPosition);
+//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: new motor position: " + newMotorPosition);
 
                 if (newMotorPosition < 0)
                     newMotorPosition = Math.max( -1* maxTicksBeforeClamp, newMotorPosition);
                 else
                     newMotorPosition = Math.min(maxTicksBeforeClamp, newMotorPosition);
 
-                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: clamped motor position: " + newMotorPosition);
+//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: clamped motor position: " + newMotorPosition);
 
                 robotHardware.setLaunchTurretPosition(newMotorPosition);
 

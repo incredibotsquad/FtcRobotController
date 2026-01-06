@@ -8,7 +8,6 @@ import android.util.Log;
 import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
-import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.ColorRangeSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -19,15 +18,13 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.NormalizedRGBA;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
-
-import java.util.List;
 
 @Config
 public class RobotHardware {
 
     public static double COLOR_DETECTION_RETRY_DURATION_MILLIS = 200;
+    public static double BEAM_BREAK_DETECTION_RETRY_DURATION_MILLIS = 50;
 
     public HardwareMap hardwareMap;
     private DcMotorEx frontRightDriveMotor;
@@ -74,10 +71,10 @@ public class RobotHardware {
         this.hardwareMap = hwMap;
 
         //set bulk read more for all hubs
-        List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
-        for (LynxModule hub : allHubs) {
-            hub.setBulkCachingMode(LynxModule.BulkCachingMode.AUTO);
-        }
+//        List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
+//        for (LynxModule hub : allHubs) {
+//            hub.setBulkCachingMode(LynxModule.BulkCachingMode.AUTO);
+//        }
 
         frontRightDriveMotor = hardwareMap.get(DcMotorEx.class, "FRMotor");
         frontRightDriveMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -260,7 +257,7 @@ public class RobotHardware {
     public double getSpindexPosition() {
         double position = spindexServo.getPosition();
 
-//        Log.i("=== ROBOTHARDWARE  ===", " getSpindexPosition: " + position);
+        Log.i("=== ROBOTHARDWARE  ===", " getSpindexPosition: " + position);
         return position;
     }
 
@@ -268,7 +265,7 @@ public class RobotHardware {
         double voltage = spindexServoEncoder.getVoltage();
         double position = 1 - (voltage / 3.3);  //position via encoder seems to be flipped
 
-//        Log.i("=== ROBOTHARDWARE  ===", " getSpindexPositionFromEncoder: " + position);
+        Log.i("=== ROBOTHARDWARE  ===", " getSpindexPositionFromEncoder: " + position);
         return position;
     }
 
@@ -285,7 +282,7 @@ public class RobotHardware {
             retVal = true;
         }
 
-//        Log.i("=== ROBOTHARDWARE  ===", " isSpindexBusy: " + retVal);
+        Log.i("=== ROBOTHARDWARE  ===", " isSpindexBusy: " + retVal);
 
         return retVal;
     }
@@ -337,8 +334,13 @@ public class RobotHardware {
     public boolean didBallDetectionBeamBreak() {
         // Read the sensor state (true = HIGH, false = LOW)
         // HIGH means an object is detected
-        boolean detected = ballIntakeSensor.getState();
-//        Log.i("=== ROBOTHARDWARE  ===", " isBallPresentInIntake: " + detected);
+        boolean detected = false;
+        ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+        do {
+            detected = ballIntakeSensor.getState();
+        } while (timer.milliseconds() < BEAM_BREAK_DETECTION_RETRY_DURATION_MILLIS);
+
+        Log.i("=== ROBOTHARDWARE  ===", " isBallPresentInIntake: " + detected);
         return detected;
     }
 

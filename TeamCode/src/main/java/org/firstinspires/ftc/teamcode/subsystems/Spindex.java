@@ -209,17 +209,16 @@ public class Spindex {
     public boolean isReadyForIntake() {
         boolean retVal = false;
 
+        //this is intentionally NOT using the encoder position
+        //for a servo, the getposition returns the last value passed into setposition
+        //this means we gave the spindexer a command to move to an intake position
         double currentPos = robotHardware.getSpindexPosition();
-//        Log.i("SPINDEXER", "isReadyForIntake: currentPos: " + currentPos);
+        Log.i("SPINDEXER", "isReadyForIntake: currentPos: " + currentPos);
 
-        for (BallEntry entry: storedColors) {
-//            Log.i("SPINDEXER", "isReadyForIntake: Entry Position: " + entry.intakePosition);
-
-            if (Math.abs(entry.intakePosition - currentPos) < SpindexAction.SPINDEX_POSITION_TOLERANCE && entry.ballColor == GameColors.NONE) {
-//                Log.i("SPINDEXER", "isReadyForIntake: we are at an intake position: ");
-                retVal = true;
-                break;
-            }
+        //this should be the intake position for current index
+        if (Math.abs(storedColors.get(currentIndex).intakePosition - currentPos) < SpindexAction.SPINDEX_POSITION_TOLERANCE && storedColors.get(currentIndex).ballColor == GameColors.NONE) {
+            Log.i("SPINDEXER", "isReadyForIntake: we are or will be at an intake position: ");
+            retVal = true;
         }
 
 //        Log.i("SPINDEXER", "isReadyForIntake: " + retVal);
