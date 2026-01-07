@@ -7,8 +7,10 @@ import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
+import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -20,10 +22,10 @@ public class LimelightAprilTagHelper  {
     public static double MIN_TOLERANCE = 2.0; // Minimum tolerance at far distances
     public static double MAX_TOLERANCE = 10.0; // Maximum tolerance at close distances
     public static double TOLERANCE_SCALING_DISTANCE = 40.0; // Distance in inches for scaling
-
+    public static double TARGET_OFFSET_BEHIND_TAG_INCHES = 12;
     private ElapsedTime timeSinceLastYawPull;
     public static int YAW_NORMALIZATION_THRESHOLD_MILLIS = 50;
-    private double oldZYaw;
+    private double oldZYaw = -1000;
     private RobotHardware robotHardware;
     private AllianceColors allianceColor;
 
@@ -140,20 +142,14 @@ public class LimelightAprilTagHelper  {
             double rawY = pose.getPosition().y;
             double rawZ = pose.getPosition().z;
 
-            double oyaw = pose.getOrientation().getYaw();
+            YawPitchRollAngles angles = pose.getOrientation();
+//
+//            Log.i("LimelightAprilTagHelper", "YAW: " + angles.getYaw(AngleUnit.DEGREES));
+//            Log.i("LimelightAprilTagHelper", "PITCH: " + angles.getPitch(AngleUnit.DEGREES));
+//            Log.i("LimelightAprilTagHelper", "ROLL: " + angles.getRoll(AngleUnit.DEGREES));
 
-            double yaw = Math.toDegrees(Math.atan2(rawY, rawX));
 
-            double xyaw = Math.toDegrees(Math.atan2(rawX, rawY));
-
-            double zyaw = Math.toDegrees(Math.atan2(rawX, rawZ));
-
-            //normalize yaw to smooth out jumps
-//            if (timeSinceLastYawPull.milliseconds() < YAW_NORMALIZATION_THRESHOLD_MILLIS) {
-//                zyaw = (0.25 * zyaw) + (0.75 * oldZYaw);
-//                oldZYaw = zyaw;
-//                timeSinceLastYawPull.reset();
-//            }
+            double oyaw = angles.getPitch(AngleUnit.RADIANS);
 
             // For TARGET POSE IN CAMERA SPACE, Limelight returns METERS
             // Convert to inches for our calculations
@@ -165,16 +161,38 @@ public class LimelightAprilTagHelper  {
             double y = rawY * conversionFactor;
             double z = rawZ * conversionFactor;
 
+            double yaw = Math.toDegrees(Math.atan2(y, x));
+
+            double xyaw = Math.toDegrees(Math.atan2(x, y));
+
+            double adjustedX = x + TARGET_OFFSET_BEHIND_TAG_INCHES * Math.sin(oyaw);
+            double adjustedZ = z + TARGET_OFFSET_BEHIND_TAG_INCHES * Math.cos(oyaw);
+
+            double zyaw = Math.toDegrees(Math.atan2(x, z));
+//            Log.i("LimelightAprilTagHelper", "Z YAW: " + zyaw);
+
+            zyaw = Math.toDegrees(Math.atan2(adjustedX, adjustedZ));
+
+            //normalize yaw to smooth out jumps
+            if (oldZYaw != -1000)
+                zyaw = (0.25 * zyaw) + (0.75 * oldZYaw);
+            oldZYaw = zyaw;
+//
+//            Log.i("LimelightAprilTagHelper", "x: " + x);
+//            Log.i("LimelightAprilTagHelper", "z: " + z);
+//            Log.i("LimelightAprilTagHelper", "adjustedX: " + adjustedX);
+//            Log.i("LimelightAprilTagHelper", "adjustedZ: " + adjustedZ);
+//            //            Log.i("LimelightAprilTagHelper", "X YAW: " + xyaw);
+//            Log.i("LimelightAprilTagHelper", "ADJUSTED Z YAW: " + zyaw);
+//            Log.i("LimelightAprilTagHelper", "ORIENTATION YAW: " + oyaw);
+
             // Calculate horizontal distance to the AprilTag
-            double horizontalDistance = calculateHorizontalDistance(x, z);
+            double horizontalDistance = calculateHorizontalDistance(adjustedX, adjustedZ);
 
             // Calculate dynamic tolerance based on distance
             double dynamicTolerance = calculateDistanceBasedTolerance(horizontalDistance);
 
-//            Log.i("LimelightAprilTagHelper", "X YAW: " + xyaw);
-//            Log.i("LimelightAprilTagHelper", "Z YAW: " + zyaw);
-//            Log.i("LimelightAprilTagHelper", "ORIENTATION YAW: " + oyaw);
-//            Log.i("LimelightAprilTagHelper", "YAW: " + zyaw);
+//
 //            Log.i("LimelightAprilTagHelper", "DISTANCE: " + horizontalDistance);
 //            Log.i("LimelightAprilTagHelper", "TOLERANCE: " + dynamicTolerance);
 

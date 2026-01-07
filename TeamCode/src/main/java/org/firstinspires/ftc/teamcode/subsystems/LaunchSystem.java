@@ -10,6 +10,7 @@ import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SequentialAction;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction;
 import org.firstinspires.ftc.teamcode.Actions.LaunchKickAction;
@@ -70,7 +71,7 @@ public class LaunchSystem {
 
     public static double FLYWHEEL_POWER_COEFFICIENT_CLOSE = 0.43;
     public static double FLYWHEEL_POWER_COEFFICIENT_MID = 0.45;
-    public static double FLYWHEEL_POWER_COEFFICIENT_FAR = 0.58;
+    public static double FLYWHEEL_POWER_COEFFICIENT_FAR = 0.575;
 
     public static double DEFAULT_FLYWHEEL_POWER_COEFFICIENT = FLYWHEEL_POWER_COEFFICIENT_MID;
 
@@ -82,7 +83,7 @@ public class LaunchSystem {
     public static double VISOR_POSITION_MID_2 = 0.24;
     public static double VISOR_POSITION_MID_3 = 0.24;
 
-    public static double VISOR_POSITION_FAR_1 = 0.69;
+    public static double VISOR_POSITION_FAR_1 = 0.74;
     public static double VISOR_POSITION_FAR_2 = 0.65;
     public static double VISOR_POSITION_FAR_3 = 0.61;
     public static double DEFAULT_VISOR_POSITION = VISOR_POSITION_MID_1;
@@ -140,6 +141,7 @@ public class LaunchSystem {
                         new LaunchVisorAction(robotHardware, ballLaunchParameters.visorPositions.get(0)),
                         new LaunchFlywheelAction(robotHardware, ballLaunchParameters.flywheelVelocity)
                 ),
+                new InstantAction(() -> Log.i("== LAUNCH SYSTEM ==", "RPM Before kick:" + robotHardware.getFlywheelVelocityInTPS())),
                 new LaunchKickAction(robotHardware),
                 new LaunchVisorAction(robotHardware, VISOR_POSITION_CLOSE_1, false)
         );
@@ -298,6 +300,7 @@ public class LaunchSystem {
             return new NullAction();
 
         BallLaunchParameters ballLaunchParameters = getRobotLaunchParametersBasedOnDistance();
+
         List<Action> actionsToRun = new ArrayList<>();
 
         //flywheel and spindex for first one can happen in parallel
@@ -316,7 +319,7 @@ public class LaunchSystem {
                     new ParallelAction(
                             new LaunchVisorAction(robotHardware, ballLaunchParameters.visorPositions.get(index)),
                             new SpindexAction(robotHardware, entry.launchPosition)),
-//                        new InstantAction(() -> Log.i("== LAUNCH SYSTEM ==", "RPM Before kick:" + robotHardware.getFlywheelVelocityInTPS())),
+                        new InstantAction(() -> Log.i("== LAUNCH SYSTEM ==", "RPM Before kick:" + robotHardware.getFlywheelVelocityInTPS())),
                     new LaunchKickAction(robotHardware),
                     new InstantAction(() -> spindex.clearBallAtIndex(entry.index))
             ));
@@ -341,7 +344,7 @@ public class LaunchSystem {
 
         if (ydt != null) {
 //            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: YAW: " + ydt.yaw);
-//            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: DISTANCE: " + ydt.distance);
+            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: DISTANCE: " + ydt.distance);
 
             if (ydt.distance < FLYWHEEL_POWER_BUCKET_THRESHOLD_MID) {
                 launchParameters = new BallLaunchParameters(
@@ -418,19 +421,19 @@ public class LaunchSystem {
                 turretTolerance = TURRET_ALIGNMENT_TOLERANCE_DEGREES_FAR;
             }
 
-            int isRobotToLeftOfCenterLine = isRobotToLeftOfCenterLine();
-
-            //robot is to left of line - extra bias to stay to the left
-            if (isRobotToLeftOfCenterLine == 1) {
-                //            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: POINT TO LEFT OF LINE: ");
-                ydt.yaw = ydt.yaw - turretTolerance;
-            }
-
-            //robot is to the right of the line - extra bias to the right
-            if (isRobotToLeftOfCenterLine == -1) {
-                //            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: POINT TO RIGHT OF LINE: ");
-                ydt.yaw = ydt.yaw + turretTolerance;
-            }
+//            int isRobotToLeftOfCenterLine = isRobotToLeftOfCenterLine();
+//
+//            //robot is to left of line - extra bias to stay to the left
+//            if (isRobotToLeftOfCenterLine == 1) {
+//                //            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: POINT TO LEFT OF LINE: ");
+//                ydt.yaw = ydt.yaw - turretTolerance;
+//            }
+//
+//            //robot is to the right of the line - extra bias to the right
+//            if (isRobotToLeftOfCenterLine == -1) {
+//                //            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: POINT TO RIGHT OF LINE: ");
+//                ydt.yaw = ydt.yaw + turretTolerance;
+//            }
 
             double difference = Math.abs(ydt.yaw) - turretTolerance;
 
@@ -505,14 +508,14 @@ public class LaunchSystem {
 
             //robot is to left of line - extra bias to stay to the left
             if (isRobotToLeftOfCenterLine == 1) {
-    //            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: POINT TO LEFT OF LINE: ");
+                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: POINT TO LEFT OF LINE: ");
 
                 ydt.yaw = ydt.yaw - turretTolerance;
             }
 
             //robot is to the right of the line - extra bias to the right
             if (isRobotToLeftOfCenterLine == -1) {
-    //            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: POINT TO RIGHT OF LINE: ");
+                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: POINT TO RIGHT OF LINE: ");
 
                 ydt.yaw = ydt.yaw + turretTolerance;
             }
@@ -599,7 +602,7 @@ public class LaunchSystem {
 
         currX = limelightBasedPosition.getPosition().x * 39.37;
         currY = limelightBasedPosition.getPosition().y * 39.37;
-//        Log.i("== LAUNCH SYSTEM ==", "Limelight position: X: " + currX + " Y: " + currY + " Yaw: " + limelightBasedPosition.getOrientation().getYaw(AngleUnit.DEGREES));
+        Log.i("== LAUNCH SYSTEM ==", "Limelight position: X: " + currX + " Y: " + currY + " Yaw: " + limelightBasedPosition.getOrientation().getYaw(AngleUnit.DEGREES));
 
         double d = (x2 - x1) * (currY - y1) - (y2 - y1) * (currX - x1);
 

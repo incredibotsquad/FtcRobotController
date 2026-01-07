@@ -165,7 +165,7 @@ public class Spindex {
         previousIndex = currentIndex;
         currentIndex = nextIndex;
 
-        Log.i("SPINDEXER", "moveToNextEmptySlotAction: current index: " + currentIndex);
+//        Log.i("SPINDEXER", "moveToNextEmptySlotAction: current index: " + currentIndex);
 
         return new SpindexAction(robotHardware, storedColors.get(currentIndex).intakePosition);
     }
@@ -213,11 +213,11 @@ public class Spindex {
         //for a servo, the getposition returns the last value passed into setposition
         //this means we gave the spindexer a command to move to an intake position
         double currentPos = robotHardware.getSpindexPosition();
-        Log.i("SPINDEXER", "isReadyForIntake: currentPos: " + currentPos);
+//        Log.i("SPINDEXER", "isReadyForIntake: currentPos: " + currentPos);
 
         //this should be the intake position for current index
         if (Math.abs(storedColors.get(currentIndex).intakePosition - currentPos) < SpindexAction.SPINDEX_POSITION_TOLERANCE && storedColors.get(currentIndex).ballColor == GameColors.NONE) {
-            Log.i("SPINDEXER", "isReadyForIntake: we are or will be at an intake position: ");
+//            Log.i("SPINDEXER", "isReadyForIntake: we are or will be at an intake position: ");
             retVal = true;
         }
 

@@ -257,7 +257,7 @@ public class RobotHardware {
     public double getSpindexPosition() {
         double position = spindexServo.getPosition();
 
-        Log.i("=== ROBOTHARDWARE  ===", " getSpindexPosition: " + position);
+//        Log.i("=== ROBOTHARDWARE  ===", " getSpindexPosition: " + position);
         return position;
     }
 
@@ -265,7 +265,7 @@ public class RobotHardware {
         double voltage = spindexServoEncoder.getVoltage();
         double position = 1 - (voltage / 3.3);  //position via encoder seems to be flipped
 
-        Log.i("=== ROBOTHARDWARE  ===", " getSpindexPositionFromEncoder: " + position);
+//        Log.i("=== ROBOTHARDWARE  ===", " getSpindexPositionFromEncoder: " + position);
         return position;
     }
 
@@ -282,7 +282,7 @@ public class RobotHardware {
             retVal = true;
         }
 
-        Log.i("=== ROBOTHARDWARE  ===", " isSpindexBusy: " + retVal);
+//        Log.i("=== ROBOTHARDWARE  ===", " isSpindexBusy: " + retVal);
 
         return retVal;
     }
@@ -340,7 +340,7 @@ public class RobotHardware {
             detected = ballIntakeSensor.getState();
         } while (timer.milliseconds() < BEAM_BREAK_DETECTION_RETRY_DURATION_MILLIS);
 
-        Log.i("=== ROBOTHARDWARE  ===", " isBallPresentInIntake: " + detected);
+//        Log.i("=== ROBOTHARDWARE  ===", " isBallPresentInIntake: " + detected);
         return detected;
     }
 
