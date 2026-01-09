@@ -1,11 +1,13 @@
 package org.firstinspires.ftc.teamcode.OpModes.test;
 
+import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 
+@Config
 @TeleOp(name = "FlywheelTuner", group = "Tests")
 public class FlywheelTuner extends OpMode {
 
@@ -14,14 +16,14 @@ public class FlywheelTuner extends OpMode {
     private DcMotorEx flywheelMotor2;
 
     // ===== PIDF tuning values =====
-    double P = 270.0;
+    double P = 0.0;
     double I = 0.0;
     double D = 0.0;
-    double F = 14.0; //15.1
+    double F = 0.0; //15.39 14
 
     // ===== Velocity targets =====
-    double highVelocity = 1650;   // ticks/sec (inferred)
-    double lowVelocity  = 1200;   // ticks/sec (inferred)
+    public static double highVelocity = 1650;   // ticks/sec (inferred) 1302
+    public static double lowVelocity  = 1200;   // ticks/sec (inferred) 1204
     double curTargetVelocity = highVelocity;
 
     // ===== Step sizes for tuning =====

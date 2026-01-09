@@ -55,10 +55,10 @@ public class RobotHardware {
     private Servo spindexStatusLight;
     private Limelight3A limelight;
 
-    public static double FLYWHEEL_P = 270;
+    public static double FLYWHEEL_P = 210;
     public static double FLYWHEEL_I = 0;
     public static double FLYWHEEL_D = 0;
-    public static double FLYWHEEL_F = 14.0;
+    public static double FLYWHEEL_F = 11.0;
 
     public static double TURRET_P = 12.0;
     public static double TURRET_I = 3.0;

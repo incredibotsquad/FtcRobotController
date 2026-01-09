@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.common;
 
+import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR;
+
 import android.util.Log;
 
 import com.acmerobotics.dashboard.config.Config;
@@ -9,7 +11,6 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
-import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 
 import java.util.List;
@@ -22,7 +23,8 @@ public class LimelightAprilTagHelper  {
     public static double MIN_TOLERANCE = 2.0; // Minimum tolerance at far distances
     public static double MAX_TOLERANCE = 10.0; // Maximum tolerance at close distances
     public static double TOLERANCE_SCALING_DISTANCE = 40.0; // Distance in inches for scaling
-    public static double TARGET_OFFSET_BEHIND_TAG_INCHES = 12;
+    public static double TARGET_OFFSET_BEHIND_TAG_INCHES_NEAR = 12;
+    public static double TARGET_OFFSET_BEHIND_TAG_INCHES_FAR = 25;
     private ElapsedTime timeSinceLastYawPull;
     public static int YAW_NORMALIZATION_THRESHOLD_MILLIS = 50;
     private double oldZYaw = -1000;
@@ -143,7 +145,7 @@ public class LimelightAprilTagHelper  {
             double rawZ = pose.getPosition().z;
 
             YawPitchRollAngles angles = pose.getOrientation();
-//
+
 //            Log.i("LimelightAprilTagHelper", "YAW: " + angles.getYaw(AngleUnit.DEGREES));
 //            Log.i("LimelightAprilTagHelper", "PITCH: " + angles.getPitch(AngleUnit.DEGREES));
 //            Log.i("LimelightAprilTagHelper", "ROLL: " + angles.getRoll(AngleUnit.DEGREES));
@@ -165,10 +167,18 @@ public class LimelightAprilTagHelper  {
 
             double xyaw = Math.toDegrees(Math.atan2(x, y));
 
-            double adjustedX = x + TARGET_OFFSET_BEHIND_TAG_INCHES * Math.sin(oyaw);
-            double adjustedZ = z + TARGET_OFFSET_BEHIND_TAG_INCHES * Math.cos(oyaw);
+            //add code to change offset
+            double horizontalDistance = calculateHorizontalDistance(x, z);
+
+            double tagOffset = TARGET_OFFSET_BEHIND_TAG_INCHES_NEAR;
+            if (horizontalDistance > FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR)
+                tagOffset = TARGET_OFFSET_BEHIND_TAG_INCHES_FAR;
+
+            double adjustedX = x + tagOffset * Math.sin(oyaw);
+            double adjustedZ = z + tagOffset * Math.cos(oyaw);
 
             double zyaw = Math.toDegrees(Math.atan2(x, z));
+
 //            Log.i("LimelightAprilTagHelper", "Z YAW: " + zyaw);
 
             zyaw = Math.toDegrees(Math.atan2(adjustedX, adjustedZ));
@@ -179,6 +189,7 @@ public class LimelightAprilTagHelper  {
             oldZYaw = zyaw;
 //
 //            Log.i("LimelightAprilTagHelper", "x: " + x);
+//            Log.i("LimelightAprilTagHelper", "y: " + y);
 //            Log.i("LimelightAprilTagHelper", "z: " + z);
 //            Log.i("LimelightAprilTagHelper", "adjustedX: " + adjustedX);
 //            Log.i("LimelightAprilTagHelper", "adjustedZ: " + adjustedZ);
@@ -187,7 +198,7 @@ public class LimelightAprilTagHelper  {
 //            Log.i("LimelightAprilTagHelper", "ORIENTATION YAW: " + oyaw);
 
             // Calculate horizontal distance to the AprilTag
-            double horizontalDistance = calculateHorizontalDistance(adjustedX, adjustedZ);
+            horizontalDistance = calculateHorizontalDistance(adjustedX, adjustedZ);
 
             // Calculate dynamic tolerance based on distance
             double dynamicTolerance = calculateDistanceBasedTolerance(horizontalDistance);

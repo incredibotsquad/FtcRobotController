@@ -52,55 +52,58 @@ public class LaunchSystem {
     public static double TURRET_SERVO_ADJUSTMENT_DELTA_FAR = 0.001;
     public static double TURRET_ALIGNMENT_THROTTLE_MILLIS = 20;
     public static double TURRET_SERVO_ADJUSTMENT_SCALE = 0.25;
-    public static double TURRET_ALIGNMENT_TOLERANCE_DEGREES_NEAR = 3;
-    public static double TURRET_ALIGNMENT_TOLERANCE_DEGREES_FAR = 2;
+    public static double TURRET_ALIGNMENT_TOLERANCE_DEGREES_NEAR = 2;
+    public static double TURRET_ALIGNMENT_TOLERANCE_DEGREES_FAR = 4;
     public static double TURRET_TAG_NOT_FOUND_TIMER_MILLIS = 4000;
 
 
     public static double TURRET_FRACTION_OF_DIFFERENCE_TO_COVER = 0.9;
-    public static double TURRET_PULSES_PER_REV = 751.8;
+    public static double TURRET_PULSES_PER_REV = 751.8; //PPR at the output shaft depending on the motor that is used.
 
     public static double ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT = 0.3;    //RED
     public static double ROBOT_ALIGNED_TO_SHOOT_LIGHT = 0.5;    //GREEN
 
 
     public static double FLYWHEEL_WARM_THROTTLE_MILLIS = 50;
-    public static double FLYWHEEL_POWER_BUCKET_THRESHOLD_LOW = 0;
+    public static double FLYWHEEL_POWER_BUCKET_THRESHOLD_CLOSE = 0;
     public static double FLYWHEEL_POWER_BUCKET_THRESHOLD_MID = 60;
     public static double FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR = 100;
 
-    public static double FLYWHEEL_POWER_COEFFICIENT_CLOSE = 0.43;
+    public static double FLYWHEEL_POWER_COEFFICIENT_CLOSE = 0.41;
     public static double FLYWHEEL_POWER_COEFFICIENT_MID = 0.45;
-    public static double FLYWHEEL_POWER_COEFFICIENT_FAR = 0.575;
+    public static double FLYWHEEL_POWER_COEFFICIENT_FAR = 0.555;
 
     public static double DEFAULT_FLYWHEEL_POWER_COEFFICIENT = FLYWHEEL_POWER_COEFFICIENT_MID;
 
-    public static double VISOR_POSITION_CLOSE_1 = 0.15;
-    public static double VISOR_POSITION_CLOSE_2 = 0.15;
-    public static double VISOR_POSITION_CLOSE_3 = 0.15;
+    public static double VISOR_POSITION_CLOSE_1 = 0.01;
+    public static double VISOR_POSITION_CLOSE_2 = 0.01;
+    public static double VISOR_POSITION_CLOSE_3 = 0.01;
 
-    public static double VISOR_POSITION_MID_1 = 0.24;
-    public static double VISOR_POSITION_MID_2 = 0.24;
-    public static double VISOR_POSITION_MID_3 = 0.24;
+    public static double VISOR_POSITION_MID_1 = 0.3;
+    public static double VISOR_POSITION_MID_2 = 0.25;
+    public static double VISOR_POSITION_MID_3 = 0.25;
 
-    public static double VISOR_POSITION_FAR_1 = 0.74;
-    public static double VISOR_POSITION_FAR_2 = 0.65;
-    public static double VISOR_POSITION_FAR_3 = 0.61;
+    public static double VISOR_POSITION_FAR_1 = 0.7;
+    public static double VISOR_POSITION_FAR_2 = 0.7;
+    public static double VISOR_POSITION_FAR_3 = 0.7;
     public static double DEFAULT_VISOR_POSITION = VISOR_POSITION_MID_1;
 
     BallLaunchParameters oldLaunchParameters;
     Map<Double, BallLaunchParameters> distancePowerVisorMap = Map.of(
-            FLYWHEEL_POWER_BUCKET_THRESHOLD_LOW, new BallLaunchParameters(
+            FLYWHEEL_POWER_BUCKET_THRESHOLD_CLOSE, new BallLaunchParameters(
+                    FLYWHEEL_POWER_BUCKET_THRESHOLD_CLOSE,
                     LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_CLOSE,
                     VISOR_POSITION_CLOSE_1,
                     VISOR_POSITION_CLOSE_2,
                     VISOR_POSITION_CLOSE_3),
             FLYWHEEL_POWER_BUCKET_THRESHOLD_MID, new BallLaunchParameters(
+                    FLYWHEEL_POWER_BUCKET_THRESHOLD_MID,
                     LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_MID,
                     VISOR_POSITION_MID_1,
                     VISOR_POSITION_MID_2,
                     VISOR_POSITION_MID_3),
             FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR, new BallLaunchParameters(
+                    FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR,
                     LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR,
                     VISOR_POSITION_FAR_1,
                     VISOR_POSITION_FAR_2,
@@ -165,7 +168,7 @@ public class LaunchSystem {
 
     public Action getLaunchNextBallCloseAction() {
         Log.i("== LAUNCH SYSTEM ==", "Launch Next Ball Close Action");
-        return getLaunchNextBallAction(distancePowerVisorMap.get(FLYWHEEL_POWER_BUCKET_THRESHOLD_LOW));
+        return getLaunchNextBallAction(distancePowerVisorMap.get(FLYWHEEL_POWER_BUCKET_THRESHOLD_CLOSE));
     }
 
     public Action getLaunchNextBallMidAction() {
@@ -301,12 +304,17 @@ public class LaunchSystem {
 
         BallLaunchParameters ballLaunchParameters = getRobotLaunchParametersBasedOnDistance();
 
+        //we want to wait for flywheel to ramp up only when launching from far
+        boolean waitForFlywheelBetweenLaunches = (ballLaunchParameters.distanceThreshold == FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR);
+        if (waitForFlywheelBetweenLaunches)
+            Log.i("== LAUNCH SYSTEM ==", "getLaunchAllBallsInSequenceAction. Will wait for flywheel between launches: ");
+
         List<Action> actionsToRun = new ArrayList<>();
 
-        //flywheel and spindex for first one can happen in parallel
+        //flywheel and spindex for first one can be kicked off without waiting for the first time
         actionsToRun.add(
                 new ParallelAction(
-                        new LaunchFlywheelAction(robotHardware, ballLaunchParameters.flywheelVelocity),
+                        waitForFlywheelBetweenLaunches ? new LaunchFlywheelAction(robotHardware, ballLaunchParameters.flywheelVelocity) : new NullAction(),
                         new SpindexAction(robotHardware, spindex.storedColors.get(sequence.get(0)).launchPosition)
                 )
         );
@@ -318,7 +326,9 @@ public class LaunchSystem {
             actionsToRun.add(new SequentialAction(
                     new ParallelAction(
                             new LaunchVisorAction(robotHardware, ballLaunchParameters.visorPositions.get(index)),
-                            new SpindexAction(robotHardware, entry.launchPosition)),
+                            new SpindexAction(robotHardware, entry.launchPosition)
+                            ),
+                        waitForFlywheelBetweenLaunches ? new LaunchFlywheelAction(robotHardware, ballLaunchParameters.flywheelVelocity) : new NullAction(),
                         new InstantAction(() -> Log.i("== LAUNCH SYSTEM ==", "RPM Before kick:" + robotHardware.getFlywheelVelocityInTPS())),
                     new LaunchKickAction(robotHardware),
                     new InstantAction(() -> spindex.clearBallAtIndex(entry.index))
@@ -344,10 +354,11 @@ public class LaunchSystem {
 
         if (ydt != null) {
 //            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: YAW: " + ydt.yaw);
-            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: DISTANCE: " + ydt.distance);
+//            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: DISTANCE: " + ydt.distance);
 
             if (ydt.distance < FLYWHEEL_POWER_BUCKET_THRESHOLD_MID) {
                 launchParameters = new BallLaunchParameters(
+                        FLYWHEEL_POWER_BUCKET_THRESHOLD_CLOSE,
                         LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_CLOSE,
                         VISOR_POSITION_CLOSE_1,
                         VISOR_POSITION_CLOSE_2,
@@ -356,6 +367,7 @@ public class LaunchSystem {
             } else if (ydt.distance < FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR) {
 
                 launchParameters = new BallLaunchParameters(
+                        FLYWHEEL_POWER_BUCKET_THRESHOLD_MID,
                         LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_MID,
                         VISOR_POSITION_MID_1,
                         VISOR_POSITION_MID_2,
@@ -364,6 +376,7 @@ public class LaunchSystem {
             } else {
 
                 launchParameters = new BallLaunchParameters(
+                        FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR,
                         LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR,
                         VISOR_POSITION_FAR_1,
                         VISOR_POSITION_FAR_2,
@@ -380,20 +393,20 @@ public class LaunchSystem {
     }
 
     public void KeepLauncherWarm() {
-        if (flywheelWarmerThrottleTimer.milliseconds() < FLYWHEEL_WARM_THROTTLE_MILLIS)
-            return;
-
-        flywheelWarmerThrottleTimer.reset();
-
-        //call to set if the velocity is more than 10% off
+//        if (flywheelWarmerThrottleTimer.milliseconds() < FLYWHEEL_WARM_THROTTLE_MILLIS)
+//            return;
+//
+//        flywheelWarmerThrottleTimer.reset();
+//
+//        //call to set if the velocity is more than 10% off
         double currentVelocity = robotHardware.getFlywheelVelocityInTPS();
         double targetVelocity = getRobotLaunchParametersBasedOnDistance().flywheelVelocity;
+//
+//        if (Math.abs(targetVelocity - currentVelocity) > LaunchFlywheelAction.FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS) {
 
-        if (Math.abs(targetVelocity - currentVelocity) > LaunchFlywheelAction.FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS) {
-
-//            Log.i("LAUNCH SYSTEM", "WARMING UP FLYWHEEL: CURRENT VELOCITY: " + currentVelocity + " TARGET VELOCITY: " + targetVelocity);
+            Log.i("LAUNCH SYSTEM", "WARMING UP FLYWHEEL: CURRENT VELOCITY: " + currentVelocity + " TARGET VELOCITY: " + targetVelocity);
             robotHardware.setFlywheelVelocityInTPS(targetVelocity);
-        }
+//        }
     }
 
     public void AlignTurretToGoalNew() {
@@ -421,19 +434,19 @@ public class LaunchSystem {
                 turretTolerance = TURRET_ALIGNMENT_TOLERANCE_DEGREES_FAR;
             }
 
-//            int isRobotToLeftOfCenterLine = isRobotToLeftOfCenterLine();
-//
-//            //robot is to left of line - extra bias to stay to the left
-//            if (isRobotToLeftOfCenterLine == 1) {
-//                //            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: POINT TO LEFT OF LINE: ");
-//                ydt.yaw = ydt.yaw - turretTolerance;
-//            }
-//
-//            //robot is to the right of the line - extra bias to the right
-//            if (isRobotToLeftOfCenterLine == -1) {
-//                //            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: POINT TO RIGHT OF LINE: ");
-//                ydt.yaw = ydt.yaw + turretTolerance;
-//            }
+            int isRobotToLeftOfCenterLine = isRobotToLeftOfCenterLine();
+
+            //robot is to left of line - extra bias to stay to the left
+            if (isRobotToLeftOfCenterLine == 1) {
+                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: POINT TO LEFT OF LINE: ");
+                ydt.yaw = ydt.yaw - turretTolerance;
+            }
+
+            //robot is to the right of the line - extra bias to the right
+            if (isRobotToLeftOfCenterLine == -1) {
+                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: POINT TO RIGHT OF LINE: ");
+                ydt.yaw = ydt.yaw + turretTolerance;
+            }
 
             double difference = Math.abs(ydt.yaw) - turretTolerance;
 

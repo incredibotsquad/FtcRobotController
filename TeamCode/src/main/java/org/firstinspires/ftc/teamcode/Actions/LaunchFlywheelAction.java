@@ -18,6 +18,8 @@ public class LaunchFlywheelAction implements Action {
 
     public static double FLYWHEEL_FULL_TICKS_PER_SEC = 2800; //1900
     public static double FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS = 30;
+    public static double FLYWHEEL_ACTION_TIMEOUT_MILLIS = 3000;
+
     private double targetVelocity;
     private boolean waitForAction;
     private ElapsedTime throttleTimer;
@@ -62,6 +64,11 @@ public class LaunchFlywheelAction implements Action {
 //            Log.i("LaunchFlywheelAction", "Current Velocity: " + currentVelocity);
 
             boolean retVal = (Math.abs( targetVelocity -  currentVelocity) > FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS);
+
+            if (actionDuration.milliseconds() > FLYWHEEL_ACTION_TIMEOUT_MILLIS) {
+                Log.i("LAUNCH FLYWHEEL ACTION", "CALLING IT DONE. TIME EXCEEDED THRESHOLD OF: " + FLYWHEEL_ACTION_TIMEOUT_MILLIS);
+                retVal = false;
+            }
 
             if (!retVal)
                 Log.i("LAUNCH FLYWHEEL ACTION", "Total Time taken: " + actionDuration.milliseconds());
