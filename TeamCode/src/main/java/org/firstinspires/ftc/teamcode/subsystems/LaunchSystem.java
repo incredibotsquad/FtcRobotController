@@ -56,6 +56,24 @@ public class LaunchSystem {
     public static double TURRET_ALIGNMENT_TOLERANCE_DEGREES_FAR = 4;
     public static double TURRET_TAG_NOT_FOUND_TIMER_MILLIS = 4000;
 
+    public enum TurretAlignmentMode {
+        POSITION,
+        POWER
+    }
+
+    public static TurretAlignmentMode TURRET_ALIGNMENT_MODE = TurretAlignmentMode.POSITION;
+
+    public static double TURRET_POWER_KP = 0.03;
+    public static double TURRET_POWER_MIN = 0.12;
+    public static double TURRET_POWER_MAX = 0.7;
+    public static boolean TURRET_POWER_SOFT_LIMITS_ENABLED = true;
+
+    public static double DBG_TURRET_LAST_YAW_DEG = 0;
+    public static double DBG_TURRET_LAST_DISTANCE_IN = 0;
+    public static double DBG_TURRET_LAST_TOLERANCE_DEG = 0;
+    public static double DBG_TURRET_LAST_POWER = 0;
+    public static boolean DBG_TURRET_ALIGNED = false;
+
 
     public static double TURRET_FRACTION_OF_DIFFERENCE_TO_COVER = 0.9;
     public static double TURRET_PULSES_PER_REV = 751.8; //PPR at the output shaft depending on the motor that is used.
@@ -407,6 +425,77 @@ public class LaunchSystem {
             Log.i("LAUNCH SYSTEM", "WARMING UP FLYWHEEL: CURRENT VELOCITY: " + currentVelocity + " TARGET VELOCITY: " + targetVelocity);
             robotHardware.setFlywheelVelocityInTPS(targetVelocity);
 //        }
+    }
+
+    public void AlignTurretToGoalSelected() {
+        if (TURRET_ALIGNMENT_MODE == TurretAlignmentMode.POWER) {
+            AlignTurretToGoalPower();
+        } else {
+            AlignTurretToGoalNew();
+        }
+    }
+
+    public void AlignTurretToGoalPower() {
+        if (turretAlignmentThrottleTimer.milliseconds() < TURRET_ALIGNMENT_THROTTLE_MILLIS) {
+            return;
+        }
+        turretAlignmentThrottleTimer.reset();
+
+        double turretAnglePerPulleyRotation = 360.0 / (123.0 / 24.0);
+        double degreesPerTick = turretAnglePerPulleyRotation / TURRET_PULSES_PER_REV;
+        int maxTicksBeforeClamp = (int) (180.0 / degreesPerTick);
+
+        LimelightLaunchParameters ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
+        if (ydt == null) {
+            DBG_TURRET_ALIGNED = false;
+            DBG_TURRET_LAST_POWER = 0;
+            robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
+            robotHardware.setLaunchTurretPower(0);
+            return;
+        }
+
+        DBG_TURRET_LAST_YAW_DEG = ydt.yaw;
+        DBG_TURRET_LAST_DISTANCE_IN = ydt.distance;
+
+        double turretTolerance = (ydt.distance > FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR)
+                ? TURRET_ALIGNMENT_TOLERANCE_DEGREES_FAR
+                : TURRET_ALIGNMENT_TOLERANCE_DEGREES_NEAR;
+        DBG_TURRET_LAST_TOLERANCE_DEG = turretTolerance;
+
+        int isRobotToLeftOfCenterLine = isRobotToLeftOfCenterLine();
+        if (isRobotToLeftOfCenterLine == 1) {
+            ydt.yaw = ydt.yaw - turretTolerance;
+        }
+        if (isRobotToLeftOfCenterLine == -1) {
+            ydt.yaw = ydt.yaw + turretTolerance;
+        }
+
+        double difference = Math.abs(ydt.yaw) - turretTolerance;
+        if (difference <= 0) {
+            DBG_TURRET_ALIGNED = true;
+            DBG_TURRET_LAST_POWER = 0;
+            robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
+            robotHardware.setLaunchTurretPower(0);
+            return;
+        }
+
+        DBG_TURRET_ALIGNED = false;
+        robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
+
+        double power = Math.max(-TURRET_POWER_MAX, Math.min(TURRET_POWER_MAX, TURRET_POWER_KP * ydt.yaw));
+        if (Math.abs(power) < TURRET_POWER_MIN) {
+            power = Math.copySign(TURRET_POWER_MIN, power);
+        }
+
+        if (TURRET_POWER_SOFT_LIMITS_ENABLED) {
+            int currentPos = robotHardware.getLaunchTurretPosition();
+            if ((power > 0 && currentPos >= maxTicksBeforeClamp) || (power < 0 && currentPos <= -maxTicksBeforeClamp)) {
+                power = 0;
+            }
+        }
+
+        DBG_TURRET_LAST_POWER = power;
+        robotHardware.setLaunchTurretPower(power);
     }
 
     public void AlignTurretToGoalNew() {

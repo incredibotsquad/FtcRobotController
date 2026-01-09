@@ -293,6 +293,11 @@ public class RobotHardware {
         CrossOpModeStorage.launchTurretMotor.setPower(0);
     }
 
+    public void setLaunchTurretPower(double power) {
+        CrossOpModeStorage.launchTurretMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        CrossOpModeStorage.launchTurretMotor.setPower(power);
+    }
+
     public int getLaunchTurretPosition () {
         int retVal = CrossOpModeStorage.launchTurretMotor.getCurrentPosition();
 //        Log.i("=== ROBOTHARDWARE ===", " getLaunchTurretPosition: " + retVal);
