@@ -16,9 +16,6 @@ import org.firstinspires.ftc.teamcode.common.RobotHardware;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
-
-import com.acmerobotics.roadrunner.Pose2d;
 
 public class MechanismControl {
     private Gamepad gamepad2;
@@ -27,7 +24,6 @@ public class MechanismControl {
     private IntakeSystem intakeSystem;
     private LaunchSystem launchSystem;
     private LimelightAprilTagHelper limelightAprilTagHelper;
-    private Supplier<Pose2d> robotPoseSupplier;
 
 
     private List<Action> runningActions;
@@ -52,18 +48,16 @@ public class MechanismControl {
     private ROBOT_STATE currentRobotState;
     private ROBOT_STATE targetRobotState;
     private boolean stateTransitionInProgress;
-    public MechanismControl(Gamepad gamepad, RobotHardware robotHardware, LimelightAprilTagHelper limelightAprilTagHelper, Telemetry telemetry, Supplier<Pose2d> robotPoseSupplier) {
+    public MechanismControl(Gamepad gamepad, RobotHardware robotHardware, LimelightAprilTagHelper limelightAprilTagHelper, Telemetry telemetry) {
         gamepad2 = gamepad;
         this.telemetry = telemetry;
         this.robotHardware = robotHardware;
         this.limelightAprilTagHelper = limelightAprilTagHelper;
-        this.robotPoseSupplier = robotPoseSupplier;
 
         this.spindex = new Spindex(robotHardware);
 
         this.intakeSystem = new IntakeSystem(robotHardware, this.spindex);
         this.launchSystem = new LaunchSystem(robotHardware, this.spindex, limelightAprilTagHelper);
-        this.launchSystem.setRobotPoseSupplier(robotPoseSupplier);
 
         currentRobotState = ROBOT_STATE.NONE;
         targetRobotState = ROBOT_STATE.NONE;
@@ -99,10 +93,6 @@ public class MechanismControl {
         telemetry.addData("TurretTolDeg", LaunchSystem.DBG_TURRET_LAST_TOLERANCE_DEG);
         telemetry.addData("TurretPower", LaunchSystem.DBG_TURRET_LAST_POWER);
         telemetry.addData("TurretAligned", LaunchSystem.DBG_TURRET_ALIGNED);
-        telemetry.addData("TurretCoarse", LaunchSystem.DBG_TURRET_COARSE_ACTIVE);
-        telemetry.addData("PoseX", LaunchSystem.DBG_POSE_X);
-        telemetry.addData("PoseY", LaunchSystem.DBG_POSE_Y);
-        telemetry.addData("PoseHeadingDeg", LaunchSystem.DBG_POSE_HEADING_DEG);
 
         //keep warm only if we are intake mode. Else this will interfere with launch parameters
 //        if ((currentRobotState == ROBOT_STATE.INTAKE || targetRobotState == ROBOT_STATE.INTAKE) && (!stateTransitionInProgress)) {
