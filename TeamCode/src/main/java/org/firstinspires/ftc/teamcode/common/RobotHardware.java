@@ -119,8 +119,7 @@ public class RobotHardware {
         if (CrossOpModeStorage.launchTurretMotor == null) {
             CrossOpModeStorage.launchTurretMotor = hardwareMap.get(DcMotorEx.class, "LaunchTurretMotor");
             CrossOpModeStorage.launchTurretMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-            CrossOpModeStorage.launchTurretMotor.setTargetPosition(0);
-            CrossOpModeStorage.launchTurretMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            CrossOpModeStorage.launchTurretMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
             CrossOpModeStorage.launchTurretMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
             customPIDF = new PIDFCoefficients(TURRET_P, TURRET_I, TURRET_D, TURRET_F);
@@ -160,7 +159,8 @@ public class RobotHardware {
         ballIntakeSensor.setMode(DigitalChannel.Mode.INPUT);
 
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
-        limelight.setPollRateHz(100); // This sets how often we ask Limelight for data (100 times per second)
+        limelight.setPollRateHz(250); // This sets how often we ask Limelight for data (100 times per second)
+
 //        limelight.updateRobotOrientation(0);
     }
 
@@ -293,14 +293,22 @@ public class RobotHardware {
         CrossOpModeStorage.launchTurretMotor.setPower(0);
     }
 
+    public double getLaunchTurretPower() {
+//        Log.i("=== ROBOTHARDWARE ===", " getLaunchTurretPower: " + power);
+
+        return CrossOpModeStorage.launchTurretMotor.getPower();
+    }
+
     public void setLaunchTurretPower(double power) {
+//        Log.i("=== ROBOTHARDWARE ===", " setLaunchTurretPower: " + power);
+
         CrossOpModeStorage.launchTurretMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         CrossOpModeStorage.launchTurretMotor.setPower(power);
     }
 
     public int getLaunchTurretPosition () {
         int retVal = CrossOpModeStorage.launchTurretMotor.getCurrentPosition();
-//        Log.i("=== ROBOTHARDWARE ===", " getLaunchTurretPosition: " + retVal);
+        Log.i("=== ROBOTHARDWARE ===", " getLaunchTurretPosition: " + retVal);
         return retVal;
     }
 

@@ -19,7 +19,7 @@ public class LaunchVisorAction implements Action {
     public static double LAUNCH_VISOR_RESTING = 0.01;
     public static double LAUNCH_VISOR_MAX = 0.75;
     public static double LAUNCH_VISOR_MID = (LAUNCH_VISOR_RESTING + LAUNCH_VISOR_MAX)/2;
-
+    public static double VISOR_ACTION_TIMEOUT_MILLIS = 800;
     public static double VISOR_POSITION_TOLERANCE = 0.05;
     private boolean waitForAction;
     private ElapsedTime timer;
@@ -53,9 +53,14 @@ public class LaunchVisorAction implements Action {
         timer.reset();
 
         double visorPos = robotHardware.getLaunchVisorPositionFromEncoder();
-//        Log.i("LAUNCH VISOR ACTION", "POSITION: " + visorPos);
+//        Log.i("LAUNCH VISOR ACTION", "POSITION: " + visorPos + " Target: " + position);
 
         boolean retVal = (Math.abs(position - visorPos) > VISOR_POSITION_TOLERANCE);
+
+        if (actionDuration.milliseconds() > VISOR_ACTION_TIMEOUT_MILLIS) {
+            Log.i("LAUNCH VISOR ACTION", "CALLING IT DONE. TIME EXCEEDED THRESHOLD OF: " + VISOR_ACTION_TIMEOUT_MILLIS);
+            retVal = false;
+        }
 
         if (!retVal)
             Log.i("LAUNCH VISOR ACTION", "Total time taken: " + actionDuration.milliseconds());

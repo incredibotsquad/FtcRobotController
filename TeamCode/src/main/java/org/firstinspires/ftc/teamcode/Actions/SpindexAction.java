@@ -42,10 +42,15 @@ public class SpindexAction implements Action {
         }
 
         if (waitForAction) {
-            boolean retVal = (Math.abs(robotHardware.getSpindexPositionFromEncoder() - position) > SPINDEX_POSITION_TOLERANCE);
 
-//            if (!retVal)
-//                Log.i("SPINDEX ACTION", "Total Time Taken: " + actionDuration.milliseconds());
+            double spindexPos = robotHardware.getSpindexPositionFromEncoder();
+            boolean retVal = (Math.abs(spindexPos - position) > SPINDEX_POSITION_TOLERANCE);
+
+//            Log.i("SPINDEX ACTION", "POSITION: " + spindexPos + " Target: " + position);
+
+
+            if (!retVal)
+                Log.i("SPINDEX ACTION", "Total Time Taken: " + actionDuration.milliseconds());
 
             return retVal;
         }

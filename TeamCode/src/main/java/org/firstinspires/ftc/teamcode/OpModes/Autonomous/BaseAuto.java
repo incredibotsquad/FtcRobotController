@@ -51,7 +51,7 @@ public abstract class BaseAuto extends LinearOpMode {
                 CrossOpModeStorage.turretPosition = robotHardware.getLaunchTurretPosition();
 
                 //keep the turret aligned to the goal
-                launchSystem.AlignTurretToGoalNew();
+                launchSystem.AlignTurretToGoal();
 
                 //keep tha launcher warm
                 launchSystem.KeepLauncherWarm();

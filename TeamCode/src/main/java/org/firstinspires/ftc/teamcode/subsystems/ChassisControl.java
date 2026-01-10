@@ -78,8 +78,8 @@ public class ChassisControl {
         mecanumDrive.updatePoseEstimate();
 
         Pose2d pose = mecanumDrive.localizer.getPose();
-//        Log.i("Chassis Control", "position before parking: x: " + pose.position.x + " y: " + pose.position.y);
-
+        CrossOpModeStorage.currentPose = pose;
+        Log.i("Chassis Control", "position update: x: " + pose.position.x + " y: " + pose.position.y + " heading: " + Math.toDegrees(pose.heading.toDouble()));
     }
 
 //    private void moveRobotWithGamePad() {
