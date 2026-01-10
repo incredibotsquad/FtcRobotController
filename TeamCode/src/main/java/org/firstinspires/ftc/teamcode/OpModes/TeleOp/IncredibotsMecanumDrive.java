@@ -57,7 +57,7 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
         // THAT'S WHY THESE ARE INITIALIZED AFTER A CHANCE TO CHANGE ALLIANCE COLOR
         this.limelightAprilTagHelper = new LimelightAprilTagHelper(robotHardware);
         this.chassisControl = new ChassisControl(gamepad1, robotHardware, this.limelightAprilTagHelper);
-        this.mechanismControl = new MechanismControl(gamepad2, robotHardware, this.limelightAprilTagHelper, telemetry);
+        this.mechanismControl = new MechanismControl(gamepad2, robotHardware, this.limelightAprilTagHelper, telemetry, () -> chassisControl.getPose());
 
         telemetry.addData("Status", "Initialized");
         telemetry.update();

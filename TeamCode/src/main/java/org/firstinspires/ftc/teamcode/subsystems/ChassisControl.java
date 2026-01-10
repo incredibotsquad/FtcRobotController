@@ -82,6 +82,11 @@ public class ChassisControl {
 
     }
 
+    public Pose2d getPose() {
+        if (mecanumDrive == null || mecanumDrive.localizer == null) return null;
+        return mecanumDrive.localizer.getPose();
+    }
+
 //    private void moveRobotWithGamePad() {
 //        double max;
 //

@@ -30,6 +30,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.function.Supplier;
+
+import com.acmerobotics.roadrunner.Pose2d;
 
 @Config
 public class LaunchSystem {
@@ -42,6 +45,7 @@ public class LaunchSystem {
     private ElapsedTime turretAlignmentThrottleTimer;
     private ElapsedTime turretTagNotFoundTimer;
     private ElapsedTime flywheelWarmerThrottleTimer;
+    private Supplier<Pose2d> robotPoseSupplier;
 
     public static int TURRET_VELOCITY = 4000;
 
@@ -58,7 +62,8 @@ public class LaunchSystem {
 
     public enum TurretAlignmentMode {
         POSITION,
-        POWER
+        POWER,
+        POSE_COARSE_THEN_VISION
     }
 
     public static TurretAlignmentMode TURRET_ALIGNMENT_MODE = TurretAlignmentMode.POSITION;
@@ -68,11 +73,25 @@ public class LaunchSystem {
     public static double TURRET_POWER_MAX = 0.7;
     public static boolean TURRET_POWER_SOFT_LIMITS_ENABLED = true;
 
+    // Coarse aim config (must match your Road Runner pose coordinate frame + units)
+    public static double GOAL_BLUE_X = 0;
+    public static double GOAL_BLUE_Y = 0;
+    public static double GOAL_RED_X = 0;
+    public static double GOAL_RED_Y = 0;
+    // Turret pivot offset from robot pose origin, in robot frame (x forward, y left)
+    public static double TURRET_PIVOT_OFFSET_X = 0;
+    public static double TURRET_PIVOT_OFFSET_Y = 0;
+    public static double TURRET_COARSE_TOLERANCE_DEG = 12;
+
     public static double DBG_TURRET_LAST_YAW_DEG = 0;
     public static double DBG_TURRET_LAST_DISTANCE_IN = 0;
     public static double DBG_TURRET_LAST_TOLERANCE_DEG = 0;
     public static double DBG_TURRET_LAST_POWER = 0;
     public static boolean DBG_TURRET_ALIGNED = false;
+    public static boolean DBG_TURRET_COARSE_ACTIVE = false;
+    public static double DBG_POSE_X = 0;
+    public static double DBG_POSE_Y = 0;
+    public static double DBG_POSE_HEADING_DEG = 0;
 
 
     public static double TURRET_FRACTION_OF_DIFFERENCE_TO_COVER = 0.9;
@@ -138,6 +157,10 @@ public class LaunchSystem {
         this.allianceColor = CrossOpModeStorage.allianceColor;
 
         this.oldLaunchParameters = distancePowerVisorMap.get(FLYWHEEL_POWER_BUCKET_THRESHOLD_MID);
+    }
+
+    public void setRobotPoseSupplier(Supplier<Pose2d> robotPoseSupplier) {
+        this.robotPoseSupplier = robotPoseSupplier;
     }
 
     //make default constructor private
@@ -428,11 +451,123 @@ public class LaunchSystem {
     }
 
     public void AlignTurretToGoalSelected() {
-        if (TURRET_ALIGNMENT_MODE == TurretAlignmentMode.POWER) {
+        if (TURRET_ALIGNMENT_MODE == TurretAlignmentMode.POSE_COARSE_THEN_VISION) {
+            AlignTurretToGoalPoseCoarseThenVision();
+        } else if (TURRET_ALIGNMENT_MODE == TurretAlignmentMode.POWER) {
             AlignTurretToGoalPower();
         } else {
             AlignTurretToGoalNew();
         }
+    }
+
+    /**
+     * Coarse turret pointing using robot Pose2d + fixed goal (x,y).
+     * If the goal tag is visible, defers to Limelight yaw alignment for fine adjustment.
+     */
+    public void AlignTurretToGoalPoseCoarseThenVision() {
+        if (turretAlignmentThrottleTimer.milliseconds() < TURRET_ALIGNMENT_THROTTLE_MILLIS) {
+            return;
+        }
+        turretAlignmentThrottleTimer.reset();
+
+        LimelightLaunchParameters ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
+        if (ydt != null) {
+            DBG_TURRET_COARSE_ACTIVE = false;
+            AlignTurretToGoalPower();
+            return;
+        }
+
+        DBG_TURRET_COARSE_ACTIVE = true;
+
+        if (robotPoseSupplier == null) {
+            robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
+            DBG_TURRET_ALIGNED = false;
+            DBG_TURRET_LAST_POWER = 0;
+            robotHardware.setLaunchTurretPower(0);
+            return;
+        }
+
+        Pose2d pose = robotPoseSupplier.get();
+        if (pose == null) {
+            robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
+            DBG_TURRET_ALIGNED = false;
+            DBG_TURRET_LAST_POWER = 0;
+            robotHardware.setLaunchTurretPower(0);
+            return;
+        }
+
+        DBG_POSE_X = pose.position.x;
+        DBG_POSE_Y = pose.position.y;
+        DBG_POSE_HEADING_DEG = Math.toDegrees(pose.heading.toDouble());
+
+        double goalX = (allianceColor == AllianceColors.RED) ? GOAL_RED_X : GOAL_BLUE_X;
+        double goalY = (allianceColor == AllianceColors.RED) ? GOAL_RED_Y : GOAL_BLUE_Y;
+
+        double desiredTurretDeg = computeTurretDegreesToFaceGoal(pose, goalX, goalY, TURRET_PIVOT_OFFSET_X, TURRET_PIVOT_OFFSET_Y);
+
+        double turretAnglePerPulleyRotation = 360.0 / (123.0 / 24.0);
+        double degreesPerTick = turretAnglePerPulleyRotation / TURRET_PULSES_PER_REV;
+        int maxTicksBeforeClamp = (int) (180.0 / degreesPerTick);
+        double currentTurretDeg = robotHardware.getLaunchTurretPosition() * degreesPerTick;
+
+        double errorDeg = normalizeDeg180(desiredTurretDeg - currentTurretDeg);
+
+        DBG_TURRET_LAST_DISTANCE_IN = 0;
+        DBG_TURRET_LAST_TOLERANCE_DEG = TURRET_COARSE_TOLERANCE_DEG;
+        DBG_TURRET_LAST_YAW_DEG = errorDeg;
+
+        if (Math.abs(errorDeg) <= TURRET_COARSE_TOLERANCE_DEG) {
+            DBG_TURRET_ALIGNED = true;
+            DBG_TURRET_LAST_POWER = 0;
+            robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
+            robotHardware.setLaunchTurretPower(0);
+            return;
+        }
+
+        DBG_TURRET_ALIGNED = false;
+        robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
+
+        double power = Math.max(-TURRET_POWER_MAX, Math.min(TURRET_POWER_MAX, TURRET_POWER_KP * errorDeg));
+        if (Math.abs(power) < TURRET_POWER_MIN) {
+            power = Math.copySign(TURRET_POWER_MIN, power);
+        }
+
+        if (TURRET_POWER_SOFT_LIMITS_ENABLED) {
+            int currentPos = robotHardware.getLaunchTurretPosition();
+            if ((power > 0 && currentPos >= maxTicksBeforeClamp) || (power < 0 && currentPos <= -maxTicksBeforeClamp)) {
+                power = 0;
+            }
+        }
+
+        DBG_TURRET_LAST_POWER = power;
+        robotHardware.setLaunchTurretPower(power);
+    }
+
+    /**
+     * Helper: returns desired turret angle (deg, [-180,180]) relative to robot forward.
+     */
+    public static double computeTurretDegreesToFaceGoal(Pose2d robotPose, double goalX, double goalY, double turretOffsetX, double turretOffsetY) {
+        double heading = robotPose.heading.toDouble();
+
+        // Rotate turret offset from robot frame into world frame.
+        double cos = Math.cos(heading);
+        double sin = Math.sin(heading);
+        double offsetWorldX = turretOffsetX * cos - turretOffsetY * sin;
+        double offsetWorldY = turretOffsetX * sin + turretOffsetY * cos;
+
+        double turretWorldX = robotPose.position.x + offsetWorldX;
+        double turretWorldY = robotPose.position.y + offsetWorldY;
+
+        double worldAngleToGoalDeg = Math.toDegrees(Math.atan2(goalY - turretWorldY, goalX - turretWorldX));
+        double robotHeadingDeg = Math.toDegrees(heading);
+        return normalizeDeg180(worldAngleToGoalDeg - robotHeadingDeg);
+    }
+
+    private static double normalizeDeg180(double deg) {
+        double out = deg % 360.0;
+        if (out > 180.0) out -= 360.0;
+        if (out < -180.0) out += 360.0;
+        return out;
     }
 
     public void AlignTurretToGoalPower() {
