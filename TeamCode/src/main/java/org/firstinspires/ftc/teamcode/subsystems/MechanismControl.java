@@ -83,21 +83,13 @@ public class MechanismControl {
 
         //process the yaw and rotate the turret always - except when parking
         if (currentRobotState != ROBOT_STATE.PARK && targetRobotState != ROBOT_STATE.PARK) {
-//            launchSystem.AlignTurretToGoal();
-            launchSystem.AlignTurretToGoalSelected();
+            launchSystem.AlignTurretToGoal();
+            launchSystem.KeepLauncherWarm();
         }
-
-        telemetry.addData("TurretAlignMode", LaunchSystem.TURRET_ALIGNMENT_MODE);
-        telemetry.addData("TurretYawDeg", LaunchSystem.DBG_TURRET_LAST_YAW_DEG);
-        telemetry.addData("TurretDistanceIn", LaunchSystem.DBG_TURRET_LAST_DISTANCE_IN);
-        telemetry.addData("TurretTolDeg", LaunchSystem.DBG_TURRET_LAST_TOLERANCE_DEG);
-        telemetry.addData("TurretPower", LaunchSystem.DBG_TURRET_LAST_POWER);
-        telemetry.addData("TurretAligned", LaunchSystem.DBG_TURRET_ALIGNED);
 
         //keep warm only if we are intake mode. Else this will interfere with launch parameters
 //        if ((currentRobotState == ROBOT_STATE.INTAKE || targetRobotState == ROBOT_STATE.INTAKE) && (!stateTransitionInProgress)) {
 //            Log.i("== MECHANISM CONTROL ==", "Calling to keep launcher warm from main loop. Current state:" + currentRobotState + " target state: " + targetRobotState);
-            launchSystem.KeepLauncherWarm();
 //        }
 
 
@@ -205,9 +197,7 @@ public class MechanismControl {
             switch (targetRobotState) {
 
                 case INTAKE:
-//                    Log.i("== MECHANISM CONTROL ==", "PROCESSING STATE: INTAKE");
-
-                    //get the list of actions and put it in running actions
+                    Log.i("== MECHANISM CONTROL ==", "PROCESSING STATE: INTAKE");
                     runningActions.add(
                             new SequentialAction(
                                     launchSystem.getKeepWarmAction(),
