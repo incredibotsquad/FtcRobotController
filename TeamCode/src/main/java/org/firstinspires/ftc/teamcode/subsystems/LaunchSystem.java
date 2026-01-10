@@ -429,7 +429,11 @@ public class LaunchSystem {
         LimelightLaunchParameters ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
 
         //tag not found
-        if (ydt == null && turretTagNotFoundTimer.milliseconds() > TURRET_TAG_NOT_FOUND_TIMER_MILLIS) {
+        if (ydt == null) {
+
+            if (turretTagNotFoundTimer.milliseconds() < TURRET_TAG_NOT_FOUND_TIMER_MILLIS)
+                return;
+
             Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : Tag NOT found");
 
             double goalX = (allianceColor == AllianceColors.RED) ? GOAL_RED_X : GOAL_BLUE_X;
@@ -439,12 +443,13 @@ public class LaunchSystem {
 
             robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
 
-            double desiredTurretDeg = computeTurretDegreesToFaceGoal(CrossOpModeStorage.currentPose, goalX, goalY, TURRET_PIVOT_OFFSET_X, TURRET_PIVOT_OFFSET_Y);
-            double currentTurretDeg = robotHardware.getLaunchTurretPosition() * degreesPerTick;
+            double currentTurretRadians = Math.toRadians(robotHardware.getLaunchTurretPosition() * degreesPerTick);
 
-            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : currentTurretDeg:" + currentTurretDeg + " desiredTurretDeg: " + desiredTurretDeg);
+            double desiredTurretDeg = computeTurretDegreesToFaceGoal(CrossOpModeStorage.currentPose, goalX, goalY, currentTurretRadians);
 
-            double errorDeg = normalizeDeg180(desiredTurretDeg - currentTurretDeg);
+            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : currentTurretDeg:" + Math.toDegrees(currentTurretRadians) + " desiredTurretDeg: " + desiredTurretDeg);
+
+            double errorDeg = normalizeToTurretRange(desiredTurretDeg, degreesPerTick, maxTicksBeforeClamp);
 
             if (Math.abs(errorDeg) <= TURRET_COARSE_TOLERANCE_DEGREES) {
                 robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
@@ -535,22 +540,55 @@ public class LaunchSystem {
         robotHardware.setLaunchTurretPower(power);
     }
 
-    public static double computeTurretDegreesToFaceGoal(Pose2d robotPose, double goalX, double goalY, double turretOffsetX, double turretOffsetY) {
+    public double computeTurretDegreesToFaceGoal(Pose2d robotPose, double goalX, double goalY, double currentTurretRadians) {
         double heading = robotPose.heading.toDouble();
 
-        // Rotate turret offset from robot frame into world frame.
-        double cos = Math.cos(heading);
-        double sin = Math.sin(heading);
+        double deltaX = goalX - robotPose.position.x;
+        double deltaY = goalY - robotPose.position.y;
 
-        double offsetWorldX = turretOffsetX * cos - turretOffsetY * sin;
-        double offsetWorldY = turretOffsetX * sin + turretOffsetY * cos;
+        Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : robot pose: X: " + robotPose.position.x + " Y: " + robotPose.position.y + " Heading:" + Math.toDegrees(heading));
+        Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : goal X: " + goalX + " goal Y: " + goalY);
+        Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : current Turret Degrees: " + Math.toDegrees(currentTurretRadians));
 
-        double turretWorldX = robotPose.position.x + offsetWorldX;
-        double turretWorldY = robotPose.position.y + offsetWorldY;
+        double targetRadiansRelativeToRobotPosition = Math.atan2(deltaY, deltaX);
 
-        double worldAngleToGoalDeg = Math.toDegrees(Math.atan2(goalY - turretWorldY, goalX - turretWorldX));
-        double robotHeadingDeg = Math.toDegrees(heading);
-        return normalizeDeg180(robotHeadingDeg - worldAngleToGoalDeg);
+        Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : target Angle Relative To Robot X Y only: " + Math.toDegrees(targetRadiansRelativeToRobotPosition));
+
+        double turretHeadingInFieldSpace = heading - currentTurretRadians;
+
+        Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : turret heading in field space: " + Math.toDegrees(turretHeadingInFieldSpace));
+
+        double degreesTurretHasToMove = Math.toDegrees(turretHeadingInFieldSpace - targetRadiansRelativeToRobotPosition);
+        Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : degrees turret has to  move: " + degreesTurretHasToMove);
+
+        return degreesTurretHasToMove;
+    }
+
+    private double normalizeToTurretRange(double degreesTurretHasToMove, double degreesPerTick, double maxTicksBeforeClamp) {
+        double currentPos = robotHardware.getLaunchTurretPosition();
+
+        double targetPos = currentPos + (degreesTurretHasToMove / degreesPerTick);
+
+        Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : target position: " + targetPos);
+
+        if (targetPos >= -maxTicksBeforeClamp && targetPos <= maxTicksBeforeClamp)  //within range - move
+        {
+            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : target position reachable by moving " + degreesTurretHasToMove + " degrees");
+            return degreesTurretHasToMove;
+        }
+
+        // flip the angle and try
+        degreesTurretHasToMove = 180 - Math.abs(degreesTurretHasToMove);
+        targetPos = currentPos + (degreesTurretHasToMove / degreesPerTick);
+
+        if (targetPos >= -maxTicksBeforeClamp && targetPos <= maxTicksBeforeClamp)  //within range - move
+        {
+            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : Flipped target position reachable by moving " + degreesTurretHasToMove + " degrees");
+            return degreesTurretHasToMove;
+        }
+
+        Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : target position not reachable:");
+        return 0; // dont move at all
     }
 
     private static double normalizeDeg180(double deg) {
