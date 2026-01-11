@@ -83,7 +83,7 @@ public class MechanismControl {
 
         //process the yaw and rotate the turret always - except when parking
         if (currentRobotState != ROBOT_STATE.PARK && targetRobotState != ROBOT_STATE.PARK) {
-            launchSystem.AlignTurretToGoal();
+            launchSystem.AlignTurretToGoal(false);
             launchSystem.KeepLauncherWarm();
         }
 

@@ -13,6 +13,8 @@ import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.ProfileAccelConstraint;
+import com.acmerobotics.roadrunner.SequentialAction;
+import com.acmerobotics.roadrunner.SleepAction;
 import com.acmerobotics.roadrunner.TranslationalVelConstraint;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -48,8 +50,8 @@ public class RedFarAuto_6 extends BaseAuto {
     public Pose2d INIT_POS = new Pose2d(55, 16 * multiplier, robotHeading);
     public Pose2d LAUNCH_POS = new Pose2d(45, 16 * multiplier, robotHeading);
 
-    public Pose2d COLLECT_LINE_1_START = new Pose2d(36, 38 * multiplier, artifactHeading);
-    public Pose2d COLLECT_LINE_1_END = new Pose2d(36,  COLLECT_LINE_1_START.position.y + (LINE_DEPTH * multiplier), artifactHeading);
+    public Pose2d COLLECT_LINE_1_START = new Pose2d(40, 38 * multiplier, artifactHeading);
+    public Pose2d COLLECT_LINE_1_END = new Pose2d(40,  COLLECT_LINE_1_START.position.y + (LINE_DEPTH * multiplier), artifactHeading);
 
     public Pose2d COLLECT_LINE_2_START = new Pose2d(48, 60 * multiplier, oppositeToObeliskHeading);
     public Pose2d COLLECT_LINE_2_END = new Pose2d(COLLECT_LINE_2_START.position.x + LINE_DEPTH,  COLLECT_LINE_2_START.position.y, oppositeToObeliskHeading);
@@ -60,6 +62,8 @@ public class RedFarAuto_6 extends BaseAuto {
     public static double TIMEOUT_INIT_MS = 0;      // INIT state timeout
     public static double TIMEOUT_INTAKE_MS = 10000;   // Intake states timeout (longer to collect balls)
     public static double STATE_TIMEOUT_MS = 6000;     // All other states timeout
+
+    private static double ALIGNMENT_WAIT_SECONDS = 4;
 
     // ========== STATE MACHINE ==========
     private enum AutoState {
@@ -198,7 +202,10 @@ public class RedFarAuto_6 extends BaseAuto {
                 Log.i("RedFarAuto_6", "Starting LAUNCH_ALL_PRELOAD");
                 // Same as TeleOp LAUNCH_ALL state
                 runningActions.add(
-                        launchSystem.getPerformLaunchOnAllSlots()
+                        new SequentialAction(
+                                new SleepAction(ALIGNMENT_WAIT_SECONDS),
+                                launchSystem.getPerformLaunchOnAllSlots()
+                        )
                 );
                 stateTransitionInProgress = true;
                 break;
@@ -255,7 +262,10 @@ public class RedFarAuto_6 extends BaseAuto {
             case LAUNCH_ALL_1:
                 Log.i("RedFarAuto_6", "Starting LAUNCH_ALL_1");
                 runningActions.add(
-                        launchSystem.getPerformLaunchOnAllSlots()
+                        new SequentialAction(
+                                new SleepAction(ALIGNMENT_WAIT_SECONDS),
+                                launchSystem.getPerformLaunchOnAllSlots()
+                        )
                 );
                 stateTransitionInProgress = true;
                 break;

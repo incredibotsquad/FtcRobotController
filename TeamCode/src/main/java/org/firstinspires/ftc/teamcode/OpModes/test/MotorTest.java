@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 
 //@Disabled
 
+@Disabled
 @Config
 @TeleOp(name="MotorTest", group="Tests")
 public class MotorTest extends LinearOpMode {

@@ -1,6 +1,8 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
 
+import static org.firstinspires.ftc.teamcode.Actions.LiftAction.LIFT_RESET;
+
 import android.util.Log;
 
 import com.acmerobotics.dashboard.config.Config;
@@ -147,7 +149,11 @@ public class ChassisControl {
 
         if (gamepad1.startWasPressed()) {
 
-            robotHardware.setLiftPosition(LiftAction.LIFT_ROBOT);
+            if (robotHardware.getLiftPosition() < LiftAction.LIFT_ROBOT / 2)
+                robotHardware.setLiftPosition(LiftAction.LIFT_ROBOT);
+            else
+                robotHardware.setLiftPosition(LiftAction.LIFT_RESET);
+
 
 //            if (PARK_POS != null) {
 //                Pose2d startingPose = mecanumDrive.localizer.getPose();

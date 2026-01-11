@@ -217,7 +217,7 @@ public class LimelightAprilTagHelper  {
 //            Log.i("LimelightAprilTagHelper", "ORIENTATION YAW: " + oyaw);
 
             // Calculate horizontal distance to the AprilTag
-            horizontalDistance = calculateHorizontalDistance(adjustedX, adjustedZ);
+//            horizontalDistance = calculateHorizontalDistance(adjustedX, adjustedZ);
 
             // Calculate dynamic tolerance based on distance
             double dynamicTolerance = calculateDistanceBasedTolerance(horizontalDistance);

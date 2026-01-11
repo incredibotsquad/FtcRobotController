@@ -15,7 +15,7 @@ import org.firstinspires.ftc.teamcode.common.RobotHardware;
 public class LiftAction implements Action {
 
     public static double LIFT_ROBOT = 0.4;
-    public static double LIFT_RESET = 0;
+    public static double LIFT_RESET = 0.1;
 
     private RobotHardware robotHardware;
     private double position;

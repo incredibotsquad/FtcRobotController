@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.OpModes.Autonomous;
 
 import static org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC;
+import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.FLYWHEEL_POWER_COEFFICIENT_CLOSE;
 import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.FLYWHEEL_POWER_COEFFICIENT_MID;
 import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.TURRET_SERVO_CENTERED;
 
@@ -15,6 +16,7 @@ import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.ProfileAccelConstraint;
 import com.acmerobotics.roadrunner.SequentialAction;
+import com.acmerobotics.roadrunner.SleepAction;
 import com.acmerobotics.roadrunner.TranslationalVelConstraint;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -55,15 +57,16 @@ public class RedNearAuto_6 extends BaseAuto {
     public Pose2d INIT_POS = new Pose2d(-54, 54 * multiplier, robotHeading);
     public Pose2d TAG_READ_POS = new Pose2d(-36, 15 * multiplier, obeliskHeading);
 
-    public Pose2d LAUNCH_POS = new Pose2d(-20, 30 * multiplier, goalHeading);
+    public Pose2d LAUNCH_POS = new Pose2d(-36, 36 * multiplier, goalHeading);
 
-    public Pose2d COLLECT_LINE_1_START = new Pose2d(-12, 38 * multiplier, artifactHeading);
+    public Pose2d COLLECT_LINE_1_START = new Pose2d(-10, 38 * multiplier, artifactHeading);
     public Pose2d COLLECT_LINE_1_END = new Pose2d(COLLECT_LINE_1_START.position.x,  COLLECT_LINE_1_START.position.y + (LINE_DEPTH_SHALLOW * multiplier), artifactHeading);
     public Pose2d COLLECT_LINE_2_START = new Pose2d(16, 38 * multiplier, artifactHeading);
     public Pose2d COLLECT_LINE_2_END = new Pose2d(COLLECT_LINE_2_START.position.x,  COLLECT_LINE_2_START.position.y + (LINE_DEPTH * multiplier), artifactHeading);
 
     public Pose2d MOVE_OFF_LINE = new Pose2d(-48, 24  * multiplier, artifactHeading);
 
+    private static double ALIGNMENT_WAIT_SECONDS = 2;
 
     // ========== TIMEOUTS (tunable via FTC Dashboard) ==========
     public static double TIMEOUT_INIT_MS = 0;      // INIT state timeout
@@ -191,7 +194,7 @@ public class RedNearAuto_6 extends BaseAuto {
                 Log.i("RedNearAuto_6", "Starting DRIVE_TO_READ_SEQUENCE");
                 runningActions.add(
                         new SequentialAction(
-                                new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_MID, false),
+                                new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_CLOSE, false),
                                 mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
                                     .strafeToLinearHeading(LAUNCH_POS.position, obeliskHeading)
                                     .build(),
@@ -211,7 +214,7 @@ public class RedNearAuto_6 extends BaseAuto {
                 Log.i("RedNearAuto_6", "Starting DRIVE_TO_LAUNCH_PRELOAD");
                 runningActions.add(
                         new SequentialAction(
-                                new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_MID, false),
+                                new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_CLOSE, false),
                                 mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
 //                                        .turnTo(LAUNCH_POS.heading)
                                         .splineToLinearHeading(LAUNCH_POS, LAUNCH_POS.heading)
@@ -224,7 +227,10 @@ public class RedNearAuto_6 extends BaseAuto {
                 Log.i("RedNearAuto_6", "Starting LAUNCH_ALL_PRELOAD");
                 // Same as TeleOp LAUNCH_ALL state
                 runningActions.add(
-                        launchSystem.getPerformLaunchOnAllSlots()
+                        new SequentialAction(
+                                new SleepAction(ALIGNMENT_WAIT_SECONDS),
+                                launchSystem.getPerformLaunchOnAllSlots()
+                        )
                 );
                 stateTransitionInProgress = true;
                 break;
@@ -279,7 +285,10 @@ public class RedNearAuto_6 extends BaseAuto {
             case LAUNCH_ALL_1:
                 Log.i("RedNearAuto_6", "Starting LAUNCH_ALL_1");
                 runningActions.add(
-                        launchSystem.getPerformLaunchOnAllSlots()
+                        new SequentialAction(
+                                new SleepAction(ALIGNMENT_WAIT_SECONDS),
+                                launchSystem.getPerformLaunchOnAllSlots()
+                        )
                 );
                 stateTransitionInProgress = true;
                 break;

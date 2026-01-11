@@ -51,7 +51,8 @@ public class LaunchSystem {
     public static double TURRET_ALIGNMENT_TOLERANCE_DEGREES_FAR = 2;
     public static double TURRET_COARSE_TOLERANCE_DEGREES = 3;
     public static double TURRET_FRACTION_OF_DIFFERENCE_TO_COVER = 0.9;
-    public static double TURRET_TAG_NOT_FOUND_TIMER_MILLIS = 2000;
+    public static double TURRET_TAG_NOT_FOUND_TIMER_MILLIS_TELEOP = 2000;
+    public static double TURRET_TAG_NOT_FOUND_TIMER_MILLIS_AUTO = 500;
 
     public static double TURRET_POWER_KP = 0.05;
     public static double TURRET_POWER_MIN = 0.12;
@@ -360,7 +361,7 @@ public class LaunchSystem {
 
         if (ydt != null) {
 //            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: YAW: " + ydt.yaw);
-//            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: DISTANCE: " + ydt.distance);
+            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: DISTANCE: " + ydt.distance);
 
             if (ydt.distance < FLYWHEEL_POWER_BUCKET_THRESHOLD_MID) {
                 launchParameters = new BallLaunchParameters(
@@ -468,8 +469,7 @@ public class LaunchSystem {
 
     }
 
-
-    public void AlignTurretToGoal() {
+    public void AlignTurretToGoal(boolean inAutonomous) {
         if (turretAlignmentThrottleTimer.milliseconds() < TURRET_ALIGNMENT_THROTTLE_MILLIS) {
             return;
         }
@@ -483,8 +483,11 @@ public class LaunchSystem {
 
         //tag not found
         if (ydt == null) {
+            double timeout = TURRET_TAG_NOT_FOUND_TIMER_MILLIS_TELEOP;
+            if (inAutonomous)
+                timeout = TURRET_TAG_NOT_FOUND_TIMER_MILLIS_AUTO;
 
-            if (turretTagNotFoundTimer.milliseconds() > TURRET_TAG_NOT_FOUND_TIMER_MILLIS) {
+            if (turretTagNotFoundTimer.milliseconds() > timeout) {
 
 //                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : Tag NOT found");
 

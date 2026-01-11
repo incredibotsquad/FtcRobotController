@@ -1,12 +1,14 @@
 package org.firstinspires.ftc.teamcode.OpModes.test;
 
 import com.acmerobotics.dashboard.config.Config;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 
+@Disabled
 @Config
 @TeleOp(name = "FlywheelTuner", group = "Tests")
 public class FlywheelTuner extends OpMode {
