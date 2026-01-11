@@ -24,9 +24,14 @@ public class LimelightAprilTagHelper  {
     public static double MAX_TOLERANCE = 10.0; // Maximum tolerance at close distances
     public static double TOLERANCE_SCALING_DISTANCE = 40.0; // Distance in inches for scaling
     public static double TARGET_OFFSET_BEHIND_TAG_INCHES_NEAR = 12;
-    public static double TARGET_OFFSET_BEHIND_TAG_INCHES_FAR = 25;
+    public static double TARGET_OFFSET_BEHIND_TAG_INCHES_FAR = 8;
     private ElapsedTime timeSinceLastYawPull;
     public static int YAW_NORMALIZATION_THRESHOLD_MILLIS = 50;
+    private double oldX = -1000;
+    private double oldY = -1000;
+    private double oldZ = -1000;
+    private double oldPitch = -1000;
+
     private double oldZYaw = -1000;
     private RobotHardware robotHardware;
     private AllianceColors allianceColor;
@@ -141,8 +146,19 @@ public class LimelightAprilTagHelper  {
 
             // Get RAW position values (target position relative to camera)
             double rawX = pose.getPosition().x;
+            if (oldX != -1000)
+                rawX = (0.25 * rawX) + (0.75 * oldX);
+            oldX = rawX;
+
             double rawY = pose.getPosition().y;
+            if (oldY != -1000)
+                rawY = (0.25 * rawY) + (0.75 * oldY);
+            oldY = rawY;
+
             double rawZ = pose.getPosition().z;
+            if (oldZ != -1000)
+                rawZ = (0.25 * rawZ) + (0.75 * oldZ);
+            oldZ = rawZ;
 
             YawPitchRollAngles angles = pose.getOrientation();
 
@@ -152,6 +168,9 @@ public class LimelightAprilTagHelper  {
 
 
             double oyaw = angles.getPitch(AngleUnit.RADIANS);
+            if (oldPitch != -1000)
+                oyaw = (0.25 * oyaw) + (0.75 * oldPitch);
+            oldPitch = oyaw;
 
             // For TARGET POSE IN CAMERA SPACE, Limelight returns METERS
             // Convert to inches for our calculations

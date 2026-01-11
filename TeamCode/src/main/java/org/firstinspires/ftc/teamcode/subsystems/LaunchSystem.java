@@ -49,7 +49,7 @@ public class LaunchSystem {
     public static double TURRET_ALIGNMENT_THROTTLE_MILLIS = 20;
     public static double TURRET_ALIGNMENT_TOLERANCE_DEGREES_NEAR = 2;
     public static double TURRET_ALIGNMENT_TOLERANCE_DEGREES_FAR = 2;
-    public static double TURRET_COARSE_TOLERANCE_DEGREES = 12;
+    public static double TURRET_COARSE_TOLERANCE_DEGREES = 3;
     public static double TURRET_FRACTION_OF_DIFFERENCE_TO_COVER = 0.9;
     public static double TURRET_TAG_NOT_FOUND_TIMER_MILLIS = 2000;
 
@@ -57,7 +57,8 @@ public class LaunchSystem {
     public static double TURRET_POWER_MIN = 0.12;
     public static double TURRET_POWER_MAX = 0.9;
     public static boolean TURRET_POWER_SOFT_LIMITS_ENABLED = true;
-
+    public static double TURRET_PIVOT_OFFSET_X = -12;
+    public static double TURRET_PIVOT_OFFSET_Y = 0;
 
     public static double GOAL_BLUE_X = -56;
     public static double GOAL_BLUE_Y = -56;
@@ -65,7 +66,6 @@ public class LaunchSystem {
     public static double GOAL_RED_Y = 56;
 
     public static double TURRET_PULSES_PER_REV = 751.8; //PPR at the output shaft depending on the motor that is used.
-    public static double TURRET_SCAN_POWER = 0.5;
     public static double ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT = 0.3;    //RED
     public static double ROBOT_ALIGNED_TO_SHOOT_LIGHT = 0.5;    //GREEN
 
@@ -89,9 +89,9 @@ public class LaunchSystem {
     public static double VISOR_POSITION_MID_2 = 0.3;
     public static double VISOR_POSITION_MID_3 = 0.3;
 
-    public static double VISOR_POSITION_FAR_1 = 0.7;
-    public static double VISOR_POSITION_FAR_2 = 0.7;
-    public static double VISOR_POSITION_FAR_3 = 0.7;
+    public static double VISOR_POSITION_FAR_1 = 0.71;
+    public static double VISOR_POSITION_FAR_2 = 0.71;
+    public static double VISOR_POSITION_FAR_3 = 0.71;
 
 
 
@@ -415,6 +415,60 @@ public class LaunchSystem {
 //        }
     }
 
+
+    public void AlignTurretToGoalTry() {
+
+        if (turretAlignmentThrottleTimer.milliseconds() < TURRET_ALIGNMENT_THROTTLE_MILLIS) {
+            return;
+        }
+        turretAlignmentThrottleTimer.reset();
+
+        double turretAnglePerPulleyRotation = 360.0 / (123.0 / 24.0);
+        double degreesPerTick = turretAnglePerPulleyRotation / TURRET_PULSES_PER_REV;
+        int maxTicksBeforeClamp = (int) (90.0 / degreesPerTick);
+
+//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : Tag NOT found");
+
+        double goalX = (allianceColor == AllianceColors.RED) ? GOAL_RED_X : GOAL_BLUE_X;
+        double goalY = (allianceColor == AllianceColors.RED) ? GOAL_RED_Y : GOAL_BLUE_Y;
+
+//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : Goal X:" + goalX + " Goal Y: " + goalY);
+
+        double currentTurretRadians = Math.toRadians(robotHardware.getLaunchTurretPosition() * degreesPerTick);
+        double desiredTurretDeg = computeTurretDegreesToFaceGoal(CrossOpModeStorage.currentPose, goalX, goalY, currentTurretRadians);
+
+//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : currentTurretDeg:" + Math.toDegrees(currentTurretRadians) + " desiredTurretDeg: " + desiredTurretDeg);
+
+        double errorDeg = normalizeToTurretRange(desiredTurretDeg, degreesPerTick, maxTicksBeforeClamp);
+
+        if (Math.abs(errorDeg) <= TURRET_COARSE_TOLERANCE_DEGREES) {
+//                    Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : tag not found error in tolerance range - stopping turret");
+            robotHardware.setLaunchTurretPower(0);
+            robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);    //turn off the alignment light
+            return;
+        }
+
+        robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);    //turn off the alignment light
+
+        double power = Math.max(-TURRET_POWER_MAX, Math.min(TURRET_POWER_MAX, TURRET_POWER_KP * errorDeg));
+        if (Math.abs(power) < TURRET_POWER_MIN) {
+            power = Math.copySign(TURRET_POWER_MIN, power);
+        }
+
+        if (TURRET_POWER_SOFT_LIMITS_ENABLED) {
+            int currentPos = robotHardware.getLaunchTurretPosition();
+            if ((power > 0 && currentPos >= maxTicksBeforeClamp) || (power < 0 && currentPos <= -maxTicksBeforeClamp)) {
+                power = 0;
+            }
+        }
+
+//        Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : setLaunchTurretPower:" + power);
+
+        robotHardware.setLaunchTurretPower(power);
+
+    }
+
+
     public void AlignTurretToGoal() {
         if (turretAlignmentThrottleTimer.milliseconds() < TURRET_ALIGNMENT_THROTTLE_MILLIS) {
             return;
@@ -484,15 +538,15 @@ public class LaunchSystem {
 
 //            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : Tag found. Tolerance: " + turretTolerance);
 
-//            int isRobotToLeftOfCenterLine = isRobotToLeftOfCenterLine();
-//            if (isRobotToLeftOfCenterLine == 1) {
+            int isRobotToLeftOfCenterLine = isRobotToLeftOfCenterLine();
+            if (isRobotToLeftOfCenterLine == 1) {
 //                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : Tag found - adding left of line bias");
-//                ydt.yaw = ydt.yaw - turretTolerance;
-//            }
-//            if (isRobotToLeftOfCenterLine == -1) {
+                ydt.yaw = ydt.yaw - turretTolerance;
+            }
+            if (isRobotToLeftOfCenterLine == -1) {
 //                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : Tag found - adding right of line bias");
-//                ydt.yaw = ydt.yaw + turretTolerance;
-//            }
+                ydt.yaw = ydt.yaw + turretTolerance;
+            }
 
             double difference = Math.abs(ydt.yaw) - turretTolerance;
 
@@ -544,10 +598,26 @@ public class LaunchSystem {
     public double computeTurretDegreesToFaceGoal(Pose2d robotPose, double goalX, double goalY, double currentTurretRadians) {
         double heading = robotPose.heading.toDouble();
 
+//        double cos = Math.cos(heading);
+//        double sin = Math.sin(heading);
+
+//        double offsetWorldX = TURRET_PIVOT_OFFSET_X * cos - TURRET_PIVOT_OFFSET_Y * sin;
+//        double offsetWorldY = TURRET_PIVOT_OFFSET_X * sin + TURRET_PIVOT_OFFSET_Y * cos;
+//
+//        double turretWorldX = robotPose.position.x + offsetWorldX;
+//        double turretWorldY = robotPose.position.y + offsetWorldY;
+
         double deltaX = goalX - robotPose.position.x;
         double deltaY = goalY - robotPose.position.y;
 
+//        double deltaX = goalX - turretWorldX;
+//        double deltaY = goalY - turretWorldY;
+
+
 //        Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : robot pose: X: " + robotPose.position.x + " Y: " + robotPose.position.y + " Heading:" + Math.toDegrees(heading));
+
+//        Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : turret pose: X: " + turretWorldX + " Y: " + turretWorldY);
+
 //        Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : current Turret Degrees: " + Math.toDegrees(currentTurretRadians));
 
         double targetRadiansRelativeToRobotPosition = Math.atan2(deltaY, deltaX);
@@ -593,13 +663,6 @@ public class LaunchSystem {
 
 //        Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : target position not reachable:");
         return 0; // dont move at all
-    }
-
-    private static double normalizeDeg180(double deg) {
-        double out = deg % 360.0;
-        if (out > 180.0) out -= 360.0;
-        if (out < -180.0) out += 360.0;
-        return out;
     }
 
     //0 means no idea. 1 means yes, -1 means no.
