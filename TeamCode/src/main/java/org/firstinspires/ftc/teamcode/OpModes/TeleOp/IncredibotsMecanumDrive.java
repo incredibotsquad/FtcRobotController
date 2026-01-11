@@ -67,9 +67,6 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
 
         robotHardware.setLaunchKickPosition(LAUNCH_KICK_RESTING);
 
-        robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
-        //TODO: READ THE POSITION FROM CROSS OPMODE STORAGE,
-
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive() && !isStopRequested()) {
 
