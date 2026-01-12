@@ -83,7 +83,9 @@ public class MechanismControl {
 
         //process the yaw and rotate the turret always - except when parking
         if (currentRobotState != ROBOT_STATE.PARK && targetRobotState != ROBOT_STATE.PARK) {
-            launchSystem.AlignTurretToGoal(false);
+            // Use the new robust turret alignment that uses odometry as primary source
+            // and limelight only for fine adjustments, with a locked state for stability
+            launchSystem.AlignTurretToGoalRobust(false);
             launchSystem.KeepLauncherWarm();
         }
 

@@ -50,8 +50,9 @@ public abstract class BaseAuto extends LinearOpMode {
                 CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
                 CrossOpModeStorage.turretPosition = robotHardware.getLaunchTurretPosition();
 
-                //keep the turret aligned to the goal
-                launchSystem.AlignTurretToGoal(true);
+                //keep the turret aligned to the goal using the robust alignment method
+                //that uses odometry as primary source and limelight only for fine adjustments
+                launchSystem.AlignTurretToGoalRobust(true);
 
                 //keep tha launcher warm
                 launchSystem.KeepLauncherWarm();

@@ -44,6 +44,7 @@ public class LaunchSystem {
     private ElapsedTime flywheelWarmerThrottleTimer;
 
     public static int TURRET_VELOCITY = 4000;
+    public static int TURRET_VELOCITY_FINE = 1500;  // Slower velocity for fine adjustments
 
     public static int TURRET_SERVO_CENTERED = 0;
     public static double TURRET_ALIGNMENT_THROTTLE_MILLIS = 20;
@@ -67,6 +68,38 @@ public class LaunchSystem {
     public static double GOAL_RED_Y = 56;
 
     public static double TURRET_PULSES_PER_REV = 751.8; //PPR at the output shaft depending on the motor that is used.
+
+    // ========== NEW ALIGNMENT SYSTEM PARAMETERS ==========
+    // Thresholds for alignment state machine
+    public static double TURRET_LOCK_THRESHOLD_DEGREES = 1.5;      // Below this = locked (aligned)
+    public static double TURRET_UNLOCK_THRESHOLD_DEGREES = 3.0;    // Above this = needs realignment (hysteresis)
+    
+    // Robot movement thresholds to trigger turret realignment
+    public static double ROBOT_POSITION_CHANGE_THRESHOLD_INCHES = 2.0;   // Robot position change to unlock
+    public static double ROBOT_HEADING_CHANGE_THRESHOLD_DEGREES = 3.0;   // Robot heading change to unlock
+    
+    // Limelight fine adjustment parameters
+    public static double LIMELIGHT_FINE_ADJUST_MAX_DEGREES = 8.0;    // Only use limelight below this error
+    public static double LIMELIGHT_MIN_ADJUST_THRESHOLD_DEGREES = 0.5; // Ignore limelight below this (noise)
+    public static double LIMELIGHT_WEIGHT = 0.7;  // How much to trust limelight vs odometry (0-1)
+    
+    // Stability parameters
+    public static int ALIGNMENT_STABLE_CYCLES_REQUIRED = 3;  // Cycles aligned before locking
+    public static double TURRET_DEADBAND_DEGREES = 0.5;  // Don't move if error is below this
+
+    // Alignment state tracking
+    private enum TurretAlignmentState {
+        COARSE_ALIGNING,    // Large error, using odometry only
+        FINE_ALIGNING,      // Small error, can use limelight for fine tuning
+        LOCKED              // Aligned and stable, don't move unless robot moves
+    }
+    
+    private TurretAlignmentState currentAlignmentState = TurretAlignmentState.COARSE_ALIGNING;
+    private Pose2d lastLockedPose = null;           // Robot pose when turret was locked
+    private int lastLockedTurretPosition = 0;       // Turret position when locked
+    private int alignmentStableCounter = 0;         // Counts cycles at low error before locking
+    private double lastOdometryTargetDegrees = 0;   // Last calculated target from odometry
+    // ========== END NEW ALIGNMENT SYSTEM PARAMETERS ==========
     public static double ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT = 0.3;    //RED
     public static double ROBOT_ALIGNED_TO_SHOOT_LIGHT = 0.5;    //GREEN
 
@@ -666,6 +699,294 @@ public class LaunchSystem {
 
 //        Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : target position not reachable:");
         return 0; // dont move at all
+    }
+
+    /**
+     * NEW ROBUST TURRET ALIGNMENT METHOD
+     * 
+     * Uses odometry-based positioning as the primary source of truth, with limelight
+     * only for fine adjustments. Implements a state machine with hysteresis to prevent
+     * oscillation and unnecessary movement.
+     * 
+     * State Machine:
+     * - COARSE_ALIGNING: Large error (>TURRET_UNLOCK_THRESHOLD_DEGREES), uses odometry only
+     * - FINE_ALIGNING: Small error, uses odometry + limelight for fine tuning
+     * - LOCKED: Aligned and stable, turret holds position unless robot moves significantly
+     */
+    public void AlignTurretToGoalRobust(boolean inAutonomous) {
+        // Throttle updates for stability
+        if (turretAlignmentThrottleTimer.milliseconds() < TURRET_ALIGNMENT_THROTTLE_MILLIS) {
+            return;
+        }
+        turretAlignmentThrottleTimer.reset();
+
+        // Calculate turret conversion constants
+        double turretAnglePerPulleyRotation = 360.0 / (123.0 / 24.0);
+        double degreesPerTick = turretAnglePerPulleyRotation / TURRET_PULSES_PER_REV;
+        int maxTicksBeforeClamp = (int) (90.0 / degreesPerTick);
+
+        // Get current robot pose from odometry (primary source of truth)
+        Pose2d currentPose = CrossOpModeStorage.currentPose;
+        
+        // Get goal coordinates based on alliance
+        double goalX = (allianceColor == AllianceColors.RED) ? GOAL_RED_X : GOAL_BLUE_X;
+        double goalY = (allianceColor == AllianceColors.RED) ? GOAL_RED_Y : GOAL_BLUE_Y;
+
+        // ============ CHECK IF ROBOT HAS MOVED (to unlock turret if needed) ============
+        boolean robotHasMoved = hasRobotMovedSignificantly(currentPose);
+        
+        if (robotHasMoved && currentAlignmentState == TurretAlignmentState.LOCKED) {
+            // Robot moved - unlock turret and go back to coarse alignment
+            Log.i("== LAUNCH SYSTEM ==", "AlignTurretRobust: Robot moved - unlocking turret");
+            currentAlignmentState = TurretAlignmentState.COARSE_ALIGNING;
+            alignmentStableCounter = 0;
+        }
+
+        // ============ CALCULATE ODOMETRY-BASED TARGET ============
+        int currentTurretPosition = robotHardware.getLaunchTurretPosition();
+        double currentTurretRadians = Math.toRadians(currentTurretPosition * degreesPerTick);
+        
+        // Calculate desired turret angle using odometry
+        double odometryTargetDegrees = computeTurretDegreesToFaceGoal(currentPose, goalX, goalY, currentTurretRadians);
+        odometryTargetDegrees = normalizeToTurretRange(odometryTargetDegrees, degreesPerTick, maxTicksBeforeClamp);
+        lastOdometryTargetDegrees = odometryTargetDegrees;
+
+        // ============ GET LIMELIGHT DATA (if available) ============
+        LimelightLaunchParameters limelightData = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
+        double limelightAdjustmentDegrees = 0;
+        boolean limelightAvailable = (limelightData != null);
+        
+        if (limelightAvailable) {
+            turretTagNotFoundTimer.reset();  // Reset timeout since we found tag
+            limelightAdjustmentDegrees = limelightData.yaw;
+            
+            // Apply center line bias if needed
+            int isLeftOfCenter = isRobotToLeftOfCenterLineUsingOdometry(currentPose);
+            double turretTolerance = (limelightData.distance > FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR)
+                    ? TURRET_ALIGNMENT_TOLERANCE_DEGREES_FAR
+                    : TURRET_ALIGNMENT_TOLERANCE_DEGREES_NEAR;
+            
+            if (isLeftOfCenter == 1) {
+                limelightAdjustmentDegrees -= turretTolerance;
+            } else if (isLeftOfCenter == -1) {
+                limelightAdjustmentDegrees += turretTolerance;
+            }
+        }
+
+        // ============ STATE MACHINE LOGIC ============
+        double effectiveError;
+        int targetTurretPosition;
+        int turretVelocity = TURRET_VELOCITY;
+
+        switch (currentAlignmentState) {
+            case LOCKED:
+                // In LOCKED state, only move if:
+                // 1. Robot has moved (already handled above - would transition to COARSE)
+                // 2. Limelight shows significant error
+                
+                if (limelightAvailable && Math.abs(limelightAdjustmentDegrees) > TURRET_UNLOCK_THRESHOLD_DEGREES) {
+                    // Limelight shows we're misaligned - unlock
+                    Log.i("== LAUNCH SYSTEM ==", "AlignTurretRobust: Limelight shows error " + limelightAdjustmentDegrees + " - unlocking");
+                    currentAlignmentState = TurretAlignmentState.FINE_ALIGNING;
+                    alignmentStableCounter = 0;
+                } else {
+                    // Stay locked - don't move turret at all
+                    robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
+                    // Maintain position by setting to last locked position
+                    robotHardware.setLaunchTurretPositionAndVelocity(lastLockedTurretPosition, TURRET_VELOCITY_FINE);
+                    return;
+                }
+                // Fall through to FINE_ALIGNING if we unlocked
+                
+            case FINE_ALIGNING:
+                // Use combination of odometry and limelight
+                if (limelightAvailable && Math.abs(limelightAdjustmentDegrees) < LIMELIGHT_FINE_ADJUST_MAX_DEGREES) {
+                    // Weighted combination: prefer limelight for small adjustments
+                    if (Math.abs(limelightAdjustmentDegrees) > LIMELIGHT_MIN_ADJUST_THRESHOLD_DEGREES) {
+                        effectiveError = limelightAdjustmentDegrees * LIMELIGHT_WEIGHT 
+                                       + odometryTargetDegrees * (1.0 - LIMELIGHT_WEIGHT);
+                    } else {
+                        // Limelight error is very small - use it directly
+                        effectiveError = limelightAdjustmentDegrees;
+                    }
+                } else {
+                    // No limelight or error too large - use odometry only
+                    effectiveError = odometryTargetDegrees;
+                }
+                
+                // Use slower velocity for fine adjustments
+                turretVelocity = TURRET_VELOCITY_FINE;
+                
+                // Check if we should lock
+                if (Math.abs(effectiveError) <= TURRET_LOCK_THRESHOLD_DEGREES) {
+                    alignmentStableCounter++;
+                    if (alignmentStableCounter >= ALIGNMENT_STABLE_CYCLES_REQUIRED) {
+                        // Stable for enough cycles - lock the turret
+                        currentAlignmentState = TurretAlignmentState.LOCKED;
+                        lastLockedPose = currentPose;
+                        lastLockedTurretPosition = currentTurretPosition;
+                        robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
+                        Log.i("== LAUNCH SYSTEM ==", "AlignTurretRobust: LOCKED at position " + lastLockedTurretPosition);
+                        return;
+                    }
+                } else {
+                    alignmentStableCounter = 0;  // Reset counter if error increased
+                }
+                
+                // Check if error grew too large (go back to coarse)
+                if (Math.abs(effectiveError) > TURRET_UNLOCK_THRESHOLD_DEGREES * 2) {
+                    currentAlignmentState = TurretAlignmentState.COARSE_ALIGNING;
+                    alignmentStableCounter = 0;
+                }
+                break;
+                
+            case COARSE_ALIGNING:
+            default:
+                // Use odometry only for coarse alignment
+                effectiveError = odometryTargetDegrees;
+                turretVelocity = TURRET_VELOCITY;
+                
+                // Check if we're close enough to switch to fine alignment
+                if (Math.abs(effectiveError) < LIMELIGHT_FINE_ADJUST_MAX_DEGREES) {
+                    currentAlignmentState = TurretAlignmentState.FINE_ALIGNING;
+                    alignmentStableCounter = 0;
+                }
+                break;
+        }
+
+        // ============ APPLY DEADBAND ============
+        if (Math.abs(effectiveError) < TURRET_DEADBAND_DEGREES) {
+            // Within deadband - don't move, but not yet stable enough to lock
+            robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
+            return;
+        }
+
+        // ============ CALCULATE AND APPLY TURRET MOVEMENT ============
+        robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
+        
+        // Convert error to ticks, applying fraction for smooth approach
+        double fractionToCover = (currentAlignmentState == TurretAlignmentState.FINE_ALIGNING) 
+                ? TURRET_FRACTION_OF_DIFFERENCE_TO_COVER 
+                : 1.0;  // Full movement for coarse alignment
+        
+        int ticksToMove = (int)((effectiveError * fractionToCover) / degreesPerTick);
+        targetTurretPosition = currentTurretPosition + ticksToMove;
+
+        // Apply soft limits
+        if (targetTurretPosition < -maxTicksBeforeClamp) {
+            targetTurretPosition = -maxTicksBeforeClamp;
+        } else if (targetTurretPosition > maxTicksBeforeClamp) {
+            targetTurretPosition = maxTicksBeforeClamp;
+        }
+
+        // Additional soft limit check - don't command movement that would exceed limits
+        if (TURRET_POWER_SOFT_LIMITS_ENABLED) {
+            if ((ticksToMove > 0 && currentTurretPosition >= maxTicksBeforeClamp) ||
+                (ticksToMove < 0 && currentTurretPosition <= -maxTicksBeforeClamp)) {
+                // At limit - don't move further
+                Log.i("== LAUNCH SYSTEM ==", "AlignTurretRobust: At soft limit, stopping");
+                robotHardware.setLaunchTurretPower(0);
+                return;
+            }
+        }
+
+        // Command the turret to move
+        robotHardware.setLaunchTurretPositionAndVelocity(targetTurretPosition, turretVelocity);
+        
+//        Log.i("== LAUNCH SYSTEM ==", "AlignTurretRobust: State=" + currentAlignmentState + 
+//              " Error=" + effectiveError + " Target=" + targetTurretPosition + " Velocity=" + turretVelocity);
+    }
+
+    /**
+     * Check if the robot has moved significantly from the last locked pose.
+     * Used to determine if we should unlock the turret.
+     */
+    private boolean hasRobotMovedSignificantly(Pose2d currentPose) {
+        if (lastLockedPose == null) {
+            return true;  // Never locked, consider as "moved"
+        }
+
+        // Check position change
+        double dx = currentPose.position.x - lastLockedPose.position.x;
+        double dy = currentPose.position.y - lastLockedPose.position.y;
+        double positionChange = Math.sqrt(dx * dx + dy * dy);
+        
+        if (positionChange > ROBOT_POSITION_CHANGE_THRESHOLD_INCHES) {
+            return true;
+        }
+
+        // Check heading change
+        double currentHeadingDeg = Math.toDegrees(currentPose.heading.toDouble());
+        double lastHeadingDeg = Math.toDegrees(lastLockedPose.heading.toDouble());
+        double headingChange = Math.abs(normalizeAngle(currentHeadingDeg - lastHeadingDeg));
+        
+        if (headingChange > ROBOT_HEADING_CHANGE_THRESHOLD_DEGREES) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Normalize angle to -180 to 180 range
+     */
+    private double normalizeAngle(double angleDegrees) {
+        while (angleDegrees > 180) angleDegrees -= 360;
+        while (angleDegrees < -180) angleDegrees += 360;
+        return angleDegrees;
+    }
+
+    /**
+     * Check if robot is to left of center line using odometry (doesn't need limelight)
+     * Returns: 1 = left, -1 = right, 0 = unknown/on line
+     */
+    private int isRobotToLeftOfCenterLineUsingOdometry(Pose2d robotPose) {
+        // Center line coordinates
+        int x1 = 72;
+        int y1 = -72;
+        int x2 = -72;
+        int y2 = 72;
+
+        if (allianceColor == AllianceColors.BLUE) {
+            y1 = 72;
+            y2 = -72;
+        }
+
+        double currX = robotPose.position.x;
+        double currY = robotPose.position.y;
+
+        double d = (x2 - x1) * (currY - y1) - (y2 - y1) * (currX - x1);
+
+        // If d > 0, point is to the left of the line
+        if (Math.abs(d) < 1.0) return 0;  // Too close to line to tell
+        return (d > 0) ? 1 : -1;
+    }
+
+    /**
+     * Reset the turret alignment state machine.
+     * Call this when starting a new match or when odometry is reset.
+     */
+    public void resetTurretAlignment() {
+        currentAlignmentState = TurretAlignmentState.COARSE_ALIGNING;
+        lastLockedPose = null;
+        lastLockedTurretPosition = 0;
+        alignmentStableCounter = 0;
+        lastOdometryTargetDegrees = 0;
+        Log.i("== LAUNCH SYSTEM ==", "AlignTurretRobust: State machine reset");
+    }
+
+    /**
+     * Get current alignment state for telemetry/debugging
+     */
+    public String getTurretAlignmentState() {
+        return currentAlignmentState.toString();
+    }
+
+    /**
+     * Check if turret is currently locked (aligned and stable)
+     */
+    public boolean isTurretLocked() {
+        return currentAlignmentState == TurretAlignmentState.LOCKED;
     }
 
     //0 means no idea. 1 means yes, -1 means no.
