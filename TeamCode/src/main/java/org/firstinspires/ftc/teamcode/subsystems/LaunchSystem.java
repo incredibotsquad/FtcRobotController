@@ -87,6 +87,40 @@ public class LaunchSystem {
     public static int ALIGNMENT_STABLE_CYCLES_REQUIRED = 3;  // Cycles aligned before locking
     public static double TURRET_DEADBAND_DEGREES = 0.5;  // Don't move if error is below this
 
+    // ========== POSITION-ONLY ALIGNMENT PARAMETERS ==========
+    // Tighter tolerances for position-only mode (no limelight fallback)
+    public static double POS_ONLY_LOCK_THRESHOLD_DEGREES = 0.8;      // Tighter than limelight mode
+    public static double POS_ONLY_UNLOCK_THRESHOLD_DEGREES = 2.0;    // Hysteresis
+    public static double POS_ONLY_DEADBAND_DEGREES = 0.3;            // Smaller deadband for precision
+    public static int POS_ONLY_STABLE_CYCLES_REQUIRED = 5;           // More cycles for stability
+    public static double POS_ONLY_MOVEMENT_THRESHOLD_INCHES = 1.0;   // More sensitive to movement
+    public static double POS_ONLY_HEADING_THRESHOLD_DEGREES = 1.5;   // More sensitive to rotation
+    public static int POS_ONLY_TURRET_VELOCITY_COARSE = 3000;        // Slightly slower for accuracy
+    public static int POS_ONLY_TURRET_VELOCITY_FINE = 800;           // Very slow for fine adjustment
+    public static int POS_ONLY_TURRET_VELOCITY_ULTRA_FINE = 400;     // Ultra slow for final approach
+    public static double POS_ONLY_FRACTION_COARSE = 1.0;             // Full movement for coarse
+    public static double POS_ONLY_FRACTION_FINE = 0.8;               // 80% for fine
+    public static double POS_ONLY_FRACTION_ULTRA_FINE = 0.5;         // 50% for ultra fine
+    public static boolean POS_ONLY_USE_PIVOT_OFFSET = true;          // Account for turret pivot offset
+    public static double POS_ONLY_ERROR_FILTER_ALPHA = 0.3;          // Low-pass filter (0-1, lower = more filtering)
+    
+    // Position-only state machine
+    private enum PositionOnlyAlignmentState {
+        COARSE,         // Large error, fast movement
+        FINE,           // Medium error, slow movement  
+        ULTRA_FINE,     // Small error, very slow movement
+        LOCKED          // Aligned and stable
+    }
+    
+    private PositionOnlyAlignmentState posOnlyState = PositionOnlyAlignmentState.COARSE;
+    private Pose2d posOnlyLastLockedPose = null;
+    private int posOnlyLastLockedTurretPosition = 0;
+    private int posOnlyStableCounter = 0;
+    private double posOnlyFilteredError = 0;  // Low-pass filtered error for stability
+    private double posOnlyLastError = 0;      // For derivative term
+    private double posOnlyErrorIntegral = 0;  // For integral term
+    // ========== END POSITION-ONLY PARAMETERS ==========
+
     // Alignment state tracking
     private enum TurretAlignmentState {
         COARSE_ALIGNING,    // Large error, using odometry only
@@ -976,6 +1010,28 @@ public class LaunchSystem {
     }
 
     /**
+     * Initialize alignment state from CrossOpModeStorage.
+     * Call this at the start of TeleOp after Auto to preserve alignment state.
+     * This seeds the last locked pose from the stored pose, allowing the alignment
+     * to determine if the robot has moved since Auto ended.
+     */
+    public void initializeAlignmentFromStorage() {
+        // Seed the last locked pose from storage so we can detect if robot moved
+        lastLockedPose = CrossOpModeStorage.currentPose;
+        lastLockedTurretPosition = robotHardware.getLaunchTurretPosition();
+        
+        // Start in FINE_ALIGNING to quickly verify alignment
+        // If turret is still aligned, it will lock quickly
+        // If turret is misaligned, it will correct with fine movements
+        currentAlignmentState = TurretAlignmentState.FINE_ALIGNING;
+        alignmentStableCounter = 0;
+        
+        Log.i("== LAUNCH SYSTEM ==", "AlignTurretRobust: Initialized from storage. " +
+              "Pose: (" + lastLockedPose.position.x + ", " + lastLockedPose.position.y + ") " +
+              "Turret: " + lastLockedTurretPosition);
+    }
+
+    /**
      * Get current alignment state for telemetry/debugging
      */
     public String getTurretAlignmentState() {
@@ -987,6 +1043,291 @@ public class LaunchSystem {
      */
     public boolean isTurretLocked() {
         return currentAlignmentState == TurretAlignmentState.LOCKED;
+    }
+
+    // =====================================================================
+    // POSITION-ONLY TURRET ALIGNMENT (NO LIMELIGHT)
+    // =====================================================================
+    
+    /**
+     * POSITION-ONLY TURRET ALIGNMENT
+     * 
+     * This method aligns the turret using ONLY odometry data - no limelight required.
+     * Designed for maximum accuracy and consistency when shooting artifacts.
+     * 
+     * Features:
+     * - 4-state machine: COARSE → FINE → ULTRA_FINE → LOCKED
+     * - Low-pass filtering to reduce noise and oscillation
+     * - Turret pivot offset compensation for improved accuracy
+     * - Very tight tolerances for precision alignment
+     * - Hysteresis to prevent oscillation at state boundaries
+     * - Variable velocity based on error magnitude
+     * 
+     * Call this method repeatedly in your control loop when you want position-only alignment.
+     */
+    public void AlignTurretToGoalPositionOnly() {
+        // Throttle updates for stability
+        if (turretAlignmentThrottleTimer.milliseconds() < TURRET_ALIGNMENT_THROTTLE_MILLIS) {
+            return;
+        }
+        turretAlignmentThrottleTimer.reset();
+
+        // Calculate turret conversion constants
+        double turretAnglePerPulleyRotation = 360.0 / (123.0 / 24.0);
+        double degreesPerTick = turretAnglePerPulleyRotation / TURRET_PULSES_PER_REV;
+        int maxTicksBeforeClamp = (int) (90.0 / degreesPerTick);
+
+        // Get current robot pose from odometry
+        Pose2d currentPose = CrossOpModeStorage.currentPose;
+        
+        // Get goal coordinates based on alliance
+        double goalX = (allianceColor == AllianceColors.RED) ? GOAL_RED_X : GOAL_BLUE_X;
+        double goalY = (allianceColor == AllianceColors.RED) ? GOAL_RED_Y : GOAL_BLUE_Y;
+
+        // ============ CHECK IF ROBOT HAS MOVED (to unlock turret if needed) ============
+        boolean robotHasMoved = hasRobotMovedForPositionOnly(currentPose);
+        
+        if (robotHasMoved && posOnlyState == PositionOnlyAlignmentState.LOCKED) {
+            Log.i("== LAUNCH SYSTEM ==", "PosOnlyAlign: Robot moved - unlocking");
+            posOnlyState = PositionOnlyAlignmentState.COARSE;
+            posOnlyStableCounter = 0;
+            posOnlyErrorIntegral = 0;  // Reset integral when unlocking
+        }
+
+        // ============ CALCULATE TARGET ANGLE ============
+        int currentTurretPosition = robotHardware.getLaunchTurretPosition();
+        double currentTurretRadians = Math.toRadians(currentTurretPosition * degreesPerTick);
+        
+        // Calculate desired turret angle using enhanced method with pivot offset
+        double rawErrorDegrees = computeTurretDegreesToFaceGoalWithPivot(
+            currentPose, goalX, goalY, currentTurretRadians
+        );
+        rawErrorDegrees = normalizeToTurretRange(rawErrorDegrees, degreesPerTick, maxTicksBeforeClamp);
+
+        // ============ APPLY LOW-PASS FILTER ============
+        // Filter the error to reduce noise and prevent jitter
+        posOnlyFilteredError = POS_ONLY_ERROR_FILTER_ALPHA * rawErrorDegrees 
+                             + (1.0 - POS_ONLY_ERROR_FILTER_ALPHA) * posOnlyFilteredError;
+        
+        double effectiveError = posOnlyFilteredError;
+
+        // ============ STATE MACHINE ============
+        int turretVelocity;
+        double fractionToCover;
+        
+        switch (posOnlyState) {
+            case LOCKED:
+                // Check if we need to unlock
+                if (Math.abs(effectiveError) > POS_ONLY_UNLOCK_THRESHOLD_DEGREES) {
+                    Log.i("== LAUNCH SYSTEM ==", "PosOnlyAlign: Error increased - unlocking");
+                    posOnlyState = PositionOnlyAlignmentState.FINE;
+                    posOnlyStableCounter = 0;
+                } else {
+                    // Stay locked - maintain position
+                    robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
+                    robotHardware.setLaunchTurretPositionAndVelocity(
+                        posOnlyLastLockedTurretPosition, 
+                        POS_ONLY_TURRET_VELOCITY_ULTRA_FINE
+                    );
+                    return;
+                }
+                // Fall through if we unlocked
+                
+            case ULTRA_FINE:
+                turretVelocity = POS_ONLY_TURRET_VELOCITY_ULTRA_FINE;
+                fractionToCover = POS_ONLY_FRACTION_ULTRA_FINE;
+                
+                // Check for lock
+                if (Math.abs(effectiveError) <= POS_ONLY_LOCK_THRESHOLD_DEGREES) {
+                    posOnlyStableCounter++;
+                    if (posOnlyStableCounter >= POS_ONLY_STABLE_CYCLES_REQUIRED) {
+                        posOnlyState = PositionOnlyAlignmentState.LOCKED;
+                        posOnlyLastLockedPose = currentPose;
+                        posOnlyLastLockedTurretPosition = currentTurretPosition;
+                        posOnlyErrorIntegral = 0;
+                        robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
+                        Log.i("== LAUNCH SYSTEM ==", "PosOnlyAlign: LOCKED at " + posOnlyLastLockedTurretPosition);
+                        return;
+                    }
+                } else if (Math.abs(effectiveError) > POS_ONLY_UNLOCK_THRESHOLD_DEGREES) {
+                    posOnlyState = PositionOnlyAlignmentState.FINE;
+                    posOnlyStableCounter = 0;
+                } else {
+                    posOnlyStableCounter = 0;
+                }
+                break;
+                
+            case FINE:
+                turretVelocity = POS_ONLY_TURRET_VELOCITY_FINE;
+                fractionToCover = POS_ONLY_FRACTION_FINE;
+                
+                // Check for transition to ultra-fine
+                if (Math.abs(effectiveError) <= POS_ONLY_LOCK_THRESHOLD_DEGREES * 2) {
+                    posOnlyState = PositionOnlyAlignmentState.ULTRA_FINE;
+                    posOnlyStableCounter = 0;
+                }
+                // Check if we need to go back to coarse
+                else if (Math.abs(effectiveError) > POS_ONLY_UNLOCK_THRESHOLD_DEGREES * 2) {
+                    posOnlyState = PositionOnlyAlignmentState.COARSE;
+                    posOnlyStableCounter = 0;
+                }
+                break;
+                
+            case COARSE:
+            default:
+                turretVelocity = POS_ONLY_TURRET_VELOCITY_COARSE;
+                fractionToCover = POS_ONLY_FRACTION_COARSE;
+                
+                // Check for transition to fine
+                if (Math.abs(effectiveError) < POS_ONLY_UNLOCK_THRESHOLD_DEGREES * 2) {
+                    posOnlyState = PositionOnlyAlignmentState.FINE;
+                    posOnlyStableCounter = 0;
+                }
+                break;
+        }
+
+        // ============ APPLY DEADBAND ============
+        if (Math.abs(effectiveError) < POS_ONLY_DEADBAND_DEGREES) {
+            robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
+            // In deadband but not yet stable enough to lock
+            return;
+        }
+
+        // ============ CALCULATE MOVEMENT ============
+        robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
+        
+        int ticksToMove = (int)((effectiveError * fractionToCover) / degreesPerTick);
+        int targetTurretPosition = currentTurretPosition + ticksToMove;
+
+        // Apply soft limits
+        targetTurretPosition = Math.max(-maxTicksBeforeClamp, 
+                                Math.min(maxTicksBeforeClamp, targetTurretPosition));
+
+        // Check if we're at the limit
+        if (TURRET_POWER_SOFT_LIMITS_ENABLED) {
+            if ((ticksToMove > 0 && currentTurretPosition >= maxTicksBeforeClamp) ||
+                (ticksToMove < 0 && currentTurretPosition <= -maxTicksBeforeClamp)) {
+                Log.i("== LAUNCH SYSTEM ==", "PosOnlyAlign: At soft limit");
+                robotHardware.setLaunchTurretPower(0);
+                return;
+            }
+        }
+
+        // Command turret movement
+        robotHardware.setLaunchTurretPositionAndVelocity(targetTurretPosition, turretVelocity);
+    }
+
+    /**
+     * Enhanced turret angle calculation that accounts for turret pivot offset.
+     * This provides more accurate targeting by calculating from the actual turret
+     * position rather than robot center.
+     */
+    private double computeTurretDegreesToFaceGoalWithPivot(Pose2d robotPose, double goalX, double goalY, double currentTurretRadians) {
+        double heading = robotPose.heading.toDouble();
+        
+        double turretWorldX, turretWorldY;
+        
+        if (POS_ONLY_USE_PIVOT_OFFSET) {
+            // Transform turret pivot offset from robot frame to world frame
+            double cos = Math.cos(heading);
+            double sin = Math.sin(heading);
+            
+            double offsetWorldX = TURRET_PIVOT_OFFSET_X * cos - TURRET_PIVOT_OFFSET_Y * sin;
+            double offsetWorldY = TURRET_PIVOT_OFFSET_X * sin + TURRET_PIVOT_OFFSET_Y * cos;
+            
+            turretWorldX = robotPose.position.x + offsetWorldX;
+            turretWorldY = robotPose.position.y + offsetWorldY;
+        } else {
+            turretWorldX = robotPose.position.x;
+            turretWorldY = robotPose.position.y;
+        }
+
+        double deltaX = goalX - turretWorldX;
+        double deltaY = goalY - turretWorldY;
+
+        double targetRadiansRelativeToRobotPosition = Math.atan2(deltaY, deltaX);
+        double turretHeadingInFieldSpace = heading - currentTurretRadians;
+        double degreesTurretHasToMove = Math.toDegrees(turretHeadingInFieldSpace - targetRadiansRelativeToRobotPosition);
+
+        return degreesTurretHasToMove;
+    }
+
+    /**
+     * Check if robot moved significantly (for position-only mode with tighter thresholds)
+     */
+    private boolean hasRobotMovedForPositionOnly(Pose2d currentPose) {
+        if (posOnlyLastLockedPose == null) {
+            return true;
+        }
+
+        double dx = currentPose.position.x - posOnlyLastLockedPose.position.x;
+        double dy = currentPose.position.y - posOnlyLastLockedPose.position.y;
+        double positionChange = Math.sqrt(dx * dx + dy * dy);
+        
+        if (positionChange > POS_ONLY_MOVEMENT_THRESHOLD_INCHES) {
+            return true;
+        }
+
+        double currentHeadingDeg = Math.toDegrees(currentPose.heading.toDouble());
+        double lastHeadingDeg = Math.toDegrees(posOnlyLastLockedPose.heading.toDouble());
+        double headingChange = Math.abs(normalizeAngle(currentHeadingDeg - lastHeadingDeg));
+        
+        return headingChange > POS_ONLY_HEADING_THRESHOLD_DEGREES;
+    }
+
+    /**
+     * Reset the position-only alignment state machine.
+     */
+    public void resetPositionOnlyAlignment() {
+        posOnlyState = PositionOnlyAlignmentState.COARSE;
+        posOnlyLastLockedPose = null;
+        posOnlyLastLockedTurretPosition = 0;
+        posOnlyStableCounter = 0;
+        posOnlyFilteredError = 0;
+        posOnlyLastError = 0;
+        posOnlyErrorIntegral = 0;
+        Log.i("== LAUNCH SYSTEM ==", "PosOnlyAlign: Reset");
+    }
+
+    /**
+     * Initialize position-only alignment from stored pose.
+     */
+    public void initializePositionOnlyFromStorage() {
+        posOnlyLastLockedPose = CrossOpModeStorage.currentPose;
+        posOnlyLastLockedTurretPosition = robotHardware.getLaunchTurretPosition();
+        posOnlyState = PositionOnlyAlignmentState.FINE;
+        posOnlyStableCounter = 0;
+        posOnlyFilteredError = 0;
+        posOnlyErrorIntegral = 0;
+        Log.i("== LAUNCH SYSTEM ==", "PosOnlyAlign: Initialized from storage");
+    }
+
+    /**
+     * Get the position-only alignment state for telemetry.
+     */
+    public String getPositionOnlyAlignmentState() {
+        return posOnlyState.toString();
+    }
+
+    /**
+     * Check if position-only alignment is locked.
+     */
+    public boolean isPositionOnlyLocked() {
+        return posOnlyState == PositionOnlyAlignmentState.LOCKED;
+    }
+
+    /**
+     * Get the distance to goal using odometry only (no limelight).
+     */
+    public double getDistanceToGoalFromOdometry() {
+        Pose2d currentPose = CrossOpModeStorage.currentPose;
+        double goalX = (allianceColor == AllianceColors.RED) ? GOAL_RED_X : GOAL_BLUE_X;
+        double goalY = (allianceColor == AllianceColors.RED) ? GOAL_RED_Y : GOAL_BLUE_Y;
+        
+        double dx = goalX - currentPose.position.x;
+        double dy = goalY - currentPose.position.y;
+        
+        return Math.sqrt(dx * dx + dy * dy);
     }
 
     //0 means no idea. 1 means yes, -1 means no.

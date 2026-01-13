@@ -58,6 +58,10 @@ public class MechanismControl {
 
         this.intakeSystem = new IntakeSystem(robotHardware, this.spindex);
         this.launchSystem = new LaunchSystem(robotHardware, this.spindex, limelightAprilTagHelper);
+        
+        // Initialize turret alignment state from storage for smooth Auto→TeleOp transition
+        // This preserves the pose and turret position from the previous OpMode
+        this.launchSystem.initializeAlignmentFromStorage();
 
         currentRobotState = ROBOT_STATE.NONE;
         targetRobotState = ROBOT_STATE.NONE;
