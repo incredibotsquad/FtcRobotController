@@ -2,7 +2,7 @@ package org.firstinspires.ftc.teamcode.OpModes.Autonomous;
 
 import static org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC;
 import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.FLYWHEEL_POWER_COEFFICIENT_FAR;
-import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.TURRET_SERVO_CENTERED;
+import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.TURRET_CENTERED_POSITION;
 
 import android.util.Log;
 
@@ -79,7 +79,7 @@ public class BlueFarAuto_3 extends BaseAuto {
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
 
-        robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
+        robotHardware.setLaunchTurretPosition(TURRET_CENTERED_POSITION);
 
         while (opModeIsActive() && !isStopRequested()) {
             ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);

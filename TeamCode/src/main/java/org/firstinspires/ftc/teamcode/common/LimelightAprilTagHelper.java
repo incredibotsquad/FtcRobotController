@@ -23,8 +23,8 @@ public class LimelightAprilTagHelper  {
     public static double MIN_TOLERANCE = 2.0; // Minimum tolerance at far distances
     public static double MAX_TOLERANCE = 10.0; // Maximum tolerance at close distances
     public static double TOLERANCE_SCALING_DISTANCE = 40.0; // Distance in inches for scaling
-    public static double TARGET_OFFSET_BEHIND_TAG_INCHES_NEAR = 12;
-    public static double TARGET_OFFSET_BEHIND_TAG_INCHES_FAR = 8;
+    public static double TARGET_OFFSET_BEHIND_TAG_INCHES_NEAR = 0; //12
+    public static double TARGET_OFFSET_BEHIND_TAG_INCHES_FAR = 0; //8
     private ElapsedTime timeSinceLastYawPull;
     public static int YAW_NORMALIZATION_THRESHOLD_MILLIS = 50;
     private double oldX = -1000;
@@ -41,6 +41,19 @@ public class LimelightAprilTagHelper  {
         this.allianceColor = CrossOpModeStorage.allianceColor;
     }
 
+   public Pose3D getMT2PoseFromAprilTags(double yawInDegrees) {
+       robotHardware.updateLimelightYawDegrees(yawInDegrees);
+       Pose3D botPose = null;
+
+       LLResult result = robotHardware.getLatestLimelightResults();
+
+       if (result.isValid()) { // Tag is visible
+            botPose = result.getBotpose_MT2();
+       }
+
+       return botPose;
+   }
+
     public Pose3D getRobotPoseFromAprilTags() {
         Pose3D botPose = null;
 
@@ -48,6 +61,7 @@ public class LimelightAprilTagHelper  {
 
         if (result.isValid()) { // Tag is visible
             botPose = result.getBotpose();
+//            botPose = result.getBotpose_MT2();
         }
 
         return botPose;
@@ -223,7 +237,8 @@ public class LimelightAprilTagHelper  {
             double dynamicTolerance = calculateDistanceBasedTolerance(horizontalDistance);
 
 //
-//            Log.i("LimelightAprilTagHelper", "DISTANCE: " + horizontalDistance);
+            Log.i("LimelightAprilTagHelper", "YAW: " + zyaw);
+            Log.i("LimelightAprilTagHelper", "DISTANCE: " + horizontalDistance);
 //            Log.i("LimelightAprilTagHelper", "TOLERANCE: " + dynamicTolerance);
 
             return new LimelightLaunchParameters(zyaw, horizontalDistance, dynamicTolerance);

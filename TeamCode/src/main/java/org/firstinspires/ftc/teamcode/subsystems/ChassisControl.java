@@ -1,7 +1,10 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
 
-import static org.firstinspires.ftc.teamcode.Actions.LiftAction.LIFT_RESET;
+import static org.firstinspires.ftc.teamcode.subsystems.IntakeSystem.THREE_BALL_COLOR;
+import static org.firstinspires.ftc.teamcode.subsystems.IntakeSystem.ZERO_BALL_COLOR;
+import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.TURRET_CENTERED_POSITION;
+import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.TURRET_DEGREES_PER_TICK;
 
 import android.util.Log;
 
@@ -9,17 +12,14 @@ import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.NullAction;
 import com.acmerobotics.roadrunner.Pose2d;
-import com.acmerobotics.roadrunner.PoseVelocity2d;
-import com.acmerobotics.roadrunner.Vector2d;
-import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.Actions.LiftAction;
-import org.firstinspires.ftc.teamcode.MecanumDrive;
+import org.firstinspires.ftc.teamcode.Localizer;
+import org.firstinspires.ftc.teamcode.PinpointLocalizer;
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.common.LimelightAprilTagHelper;
 import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
@@ -31,8 +31,10 @@ public class ChassisControl {
     private RobotHardware robotHardware;
     private LimelightAprilTagHelper limelightAprilTagHelper;
     private ElapsedTime positionCheckTimer;
-    public static double POSITION_CHECK_THROTTLE_MILLIS = 200;
-    private MecanumDrive mecanumDrive;
+    public static double POSITION_CHECK_THROTTLE_MILLIS = 20;
+//    private MecanumDrive mecanumDrive;
+
+    private PinpointLocalizer pinPoint;
     private AllianceColors allianceColor;
     private int multiplier = 1;    //used to flip coordinates between red (1), Blue (-1)
 
@@ -48,9 +50,12 @@ public class ChassisControl {
 
         this.positionCheckTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
-        Log.i("Chassis Control", "Seeded mecanum drive with: X: " + CrossOpModeStorage.currentPose.position.x + " Y: " + CrossOpModeStorage.currentPose.position.y + " Heading: " + Math.toDegrees(CrossOpModeStorage.currentPose.heading.toDouble()));
+        pinPoint = new PinpointLocalizer(this.robotHardware.hardwareMap, CrossOpModeStorage.currentPose);
+        pinPoint.setPose(CrossOpModeStorage.currentPose);
+//        Log.i("Chassis Control", "Seeded localizer with: X: " + CrossOpModeStorage.currentPose.position.x + " Y: " + CrossOpModeStorage.currentPose.position.y + " Heading: " + Math.toDegrees(CrossOpModeStorage.currentPose.heading.toDouble()));
 
-        mecanumDrive = new MecanumDrive(this.robotHardware.hardwareMap, CrossOpModeStorage.currentPose);
+//        mecanumDrive = new MecanumDrive(this.robotHardware.hardwareMap, CrossOpModeStorage.currentPose);
+
         allianceColor = CrossOpModeStorage.allianceColor;
 
         if (allianceColor == AllianceColors.RED) {
@@ -62,82 +67,104 @@ public class ChassisControl {
     public void processInputs() {
         moveRobotWithGamePad();
 
-//        updateRobotPose();
+        trackRobotPose();
 
         parkRobot();
 //        augmentPinpointWithAprilTagData();
-    }
-
-    private void moveRobotWithGamePad() {
-        mecanumDrive.setDrivePowers(new PoseVelocity2d(
-                new Vector2d(
-                        -gamepad1.left_stick_y,
-                        -gamepad1.left_stick_x
-                ),
-                -gamepad1.right_stick_x
-        ));
-
-        mecanumDrive.updatePoseEstimate();
-
-        Pose2d pose = mecanumDrive.localizer.getPose();
-        CrossOpModeStorage.currentPose = pose;
-//        Log.i("Chassis Control", "position update: x: " + pose.position.x + " y: " + pose.position.y + " heading: " + Math.toDegrees(pose.heading.toDouble()));
+//        resetRobotPosition();
     }
 
 //    private void moveRobotWithGamePad() {
-//        double max;
+//        mecanumDrive.setDrivePowers(new PoseVelocity2d(
+//                new Vector2d(
+//                        -gamepad1.left_stick_y * DRIVETRAIN_POWER_RATIO,
+//                        -gamepad1.left_stick_x * DRIVETRAIN_POWER_RATIO
+//                ),
+//                -gamepad1.right_stick_x * DRIVETRAIN_POWER_RATIO
+//        ));
 //
-//        // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
-//        double axial   = -gamepad1.left_stick_y  * DRIVETRAIN_POWER_RATIO;  // Note: pushing stick forward gives negative value
-//        double lateral =  gamepad1.left_stick_x * DRIVETRAIN_POWER_RATIO;
-//        double yaw     =  gamepad1.right_stick_x * DRIVETRAIN_POWER_RATIO;
-//
-//        // Combine the joystick requests for each axis-motion to determine each wheel's power.
-//        // Set up a variable for each drive wheel to save the power level for telemetry.
-//        double leftFrontPower  = axial + lateral + yaw;
-//        double rightFrontPower = axial - lateral - yaw;
-//        double leftBackPower   = axial - lateral + yaw;
-//        double rightBackPower  = axial + lateral - yaw;
-//
-//        // Normalize the values so no wheel power exceeds 100%
-//        // This ensures that the robot maintains the desired motion.
-//        max = Math.max(Math.abs(leftFrontPower), Math.abs(rightFrontPower));
-//        max = Math.max(max, Math.abs(leftBackPower));
-//        max = Math.max(max, Math.abs(rightBackPower));
-//
-//        if (max > 1.0) {
-//            leftFrontPower  /= max;
-//            rightFrontPower /= max;
-//            leftBackPower   /= max;
-//            rightBackPower  /= max;
-//        }
-//
-//        // Sets the drive motor powers
-//        robotHardware.setDriveMotorPowers(rightFrontPower, leftFrontPower, rightBackPower, leftBackPower);
-//    }
-
-
-
-//    public void updateRobotPose() {
-////        Log.i("Chassis Control", "updateRobotPose: using encoders to update pose in mecanumdrive");
 //        mecanumDrive.updatePoseEstimate();
+//
+//        Pose2d pose = mecanumDrive.localizer.getPose();
+//        CrossOpModeStorage.currentPose = pose;
+//        Log.i("Chassis Control", "position update: x: " + pose.position.x + " y: " + pose.position.y + " heading: " + Math.toDegrees(pose.heading.toDouble()));
 //    }
+
+    public void initializePinPoint() {
+        Log.i("Chassis Control", "initializePinPoint");
+        pinPoint.resetPosAndIMU();
+        pinPoint.setPose(CrossOpModeStorage.currentPose);
+    }
+
+    private void moveRobotWithGamePad() {
+        double max;
+
+        // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
+        double axial   = -gamepad1.left_stick_y  * DRIVETRAIN_POWER_RATIO;  // Note: pushing stick forward gives negative value
+        double lateral =  gamepad1.left_stick_x * DRIVETRAIN_POWER_RATIO;
+        double yaw     =  gamepad1.right_stick_x * DRIVETRAIN_POWER_RATIO;
+
+        // Combine the joystick requests for each axis-motion to determine each wheel's power.
+        // Set up a variable for each drive wheel to save the power level for telemetry.
+        double leftFrontPower  = axial + lateral + yaw;
+        double rightFrontPower = axial - lateral - yaw;
+        double leftBackPower   = axial - lateral + yaw;
+        double rightBackPower  = axial + lateral - yaw;
+
+        // Normalize the values so no wheel power exceeds 100%
+        // This ensures that the robot maintains the desired motion.
+        max = Math.max(Math.abs(leftFrontPower), Math.abs(rightFrontPower));
+        max = Math.max(max, Math.abs(leftBackPower));
+        max = Math.max(max, Math.abs(rightBackPower));
+
+        if (max > 1.0) {
+            leftFrontPower  /= max;
+            rightFrontPower /= max;
+            leftBackPower   /= max;
+            rightBackPower  /= max;
+        }
+
+        // Sets the drive motor powers
+        robotHardware.setDriveMotorPowers(rightFrontPower, leftFrontPower, rightBackPower, leftBackPower);
+
+    }
+
+    public void trackRobotPose() {
+//        Log.i("Chassis Control", "trackRobotPose: updating pose in localizer and crossopmode storage");
+        pinPoint.update();
+        CrossOpModeStorage.currentPose = pinPoint.getPose();
+//        Log.i("Chassis Control", "New robot position: X: " + CrossOpModeStorage.currentPose.position.x + " Y: " + CrossOpModeStorage.currentPose.position.y + " Heading: " + Math.toDegrees(CrossOpModeStorage.currentPose.heading.toDouble()));
+    }
 
     public void augmentPinpointWithAprilTagData() {
-        if (positionCheckTimer.milliseconds() < POSITION_CHECK_THROTTLE_MILLIS)
-            return;
+//        if (positionCheckTimer.milliseconds() < POSITION_CHECK_THROTTLE_MILLIS)
+//            return;
+//
+//        positionCheckTimer.reset();
+//
+//        //puppy: since Meher asked me to write it - DO NOT REMOVE THIS!
+//
+//        Pose2d pinpointPosition = mecanumDrive.localizer.getPose();
+//        if (pinpointPosition != null)
+//            Log.i("Chassis Control", "augmentPinpointWithAprilTagData : Pinpoint position: X: " + pinpointPosition.position.x + " Y: " + pinpointPosition.position.y + " Yaw: " + Math.toDegrees(pinpointPosition.heading.toDouble()));
+//
+//        Pose3D limelightBasedPosition = limelightAprilTagHelper.getRobotPoseFromAprilTags();
+//        if (limelightBasedPosition != null) {
+//            double x = limelightBasedPosition.getPosition().x * 39.37;
+//            double y = limelightBasedPosition.getPosition().y * 39.37;
+//            double turretHeading = limelightBasedPosition.getOrientation().getYaw(AngleUnit.RADIANS);
+//            Log.i("Chassis Control", "augmentPinpointWithAprilTagData: Limelight position: X: " + x + " Y: " + y + " Yaw: " + Math.toDegrees(turretHeading));
+//            Log.i("Chassis Control", "augmentPinpointWithAprilTagData: Updated Pinpoint with Limelight position");
 
-        positionCheckTimer.reset();
+//            //find robot heading from limelight heading
+//            double currentTurretRadians = Math.toRadians(robotHardware.getLaunchTurretPosition() * TURRET_DEGREES_PER_TICK);
+//            double robotHeading = turretHeading + currentTurretRadians;
 
-        //puppy: since Meher asked me to write it - DO NOT REMOVE THIS!
+//            Log.i("Chassis Control", "augmentPinpointWithAprilTagData: robot heading from turret heading: " + Math.toDegrees(robotHeading));
 
-        Pose3D limelightBasedPosition = limelightAprilTagHelper.getRobotPoseFromAprilTags();
-        if (limelightBasedPosition != null)
-            Log.i("Chassis Control", "Limelight position: X: " + limelightBasedPosition.getPosition().x * 39.37 + " Y: " + limelightBasedPosition.getPosition().y * 39.37 + " Yaw: " + limelightBasedPosition.getOrientation().getYaw(AngleUnit.DEGREES));
+//            mecanumDrive.localizer.setPose(new Pose2d(x, y, robotHeading));
+//        }
 
-        Pose2d pinpointPosition = mecanumDrive.localizer.getPose();
-        if (pinpointPosition != null)
-            Log.i("Chassis Control", "Pinpoint position: X: " + pinpointPosition.position.x + " Y: " + pinpointPosition.position.y + " Yaw: " + Math.toDegrees(pinpointPosition.heading.toDouble()));
     }
 
     public Action holdPosition() {
@@ -168,6 +195,44 @@ public class ChassisControl {
 //            //TODO: ADD EXTRA CORRECTION
 //
 //            Actions.runBlocking(park);
+        }
+    }
+
+    //the goal is to do this while aligned to the back wall and looking at your own goal april tag
+    public void resetRobotPosition() {
+        if (gamepad1.leftBumperWasPressed() && gamepad1.rightBumperWasPressed()) {
+            robotHardware.setLaunchTurretPosition(TURRET_CENTERED_POSITION);
+
+
+            do {
+                Log.i("Chassis Control", "resetRobotPosition: Turret still moving");
+            }
+            while (Math.abs(robotHardware.getLaunchTurretPosition()) - TURRET_CENTERED_POSITION > 5);
+
+            //now we know our orientation.
+            double robotHeading = 90;
+            if (allianceColor == AllianceColors.BLUE)
+                robotHeading = 270;
+
+            //now get MT2 from limelight
+            Pose3D robotPose = limelightAprilTagHelper.getMT2PoseFromAprilTags(robotHeading);
+
+            Log.i("Chassis Control", "resetRobotPosition: Megatag from Limelight: X: " + robotPose.getPosition().x + " Y: " +  robotPose.getPosition().y + " Yaw: " + robotPose.getOrientation().getYaw());
+
+
+            if (robotPose != null){
+                pinPoint.setPose(new Pose2d(robotPose.getPosition().x, robotPose.getPosition().y, Math.toRadians(robotHeading)));
+
+                ElapsedTime blinkTime = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+
+                do {
+                    robotHardware.setAlignmentLightColor(THREE_BALL_COLOR);
+                    robotHardware.setspindexStatusLightColor(THREE_BALL_COLOR);
+                } while (blinkTime.milliseconds() < 500);
+
+                robotHardware.setAlignmentLightColor(ZERO_BALL_COLOR);
+                robotHardware.setspindexStatusLightColor(ZERO_BALL_COLOR);
+            }
         }
     }
 }

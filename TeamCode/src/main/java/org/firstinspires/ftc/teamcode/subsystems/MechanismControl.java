@@ -5,6 +5,7 @@ import static org.firstinspires.ftc.teamcode.subsystems.Spindex.SPINDEXER_INCREM
 import android.util.Log;
 
 import com.acmerobotics.roadrunner.Action;
+import com.acmerobotics.roadrunner.NullAction;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SequentialAction;
 import com.qualcomm.robotcore.hardware.Gamepad;
@@ -29,6 +30,13 @@ public class MechanismControl {
     private List<Action> runningActions;
     private FtcDashboard dashboard;
     private Telemetry telemetry;
+
+    private enum TURRET_ALIGNMENT_TYPE {
+        HYBRID,
+        LIMELIGHT_ONLY
+    }
+
+    private TURRET_ALIGNMENT_TYPE turretAlignmentType;
 
     private enum ROBOT_STATE {
         NONE,
@@ -63,6 +71,7 @@ public class MechanismControl {
         // This preserves the pose and turret position from the previous OpMode
         this.launchSystem.initializeAlignmentFromStorage();
 
+        turretAlignmentType = TURRET_ALIGNMENT_TYPE.HYBRID;
         currentRobotState = ROBOT_STATE.NONE;
         targetRobotState = ROBOT_STATE.NONE;
         stateTransitionInProgress = false;
@@ -87,10 +96,15 @@ public class MechanismControl {
 
         //process the yaw and rotate the turret always - except when parking
         if (currentRobotState != ROBOT_STATE.PARK && targetRobotState != ROBOT_STATE.PARK) {
-            // Use the new robust turret alignment that uses odometry as primary source
-            // and limelight only for fine adjustments, with a locked state for stability
-            launchSystem.AlignTurretToGoalRobust(false);
-            launchSystem.KeepLauncherWarm();
+//            launchSystem.AlignTurretToGoalTry();
+                launchSystem.AlignTurretToGoalRobust();
+
+//            if (turretAlignmentType == TURRET_ALIGNMENT_TYPE.HYBRID)
+//                launchSystem.AlignTurretToGoalRobust();
+//            else
+//                launchSystem.AlignTurretToGoalLimelightOnly();
+
+//            launchSystem.KeepLauncherWarm();
         }
 
         //keep warm only if we are intake mode. Else this will interfere with launch parameters
@@ -126,12 +140,21 @@ public class MechanismControl {
             newTargetRobotState = ROBOT_STATE.LAUNCH_PURPLE;
         }
 
-        if (gamepad2.right_trigger > 0.5) {
+        if (gamepad2.right_trigger > 0.3) {
             newTargetRobotState = ROBOT_STATE.LAUNCH_ALL;
         }
 
         if (gamepad2.startWasPressed()) {
             newTargetRobotState = ROBOT_STATE.PARK;
+        }
+
+        if(gamepad2.leftBumperWasPressed() && gamepad2.rightBumperWasPressed())
+        {
+            //toggle between turret alignment states
+            if (turretAlignmentType == TURRET_ALIGNMENT_TYPE.HYBRID)
+                turretAlignmentType = TURRET_ALIGNMENT_TYPE.LIMELIGHT_ONLY;
+            else
+                turretAlignmentType = TURRET_ALIGNMENT_TYPE.HYBRID;
         }
 
 //        if (gamepad2.backWasPressed()) {
@@ -205,10 +228,12 @@ public class MechanismControl {
                 case INTAKE:
                     Log.i("== MECHANISM CONTROL ==", "PROCESSING STATE: INTAKE");
                     runningActions.add(
-                            new SequentialAction(
-                                    launchSystem.getKeepWarmAction(),
-                                    intakeSystem.getTurnOnAction()
-                            ));
+                            new NullAction()
+//                            new SequentialAction(
+//                                    launchSystem.getKeepWarmAction(),
+//                                    intakeSystem.getTurnOnAction()
+//                            )
+                    );
                     break;
 
                 case REVERSE_INTAKE:

@@ -14,7 +14,6 @@ public class LaunchTurretAction implements Action {
     private RobotHardware robotHardware;
     private int position;
     private boolean initialized = false;
-    public static double LAUNCH_TURRET_CENTER = 0.5;
     public static double LAUNCH_TURRET_ACTION_DELAY_MILLIS = 200;
     private ElapsedTime timer;
 

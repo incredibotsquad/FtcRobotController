@@ -2,8 +2,7 @@ package org.firstinspires.ftc.teamcode.OpModes.Autonomous;
 
 import static org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC;
 import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.FLYWHEEL_POWER_COEFFICIENT_CLOSE;
-import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.FLYWHEEL_POWER_COEFFICIENT_MID;
-import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.TURRET_SERVO_CENTERED;
+import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.TURRET_CENTERED_POSITION;
 
 import android.util.Log;
 
@@ -135,7 +134,7 @@ public class BlueNearAuto_6 extends BaseAuto {
         stateTimer.reset();
         currentState = AutoState.INIT;
 
-        robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED);
+        robotHardware.setLaunchTurretPosition(TURRET_CENTERED_POSITION);
 
         totalTime = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
@@ -276,7 +275,7 @@ public class BlueNearAuto_6 extends BaseAuto {
                                         .build(),
                                 intakeSystem.getReverseIntakeAction(false),
                                 intakeSystem.updateBallColorsAction(),
-                                new InstantAction(() -> robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED))
+                                new InstantAction(() -> robotHardware.setLaunchTurretPosition(TURRET_CENTERED_POSITION))
                         )
                 );
                 stateTransitionInProgress = true;
@@ -333,7 +332,7 @@ public class BlueNearAuto_6 extends BaseAuto {
                                         .build(),
                                 intakeSystem.getReverseIntakeAction(false),
                                 intakeSystem.updateBallColorsAction(),
-                                new InstantAction(() -> robotHardware.setLaunchTurretPosition(TURRET_SERVO_CENTERED))
+                                new InstantAction(() -> robotHardware.setLaunchTurretPosition(TURRET_CENTERED_POSITION))
                         )
                 );
                 stateTransitionInProgress = true;

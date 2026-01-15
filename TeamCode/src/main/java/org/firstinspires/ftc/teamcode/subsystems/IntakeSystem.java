@@ -219,7 +219,7 @@ public class IntakeSystem {
         );
 
         Action colorForAllBallsAction = new SequentialAction(
-            new SpindexAction(robotHardware, spindex.storedColors.get(1).launchPosition),
+            new SpindexAction(robotHardware, spindex.storedColors.get(0).launchPosition),
             new SleepAction(0.25),
             updateBallColorsAction()
         );

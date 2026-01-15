@@ -6,6 +6,7 @@ import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.TURRET_VELO
 import android.util.Log;
 
 import com.acmerobotics.dashboard.config.Config;
+import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.hardware.AnalogInput;
@@ -64,6 +65,8 @@ public class RobotHardware {
     public static double TURRET_I = 3.0;
     public static double TURRET_D = 0;
     public static double TURRET_F = 0;
+
+    private GoBildaPinpointDriver pinpointDriver;
 
     //making constructor
     public RobotHardware(HardwareMap hwMap) {
@@ -161,7 +164,15 @@ public class RobotHardware {
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         limelight.setPollRateHz(250); // This sets how often we ask Limelight for data (100 times per second)
 
+        pinpointDriver = hardwareMap.get(GoBildaPinpointDriver.class, "PinpointOdo");
+
 //        limelight.updateRobotOrientation(0);
+    }
+
+    public void resetPinpoint() {
+        pinpointDriver.recalibrateIMU();
+        pinpointDriver.resetPosAndIMU();
+        Log.i("== ROBOTHARDWARE ==", " resetPinpoint");
     }
 
     public LLResult getLatestLimelightResults() {
@@ -175,7 +186,7 @@ public class RobotHardware {
         return result;
     }
 
-    public void updateLimelightYaw(double yaw) {
+    public void updateLimelightYawDegrees(double yaw) {
         limelight.updateRobotOrientation(yaw);
     }
 
@@ -308,7 +319,7 @@ public class RobotHardware {
 
     public int getLaunchTurretPosition () {
         int retVal = CrossOpModeStorage.launchTurretMotor.getCurrentPosition();
-        Log.i("=== ROBOTHARDWARE ===", " getLaunchTurretPosition: " + retVal);
+//        Log.i("=== ROBOTHARDWARE ===", " getLaunchTurretPosition: " + retVal);
         return retVal;
     }
 

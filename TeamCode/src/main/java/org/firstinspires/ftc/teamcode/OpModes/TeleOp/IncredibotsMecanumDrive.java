@@ -3,7 +3,6 @@
 package org.firstinspires.ftc.teamcode.OpModes.TeleOp;
 
 import static org.firstinspires.ftc.teamcode.Actions.LaunchKickAction.LAUNCH_KICK_RESTING;
-import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.TURRET_SERVO_CENTERED;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -22,7 +21,6 @@ import org.firstinspires.ftc.teamcode.subsystems.ChassisControl;
 @TeleOp(name="IncredibotsMecanumDrive", group="TeleOp")
 public class IncredibotsMecanumDrive extends LinearOpMode {
 
-
     private RobotHardware robotHardware;
     private ChassisControl chassisControl;
     private MechanismControl mechanismControl;
@@ -30,8 +28,6 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
 
     @Override
     public void runOpMode() {
-
-
 
         // Initialize the hardware variables. Note that the strings used here must correspond
         // to the names assigned during the robot configuration step on the DS or RC devices.
@@ -51,6 +47,8 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
                 telemetry.addData("Alliance Color", "Red");
                 telemetry.update();
             }
+
+            robotHardware.resetPinpoint();
         }
 
         //NOTE: THESE OBJECTS USE THE ALLIANCE COLOR FROM CROSS OPMODE STORAGE.
@@ -64,6 +62,8 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
 
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
+
+        chassisControl.initializePinPoint();
 
         robotHardware.setLaunchKickPosition(LAUNCH_KICK_RESTING);
 

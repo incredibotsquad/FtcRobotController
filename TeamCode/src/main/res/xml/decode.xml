@@ -40,7 +40,7 @@
             <Servo name="AlignmentIndicatorLight" port="3" />
             <Servo name="LeftLiftServo" port="4" />
 
-            <goBILDAPinpoint name="PinpointOdo" port="1" bus="1"/>
+            <goBILDAPinpoint name="PinpointOdo" port="2" bus="2"/>
 
         </LynxModule>
     </LynxUsbDevice>

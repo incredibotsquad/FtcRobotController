@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.OpModes.Autonomous;
 
+import android.util.Log;
+
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
@@ -48,11 +50,13 @@ public abstract class BaseAuto extends LinearOpMode {
             public void run() {
                 //storing robot and spindexer positions
                 CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
+                Log.i("BaseAuto", "Robot pose: X: " + CrossOpModeStorage.currentPose.position.x + " Y: " + CrossOpModeStorage.currentPose.position.y + " Yaw: " + Math.toDegrees(CrossOpModeStorage.currentPose.heading.toDouble()));
+
                 CrossOpModeStorage.turretPosition = robotHardware.getLaunchTurretPosition();
 
                 //keep the turret aligned to the goal using the robust alignment method
                 //that uses odometry as primary source and limelight only for fine adjustments
-                launchSystem.AlignTurretToGoalRobust(true);
+                launchSystem.AlignTurretToGoalRobust();
 
                 //keep tha launcher warm
                 launchSystem.KeepLauncherWarm();
