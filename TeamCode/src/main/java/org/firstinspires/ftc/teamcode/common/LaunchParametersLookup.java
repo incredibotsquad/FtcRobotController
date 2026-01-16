@@ -27,6 +27,9 @@ public class LaunchParametersLookup {
     // If target visor is within this of current, keep current (deadband).
     private static final double VISOR_DEADBAND = 0.01;
 
+    // RPM interpolation threshold - only interpolate if more than this from nearest reference point
+    private static final double RPM_INTERP_THRESHOLD = 0.049;
+
     /** A single calibrated point. */
     public static class LaunchParameters {
         public final double d;      // distance (inches)
@@ -76,8 +79,11 @@ public class LaunchParametersLookup {
     public static BallLaunchParameters getBallLaunchParameters(double distanceInches) {
         if (TABLE.length == 0) throw new IllegalStateException("Shooter table is empty.");
 
+        // Truncate distance to 2 decimal places to reduce fluctuation sensitivity
+        double d = Math.floor(distanceInches * 10.0) / 10.0;
+
         // Clamp distance to table range (no extrapolation).
-        double d = clamp(distanceInches, TABLE[0].d, TABLE[TABLE.length - 1].d);
+        d = clamp(d, TABLE[0].d, TABLE[TABLE.length - 1].d);
 
         // Find bracketing points.
         int hi = upperIndex(d);
@@ -96,15 +102,31 @@ public class LaunchParametersLookup {
         // Linear interpolation factor.
         double t = (d - a.d) / (b.d - a.d);
 
-        // Interpolate both.
+        // Interpolate visor normally
         double visorInterp = lerp(a.visor, b.visor, t);
-        double rpmInterp   = lerp(a.rpm,   b.rpm,   t);
+
+        // For RPM: only interpolate if distance is more than threshold from both reference points
+        // Otherwise use the nearest reference point's RPM value
+        double distFromLo = Math.abs(d - a.d);
+        double distFromHi = Math.abs(d - b.d);
+        double rpmResult;
+
+        if (distFromLo <= RPM_INTERP_THRESHOLD) {
+            // Close enough to low reference point - use its RPM
+            rpmResult = a.rpm;
+        } else if (distFromHi <= RPM_INTERP_THRESHOLD) {
+            // Close enough to high reference point - use its RPM
+            rpmResult = b.rpm;
+        } else {
+            // Not close to either - interpolate
+            rpmResult = lerp(a.rpm, b.rpm, t);
+        }
 
         // Clamp outputs.
         visorInterp = clamp(visorInterp, VISOR_MIN, VISOR_MAX);
-        rpmInterp   = clamp(rpmInterp,   RPM_MIN,   RPM_MAX);
+        rpmResult   = clamp(rpmResult,   RPM_MIN,   RPM_MAX);
 
-        return new BallLaunchParameters(distanceInches, rpmInterp * FLYWHEEL_FULL_TICKS_PER_SEC, visorInterp, visorInterp, visorInterp);
+        return new BallLaunchParameters(distanceInches, rpmResult * FLYWHEEL_FULL_TICKS_PER_SEC, visorInterp, visorInterp, visorInterp);
     }
 
     // ---------------- helpers ----------------
