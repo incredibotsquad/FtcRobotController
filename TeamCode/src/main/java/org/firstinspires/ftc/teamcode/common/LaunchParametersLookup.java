@@ -28,7 +28,7 @@ public class LaunchParametersLookup {
     private static final double VISOR_DEADBAND = 0.01;
 
     // RPM interpolation threshold - only interpolate if more than this from nearest reference point
-    private static final double RPM_INTERP_THRESHOLD = 0.049;
+    private static final double RPM_INTERP_THRESHOLD = 0.01;
 
     /** A single calibrated point. */
     public static class LaunchParameters {
