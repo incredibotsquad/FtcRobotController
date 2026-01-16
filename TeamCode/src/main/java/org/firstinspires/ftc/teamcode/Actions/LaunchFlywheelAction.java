@@ -22,6 +22,7 @@ public class LaunchFlywheelAction implements Action {
 
     private double targetVelocity;
     private boolean waitForAction;
+    private boolean slideToleranceWindow;
     private ElapsedTime throttleTimer;
     private ElapsedTime actionDuration;
 
@@ -30,22 +31,45 @@ public class LaunchFlywheelAction implements Action {
     }
 
     public LaunchFlywheelAction(RobotHardware robotHardware, double flywheelVelocityTPS, boolean waitForAction) {
+        this(robotHardware, flywheelVelocityTPS, waitForAction, false);
+    }
+
+    public LaunchFlywheelAction(RobotHardware robotHardware, double flywheelVelocityTPS, boolean waitForAction, boolean slideToleranceWindow) {
         this.robotHardware = robotHardware;
         this.initialized = false;
         this.targetVelocity = flywheelVelocityTPS;
         this.waitForAction = waitForAction;
+        this.slideToleranceWindow = slideToleranceWindow;
     }
+
 
 
     @Override
     public boolean run (@NonNull TelemetryPacket packet) {
         if (!initialized) {
-            //we are warming up, there might not be a need to set the velocity again
-            if (Math.abs( targetVelocity -  robotHardware.getFlywheelVelocityInTPS()) > FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS)
-                robotHardware.setFlywheelVelocityInTPS(targetVelocity);
+            double currentTPS = robotHardware.getFlywheelVelocityInTPS();
 
             throttleTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
             actionDuration = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+
+            Log.i("LAUNCH FLYWHEEL ACTION", "TARGET VELOCITY: " + targetVelocity);
+
+            //we are warming up, there might not be a need to set the velocity again
+            if (Math.abs( targetVelocity - currentTPS) > FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS) {
+
+                if (slideToleranceWindow) {
+                    if (targetVelocity > currentTPS) {
+                        targetVelocity += FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS;
+                        Log.i("LAUNCH FLYWHEEL ACTION", "SLIDING TARGET WINDOW UP. NEW TARGET: " + targetVelocity);
+                    } else {
+                        targetVelocity -= FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS;
+                        Log.i("LAUNCH FLYWHEEL ACTION", "SLIDING TARGET WINDOW DOWN. NEW TARGET: " + targetVelocity);
+                    }
+                }
+
+                robotHardware.setFlywheelVelocityInTPS(targetVelocity);
+            }
+
             initialized = true;
         }
 

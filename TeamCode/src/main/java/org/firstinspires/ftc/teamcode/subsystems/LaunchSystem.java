@@ -265,6 +265,9 @@ public class LaunchSystem {
 
     public Action getLaunchNextBallAction(BallLaunchParameters ballLaunchParameters) {
         Log.i("== LAUNCH SYSTEM ==", "Launch Next Ball Action");
+        Log.i("== LAUNCH SYSTEM ==", "getLaunchNextBallAction: DISTANCE: " + ballLaunchParameters.distance);
+        Log.i("== LAUNCH SYSTEM ==", "getLaunchNextBallAction: FLYWHEEL: " + ballLaunchParameters.flywheelVelocity);
+        Log.i("== LAUNCH SYSTEM ==", "getLaunchNextBallAction: VISOR 1: " + ballLaunchParameters.visorPositions.get(0) + " VISOR 2: " + ballLaunchParameters.visorPositions.get(1) + " VISOR 3: " + ballLaunchParameters.visorPositions.get(2));
 
         return spindex.isEmpty() ? new NullAction() :
                 new SequentialAction(
@@ -412,17 +415,23 @@ public class LaunchSystem {
 
         BallLaunchParameters ballLaunchParameters = getRobotLaunchParametersBasedOnDistance();
 
+        Log.i("== LAUNCH SYSTEM ==", "getLaunchAllBallsInSequenceAction: DISTANCE: " + ballLaunchParameters.distance);
+        Log.i("== LAUNCH SYSTEM ==", "getLaunchAllBallsInSequenceAction: FLYWHEEL: " + ballLaunchParameters.flywheelVelocity);
+        Log.i("== LAUNCH SYSTEM ==", "getLaunchAllBallsInSequenceAction: VISOR 1: " + ballLaunchParameters.visorPositions.get(0) + " VISOR 2: " + ballLaunchParameters.visorPositions.get(1) + " VISOR 3: " + ballLaunchParameters.visorPositions.get(2));
+
         //we want to wait for flywheel to ramp up only when launching from far
-        boolean waitForFlywheelBetweenLaunches = (ballLaunchParameters.distance == FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR);
-        if (waitForFlywheelBetweenLaunches)
-            Log.i("== LAUNCH SYSTEM ==", "getLaunchAllBallsInSequenceAction. Will wait for flywheel between launches: ");
+        boolean waitForFirstFlywheelAndSlideToleranceWindow = false;
+//        boolean waitForFirstFlywheelAndSlideToleranceWindow = (ballLaunchParameters.distance > FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR);
+
+        if (waitForFirstFlywheelAndSlideToleranceWindow)
+            Log.i("== LAUNCH SYSTEM ==", "getLaunchAllBallsInSequenceAction. Will wait for first flywheel and slide target window");
 
         List<Action> actionsToRun = new ArrayList<>();
 
         //flywheel and spindex for first one can be kicked off without waiting for the first time
         actionsToRun.add(
                 new ParallelAction(
-                        waitForFlywheelBetweenLaunches ? new LaunchFlywheelAction(robotHardware, ballLaunchParameters.flywheelVelocity) : new NullAction(),
+                        waitForFirstFlywheelAndSlideToleranceWindow ? new LaunchFlywheelAction(robotHardware, ballLaunchParameters.flywheelVelocity, true, true) : new NullAction(),
                         new SpindexAction(robotHardware, spindex.storedColors.get(sequence.get(0)).launchPosition)
                 )
         );
@@ -434,8 +443,9 @@ public class LaunchSystem {
             actionsToRun.add(new SequentialAction(
                     new ParallelAction(
                             new LaunchVisorAction(robotHardware, ballLaunchParameters.visorPositions.get(index)),
-                            new SpindexAction(robotHardware, entry.launchPosition),
-                            waitForFlywheelBetweenLaunches ? new LaunchFlywheelAction(robotHardware, ballLaunchParameters.flywheelVelocity) : new NullAction()),
+                            new SpindexAction(robotHardware, entry.launchPosition)
+//                            waitForFirstFlywheelAndSlideToleranceWindow ? new LaunchFlywheelAction(robotHardware, ballLaunchParameters.flywheelVelocity) : new NullAction()
+                    ),
                         new InstantAction(() -> Log.i("== LAUNCH SYSTEM ==", "RPM Before kick:" + robotHardware.getFlywheelVelocityInTPS())),
                     new LaunchKickAction(robotHardware),
                     new InstantAction(() -> spindex.clearBallAtIndex(entry.index))
@@ -510,11 +520,14 @@ public class LaunchSystem {
 //
 //        //call to set if the velocity is more than 10% off
         double currentVelocity = robotHardware.getFlywheelVelocityInTPS();
-        double targetVelocity = getRobotLaunchParametersBasedOnDistance().flywheelVelocity;
+
+        BallLaunchParameters ballLaunchParameters = getRobotLaunchParametersBasedOnDistance();
+        double targetVelocity = ballLaunchParameters.flywheelVelocity;
+
+        Log.i("== LAUNCH SYSTEM ==", "WARMING UP FLYWHEEL: CURRENT VELOCITY: " + currentVelocity + " TARGET VELOCITY: " + targetVelocity);
 //
 //        if (Math.abs(targetVelocity - currentVelocity) > LaunchFlywheelAction.FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS) {
 
-            Log.i("== LAUNCH SYSTEM ==", "WARMING UP FLYWHEEL: CURRENT VELOCITY: " + currentVelocity + " TARGET VELOCITY: " + targetVelocity);
             robotHardware.setFlywheelVelocityInTPS(targetVelocity);
 //        }
     }
