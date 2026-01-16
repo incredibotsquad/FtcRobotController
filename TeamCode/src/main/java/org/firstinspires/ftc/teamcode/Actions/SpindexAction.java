@@ -18,7 +18,7 @@ public class SpindexAction implements Action {
     private double position;
     private boolean initialized = false;
     private boolean waitForAction = true;
-    public static double SPINDEX_POSITION_TOLERANCE = 0.05;
+    public static double SPINDEX_POSITION_TOLERANCE = 0.08;
     private ElapsedTime actionDuration;
 
     public SpindexAction(RobotHardware robotHardware, double position) {

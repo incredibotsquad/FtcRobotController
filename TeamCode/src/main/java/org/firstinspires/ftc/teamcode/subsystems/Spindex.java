@@ -19,13 +19,13 @@ public class Spindex {
 
     public static double SPINDEXER_INCREMENT = 0.1;
     public static double DELTA_BETWEEN_POSITIONS = 0.375;
-    public static double INTAKE_POS_1 = 0.2275;
-    public static double INTAKE_POS_2 = INTAKE_POS_1 + DELTA_BETWEEN_POSITIONS; //0.6025;
-    public static double INTAKE_POS_3 = INTAKE_POS_2 + DELTA_BETWEEN_POSITIONS; //0.9775;
+    public static double INTAKE_POS_1 = 0.195;
+    public static double INTAKE_POS_2 = INTAKE_POS_1 + DELTA_BETWEEN_POSITIONS; //0.57;
+    public static double INTAKE_POS_3 = INTAKE_POS_2 + DELTA_BETWEEN_POSITIONS; //0.945;
 
-    public static double LAUNCH_POS_1 =  INTAKE_POS_1 + (DELTA_BETWEEN_POSITIONS * 1.5); //0.79;
-    public static double LAUNCH_POS_3 = LAUNCH_POS_1 - DELTA_BETWEEN_POSITIONS; // 0.415;
-    public static double LAUNCH_POS_2 = LAUNCH_POS_3 - DELTA_BETWEEN_POSITIONS; //0.04;
+    public static double LAUNCH_POS_1 =  INTAKE_POS_1 + (DELTA_BETWEEN_POSITIONS * 1.5); //0.7575
+    public static double LAUNCH_POS_3 = LAUNCH_POS_1 - DELTA_BETWEEN_POSITIONS; // 0.3825;
+    public static double LAUNCH_POS_2 = LAUNCH_POS_3 - DELTA_BETWEEN_POSITIONS; //0.0075;
 
     public List<BallEntry> storedColors = List.of(
             new BallEntry(0, INTAKE_POS_1, LAUNCH_POS_1, GameColors.NONE),

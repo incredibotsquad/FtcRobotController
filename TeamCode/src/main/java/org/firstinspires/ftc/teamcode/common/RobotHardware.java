@@ -399,20 +399,31 @@ public class RobotHardware {
         GameColors detectedColor = GameColors.UNKNOWN;
         ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
+        int greenCount = 0;
+        int purplecount = 0;
+
         do {
             NormalizedRGBA normalizedRGBA = sensor.getNormalizedColors();
 
 //            Log.i("=== ROBOTHARDWARE  ===", "COLOR SENSOR NORMALIZED R: " + normalizedRGBA.red + " G: " + normalizedRGBA.green + " B: " + normalizedRGBA.blue);
 
             if (normalizedRGBA.green > normalizedRGBA.blue && normalizedRGBA.green > normalizedRGBA.red)  {
-                detectedColor = GameColors.GREEN;
+                greenCount++;
+//                detectedColor = GameColors.GREEN;
             }
 
             if (normalizedRGBA.blue > normalizedRGBA.green && normalizedRGBA.blue > normalizedRGBA.red) {
-                detectedColor = GameColors.PURPLE;
+                purplecount++;
+//                detectedColor = GameColors.PURPLE;
             }
 
-        } while (detectedColor == GameColors.UNKNOWN && timer.milliseconds() < COLOR_DETECTION_RETRY_DURATION_MILLIS);
+        } while (timer.milliseconds() < COLOR_DETECTION_RETRY_DURATION_MILLIS);
+
+        if (greenCount > purplecount)
+            detectedColor = GameColors.GREEN;
+
+        if (purplecount > greenCount)
+            detectedColor = GameColors.PURPLE;
 
         return detectedColor;
     }

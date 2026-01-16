@@ -41,6 +41,7 @@ public class ChassisControl {
     public double obeliskHeading = Math.toRadians(180); //this is same for both sides - do NOT need a multiplier
     public Pose2d PARK_POS;
     public static double DRIVETRAIN_POWER_RATIO = 1;
+    private boolean hasRobotMoved = false;
     private ChassisControl() {}
 
     public ChassisControl(Gamepad gamepad, RobotHardware robotHardware, LimelightAprilTagHelper limelightAprilTagHelper) {
@@ -62,6 +63,8 @@ public class ChassisControl {
             multiplier = -1;
         }
         PARK_POS = new Pose2d(31, 33 * multiplier, obeliskHeading);
+
+        hasRobotMoved = false;
     }
 
     public void processInputs() {
@@ -93,7 +96,6 @@ public class ChassisControl {
     public void initializePinPoint() {
         Log.i("Chassis Control", "initializePinPoint");
         pinPoint.resetPosAndIMU();
-        pinPoint.setPose(CrossOpModeStorage.currentPose);
     }
 
     private void moveRobotWithGamePad() {
@@ -104,7 +106,14 @@ public class ChassisControl {
         double lateral =  gamepad1.left_stick_x * DRIVETRAIN_POWER_RATIO;
         double yaw     =  gamepad1.right_stick_x * DRIVETRAIN_POWER_RATIO;
 
-        // Combine the joystick requests for each axis-motion to determine each wheel's power.
+        //if robot has not moved yet but is going to move, set the initial pose once
+        if (!hasRobotMoved && (axial != 0 || lateral != 0 || yaw != 0)) {
+            Log.i("Chassis Control", "Setting pose before first move");
+            pinPoint.setPose(CrossOpModeStorage.currentPose);   //set the pose before the first move
+            hasRobotMoved = true;
+        }
+
+            // Combine the joystick requests for each axis-motion to determine each wheel's power.
         // Set up a variable for each drive wheel to save the power level for telemetry.
         double leftFrontPower  = axial + lateral + yaw;
         double rightFrontPower = axial - lateral - yaw;
@@ -130,10 +139,13 @@ public class ChassisControl {
     }
 
     public void trackRobotPose() {
+        if (!hasRobotMoved)
+            return;
+
 //        Log.i("Chassis Control", "trackRobotPose: updating pose in localizer and crossopmode storage");
         pinPoint.update();
         CrossOpModeStorage.currentPose = pinPoint.getPose();
-//        Log.i("Chassis Control", "New robot position: X: " + CrossOpModeStorage.currentPose.position.x + " Y: " + CrossOpModeStorage.currentPose.position.y + " Heading: " + Math.toDegrees(CrossOpModeStorage.currentPose.heading.toDouble()));
+        Log.i("Chassis Control", "New robot position: X: " + CrossOpModeStorage.currentPose.position.x + " Y: " + CrossOpModeStorage.currentPose.position.y + " Heading: " + Math.toDegrees(CrossOpModeStorage.currentPose.heading.toDouble()));
     }
 
     public void augmentPinpointWithAprilTagData() {
