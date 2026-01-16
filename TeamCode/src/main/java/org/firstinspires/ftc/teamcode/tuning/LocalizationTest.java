@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.tuning;
 
+import android.util.Log;
+
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
@@ -14,7 +16,7 @@ import org.firstinspires.ftc.teamcode.Drawing;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.firstinspires.ftc.teamcode.TankDrive;
 
-@Disabled
+
 @TeleOp(name="LocalizationTest", group="TeleOp")
 public class LocalizationTest extends LinearOpMode {
     @Override
@@ -42,6 +44,8 @@ public class LocalizationTest extends LinearOpMode {
                 telemetry.addData("y", pose.position.y);
                 telemetry.addData("heading (deg)", Math.toDegrees(pose.heading.toDouble()));
                 telemetry.update();
+
+                Log.i("LocalizationTest", "Updated position: X: " + pose.position.x + " Y: " + pose.position.y + " heading: " + Math.toDegrees(pose.heading.toDouble()));
 
                 TelemetryPacket packet = new TelemetryPacket();
                 packet.fieldOverlay().setStroke("#3F51B5");

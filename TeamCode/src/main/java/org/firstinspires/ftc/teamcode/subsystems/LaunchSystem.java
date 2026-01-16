@@ -463,7 +463,7 @@ public class LaunchSystem {
             launchParameters = LaunchParametersLookup.getBallLaunchParameters(ydt.distance);
             Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: DISTANCE: " + launchParameters.distance);
             Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: FLYWHEEL: " + launchParameters.flywheelVelocity);
-            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: VISOR: " + launchParameters.visorPositions.get(0));
+            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: VISOR 1: " + launchParameters.visorPositions.get(0) + " VISOR 2: " + launchParameters.visorPositions.get(1) + " VISOR 3: " + launchParameters.visorPositions.get(2));
 
 
 //            if (ydt.distance < FLYWHEEL_POWER_BUCKET_THRESHOLD_MID) {
@@ -514,7 +514,7 @@ public class LaunchSystem {
 //
 //        if (Math.abs(targetVelocity - currentVelocity) > LaunchFlywheelAction.FLYWHEEL_TARGET_VELOCITY_TOLERANCE_TPS) {
 
-            Log.i("LAUNCH SYSTEM", "WARMING UP FLYWHEEL: CURRENT VELOCITY: " + currentVelocity + " TARGET VELOCITY: " + targetVelocity);
+            Log.i("== LAUNCH SYSTEM ==", "WARMING UP FLYWHEEL: CURRENT VELOCITY: " + currentVelocity + " TARGET VELOCITY: " + targetVelocity);
             robotHardware.setFlywheelVelocityInTPS(targetVelocity);
 //        }
     }
@@ -578,12 +578,16 @@ public class LaunchSystem {
         if (ydt == null) {
             if (turretTagNotFoundTimer.milliseconds() > TURRET_TAG_NOT_FOUND_THRESHOLD_MILLIS)
                 robotHardware.setLaunchTurretPosition(TURRET_CENTERED_POSITION);
+
             robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
             return;
         }
 
         //tag found - reset not found timer
         turretTagNotFoundTimer.reset();
+
+        int currentTurretPosition = robotHardware.getLaunchTurretPosition();
+        Pose2d currentPose = CrossOpModeStorage.currentPose;
 
 //            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : Tag found");
 
@@ -603,29 +607,57 @@ public class LaunchSystem {
 //                ydt.yaw = ydt.yaw + turretTolerance;
 //            }
 
-        double difference = Math.abs(ydt.yaw) - turretTolerance;
+        double error = Math.abs(ydt.yaw) - turretTolerance;
 
-//            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : Tag found - yaw difference: " + difference);
+//            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : Tag found - yaw error: " + error);
 
-        if (difference <= 0) {
-//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : Tag found - yaw difference within tolerance - aligned");
+        if (error <= 0) {   //we are within tolerance
+//                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : Tag found - yaw error within tolerance - aligned");
             robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
             robotHardware.setLaunchTurretPower(0);
             return;
         }
 
+        if (currentAlignmentState == TurretAlignmentState.LOCKED) {
+            if (error > TURRET_UNLOCK_THRESHOLD_DEGREES || hasRobotMovedSignificantly(currentPose)) {
+                // Limelight shows we're misaligned - unlock
+                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalPositionHuman: Limelight shows error " + error + " - unlocking");
+                currentAlignmentState = TurretAlignmentState.FINE_ALIGNING;
+                alignmentStableCounter = 0;
+            } else {
+                // Stay locked - don't move turret at all
+                robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
+                // Maintain position by setting to last locked position
+                robotHardware.setLaunchTurretPositionAndVelocity(lastLockedTurretPosition, TURRET_VELOCITY_FINE);
+                return;
+            }
+        }
+
+        if (error <= TURRET_LOCK_THRESHOLD_DEGREES) {
+            alignmentStableCounter++;
+            if (alignmentStableCounter >= ALIGNMENT_STABLE_CYCLES_REQUIRED) {
+                // Stable for enough cycles - lock the turret
+                currentAlignmentState = TurretAlignmentState.LOCKED;
+                lastLockedPose = currentPose;
+                lastLockedTurretPosition = currentTurretPosition;
+                robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
+                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalPositionHuman: LOCKED at position " + lastLockedTurretPosition);
+                return;
+            }
+        } else {
+            alignmentStableCounter = 0;  // Reset counter if error increased
+        }
+
         robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
 
-        int differenceToCoverInTicks = (int)((difference * TURRET_FRACTION_OF_DIFFERENCE_TO_COVER) / TURRET_DEGREES_PER_TICK);
-
-        int previousPos = robotHardware.getLaunchTurretPosition();
+        int differenceToCoverInTicks = (int)((error * TURRET_FRACTION_OF_DIFFERENCE_TO_COVER) / TURRET_DEGREES_PER_TICK);
 
 //            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: Tag found: old turret position: " + previousPos);
 
         if (ydt.yaw < 0)
             differenceToCoverInTicks = -1 * differenceToCoverInTicks;
 
-        int newMotorPosition = previousPos + differenceToCoverInTicks;
+        int newMotorPosition = currentTurretPosition + differenceToCoverInTicks;
 
 //            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal: Tag found: new turret position: " + newMotorPosition);
 
@@ -791,11 +823,6 @@ public void AlignTurretToGoalPowerHuman() {
 
         Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalRobust: entered function");
 
-        // Calculate turret conversion constants
-        double turretAnglePerPulleyRotation = 360.0 / (123.0 / 24.0);
-        double degreesPerTick = turretAnglePerPulleyRotation / TURRET_PULSES_PER_REV;
-        int maxTicksBeforeClamp = (int) (90.0 / degreesPerTick);
-
         // Get current robot pose from odometry (primary source of truth)
         Pose2d currentPose = CrossOpModeStorage.currentPose;
         
@@ -815,11 +842,11 @@ public void AlignTurretToGoalPowerHuman() {
 
         // ============ CALCULATE ODOMETRY-BASED TARGET ============
         int currentTurretPosition = robotHardware.getLaunchTurretPosition();
-        double currentTurretRadians = Math.toRadians(currentTurretPosition * degreesPerTick);
+        double currentTurretRadians = Math.toRadians(currentTurretPosition * TURRET_DEGREES_PER_TICK);
         
         // Calculate desired turret angle using odometry
         double odometryTargetDegrees = computeTurretDegreesToFaceGoal(currentPose, goalX, goalY, currentTurretRadians);
-        odometryTargetDegrees = normalizeToTurretRange(odometryTargetDegrees, degreesPerTick, maxTicksBeforeClamp);
+        odometryTargetDegrees = normalizeToTurretRange(odometryTargetDegrees, TURRET_DEGREES_PER_TICK, TURRET_MAX_TICKS_BEFORE_CLAMP);
         lastOdometryTargetDegrees = odometryTargetDegrees;
 
         // ============ GET LIMELIGHT DATA (if available) ============
@@ -940,20 +967,20 @@ public void AlignTurretToGoalPowerHuman() {
                 ? TURRET_FRACTION_OF_DIFFERENCE_TO_COVER 
                 : 1.0;  // Full movement for coarse alignment
         
-        int ticksToMove = (int)((effectiveError * fractionToCover) / degreesPerTick);
+        int ticksToMove = (int)((effectiveError * fractionToCover) / TURRET_DEGREES_PER_TICK);
         targetTurretPosition = currentTurretPosition + ticksToMove;
 
         // Apply soft limits
-        if (targetTurretPosition < -maxTicksBeforeClamp) {
-            targetTurretPosition = -maxTicksBeforeClamp;
-        } else if (targetTurretPosition > maxTicksBeforeClamp) {
-            targetTurretPosition = maxTicksBeforeClamp;
+        if (targetTurretPosition < -TURRET_MAX_TICKS_BEFORE_CLAMP) {
+            targetTurretPosition = -TURRET_MAX_TICKS_BEFORE_CLAMP;
+        } else if (targetTurretPosition > TURRET_MAX_TICKS_BEFORE_CLAMP) {
+            targetTurretPosition = TURRET_MAX_TICKS_BEFORE_CLAMP;
         }
 
         // Additional soft limit check - don't command movement that would exceed limits
         if (TURRET_POWER_SOFT_LIMITS_ENABLED) {
-            if ((ticksToMove > 0 && currentTurretPosition >= maxTicksBeforeClamp) ||
-                (ticksToMove < 0 && currentTurretPosition <= -maxTicksBeforeClamp)) {
+            if ((ticksToMove > 0 && currentTurretPosition >= TURRET_MAX_TICKS_BEFORE_CLAMP) ||
+                (ticksToMove < 0 && currentTurretPosition <= -TURRET_MAX_TICKS_BEFORE_CLAMP)) {
                 // At limit - don't move further
                 Log.i("== LAUNCH SYSTEM ==", "AlignTurretRobust: At soft limit, stopping");
                 robotHardware.setLaunchTurretPower(0);
@@ -1005,32 +1032,6 @@ public void AlignTurretToGoalPowerHuman() {
         while (angleDegrees > 180) angleDegrees -= 360;
         while (angleDegrees < -180) angleDegrees += 360;
         return angleDegrees;
-    }
-
-    /**
-     * Check if robot is to left of center line using odometry (doesn't need limelight)
-     * Returns: 1 = left, -1 = right, 0 = unknown/on line
-     */
-    private int isRobotToLeftOfCenterLineUsingOdometry(Pose2d robotPose) {
-        // Center line coordinates
-        int x1 = 72;
-        int y1 = -72;
-        int x2 = -72;
-        int y2 = 72;
-
-        if (allianceColor == AllianceColors.BLUE) {
-            y1 = 72;
-            y2 = -72;
-        }
-
-        double currX = robotPose.position.x;
-        double currY = robotPose.position.y;
-
-        double d = (x2 - x1) * (currY - y1) - (y2 - y1) * (currX - x1);
-
-        // If d > 0, point is to the left of the line
-        if (Math.abs(d) < 1.0) return 0;  // Too close to line to tell
-        return (d > 0) ? 1 : -1;
     }
 
     /**
