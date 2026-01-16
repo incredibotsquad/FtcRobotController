@@ -12,6 +12,8 @@ import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.NullAction;
 import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.PoseVelocity2d;
+import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -19,6 +21,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.Actions.LiftAction;
 import org.firstinspires.ftc.teamcode.Localizer;
+import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.firstinspires.ftc.teamcode.PinpointLocalizer;
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.common.LimelightAprilTagHelper;
@@ -32,9 +35,9 @@ public class ChassisControl {
     private LimelightAprilTagHelper limelightAprilTagHelper;
     private ElapsedTime positionCheckTimer;
     public static double POSITION_CHECK_THROTTLE_MILLIS = 20;
-//    private MecanumDrive mecanumDrive;
+    private MecanumDrive mecanumDrive;
 
-    private PinpointLocalizer pinPoint;
+//    private PinpointLocalizer pinPoint;
     private AllianceColors allianceColor;
     private int multiplier = 1;    //used to flip coordinates between red (1), Blue (-1)
 
@@ -49,10 +52,10 @@ public class ChassisControl {
         this.robotHardware = robotHardware;
         this.limelightAprilTagHelper = limelightAprilTagHelper;
 
-        this.positionCheckTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+//        this.positionCheckTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
-        pinPoint = new PinpointLocalizer(this.robotHardware.hardwareMap, CrossOpModeStorage.currentPose);
-        pinPoint.setPose(CrossOpModeStorage.currentPose);
+//        pinPoint = new PinpointLocalizer(this.robotHardware.hardwareMap, CrossOpModeStorage.currentPose);
+//        pinPoint.setPose(CrossOpModeStorage.currentPose);
 //        Log.i("Chassis Control", "Seeded localizer with: X: " + CrossOpModeStorage.currentPose.position.x + " Y: " + CrossOpModeStorage.currentPose.position.y + " Heading: " + Math.toDegrees(CrossOpModeStorage.currentPose.heading.toDouble()));
 
 //        mecanumDrive = new MecanumDrive(this.robotHardware.hardwareMap, CrossOpModeStorage.currentPose);
@@ -70,83 +73,82 @@ public class ChassisControl {
     public void processInputs() {
         moveRobotWithGamePad();
 
-        trackRobotPose();
+//        trackRobotPose();
 
         parkRobot();
 //        augmentPinpointWithAprilTagData();
 //        resetRobotPosition();
     }
 
+    private void moveRobotWithGamePad() {
+        mecanumDrive.setDrivePowers(new PoseVelocity2d(
+                new Vector2d(
+                        -gamepad1.left_stick_y * DRIVETRAIN_POWER_RATIO,
+                        -gamepad1.left_stick_x * DRIVETRAIN_POWER_RATIO
+                ),
+                -gamepad1.right_stick_x * DRIVETRAIN_POWER_RATIO
+        ));
+
+        mecanumDrive.updatePoseEstimate();
+
+        Pose2d pose = mecanumDrive.localizer.getPose();
+        CrossOpModeStorage.currentPose = pose;
+        Log.i("Chassis Control", "position update: x: " + pose.position.x + " y: " + pose.position.y + " heading: " + Math.toDegrees(pose.heading.toDouble()));
+    }
+
+    public void initializeMecanumDrive() {
+        Log.i("Chassis Control", "initializeMecanumDrive with: x: " + CrossOpModeStorage.currentPose.position.x + " y: " + CrossOpModeStorage.currentPose.position.y + " heading: " + Math.toDegrees(CrossOpModeStorage.currentPose.heading.toDouble()));
+        mecanumDrive = new MecanumDrive(this.robotHardware.hardwareMap, CrossOpModeStorage.currentPose);
+    }
+
 //    private void moveRobotWithGamePad() {
-//        mecanumDrive.setDrivePowers(new PoseVelocity2d(
-//                new Vector2d(
-//                        -gamepad1.left_stick_y * DRIVETRAIN_POWER_RATIO,
-//                        -gamepad1.left_stick_x * DRIVETRAIN_POWER_RATIO
-//                ),
-//                -gamepad1.right_stick_x * DRIVETRAIN_POWER_RATIO
-//        ));
+//        double max;
 //
-//        mecanumDrive.updatePoseEstimate();
+//        // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
+//        double axial   = -gamepad1.left_stick_y  * DRIVETRAIN_POWER_RATIO;  // Note: pushing stick forward gives negative value
+//        double lateral =  gamepad1.left_stick_x * DRIVETRAIN_POWER_RATIO;
+//        double yaw     =  gamepad1.right_stick_x * DRIVETRAIN_POWER_RATIO;
 //
-//        Pose2d pose = mecanumDrive.localizer.getPose();
-//        CrossOpModeStorage.currentPose = pose;
-//        Log.i("Chassis Control", "position update: x: " + pose.position.x + " y: " + pose.position.y + " heading: " + Math.toDegrees(pose.heading.toDouble()));
+//        //if robot has not moved yet but is going to move, set the initial pose once
+//        if (!hasRobotMoved && (axial != 0 || lateral != 0 || yaw != 0)) {
+//            Log.i("Chassis Control", "Setting pose before first move");
+//            pinPoint.setPose(CrossOpModeStorage.currentPose);   //set the pose before the first move
+//            hasRobotMoved = true;
+//        }
+//
+//            // Combine the joystick requests for each axis-motion to determine each wheel's power.
+//        // Set up a variable for each drive wheel to save the power level for telemetry.
+//        double leftFrontPower  = axial + lateral + yaw;
+//        double rightFrontPower = axial - lateral - yaw;
+//        double leftBackPower   = axial - lateral + yaw;
+//        double rightBackPower  = axial + lateral - yaw;
+//
+//        // Normalize the values so no wheel power exceeds 100%
+//        // This ensures that the robot maintains the desired motion.
+//        max = Math.max(Math.abs(leftFrontPower), Math.abs(rightFrontPower));
+//        max = Math.max(max, Math.abs(leftBackPower));
+//        max = Math.max(max, Math.abs(rightBackPower));
+//
+//        if (max > 1.0) {
+//            leftFrontPower  /= max;
+//            rightFrontPower /= max;
+//            leftBackPower   /= max;
+//            rightBackPower  /= max;
+//        }
+//
+//        // Sets the drive motor powers
+//        robotHardware.setDriveMotorPowers(rightFrontPower, leftFrontPower, rightBackPower, leftBackPower);
 //    }
 
-    public void initializePinPoint() {
-        Log.i("Chassis Control", "initializePinPoint");
-        pinPoint.resetPosAndIMU();
-    }
-
-    private void moveRobotWithGamePad() {
-        double max;
-
-        // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
-        double axial   = -gamepad1.left_stick_y  * DRIVETRAIN_POWER_RATIO;  // Note: pushing stick forward gives negative value
-        double lateral =  gamepad1.left_stick_x * DRIVETRAIN_POWER_RATIO;
-        double yaw     =  gamepad1.right_stick_x * DRIVETRAIN_POWER_RATIO;
-
-        //if robot has not moved yet but is going to move, set the initial pose once
-        if (!hasRobotMoved && (axial != 0 || lateral != 0 || yaw != 0)) {
-            Log.i("Chassis Control", "Setting pose before first move");
-            pinPoint.setPose(CrossOpModeStorage.currentPose);   //set the pose before the first move
-            hasRobotMoved = true;
-        }
-
-            // Combine the joystick requests for each axis-motion to determine each wheel's power.
-        // Set up a variable for each drive wheel to save the power level for telemetry.
-        double leftFrontPower  = axial + lateral + yaw;
-        double rightFrontPower = axial - lateral - yaw;
-        double leftBackPower   = axial - lateral + yaw;
-        double rightBackPower  = axial + lateral - yaw;
-
-        // Normalize the values so no wheel power exceeds 100%
-        // This ensures that the robot maintains the desired motion.
-        max = Math.max(Math.abs(leftFrontPower), Math.abs(rightFrontPower));
-        max = Math.max(max, Math.abs(leftBackPower));
-        max = Math.max(max, Math.abs(rightBackPower));
-
-        if (max > 1.0) {
-            leftFrontPower  /= max;
-            rightFrontPower /= max;
-            leftBackPower   /= max;
-            rightBackPower  /= max;
-        }
-
-        // Sets the drive motor powers
-        robotHardware.setDriveMotorPowers(rightFrontPower, leftFrontPower, rightBackPower, leftBackPower);
-
-    }
-
-    public void trackRobotPose() {
-        if (!hasRobotMoved)
-            return;
-
-//        Log.i("Chassis Control", "trackRobotPose: updating pose in localizer and crossopmode storage");
-        pinPoint.update();
-        CrossOpModeStorage.currentPose = pinPoint.getPose();
-        Log.i("Chassis Control", "New robot position: X: " + CrossOpModeStorage.currentPose.position.x + " Y: " + CrossOpModeStorage.currentPose.position.y + " Heading: " + Math.toDegrees(CrossOpModeStorage.currentPose.heading.toDouble()));
-    }
+//    public void trackRobotPose() {
+//        if (!hasRobotMoved)
+//            return;
+//
+////        Log.i("Chassis Control", "trackRobotPose: updating pose in localizer and crossopmode storage");
+//        pinPoint.update();
+//        CrossOpModeStorage.currentPose = pinPoint.getPose();
+//        Log.i("Chassis Control", "New robot position: X: " + CrossOpModeStorage.currentPose.position.x + " Y: " + CrossOpModeStorage.currentPose.position.y + " Heading: " + Math.toDegrees(CrossOpModeStorage.currentPose.heading.toDouble()));
+//    }
 
     public void augmentPinpointWithAprilTagData() {
 //        if (positionCheckTimer.milliseconds() < POSITION_CHECK_THROTTLE_MILLIS)
@@ -233,7 +235,9 @@ public class ChassisControl {
 
 
             if (robotPose != null){
-                pinPoint.setPose(new Pose2d(robotPose.getPosition().x, robotPose.getPosition().y, Math.toRadians(robotHeading)));
+//                pinPoint.setPose(new Pose2d(robotPose.getPosition().x, robotPose.getPosition().y, Math.toRadians(robotHeading)));
+
+                mecanumDrive.localizer.setPose(new Pose2d(robotPose.getPosition().x, robotPose.getPosition().y, Math.toRadians(robotHeading)));
 
                 ElapsedTime blinkTime = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 

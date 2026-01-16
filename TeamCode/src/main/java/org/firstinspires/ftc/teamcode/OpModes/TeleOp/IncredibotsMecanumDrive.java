@@ -63,7 +63,7 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
 
-        chassisControl.initializePinPoint();
+        chassisControl.initializeMecanumDrive();
 
         robotHardware.setLaunchKickPosition(LAUNCH_KICK_RESTING);
 
