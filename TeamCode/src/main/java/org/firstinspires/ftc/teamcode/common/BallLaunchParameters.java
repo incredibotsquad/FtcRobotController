@@ -3,13 +3,13 @@ package org.firstinspires.ftc.teamcode.common;
 import java.util.List;
 
 public class BallLaunchParameters {
-    public double distanceThreshold;
+    public double distance;
     public double flywheelVelocity;
     public List<Double> visorPositions;
 
 
-    public BallLaunchParameters(double distanceThreshold, double flywheelVelocity, double visorPosition1, double visorPosition2, double visorPosition3){
-        this.distanceThreshold = distanceThreshold;
+    public BallLaunchParameters(double distance, double flywheelVelocity, double visorPosition1, double visorPosition2, double visorPosition3){
+        this.distance = distance;
         this.flywheelVelocity = flywheelVelocity;
         this.visorPositions = List.of(visorPosition1, visorPosition2, visorPosition3);
     }

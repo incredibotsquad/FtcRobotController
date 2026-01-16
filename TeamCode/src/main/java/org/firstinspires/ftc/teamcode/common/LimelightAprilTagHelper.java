@@ -142,7 +142,7 @@ public class LimelightAprilTagHelper  {
         return primaryTarget;
     }
 
-    public LimelightLaunchParameters getGoalYawDistanceToleranceFromCurrentPosition() {
+    public LimelightYDT getGoalYawDistanceToleranceFromCurrentPosition() {
 
 //        if (timeSinceLastYawPull == null) {
 //            timeSinceLastYawPull = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
@@ -241,7 +241,7 @@ public class LimelightAprilTagHelper  {
             Log.i("LimelightAprilTagHelper", "DISTANCE: " + horizontalDistance);
 //            Log.i("LimelightAprilTagHelper", "TOLERANCE: " + dynamicTolerance);
 
-            return new LimelightLaunchParameters(zyaw, horizontalDistance, dynamicTolerance);
+            return new LimelightYDT(zyaw, horizontalDistance, dynamicTolerance);
 
         }
 

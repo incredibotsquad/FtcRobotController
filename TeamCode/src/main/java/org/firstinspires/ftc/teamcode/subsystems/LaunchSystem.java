@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import static org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC;
+
 import android.util.Log;
 
 import com.acmerobotics.dashboard.config.Config;
@@ -21,7 +23,8 @@ import org.firstinspires.ftc.teamcode.common.BallEntry;
 import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 import org.firstinspires.ftc.teamcode.common.GameColors;
 import org.firstinspires.ftc.teamcode.common.GamePattern;
-import org.firstinspires.ftc.teamcode.common.LimelightLaunchParameters;
+import org.firstinspires.ftc.teamcode.common.LaunchParametersLookup;
+import org.firstinspires.ftc.teamcode.common.LimelightYDT;
 import org.firstinspires.ftc.teamcode.common.LimelightAprilTagHelper;
 import org.firstinspires.ftc.teamcode.common.RobotHardware;
 import org.firstinspires.ftc.teamcode.common.BallLaunchParameters;
@@ -90,6 +93,22 @@ public class LaunchSystem {
     public static int ALIGNMENT_STABLE_CYCLES_REQUIRED = 3;  // Cycles aligned before locking
     public static double TURRET_DEADBAND_DEGREES = 0.5;  // Don't move if error is below this
 
+    // Alignment state tracking
+    private enum TurretAlignmentState {
+        COARSE_ALIGNING,    // Large error, using odometry only
+        FINE_ALIGNING,      // Small error, can use limelight for fine tuning
+        LOCKED              // Aligned and stable, don't move unless robot moves
+    }
+    
+    private TurretAlignmentState currentAlignmentState = TurretAlignmentState.COARSE_ALIGNING;
+    private Pose2d lastLockedPose = null;           // Robot pose when turret was locked
+    private int lastLockedTurretPosition = 0;       // Turret position when locked
+    private int alignmentStableCounter = 0;         // Counts cycles at low error before locking
+    private double lastOdometryTargetDegrees = 0;   // Last calculated target from odometry
+    // ========== END NEW ALIGNMENT SYSTEM PARAMETERS ==========
+
+
+
     // ========== POSITION-ONLY ALIGNMENT PARAMETERS ==========
     // Tighter tolerances for position-only mode (no limelight fallback)
     public static double POS_ONLY_LOCK_THRESHOLD_DEGREES = 0.8;      // Tighter than limelight mode
@@ -106,15 +125,15 @@ public class LaunchSystem {
     public static double POS_ONLY_FRACTION_ULTRA_FINE = 0.5;         // 50% for ultra fine
     public static boolean POS_ONLY_USE_PIVOT_OFFSET = true;          // Account for turret pivot offset
     public static double POS_ONLY_ERROR_FILTER_ALPHA = 0.3;          // Low-pass filter (0-1, lower = more filtering)
-    
+
     // Position-only state machine
     private enum PositionOnlyAlignmentState {
         COARSE,         // Large error, fast movement
-        FINE,           // Medium error, slow movement  
+        FINE,           // Medium error, slow movement
         ULTRA_FINE,     // Small error, very slow movement
         LOCKED          // Aligned and stable
     }
-    
+
     private PositionOnlyAlignmentState posOnlyState = PositionOnlyAlignmentState.COARSE;
     private Pose2d posOnlyLastLockedPose = null;
     private int posOnlyLastLockedTurretPosition = 0;
@@ -124,20 +143,6 @@ public class LaunchSystem {
     private double posOnlyErrorIntegral = 0;  // For integral term
     // ========== END POSITION-ONLY PARAMETERS ==========
 
-
-    // Alignment state tracking
-    private enum TurretAlignmentState {
-        COARSE_ALIGNING,    // Large error, using odometry only
-        FINE_ALIGNING,      // Small error, can use limelight for fine tuning
-        LOCKED              // Aligned and stable, don't move unless robot moves
-    }
-    
-    private TurretAlignmentState currentAlignmentState = TurretAlignmentState.COARSE_ALIGNING;
-    private Pose2d lastLockedPose = null;           // Robot pose when turret was locked
-    private int lastLockedTurretPosition = 0;       // Turret position when locked
-    private int alignmentStableCounter = 0;         // Counts cycles at low error before locking
-    private double lastOdometryTargetDegrees = 0;   // Last calculated target from odometry
-    // ========== END NEW ALIGNMENT SYSTEM PARAMETERS ==========
 
     // ========== LIMELIGHT-ONLY ALIGNMENT PARAMETERS (SIMPLIFIED) ==========
     // This mode uses ONLY limelight for alignment - no odometry
@@ -196,19 +201,19 @@ public class LaunchSystem {
     Map<Double, BallLaunchParameters> distancePowerVisorMap = Map.of(
             FLYWHEEL_POWER_BUCKET_THRESHOLD_CLOSE, new BallLaunchParameters(
                     FLYWHEEL_POWER_BUCKET_THRESHOLD_CLOSE,
-                    LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_CLOSE,
+                    FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_CLOSE,
                     VISOR_POSITION_CLOSE_1,
                     VISOR_POSITION_CLOSE_2,
                     VISOR_POSITION_CLOSE_3),
             FLYWHEEL_POWER_BUCKET_THRESHOLD_MID, new BallLaunchParameters(
                     FLYWHEEL_POWER_BUCKET_THRESHOLD_MID,
-                    LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_MID,
+                    FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_MID,
                     VISOR_POSITION_MID_1,
                     VISOR_POSITION_MID_2,
                     VISOR_POSITION_MID_3),
             FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR, new BallLaunchParameters(
                     FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR,
-                    LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR,
+                    FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR,
                     VISOR_POSITION_FAR_1,
                     VISOR_POSITION_FAR_2,
                     VISOR_POSITION_FAR_3)
@@ -408,7 +413,7 @@ public class LaunchSystem {
         BallLaunchParameters ballLaunchParameters = getRobotLaunchParametersBasedOnDistance();
 
         //we want to wait for flywheel to ramp up only when launching from far
-        boolean waitForFlywheelBetweenLaunches = (ballLaunchParameters.distanceThreshold == FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR);
+        boolean waitForFlywheelBetweenLaunches = (ballLaunchParameters.distance == FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR);
         if (waitForFlywheelBetweenLaunches)
             Log.i("== LAUNCH SYSTEM ==", "getLaunchAllBallsInSequenceAction. Will wait for flywheel between launches: ");
 
@@ -450,40 +455,43 @@ public class LaunchSystem {
     }
 
     private BallLaunchParameters getRobotLaunchParametersBasedOnDistance() {
-        LimelightLaunchParameters ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
+        LimelightYDT ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
 
         BallLaunchParameters launchParameters = oldLaunchParameters;
 
         if (ydt != null) {
-//            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: YAW: " + ydt.yaw);
-            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: DISTANCE: " + ydt.distance);
+            launchParameters = LaunchParametersLookup.getBallLaunchParameters(ydt.distance);
+            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: DISTANCE: " + launchParameters.distance);
+            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: FLYWHEEL: " + launchParameters.flywheelVelocity);
+            Log.i("== LAUNCH SYSTEM ==", "getRobotLaunchParametersBasedOnDistance: VISOR: " + launchParameters.visorPositions.get(0));
 
-            if (ydt.distance < FLYWHEEL_POWER_BUCKET_THRESHOLD_MID) {
-                launchParameters = new BallLaunchParameters(
-                        FLYWHEEL_POWER_BUCKET_THRESHOLD_CLOSE,
-                        LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_CLOSE,
-                        VISOR_POSITION_CLOSE_1,
-                        VISOR_POSITION_CLOSE_2,
-                        VISOR_POSITION_CLOSE_3);
 
-            } else if (ydt.distance < FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR) {
-
-                launchParameters = new BallLaunchParameters(
-                        FLYWHEEL_POWER_BUCKET_THRESHOLD_MID,
-                        LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_MID,
-                        VISOR_POSITION_MID_1,
-                        VISOR_POSITION_MID_2,
-                        VISOR_POSITION_MID_3);
-
-            } else {
-
-                launchParameters = new BallLaunchParameters(
-                        FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR,
-                        LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR,
-                        VISOR_POSITION_FAR_1,
-                        VISOR_POSITION_FAR_2,
-                        VISOR_POSITION_FAR_3);
-            }
+//            if (ydt.distance < FLYWHEEL_POWER_BUCKET_THRESHOLD_MID) {
+//                launchParameters = new BallLaunchParameters(
+//                        FLYWHEEL_POWER_BUCKET_THRESHOLD_CLOSE,
+//                        LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_CLOSE,
+//                        VISOR_POSITION_CLOSE_1,
+//                        VISOR_POSITION_CLOSE_2,
+//                        VISOR_POSITION_CLOSE_3);
+//
+//            } else if (ydt.distance < FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR) {
+//
+//                launchParameters = new BallLaunchParameters(
+//                        FLYWHEEL_POWER_BUCKET_THRESHOLD_MID,
+//                        LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_MID,
+//                        VISOR_POSITION_MID_1,
+//                        VISOR_POSITION_MID_2,
+//                        VISOR_POSITION_MID_3);
+//
+//            } else {
+//
+//                launchParameters = new BallLaunchParameters(
+//                        FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR,
+//                        LaunchFlywheelAction.FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR,
+//                        VISOR_POSITION_FAR_1,
+//                        VISOR_POSITION_FAR_2,
+//                        VISOR_POSITION_FAR_3);
+//            }
         }
 
         oldLaunchParameters = launchParameters;     //update the older parameters
@@ -565,7 +573,7 @@ public class LaunchSystem {
         }
         turretAlignmentThrottleTimer.reset();
 
-        LimelightLaunchParameters ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
+        LimelightYDT ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
 
         if (ydt == null) {
             if (turretTagNotFoundTimer.milliseconds() > TURRET_TAG_NOT_FOUND_THRESHOLD_MILLIS)
@@ -647,7 +655,7 @@ public void AlignTurretToGoalPowerHuman() {
     }
     turretAlignmentThrottleTimer.reset();
 
-    LimelightLaunchParameters ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
+    LimelightYDT ydt = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
 
     if (ydt == null) {
         if (turretTagNotFoundTimer.milliseconds() > TURRET_TAG_NOT_FOUND_THRESHOLD_MILLIS)
@@ -815,7 +823,7 @@ public void AlignTurretToGoalPowerHuman() {
         lastOdometryTargetDegrees = odometryTargetDegrees;
 
         // ============ GET LIMELIGHT DATA (if available) ============
-        LimelightLaunchParameters limelightData = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
+        LimelightYDT limelightData = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
         double limelightAdjustmentDegrees = 0;
         boolean limelightAvailable = (limelightData != null);
         
@@ -1105,7 +1113,7 @@ public void AlignTurretToGoalPowerHuman() {
         int currentTurretPosition = robotHardware.getLaunchTurretPosition();
 
         // ============ GET LIMELIGHT DATA ============
-        LimelightLaunchParameters limelightData = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
+        LimelightYDT limelightData = limelightAprilTagHelper.getGoalYawDistanceToleranceFromCurrentPosition();
         boolean tagVisible = (limelightData != null);
 
         // ============ HANDLE TAG NOT VISIBLE ============
