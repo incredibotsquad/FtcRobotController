@@ -163,7 +163,7 @@ public class LimelightAprilTagHelper  {
 
             ydt = new LimelightYDT(yaw, inner.distance, inner.tolerance);
 
-            Log.i("LimelightAprilTagHelper", "getPointOfInterestYawDistanceToleranceFromTag: Yaw" + yaw);
+//            Log.i("LimelightAprilTagHelper", "getPointOfInterestYawDistanceToleranceFromTag: Yaw" + yaw);
 
         }
 

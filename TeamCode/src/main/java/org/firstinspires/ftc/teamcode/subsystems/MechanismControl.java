@@ -1,12 +1,10 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
-import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.TURRET_CENTERED_POSITION;
 import static org.firstinspires.ftc.teamcode.subsystems.Spindex.SPINDEXER_INCREMENT;
 
 import android.util.Log;
 
 import com.acmerobotics.roadrunner.Action;
-import com.acmerobotics.roadrunner.NullAction;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SequentialAction;
 import com.qualcomm.robotcore.hardware.Gamepad;
@@ -98,7 +96,7 @@ public class MechanismControl {
         //process the yaw and rotate the turret always - except when parking
         if (currentRobotState != ROBOT_STATE.PARK && targetRobotState != ROBOT_STATE.PARK) {
             if (turretAlignmentType == TURRET_ALIGNMENT_TYPE.HYBRID)
-                launchSystem.AlignTurretToGoalTry();
+                launchSystem.AlignTurretToGoalBlended();
             else
                 launchSystem.AlignTurretToGoalLimelightOnlyNarrowBand();
 

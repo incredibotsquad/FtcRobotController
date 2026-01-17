@@ -83,7 +83,7 @@ public class IntakeSystem {
         return checkForBallIntakeAndGetAction();
     }
 
-    private Action checkForBallIntakeAndGetAction() {
+    public Action checkForBallIntakeAndGetAction() {
         Action returnAction = new NullAction();
 
         if (spindex.isReadyForIntake() && isOn) {

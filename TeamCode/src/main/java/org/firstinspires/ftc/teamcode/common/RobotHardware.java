@@ -206,6 +206,9 @@ public class RobotHardware {
         Log.i("ROBOT HARDWARE", "setLimelightPipeline");
 
         switch (allianceColor) {
+            case OBELISK:
+                setLimelightPipeline(5);
+                break;
             case RED:
                 setLimelightPipeline(6);
                 break;
