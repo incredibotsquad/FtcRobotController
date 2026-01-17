@@ -90,7 +90,6 @@ public class ChassisControl {
         ));
 
         mecanumDrive.updatePoseEstimate();
-        mecanumDrive.updatePoseEstimate();
 
         Pose2d pose = mecanumDrive.localizer.getPose();
 

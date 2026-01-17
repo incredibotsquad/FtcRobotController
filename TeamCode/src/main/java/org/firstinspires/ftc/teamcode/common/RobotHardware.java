@@ -66,7 +66,7 @@ public class RobotHardware {
     public static double TURRET_D = 0;
     public static double TURRET_F = 0;
 
-    private GoBildaPinpointDriver pinpointDriver;
+//    private GoBildaPinpointDriver pinpointDriver;
 
     //making constructor
     public RobotHardware(HardwareMap hwMap) {
@@ -164,16 +164,16 @@ public class RobotHardware {
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         limelight.setPollRateHz(250); // This sets how often we ask Limelight for data (100 times per second)
 
-        pinpointDriver = hardwareMap.get(GoBildaPinpointDriver.class, "PinpointOdo");
+//        pinpointDriver = hardwareMap.get(GoBildaPinpointDriver.class, "PinpointOdo");
 
 //        limelight.updateRobotOrientation(0);
     }
 
-    public void resetPinpoint() {
-        pinpointDriver.recalibrateIMU();
-        pinpointDriver.resetPosAndIMU();
-        Log.i("== ROBOTHARDWARE ==", " resetPinpoint");
-    }
+//    public void resetPinpoint() {
+//        pinpointDriver.recalibrateIMU();
+//        pinpointDriver.resetPosAndIMU();
+//        Log.i("== ROBOTHARDWARE ==", " resetPinpoint");
+//    }
 
     public LLResult getLatestLimelightResults() {
 //        Log.i("== ROBOTHARDWARE ==", " GetLatestLimelightResults");

@@ -47,7 +47,7 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
                 telemetry.update();
             }
 
-            robotHardware.resetPinpoint();
+//            robotHardware.resetPinpoint();
         }
 
         robotHardware.setLimelightPipeline(CrossOpModeStorage.allianceColor);

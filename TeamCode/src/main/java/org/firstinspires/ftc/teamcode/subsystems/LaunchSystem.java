@@ -54,7 +54,7 @@ public class LaunchSystem {
     public static double TURRET_COARSE_TOLERANCE_DEGREES = 5;
     public static double TURRET_FRACTION_OF_DIFFERENCE_TO_COVER = 0.9;
     public static double TURRET_TAG_NOT_FOUND_THRESHOLD_MILLIS = 2000;
-    public static boolean TURRET_BLENDED_ALIGNMENT = false;
+    public static boolean TURRET_BLENDED_ALIGNMENT = true;
 
     public static double TURRET_POWER_KP = 0.05;
     public static double TURRET_POWER_MIN = 0.12;
@@ -574,9 +574,9 @@ public class LaunchSystem {
             }
 
             //now check if we need to adjust based on limelight
-            LimelightYDT pointOfInterestYaw = limelightAprilTagHelper.getPointOfInterestYawDistanceToleranceFromTag();
+            LimelightYDT pointOfInterestYDT = limelightAprilTagHelper.getPointOfInterestYawDistanceToleranceFromTag();
 
-            if (pointOfInterestYaw == null)
+            if (pointOfInterestYDT == null)
             {
                 Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalTry : No POI yaw found after COARSE alignment.");
                 robotHardware.setLaunchTurretPower(0);
@@ -584,35 +584,57 @@ public class LaunchSystem {
                 return;
             }
 
-            errorDeg = pointOfInterestYaw.yaw;
+            errorDeg = pointOfInterestYDT.yaw;
 
-            if (errorDeg < LIMELIGHT_MIN_ADJUST_THRESHOLD_DEGREES) {
+            if (Math.abs(errorDeg) < LIMELIGHT_MIN_ADJUST_THRESHOLD_DEGREES) {
                 Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalTry : POI yaw within tolerance of: " + LIMELIGHT_MIN_ADJUST_THRESHOLD_DEGREES);
                 robotHardware.setLaunchTurretPower(0);
                 robotHardware.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);    //turn off the alignment light
                 return;
             }
+            else {
+                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalTry : POI yaw error: " + errorDeg + " - correcting it.");
 
-            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalTry : POI yaw found: " + errorDeg + " correcting it.");
-        }
+                robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);    //turn off the alignment light
 
-        robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);    //turn off the alignment light
+                int currentTurretPosition = robotHardware.getLaunchTurretPosition();
 
-        double power = Math.max(-TURRET_POWER_MAX, Math.min(TURRET_POWER_MAX, TURRET_POWER_KP * errorDeg));
-        if (Math.abs(power) < TURRET_POWER_MIN) {
-            power = Math.copySign(TURRET_POWER_MIN, power);
+                double turretTolerance = (pointOfInterestYDT.distance > FLYWHEEL_POWER_BUCKET_THRESHOLD_FAR)
+                        ? TURRET_ALIGNMENT_TOLERANCE_DEGREES_FAR
+                        : TURRET_ALIGNMENT_TOLERANCE_DEGREES_NEAR;
+
+                int differenceToCoverInTicks = (int)((errorDeg * TURRET_FRACTION_OF_DIFFERENCE_TO_COVER) / TURRET_DEGREES_PER_TICK);
+                int newMotorPosition = currentTurretPosition + differenceToCoverInTicks;
+
+                Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalTry: POI yaw error: new turret position: " + newMotorPosition);
+
+                if (newMotorPosition < 0)
+                    newMotorPosition = Math.max( -1 * TURRET_MAX_TICKS_BEFORE_CLAMP, newMotorPosition);
+                else
+                    newMotorPosition = Math.min(TURRET_MAX_TICKS_BEFORE_CLAMP, newMotorPosition);
+
+                robotHardware.setLaunchTurretPosition(newMotorPosition);
+            }
+
+        } else {
+            //error more than TURRET_COARSE_TOLERANCE_DEGREES
+            robotHardware.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);    //turn off the alignment light
+
+            double power = Math.max(-TURRET_POWER_MAX, Math.min(TURRET_POWER_MAX, TURRET_POWER_KP * errorDeg));
+            if (Math.abs(power) < TURRET_POWER_MIN) {
+                power = Math.copySign(TURRET_POWER_MIN, power);
+            }
+            robotHardware.setLaunchTurretPower(power);
+            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalTry : setLaunchTurretPower:" + power);
         }
 
         if (TURRET_POWER_SOFT_LIMITS_ENABLED) {
             int currentPos = robotHardware.getLaunchTurretPosition();
-            if ((power > 0 && currentPos >= TURRET_MAX_TICKS_BEFORE_CLAMP) || (power < 0 && currentPos <= -TURRET_MAX_TICKS_BEFORE_CLAMP)) {
-                power = 0;
+            double currPower = robotHardware.getLaunchTurretPower();
+            if ((currPower > 0 && currentPos >= TURRET_MAX_TICKS_BEFORE_CLAMP) || (currPower < 0 && currentPos <= -TURRET_MAX_TICKS_BEFORE_CLAMP)) {
+                robotHardware.setLaunchTurretPower(0);
             }
         }
-
-        Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalTry : setLaunchTurretPower:" + power);
-
-        robotHardware.setLaunchTurretPower(power);
     }
 
     public void AlignTurretToGoalLimelightOnlyNarrowBand() {
@@ -816,7 +838,7 @@ public void AlignTurretToGoalPowerHuman() {
         double turretHeadingInFieldSpace = heading - currentTurretRadians;
 
         //For limelight, this is the robot's orientation - go ahead and update this in limelight
-        robotHardware.updateLimelightYawDegrees(Math.toDegrees(turretHeadingInFieldSpace));
+//        robotHardware.updateLimelightYawDegrees(Math.toDegrees(turretHeadingInFieldSpace));
 
         Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoal : turret heading in field space: " + Math.toDegrees(turretHeadingInFieldSpace));
 

@@ -72,7 +72,7 @@ public class LimelightAprilTagHelper  {
 
         if (result.isValid()) { // Tag is visible
 
-            Log.i("LimelightAprilTagHelper", "getGamePatternFromObelisk: valid results found");
+//            Log.i("LimelightAprilTagHelper", "getGamePatternFromObelisk: valid results found");
 
             // Get fiducial (AprilTag) results
             List<LLResultTypes.FiducialResult> fiducialResults = result.getFiducialResults();
@@ -80,12 +80,12 @@ public class LimelightAprilTagHelper  {
             if (!fiducialResults.isEmpty()) {
                 List<LLResultTypes.FiducialResult> gameTags = fiducialResults.stream().filter(fr -> fr.getFiducialId() == 21 || fr.getFiducialId() == 22 || fr.getFiducialId() == 23).collect(Collectors.toList());
 
-                Log.i("LimelightAprilTagHelper", "getGamePatternFromObelisk: April tag results found: " + gameTags.size());
+//                Log.i("LimelightAprilTagHelper", "getGamePatternFromObelisk: April tag results found: " + gameTags.size());
 
                 if (!gameTags.isEmpty()) {
                     int idToSearch = gameTags.get(0).getFiducialId();
 
-                    Log.i("LimelightAprilTagHelper", "getGamePatternFromObelisk: id to search: " + idToSearch);
+//                    Log.i("LimelightAprilTagHelper", "getGamePatternFromObelisk: id to search: " + idToSearch);
 
                     List<GamePattern> foundPattern = AprilTagConstants.patterns.stream().filter(pattern -> pattern.tagId == idToSearch).collect(Collectors.toList());
 
@@ -110,24 +110,24 @@ public class LimelightAprilTagHelper  {
 
         LLResultTypes.FiducialResult primaryTarget = null;
 
-        Log.i("LimelightAprilTagHelper", "GOT RESULTS");
+//        Log.i("LimelightAprilTagHelper", "GOT RESULTS");
 
         if (result.isValid()) { // Tag is visible
 
-            Log.i("LimelightAprilTagHelper", "RESULTS ARE VALID");
+//            Log.i("LimelightAprilTagHelper", "RESULTS ARE VALID");
 
             // Get fiducial (AprilTag) results
             List<LLResultTypes.FiducialResult> fiducialResults = result.getFiducialResults();
 
             if (!fiducialResults.isEmpty()) {
-                Log.i("LimelightAprilTagHelper", "FOUND APRIL TAGS");
+//                Log.i("LimelightAprilTagHelper", "FOUND APRIL TAGS");
                 if (allianceColor == null) return null;
 
                 switch (allianceColor) {
                     case RED:
                         List<LLResultTypes.FiducialResult> redResults = fiducialResults.stream().filter(fr -> fr.getFiducialId() == AprilTagConstants.RED_ALLIANCE_TAG_ID).collect(Collectors.toList());
                         if (!redResults.isEmpty()) {
-                            Log.i("LimelightAprilTagHelper", allianceColor + " april tag found");
+//                            Log.i("LimelightAprilTagHelper", allianceColor + " april tag found");
                             primaryTarget = redResults.get(0);
                         }
                         break;
@@ -135,7 +135,7 @@ public class LimelightAprilTagHelper  {
                     case BLUE:
                         List<LLResultTypes.FiducialResult> blueResults = fiducialResults.stream().filter(fr -> fr.getFiducialId() == AprilTagConstants.BLUE_ALLIANCE_TAG_ID).collect(Collectors.toList());
                         if (!blueResults.isEmpty()) {
-                            Log.i("LimelightAprilTagHelper", allianceColor + " april tag found");
+//                            Log.i("LimelightAprilTagHelper", allianceColor + " april tag found");
                             primaryTarget = blueResults.get(0);
                         }
                         break;
@@ -144,8 +144,9 @@ public class LimelightAprilTagHelper  {
             }
         }
 
-        if (primaryTarget == null)
-            Log.i("LimelightAprilTagHelper", allianceColor + " april tag NOT found");
+        if (primaryTarget == null) {
+//            Log.i("LimelightAprilTagHelper", allianceColor + " april tag NOT found");
+        }
 
         return primaryTarget;
     }
