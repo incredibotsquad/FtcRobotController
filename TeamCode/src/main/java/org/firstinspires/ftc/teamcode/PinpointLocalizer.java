@@ -39,7 +39,7 @@ public final class PinpointLocalizer implements Localizer {
 //        driver.setEncoderResolution(1 / mmPerTick, DistanceUnit.MM);
         driver.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
 
-        driver.setOffsets(4.5, -7.5, DistanceUnit.INCH); //these are tuned for 3110-0002-0001 Product Insight #1
+        driver.setOffsets(-8, 4, DistanceUnit.INCH); //these are tuned for 3110-0002-0001 Product Insight #1
 
 //        driver.setOffsets(mmPerTick * PARAMS.parYTicks, mmPerTick * PARAMS.perpXTicks, DistanceUnit.MM);
 
@@ -83,7 +83,7 @@ public final class PinpointLocalizer implements Localizer {
             txPinpointRobot = new Pose2d(driver.getPosX(DistanceUnit.INCH), driver.getPosY(DistanceUnit.INCH), driver.getHeading(UnnormalizedAngleUnit.RADIANS));
             Vector2d worldVelocity = new Vector2d(driver.getVelX(DistanceUnit.INCH), driver.getVelY(DistanceUnit.INCH));
             Vector2d robotVelocity = Rotation2d.fromDouble(-txPinpointRobot.heading.log()).times(worldVelocity);
-            Log.i("PinpointLocalizer", "After update X: " + txPinpointRobot.position.x + " Y: " + txPinpointRobot.position.y + " Heading: " + Math.toDegrees(txPinpointRobot.heading.toDouble()));
+//            Log.i("PinpointLocalizer", "After update X: " + txPinpointRobot.position.x + " Y: " + txPinpointRobot.position.y + " Heading: " + Math.toDegrees(txPinpointRobot.heading.toDouble()));
 
             return new PoseVelocity2d(robotVelocity, driver.getHeadingVelocity(UnnormalizedAngleUnit.RADIANS));
         }

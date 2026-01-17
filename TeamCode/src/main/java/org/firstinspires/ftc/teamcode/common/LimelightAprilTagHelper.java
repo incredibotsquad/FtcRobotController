@@ -99,29 +99,35 @@ public class LimelightAprilTagHelper  {
         return null;
     }
 
-    private LLResultTypes.FiducialResult getAllianceSpecificAprilTag() {
-
-        LLResultTypes.FiducialResult primaryTarget = null;
+    private LLResultTypes.FiducialResult getAllianceSpecificAprilTag () {
         LLResult result = robotHardware.getLatestLimelightResults();
 
-//        Log.i("LimelightAprilTagHelper", "GOT RESULTS");
+        return getAllianceSpecificAprilTagFromResult(result);
+    }
+
+
+    private LLResultTypes.FiducialResult getAllianceSpecificAprilTagFromResult(LLResult result) {
+
+        LLResultTypes.FiducialResult primaryTarget = null;
+
+        Log.i("LimelightAprilTagHelper", "GOT RESULTS");
 
         if (result.isValid()) { // Tag is visible
 
-//            Log.i("LimelightAprilTagHelper", "RESULTS ARE VALID");
+            Log.i("LimelightAprilTagHelper", "RESULTS ARE VALID");
 
             // Get fiducial (AprilTag) results
             List<LLResultTypes.FiducialResult> fiducialResults = result.getFiducialResults();
 
             if (!fiducialResults.isEmpty()) {
-//                Log.i("LimelightAprilTagHelper", "FOUND APRIL TAGS");
+                Log.i("LimelightAprilTagHelper", "FOUND APRIL TAGS");
                 if (allianceColor == null) return null;
 
                 switch (allianceColor) {
                     case RED:
                         List<LLResultTypes.FiducialResult> redResults = fiducialResults.stream().filter(fr -> fr.getFiducialId() == AprilTagConstants.RED_ALLIANCE_TAG_ID).collect(Collectors.toList());
                         if (!redResults.isEmpty()) {
-//                            Log.i("LimelightAprilTagHelper", allianceColor + " april tag found");
+                            Log.i("LimelightAprilTagHelper", allianceColor + " april tag found");
                             primaryTarget = redResults.get(0);
                         }
                         break;
@@ -129,7 +135,7 @@ public class LimelightAprilTagHelper  {
                     case BLUE:
                         List<LLResultTypes.FiducialResult> blueResults = fiducialResults.stream().filter(fr -> fr.getFiducialId() == AprilTagConstants.BLUE_ALLIANCE_TAG_ID).collect(Collectors.toList());
                         if (!blueResults.isEmpty()) {
-//                            Log.i("LimelightAprilTagHelper", allianceColor + " april tag found");
+                            Log.i("LimelightAprilTagHelper", allianceColor + " april tag found");
                             primaryTarget = blueResults.get(0);
                         }
                         break;
@@ -138,17 +144,40 @@ public class LimelightAprilTagHelper  {
             }
         }
 
-//        Log.i("LimelightAprilTagHelper", allianceColor + " april tag NOT found");
+        if (primaryTarget == null)
+            Log.i("LimelightAprilTagHelper", allianceColor + " april tag NOT found");
+
         return primaryTarget;
     }
 
+    public LimelightYDT getPointOfInterestYawDistanceToleranceFromTag() {
+        LimelightYDT ydt = null;
+
+        LLResult result = robotHardware.getLatestLimelightResults();
+        LLResultTypes.FiducialResult primaryTarget = getAllianceSpecificAprilTagFromResult(result);
+
+        if (primaryTarget != null) {    //if we found an april tag in this result
+            double yaw = result.getTx();
+            LimelightYDT inner = getGoalYawDistanceToleranceFromCurrentPosition(primaryTarget);
+
+            ydt = new LimelightYDT(yaw, inner.distance, inner.tolerance);
+
+            Log.i("LimelightAprilTagHelper", "getPointOfInterestYawDistanceToleranceFromTag: Yaw" + yaw);
+
+        }
+
+        return ydt;
+    }
+
     public LimelightYDT getGoalYawDistanceToleranceFromCurrentPosition() {
+        return getGoalYawDistanceToleranceFromCurrentPosition(getAllianceSpecificAprilTag());
+    }
+
+    public LimelightYDT getGoalYawDistanceToleranceFromCurrentPosition(LLResultTypes.FiducialResult primaryTarget) {
 
 //        if (timeSinceLastYawPull == null) {
 //            timeSinceLastYawPull = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 //        }
-
-        LLResultTypes.FiducialResult primaryTarget = getAllianceSpecificAprilTag();
 
         if (primaryTarget != null) {
             // Get TARGET POSE IN CAMERA SPACE

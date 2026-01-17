@@ -190,9 +190,28 @@ public class RobotHardware {
         limelight.updateRobotOrientation(yaw);
     }
 
+
     public void setLimelightPipeline(int pipeline) {
         if (limelight != null) {
+            Log.i("ROBOT HARDWARE", "setLimelightPipeline. Switched to: " + pipeline);
+
             limelight.pipelineSwitch(pipeline);
+        }
+    }
+
+    //5 pattern
+    //6 is red
+    //7 is blue
+    public void setLimelightPipeline(AllianceColors allianceColor){
+        Log.i("ROBOT HARDWARE", "setLimelightPipeline");
+
+        switch (allianceColor) {
+            case RED:
+                setLimelightPipeline(6);
+                break;
+            case BLUE:
+                setLimelightPipeline(7);
+                break;
         }
     }
 

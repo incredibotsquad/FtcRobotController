@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.TURRET_CENTERED_POSITION;
 import static org.firstinspires.ftc.teamcode.subsystems.Spindex.SPINDEXER_INCREMENT;
 
 import android.util.Log;
@@ -96,13 +97,18 @@ public class MechanismControl {
 
         //process the yaw and rotate the turret always - except when parking
         if (currentRobotState != ROBOT_STATE.PARK && targetRobotState != ROBOT_STATE.PARK) {
+
+//            robotHardware.setLaunchTurretPosition(TURRET_CENTERED_POSITION);
+
 //            launchSystem.AlignTurretToGoalTry();
-                launchSystem.AlignTurretToGoalRobust();
+
+            launchSystem.AlignTurretToGoalLimelightOnlyNarrowBand();
 
 //            if (turretAlignmentType == TURRET_ALIGNMENT_TYPE.HYBRID)
+//                add reset call here
 //                launchSystem.AlignTurretToGoalRobust();
 //            else
-//                launchSystem.AlignTurretToGoalLimelightOnly();
+//                launchSystem.AlignTurretToGoalPositionHuman();
 
 //            launchSystem.KeepLauncherWarm();
         }
@@ -112,11 +118,6 @@ public class MechanismControl {
 //            Log.i("== MECHANISM CONTROL ==", "Calling to keep launcher warm from main loop. Current state:" + currentRobotState + " target state: " + targetRobotState);
 //        }
 
-
-        //TODO: this is for profiling flywheel velocity at launches
-//        if (currentRobotState != ROBOT_STATE.LAUNCH_ALL && targetRobotState == ROBOT_STATE.LAUNCH_ALL && stateTransitionInProgress) {
-//            Log.i("MECHANISM CONTROL" , "FLYWHEEL VELOCITY: " + robotHardware.getFlywheelMotorVelocityInTPS());
-//        }
 
         //update the light to reflect the number of balls in the spindex.
         intakeSystem.updateStatusLight();
@@ -155,6 +156,9 @@ public class MechanismControl {
                 turretAlignmentType = TURRET_ALIGNMENT_TYPE.LIMELIGHT_ONLY;
             else
                 turretAlignmentType = TURRET_ALIGNMENT_TYPE.HYBRID;
+
+            launchSystem.resetTurretAlignment();
+            Log.i("== MECHANISM CONTROL ==", "TURRET ALIGNMENT CHANGED TO: " + turretAlignmentType);
         }
 
 //        if (gamepad2.backWasPressed()) {

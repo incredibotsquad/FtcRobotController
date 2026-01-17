@@ -63,7 +63,7 @@ public class RedFarAuto_3 extends BaseAuto {
         mecanumDrive = new MecanumDrive(this.hardwareMap, INIT_POS);
 
         robotHardware.startLimelight();
-        robotHardware.setLimelightPipeline(6);
+        robotHardware.setLimelightPipeline(CrossOpModeStorage.allianceColor);
 
         Action moveToLaunchPosition = mecanumDrive.actionBuilder(INIT_POS)
                 .lineToX(LAUNCH_POS.position.x)

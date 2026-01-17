@@ -56,7 +56,7 @@ public abstract class BaseAuto extends LinearOpMode {
 
                 //keep the turret aligned to the goal using the robust alignment method
                 //that uses odometry as primary source and limelight only for fine adjustments
-                launchSystem.AlignTurretToGoalRobust();
+                launchSystem.AlignTurretToGoalTry();
 
                 //keep tha launcher warm
                 launchSystem.KeepLauncherWarm();

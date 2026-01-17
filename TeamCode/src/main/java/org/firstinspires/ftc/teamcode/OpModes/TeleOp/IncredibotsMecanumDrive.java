@@ -33,7 +33,6 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
         // to the names assigned during the robot configuration step on the DS or RC devices.
         robotHardware = new RobotHardware(this.hardwareMap);
         robotHardware.startLimelight();
-        robotHardware.setLimelightPipeline(6);
 
         while (opModeInInit()) {
             if (gamepad1.xWasPressed() || gamepad2.xWasPressed()) {
@@ -50,6 +49,8 @@ public class IncredibotsMecanumDrive extends LinearOpMode {
 
             robotHardware.resetPinpoint();
         }
+
+        robotHardware.setLimelightPipeline(CrossOpModeStorage.allianceColor);
 
         //NOTE: THESE OBJECTS USE THE ALLIANCE COLOR FROM CROSS OPMODE STORAGE.
         // THAT'S WHY THESE ARE INITIALIZED AFTER A CHANCE TO CHANGE ALLIANCE COLOR

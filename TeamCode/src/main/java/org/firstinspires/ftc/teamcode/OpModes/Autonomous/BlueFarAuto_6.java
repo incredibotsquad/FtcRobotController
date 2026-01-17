@@ -107,6 +107,7 @@ public class BlueFarAuto_6 extends BaseAuto {
         }
 
         robotHardware.startLimelight();
+        robotHardware.setLimelightPipeline(CrossOpModeStorage.allianceColor);
         mecanumDrive = new MecanumDrive(hardwareMap, INIT_POS);
 
         spindex = new Spindex(robotHardware);
