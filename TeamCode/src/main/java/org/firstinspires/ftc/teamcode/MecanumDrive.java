@@ -63,14 +63,14 @@ public final class MecanumDrive {
                 RevHubOrientationOnRobot.UsbFacingDirection.FORWARD;
 
         // drive model parameters
-        public double inPerTick = 0.00198129;
-        public double lateralInPerTick = 0.0012626761683623572;
-        public double trackWidthTicks = 6710.748961934635;
+        public double inPerTick = 0.00197899;
+        public double lateralInPerTick = 0.0012187585454670107;
+        public double trackWidthTicks = 6028.051494120488;
 
         // feedforward parameters (in tick units)
-        public double kS = 1.9167594193059019;
-        public double kV = 0.00025939634212057363;
-        public double kA = 0.0001;
+        public double kS = 1.2544394926627462;
+        public double kV = 0.00029872657144695613;
+        public double kA = 0.00009;
 
         // path profile parameters (in inches)
         public double maxWheelVel = 80;
@@ -82,8 +82,8 @@ public final class MecanumDrive {
         public double maxAngAccel = Math.PI;
 
         // path controller gains
-        public double axialGain = 9.0;
-        public double lateralGain = 8.0;
+        public double axialGain = 8.0;
+        public double lateralGain = 9.0;
         public double headingGain = 8.0; // shared with turn
 
         public double axialVelGain = 0.0;
@@ -241,12 +241,14 @@ public final class MecanumDrive {
 
         // TODO: make sure your config has an IMU with this name (can be BNO or BHI)
         //   see https://ftc-docs.firstinspires.org/en/latest/hardware_and_software_configuration/configuring/index.html
-        lazyImu = new LazyHardwareMapImu(hardwareMap, "PinpointOdo", new RevHubOrientationOnRobot(
+        lazyImu = new LazyHardwareMapImu(hardwareMap, "imu", new RevHubOrientationOnRobot(
                 PARAMS.logoFacingDirection, PARAMS.usbFacingDirection));
 
         voltageSensor = hardwareMap.voltageSensor.iterator().next();
 
-        localizer = new PinpointLocalizer(hardwareMap, pose);
+//        localizer = new PinpointLocalizer(hardwareMap, pose);
+
+        localizer = new ThreeDeadWheelLocalizer(hardwareMap, PARAMS.inPerTick, pose);
 
         FlightRecorder.write("MECANUM_PARAMS", PARAMS);
     }

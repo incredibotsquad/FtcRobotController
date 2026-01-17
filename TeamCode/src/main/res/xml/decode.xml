@@ -39,9 +39,9 @@
             <Servo name="AlignmentIndicatorLight" port="3" />
             <Servo name="LeftLiftServo" port="4" />
 
-            <goBILDAPinpoint name="PinpointOdo" port="2" bus="2"/>
+<!--            <goBILDAPinpoint name="PinpointOdo" port="2" bus="2"/>-->
 
-<!--            <ControlHubImuBHI260AP name="imu" port="0" bus="0" />-->
+            <ControlHubImuBHI260AP name="imu" port="0" bus="0" />
 
         </LynxModule>
     </LynxUsbDevice>
