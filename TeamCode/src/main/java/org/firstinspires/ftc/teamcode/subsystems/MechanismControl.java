@@ -97,20 +97,12 @@ public class MechanismControl {
 
         //process the yaw and rotate the turret always - except when parking
         if (currentRobotState != ROBOT_STATE.PARK && targetRobotState != ROBOT_STATE.PARK) {
+            if (turretAlignmentType == TURRET_ALIGNMENT_TYPE.HYBRID)
+                launchSystem.AlignTurretToGoalTry();
+            else
+                launchSystem.AlignTurretToGoalLimelightOnlyNarrowBand();
 
-//            robotHardware.setLaunchTurretPosition(TURRET_CENTERED_POSITION);
-
-//            launchSystem.AlignTurretToGoalTry();
-
-            launchSystem.AlignTurretToGoalLimelightOnlyNarrowBand();
-
-//            if (turretAlignmentType == TURRET_ALIGNMENT_TYPE.HYBRID)
-//                add reset call here
-//                launchSystem.AlignTurretToGoalRobust();
-//            else
-//                launchSystem.AlignTurretToGoalPositionHuman();
-
-//            launchSystem.KeepLauncherWarm();
+            launchSystem.KeepLauncherWarm();
         }
 
         //keep warm only if we are intake mode. Else this will interfere with launch parameters
@@ -232,11 +224,11 @@ public class MechanismControl {
                 case INTAKE:
                     Log.i("== MECHANISM CONTROL ==", "PROCESSING STATE: INTAKE");
                     runningActions.add(
-                            new NullAction()
-//                            new SequentialAction(
-//                                    launchSystem.getKeepWarmAction(),
-//                                    intakeSystem.getTurnOnAction()
-//                            )
+//                            new NullAction()
+                            new SequentialAction(
+                                    launchSystem.getKeepWarmAction(),
+                                    intakeSystem.getTurnOnAction()
+                            )
                     );
                     break;
 
