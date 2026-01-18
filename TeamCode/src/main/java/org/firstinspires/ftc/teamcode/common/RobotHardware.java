@@ -24,7 +24,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 @Config
 public class RobotHardware {
 
-    public static double COLOR_DETECTION_RETRY_DURATION_MILLIS = 200;
+    public static double COLOR_DETECTION_RETRY_DURATION_MILLIS = 50;
     public static double BEAM_BREAK_DETECTION_RETRY_DURATION_MILLIS = 50;
 
     public HardwareMap hardwareMap;

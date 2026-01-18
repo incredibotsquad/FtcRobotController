@@ -40,6 +40,7 @@ public class RedNearAuto_6 extends BaseAuto {
     private static final int multiplier = 1;    //used to flip coordinates between red (1), Blue (-1)
 
     public double robotHeading = Math.toRadians(135 * multiplier);
+    public double backupHeading = Math.toRadians( Math.toDegrees(robotHeading) + 180);
     public double goalHeading = Math.toRadians(125 * multiplier);
 
     public double artifactHeading = Math.toRadians(90 * multiplier);
@@ -48,14 +49,14 @@ public class RedNearAuto_6 extends BaseAuto {
     public double obeliskHeading = Math.toRadians(200); //this is same for both sides - do NOT need a multiplier
     public double splineHeading = Math.toRadians(0);
 
-    public int LINE_DEPTH_SHALLOW = 20;
+    public int LINE_DEPTH_SHALLOW = 25;
 
     public int LINE_DEPTH = 30;
 
     public Pose2d INIT_POS = new Pose2d(-54, 54 * multiplier, robotHeading);
     public Pose2d TAG_READ_POS = new Pose2d(-36, 15 * multiplier, obeliskHeading);
 
-    public Pose2d LAUNCH_POS = new Pose2d(-25, 25 * multiplier, goalHeading);
+    public Pose2d LAUNCH_POS = new Pose2d(-30, 30 * multiplier, goalHeading);
 
     public Pose2d COLLECT_LINE_1_START = new Pose2d(-15, 38 * multiplier, artifactHeading);
     public Pose2d COLLECT_LINE_1_END = new Pose2d(COLLECT_LINE_1_START.position.x,  COLLECT_LINE_1_START.position.y + (LINE_DEPTH_SHALLOW * multiplier), artifactHeading);
@@ -106,18 +107,21 @@ public class RedNearAuto_6 extends BaseAuto {
         // ========== INIT ==========
         robotHardware = new RobotHardware(hardwareMap);
 
-//        if (multiplier == 1) {
-//            CrossOpModeStorage.allianceColor = AllianceColors.RED;
-//        }
-//        else {
-//            CrossOpModeStorage.allianceColor = AllianceColors.BLUE;
-//        }
+        if (multiplier == 1) {
+            CrossOpModeStorage.allianceColor = AllianceColors.RED;
+        }
+        else {
+            CrossOpModeStorage.allianceColor = AllianceColors.BLUE;
+        }
 
         robotHardware.startLimelight();
-        robotHardware.setLimelightPipeline(AllianceColors.OBELISK);  //we want to read the pattern first
-        CrossOpModeStorage.allianceColor = AllianceColors.OBELISK;  //this will align the turret to obelisk
+        robotHardware.setLimelightPipeline(CrossOpModeStorage.allianceColor);  //we want to read the pattern first
+
+//        robotHardware.setLimelightPipeline(AllianceColors.OBELISK);  //we want to read the pattern first
+//        CrossOpModeStorage.allianceColor = AllianceColors.OBELISK;  //this will align the turret to obelisk
 
         mecanumDrive = new MecanumDrive(hardwareMap, INIT_POS);
+        mecanumDrive.localizer.setPose(INIT_POS);
 
         spindex = new Spindex(robotHardware);
         spindex.initializeWithPPG();
@@ -140,8 +144,8 @@ public class RedNearAuto_6 extends BaseAuto {
         // ========== MAIN LOOP (Non-Blocking) ==========
         while (opModeIsActive() && currentState != AutoState.DONE) {
 
-            // Background tasks (same as TeleOp)
-            getBackgroundTasks().run();
+            if (currentState != AutoState.DRIVE_TO_READ_SEQUENCE)
+                getBackgroundTasks().run();
 
             // Process current state
             processState();
@@ -207,7 +211,10 @@ public class RedNearAuto_6 extends BaseAuto {
                                     .splineToLinearHeading(LAUNCH_POS, obeliskHeading, new TranslationalVelConstraint(50), new ProfileAccelConstraint(-35, 35))
                                     .build(),
                                 new InstantAction(() -> {
+                                    for (int i = 0; i < 10; i++) {
+                                        //try to read it 10 times
                                         pattern = launchSystem.readGamePattern();
+                                    }
                                 })
                         )
                 );
@@ -218,24 +225,15 @@ public class RedNearAuto_6 extends BaseAuto {
                 Log.i("RedNearAuto_6", "Starting DRIVE_TO_LAUNCH_PRELOAD");
                 runningActions.add(
                         new SequentialAction(
-                                new InstantAction(() -> {
-                                            if (multiplier == 1) {
-                                                CrossOpModeStorage.allianceColor = AllianceColors.RED;
-                                            }
-                                            else {
-                                                CrossOpModeStorage.allianceColor = AllianceColors.BLUE;
-                                            }
-                                            Log.i("RedNearAuto_6", "Switching alliance color back to: " + CrossOpModeStorage.allianceColor);
-
-                                }),
-                                new InstantAction(() -> {
-                                    robotHardware.setLimelightPipeline(CrossOpModeStorage.allianceColor);
-                                    Log.i("RedNearAuto_6", "Switching limelight pipeline to: " + CrossOpModeStorage.allianceColor);
-                                }),
+//                                new InstantAction(() -> {
+//                                    robotHardware.setLimelightPipeline(CrossOpModeStorage.allianceColor);
+//                                    Log.i("RedNearAuto_6", "Switching limelight pipeline to: " + CrossOpModeStorage.allianceColor);
+//                                }),
                                 new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_CLOSE, false),
                                 mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                                        .turnTo(LAUNCH_POS.heading)
-//                                        .splineToLinearHeading(LAUNCH_POS, LAUNCH_POS.heading, new TranslationalVelConstraint(50), new ProfileAccelConstraint(-35, 35))
+                                        .setTangent(backupHeading)
+//                                        .turnTo(LAUNCH_POS.heading)
+                                        .splineToLinearHeading(LAUNCH_POS, LAUNCH_POS.heading, new TranslationalVelConstraint(50), new ProfileAccelConstraint(-35, 35))
                                         .build()
                         ));
                 stateTransitionInProgress = true;
@@ -412,7 +410,7 @@ public class RedNearAuto_6 extends BaseAuto {
 
         switch (currentState) {
             case INIT:
-                currentState = AutoState.DRIVE_TO_READ_SEQUENCE;
+                currentState = AutoState.DRIVE_TO_LAUNCH_PRELOAD;
                 break;
             case DRIVE_TO_READ_SEQUENCE:
                 currentState = AutoState.DRIVE_TO_LAUNCH_PRELOAD;

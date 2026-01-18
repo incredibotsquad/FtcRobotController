@@ -69,7 +69,7 @@ public class ChassisControl {
 
         parkRobot();
 //        augmentPinpointWithAprilTagData();
-//        resetRobotPosition();
+        resetRobotPosition();
     }
 
     private void moveRobotWithGamePad() {
@@ -187,7 +187,7 @@ public class ChassisControl {
     public void parkRobot() {
 //        Action park = new NullAction();
 
-        if (gamepad1.startWasPressed()) {
+        if (gamepad1.startWasPressed())
                 robotHardware.setLiftPosition(LiftAction.LIFT_ROBOT);
 
         if (gamepad1.backWasPressed())
@@ -207,7 +207,6 @@ public class ChassisControl {
 //            //TODO: ADD EXTRA CORRECTION
 //
 //            Actions.runBlocking(park);
-        }
     }
 
     //the goal is to do this while aligned to the back wall and looking at your own goal april tag
@@ -215,16 +214,15 @@ public class ChassisControl {
         if (!CORRECT_ROBOT_POSE_VIA_LIMELIGHT)
             return;
 
-        Pose2d pose = mecanumDrive.localizer.getPose();
-        Log.i("Chassis Control", "Updating robot position via limelight. Current pose: x: " + pose.position.x + " y: " + pose.position.y + " heading: " + Math.toDegrees(pose.heading.toDouble()));
-
         if (robotHardware.correctedRobotPoseViaLimelight != null) {
+            Pose2d pose = mecanumDrive.localizer.getPose();
+            Log.i("Chassis Control", "Updating robot position via limelight. Current pose: x: " + pose.position.x + " y: " + pose.position.y + " heading: " + Math.toDegrees(pose.heading.toDouble()));
+
             mecanumDrive.localizer.setPose(robotHardware.correctedRobotPoseViaLimelight);
             robotHardware.correctedRobotPoseViaLimelight = null;
+
+            pose = mecanumDrive.localizer.getPose();
+            Log.i("Chassis Control", "Updating robot position via limelight. New pose: x: " + pose.position.x + " y: " + pose.position.y + " heading: " + Math.toDegrees(pose.heading.toDouble()));
         }
-
-        pose = mecanumDrive.localizer.getPose();
-        Log.i("Chassis Control", "Updating robot position via limelight. New pose: x: " + pose.position.x + " y: " + pose.position.y + " heading: " + Math.toDegrees(pose.heading.toDouble()));
-
     }
 }

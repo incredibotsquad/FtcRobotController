@@ -72,7 +72,7 @@ public class LaunchSystem {
     public static double TURRET_ANGLE_PER_PULLEY_ROTATION = 360.0 / (123.0 / 24.0);
     public static double TURRET_DEGREES_PER_TICK = TURRET_ANGLE_PER_PULLEY_ROTATION / TURRET_PULSES_PER_REV;
     public static int TURRET_CLAMP_DEGREES_IN_EACH_DIRECTION = 90;
-    public static int TURRET_CLAMP_DEGREES_IN_EACH_DIRECTION_NARROW = 30;
+    public static int TURRET_CLAMP_DEGREES_IN_EACH_DIRECTION_NARROW = 45;
     public static int TURRET_MAX_TICKS_BEFORE_CLAMP = (int) (TURRET_CLAMP_DEGREES_IN_EACH_DIRECTION / TURRET_DEGREES_PER_TICK);
     public static int TURRET_MAX_TICKS_BEFORE_CLAMP_NARROW = (int) (TURRET_CLAMP_DEGREES_IN_EACH_DIRECTION_NARROW / TURRET_DEGREES_PER_TICK);
 
@@ -597,7 +597,7 @@ public class LaunchSystem {
                             double currTurretDegrees = robotHardware.getLaunchTurretPosition() * TURRET_DEGREES_PER_TICK;
                             double robotHeading = llPose.getOrientation().getYaw() + currTurretDegrees;
 
-                            robotHardware.correctedRobotPoseViaLimelight = new Pose2d(llPose.getPosition().x, llPose.getPosition().y, Math.toRadians(robotHeading));
+                            robotHardware.correctedRobotPoseViaLimelight = new Pose2d(Math.floor(llPose.getPosition().x), Math.floor(llPose.getPosition().y), Math.toRadians(Math.floor(robotHeading)));
 
                             Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalBlended : correctedRobotPoseViaLimelight x: " + robotHardware.correctedRobotPoseViaLimelight.position.x + " y: " + robotHardware.correctedRobotPoseViaLimelight.position.y + " yaw: " + Math.toDegrees(robotHardware.correctedRobotPoseViaLimelight.heading.toDouble()));
                         }
@@ -649,7 +649,7 @@ public class LaunchSystem {
                     blendedAlignmentState = TurretBlendedAlignmentState.BLENDED_COARSE;
                 }
 
-                if (pointOfInterestYDT != null && Math.abs(pointOfInterestYDT.yaw) > (2 * TURRET_FINE_TOLERANCE_DEGREES)) {
+                if (pointOfInterestYDT != null && Math.abs(pointOfInterestYDT.yaw) > (2 * TURRET_FINE_TOLERANCE_DEGREES) && TURRET_BLENDED_ALIGNMENT) {
                     Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalBlended: current state: " + blendedAlignmentState + " new state: " + TurretBlendedAlignmentState.BLENDED_FINE);
                     blendedAlignmentState = TurretBlendedAlignmentState.BLENDED_FINE;
                 }

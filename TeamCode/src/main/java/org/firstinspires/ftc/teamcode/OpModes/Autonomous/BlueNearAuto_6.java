@@ -15,7 +15,6 @@ import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.ProfileAccelConstraint;
 import com.acmerobotics.roadrunner.SequentialAction;
-import com.acmerobotics.roadrunner.SleepAction;
 import com.acmerobotics.roadrunner.TranslationalVelConstraint;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -41,6 +40,7 @@ public class BlueNearAuto_6 extends BaseAuto {
     private static final int multiplier = -1;    //used to flip coordinates between red (1), Blue (-1)
 
     public double robotHeading = Math.toRadians(135 * multiplier);
+    public double backupHeading = Math.toRadians( Math.toDegrees(robotHeading) + 180);
     public double goalHeading = Math.toRadians(125 * multiplier);
 
     public double artifactHeading = Math.toRadians(90 * multiplier);
@@ -51,14 +51,14 @@ public class BlueNearAuto_6 extends BaseAuto {
 
     public int LINE_DEPTH_SHALLOW = 25;
 
-    public int LINE_DEPTH = 33;
+    public int LINE_DEPTH = 30;
 
     public Pose2d INIT_POS = new Pose2d(-54, 54 * multiplier, robotHeading);
     public Pose2d TAG_READ_POS = new Pose2d(-36, 15 * multiplier, obeliskHeading);
 
-    public Pose2d LAUNCH_POS = new Pose2d(-36, 36 * multiplier, goalHeading);
+    public Pose2d LAUNCH_POS = new Pose2d(-30, 30 * multiplier, goalHeading);
 
-    public Pose2d COLLECT_LINE_1_START = new Pose2d(-10, 38 * multiplier, artifactHeading);
+    public Pose2d COLLECT_LINE_1_START = new Pose2d(-15, 38 * multiplier, artifactHeading);
     public Pose2d COLLECT_LINE_1_END = new Pose2d(COLLECT_LINE_1_START.position.x,  COLLECT_LINE_1_START.position.y + (LINE_DEPTH_SHALLOW * multiplier), artifactHeading);
     public Pose2d COLLECT_LINE_2_START = new Pose2d(16, 38 * multiplier, artifactHeading);
     public Pose2d COLLECT_LINE_2_END = new Pose2d(COLLECT_LINE_2_START.position.x,  COLLECT_LINE_2_START.position.y + (LINE_DEPTH * multiplier), artifactHeading);
@@ -100,7 +100,7 @@ public class BlueNearAuto_6 extends BaseAuto {
 
     private ElapsedTime totalTime;
 
-    GamePattern pattern;
+    GamePattern pattern = null;
 
     @Override
     public void runOpMode() {
@@ -115,11 +115,16 @@ public class BlueNearAuto_6 extends BaseAuto {
         }
 
         robotHardware.startLimelight();
-        robotHardware.setLimelightPipeline(CrossOpModeStorage.allianceColor);
+        robotHardware.setLimelightPipeline(CrossOpModeStorage.allianceColor);  //we want to read the pattern first
+
+//        robotHardware.setLimelightPipeline(AllianceColors.OBELISK);  //we want to read the pattern first
+//        CrossOpModeStorage.allianceColor = AllianceColors.OBELISK;  //this will align the turret to obelisk
+
         mecanumDrive = new MecanumDrive(hardwareMap, INIT_POS);
+        mecanumDrive.localizer.setPose(INIT_POS);
 
         spindex = new Spindex(robotHardware);
-        spindex.initializeWithUnknowns();
+        spindex.initializeWithPPG();
 
         limelightAprilTagHelper = new LimelightAprilTagHelper(robotHardware);
         intakeSystem = new IntakeSystem(robotHardware, spindex);
@@ -127,7 +132,6 @@ public class BlueNearAuto_6 extends BaseAuto {
 
         dashboard = FtcDashboard.getInstance();
 
-        // Alliance selection during init
         while (opModeInInit()) {}
 
         waitForStart();
@@ -135,21 +139,20 @@ public class BlueNearAuto_6 extends BaseAuto {
         stateTimer.reset();
         currentState = AutoState.INIT;
 
-        robotHardware.setLaunchTurretPosition(TURRET_CENTERED_POSITION);
-
         totalTime = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
         // ========== MAIN LOOP (Non-Blocking) ==========
         while (opModeIsActive() && currentState != AutoState.DONE) {
 
-            // Background tasks (same as TeleOp)
-            getBackgroundTasks().run();
+            if (currentState != AutoState.DRIVE_TO_READ_SEQUENCE)
+                getBackgroundTasks().run();
 
             // Process current state
             processState();
 
             //add auxiliary actions
-            CheckForBallsToIntake();
+            checkForBallsToIntake();
+            checkForGamePattern();
 
             // Run actions (non-blocking)
             processActions();
@@ -167,9 +170,18 @@ public class BlueNearAuto_6 extends BaseAuto {
 //        robotHardware.stopLimelight();
     }
 
-    private void CheckForBallsToIntake() {
+    private void checkForBallsToIntake() {
         if ((currentState == AutoState.INTAKE_BALLS_1 || currentState == AutoState.INTAKE_BALLS_2) && intakeSystem.isOn && !spindex.isFull()) {
-            runningActions.add(intakeSystem.checkForBallIntakeAndGetActionTeleop());
+            runningActions.add(intakeSystem.checkForBallIntakeAndGetAction());
+        }
+    }
+
+    private void checkForGamePattern() {
+        if (currentState == AutoState.DRIVE_TO_READ_SEQUENCE && pattern == null) {
+            Log.i("RedNearAuto_6", "Adding check for game pattern");
+            runningActions.add(
+                    new InstantAction(() -> pattern = launchSystem.readGamePattern())
+            );
         }
     }
 
@@ -196,13 +208,12 @@ public class BlueNearAuto_6 extends BaseAuto {
                         new SequentialAction(
                                 new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_CLOSE, false),
                                 mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                                        .strafeToLinearHeading(LAUNCH_POS.position, obeliskHeading)
+                                        .splineToLinearHeading(LAUNCH_POS, obeliskHeading, new TranslationalVelConstraint(50), new ProfileAccelConstraint(-35, 35))
                                         .build(),
                                 new InstantAction(() -> {
-                                    ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
-                                    while (pattern == null && timer.milliseconds() < 20) {
-                                        pattern = launchSystem.readGamePattern();   //read for 200 ms
-                                        Log.i("RedNearAuto_6", "Trying to read pattern " + pattern != null? "found it" : "null");
+                                    for (int i = 0; i < 10; i++) {
+                                        //try to read it 10 times
+                                        pattern = launchSystem.readGamePattern();
                                     }
                                 })
                         )
@@ -214,10 +225,15 @@ public class BlueNearAuto_6 extends BaseAuto {
                 Log.i("RedNearAuto_6", "Starting DRIVE_TO_LAUNCH_PRELOAD");
                 runningActions.add(
                         new SequentialAction(
+//                                new InstantAction(() -> {
+//                                    robotHardware.setLimelightPipeline(CrossOpModeStorage.allianceColor);
+//                                    Log.i("RedNearAuto_6", "Switching limelight pipeline to: " + CrossOpModeStorage.allianceColor);
+//                                }),
                                 new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_CLOSE, false),
                                 mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                                        .setTangent(backupHeading)
 //                                        .turnTo(LAUNCH_POS.heading)
-                                        .splineToLinearHeading(LAUNCH_POS, LAUNCH_POS.heading)
+                                        .splineToLinearHeading(LAUNCH_POS, LAUNCH_POS.heading, new TranslationalVelConstraint(50), new ProfileAccelConstraint(-35, 35))
                                         .build()
                         ));
                 stateTransitionInProgress = true;
@@ -228,7 +244,6 @@ public class BlueNearAuto_6 extends BaseAuto {
                 // Same as TeleOp LAUNCH_ALL state
                 runningActions.add(
                         new SequentialAction(
-                                new SleepAction(ALIGNMENT_WAIT_SECONDS),
                                 launchSystem.getPerformLaunchOnAllSlots()
                         )
                 );
@@ -258,7 +273,7 @@ public class BlueNearAuto_6 extends BaseAuto {
                     runningActions.add(
                             new ParallelAction(
                                     mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                                            .lineToY(COLLECT_LINE_1_END.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(-10, 10))
+                                            .lineToY(COLLECT_LINE_1_END.position.y, new TranslationalVelConstraint(30), new ProfileAccelConstraint(-20, 20))
                                             .build(),
                                     intakeSystem.checkForBallIntakeAndGetActionTeleop()
                             ));
@@ -270,13 +285,13 @@ public class BlueNearAuto_6 extends BaseAuto {
                 Log.i("RedNearAuto_6", "Starting DRIVE_TO_LAUNCH_1");
                 runningActions.add(
                         new ParallelAction(
-                                spindex.moveToNextFullSlotAction(), //move to full slot so we don't end up spitting out a ball that we took in
+//                                spindex.moveToNextFullSlotAction(), //move to full slot so we don't end up spitting out a ball that we took in
                                 mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
                                         .strafeToLinearHeading(LAUNCH_POS.position, LAUNCH_POS.heading)
-                                        .build(),
-                                intakeSystem.getReverseIntakeAction(false),
-                                intakeSystem.updateBallColorsAction(),
-                                new InstantAction(() -> robotHardware.setLaunchTurretPosition(TURRET_CENTERED_POSITION))
+                                        .build()
+//                                intakeSystem.getReverseIntakeAction(false),
+//                                intakeSystem.updateBallColorsAction(),
+//                                new InstantAction(() -> robotHardware.setLaunchTurretPosition(TURRET_CENTERED_POSITION))
                         )
                 );
                 stateTransitionInProgress = true;
@@ -286,7 +301,6 @@ public class BlueNearAuto_6 extends BaseAuto {
                 Log.i("RedNearAuto_6", "Starting LAUNCH_ALL_1");
                 runningActions.add(
                         new SequentialAction(
-                                new SleepAction(ALIGNMENT_WAIT_SECONDS),
                                 launchSystem.getPerformLaunchOnAllSlots()
                         )
                 );

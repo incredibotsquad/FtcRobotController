@@ -4,6 +4,7 @@ import static org.firstinspires.ftc.teamcode.subsystems.Spindex.SPINDEXER_INCREM
 
 import android.util.Log;
 
+import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SequentialAction;
@@ -17,6 +18,7 @@ import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import java.util.ArrayList;
 import java.util.List;
 
+@Config
 public class MechanismControl {
     private Gamepad gamepad2;
     private RobotHardware robotHardware;
@@ -70,7 +72,7 @@ public class MechanismControl {
         // This preserves the pose and turret position from the previous OpMode
         this.launchSystem.initializeAlignmentFromStorage();
 
-        turretAlignmentType = TURRET_ALIGNMENT_TYPE.HYBRID;
+        turretAlignmentType = TURRET_ALIGNMENT_TYPE.LIMELIGHT_ONLY;
         currentRobotState = ROBOT_STATE.NONE;
         targetRobotState = ROBOT_STATE.NONE;
         stateTransitionInProgress = false;
