@@ -1,11 +1,13 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.TURRET_CENTERED_POSITION;
 import static org.firstinspires.ftc.teamcode.subsystems.Spindex.SPINDEXER_INCREMENT;
 
 import android.util.Log;
 
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.roadrunner.Action;
+import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SequentialAction;
 import com.qualcomm.robotcore.hardware.Gamepad;
@@ -309,7 +311,8 @@ public class MechanismControl {
 
                     runningActions.add(new ParallelAction(
                             intakeSystem.getTurnOffAction(),
-                            launchSystem.getTurnOffAction()
+                            launchSystem.getTurnOffAction(),
+                            new InstantAction(() -> robotHardware.setLaunchTurretPosition(TURRET_CENTERED_POSITION))
                     ));
                     break;
 
@@ -417,12 +420,12 @@ public class MechanismControl {
     private void ProcessDPad() {
 
         if (gamepad2.dpadLeftWasPressed()) {
-            double currentPos = robotHardware.getSpindexPosition();
+            double currentPos = robotHardware.getSpindexPositionFromEncoder();
             robotHardware.setSpindexPosition(currentPos - SPINDEXER_INCREMENT);
         }
 
         if (gamepad2.dpadRightWasPressed()) {
-            double currentPos = robotHardware.getSpindexPosition();
+            double currentPos = robotHardware.getSpindexPositionFromEncoder();
             robotHardware.setSpindexPosition(currentPos + SPINDEXER_INCREMENT);
         }
 

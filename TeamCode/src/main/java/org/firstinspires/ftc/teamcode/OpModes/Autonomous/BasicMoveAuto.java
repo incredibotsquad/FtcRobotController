@@ -11,6 +11,7 @@ import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Actions.LaunchFlywheelAction;
@@ -25,6 +26,7 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchSystem;
 import org.firstinspires.ftc.teamcode.subsystems.Spindex;
 
 
+@Disabled
 @Autonomous(name = "BasicMoveAuto", group = "Other")
 public class BasicMoveAuto extends BaseAuto {
     private static final int multiplier = -1;    //used to flip coordinates between red (1), Blue (-1)

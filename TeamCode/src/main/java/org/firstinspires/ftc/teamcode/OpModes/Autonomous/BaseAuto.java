@@ -50,7 +50,7 @@ public abstract class BaseAuto extends LinearOpMode {
             public void run() {
                 //storing robot and spindexer positions
                 CrossOpModeStorage.currentPose = mecanumDrive.localizer.getPose();
-                Log.i("BaseAuto", "Robot pose: X: " + CrossOpModeStorage.currentPose.position.x + " Y: " + CrossOpModeStorage.currentPose.position.y + " Yaw: " + Math.toDegrees(CrossOpModeStorage.currentPose.heading.toDouble()));
+//                Log.i("BaseAuto", "Robot pose: X: " + CrossOpModeStorage.currentPose.position.x + " Y: " + CrossOpModeStorage.currentPose.position.y + " Yaw: " + Math.toDegrees(CrossOpModeStorage.currentPose.heading.toDouble()));
 
                 CrossOpModeStorage.turretPosition = robotHardware.getLaunchTurretPosition();
 

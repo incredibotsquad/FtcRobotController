@@ -31,14 +31,13 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchSystem;
 import org.firstinspires.ftc.teamcode.subsystems.Spindex;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 @Config
-@Autonomous(name = "Red_Far_Auto_6", group = "Autonomous")
-public class RedFarAuto_6 extends BaseAuto {
+@Autonomous(name = "Blue_Far_Auto_9", group = "Autonomous")
+public class BlueFarAuto_9 extends BaseAuto {
 
-    private static final int multiplier = 1;    //used to flip coordinates between red (1), Blue (-1)
+    private static final int multiplier = -1;    //used to flip coordinates between red (1), Blue (-1)
 
     public double robotHeading = Math.toRadians(180 * multiplier);
     public double artifactHeading = Math.toRadians(90 * multiplier);
@@ -209,6 +208,7 @@ public class RedFarAuto_6 extends BaseAuto {
                                 new SleepAction(PRE_LAUNCH_SLEEP_SECONDS),
                                 launchSystem.getPerformLaunchOnAllSlots()
                         )
+
                 );
                 stateTransitionInProgress = true;
                 break;
@@ -269,7 +269,8 @@ public class RedFarAuto_6 extends BaseAuto {
                         new SequentialAction(
                                 new SleepAction(PRE_LAUNCH_SLEEP_SECONDS),
                                 launchSystem.getPerformLaunchOnAllSlots()
-                        )                );
+                        )
+                );
                 stateTransitionInProgress = true;
                 break;
 
@@ -305,12 +306,12 @@ public class RedFarAuto_6 extends BaseAuto {
             case DRIVE_TO_LAUNCH_2:
                 Log.i("RedFarAuto_6", "Starting DRIVE_TO_LAUNCH_2");
                 runningActions.add(
-                        new ParallelAction(
-                                spindex.moveToSlotZeroLaunchPosition(), //move to full slot so we don't end up spitting out a ball that we took in
+                        new SequentialAction(
                                 mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
                                         .setTangent(reverseArtifactHeading)
                                         .strafeToLinearHeading(LAUNCH_POS.position, LAUNCH_POS.heading)
-                                        .build()
+                                        .build(),
+                                spindex.moveToSlotZeroLaunchPosition() //move to full slot so we don't end up spitting out a ball that we took in
                         )
                 );
                 stateTransitionInProgress = true;
@@ -322,7 +323,8 @@ public class RedFarAuto_6 extends BaseAuto {
                         new SequentialAction(
                                 new SleepAction(PRE_LAUNCH_SLEEP_SECONDS),
                                 launchSystem.getPerformLaunchOnAllSlots()
-                        )                );
+                        )
+                );
                 stateTransitionInProgress = true;
                 break;
 
@@ -393,7 +395,7 @@ public class RedFarAuto_6 extends BaseAuto {
                 currentState = AutoState.LAUNCH_ALL_1;
                 break;
             case LAUNCH_ALL_1:
-                currentState = AutoState.MOVE_AWAY_FROM_LINE;
+                currentState = AutoState.DRIVE_TO_INTAKE_2;
                 break;
             case DRIVE_TO_INTAKE_2:
                 currentState = AutoState.INTAKE_BALLS_2;

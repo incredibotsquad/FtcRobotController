@@ -31,12 +31,11 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchSystem;
 import org.firstinspires.ftc.teamcode.subsystems.Spindex;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 @Config
-@Autonomous(name = "Red_Far_Auto_6", group = "Autonomous")
-public class RedFarAuto_6 extends BaseAuto {
+@Autonomous(name = "RedFarAuto_6_Plus", group = "Autonomous")
+public class RedFarAuto_6_Plus extends BaseAuto {
 
     private static final int multiplier = 1;    //used to flip coordinates between red (1), Blue (-1)
 
@@ -79,6 +78,10 @@ public class RedFarAuto_6 extends BaseAuto {
         INTAKE_BALLS_2,
         DRIVE_TO_LAUNCH_2,
         LAUNCH_ALL_2,
+        DRIVE_TO_INTAKE_3,
+        INTAKE_BALLS_3,
+        DRIVE_TO_LAUNCH_3,
+        LAUNCH_ALL_3,
         MOVE_AWAY_FROM_LINE,
         DONE
     }
@@ -94,6 +97,7 @@ public class RedFarAuto_6 extends BaseAuto {
     private ElapsedTime totalTime;
 
     GamePattern pattern;
+
     private double PRE_LAUNCH_SLEEP_SECONDS = 1;
 
     @Override
@@ -164,8 +168,8 @@ public class RedFarAuto_6 extends BaseAuto {
     }
 
     private void CheckForBallsToIntake() {
-        if ((currentState == AutoState.INTAKE_BALLS_1 || currentState == AutoState.INTAKE_BALLS_2) && intakeSystem.isOn && !spindex.isFull()) {
-            runningActions.add(intakeSystem.checkForBallIntakeAndGetActionTeleop());
+        if ((currentState == AutoState.INTAKE_BALLS_1 || currentState == AutoState.INTAKE_BALLS_2 || currentState == AutoState.INTAKE_BALLS_3) && intakeSystem.isOn && !spindex.isFull()) {
+            runningActions.add(intakeSystem.checkForBallIntakeAndGetAction());
         }
     }
 
@@ -241,7 +245,7 @@ public class RedFarAuto_6 extends BaseAuto {
                                     mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
                                             .lineToY(COLLECT_LINE_1_END.position.y, new TranslationalVelConstraint(30), new ProfileAccelConstraint(-20, 20))
                                             .build(),
-                                    intakeSystem.checkForBallIntakeAndGetActionTeleop(),
+                                    intakeSystem.checkForBallIntakeAndGetAction(),
                                     new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR, false)
                             ));
                     stateTransitionInProgress = true;
@@ -269,7 +273,8 @@ public class RedFarAuto_6 extends BaseAuto {
                         new SequentialAction(
                                 new SleepAction(PRE_LAUNCH_SLEEP_SECONDS),
                                 launchSystem.getPerformLaunchOnAllSlots()
-                        )                );
+                        )
+                );
                 stateTransitionInProgress = true;
                 break;
 
@@ -297,7 +302,7 @@ public class RedFarAuto_6 extends BaseAuto {
                                     mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
                                             .lineToY(COLLECT_LINE_2_END.position.y, new TranslationalVelConstraint(20), new ProfileAccelConstraint(-10, 10))
                                             .build(),
-                                    intakeSystem.checkForBallIntakeAndGetActionTeleop()
+                                    intakeSystem.checkForBallIntakeAndGetAction()
                             ));
                     stateTransitionInProgress = true;
                 }
@@ -305,12 +310,12 @@ public class RedFarAuto_6 extends BaseAuto {
             case DRIVE_TO_LAUNCH_2:
                 Log.i("RedFarAuto_6", "Starting DRIVE_TO_LAUNCH_2");
                 runningActions.add(
-                        new ParallelAction(
-                                spindex.moveToSlotZeroLaunchPosition(), //move to full slot so we don't end up spitting out a ball that we took in
+                        new SequentialAction(
                                 mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
                                         .setTangent(reverseArtifactHeading)
                                         .strafeToLinearHeading(LAUNCH_POS.position, LAUNCH_POS.heading)
-                                        .build()
+                                        .build(),
+                                spindex.moveToSlotZeroLaunchPosition() //move to full slot so we don't end up spitting out a ball that we took in
                         )
                 );
                 stateTransitionInProgress = true;
@@ -322,7 +327,62 @@ public class RedFarAuto_6 extends BaseAuto {
                         new SequentialAction(
                                 new SleepAction(PRE_LAUNCH_SLEEP_SECONDS),
                                 launchSystem.getPerformLaunchOnAllSlots()
-                        )                );
+                        )
+                );
+                stateTransitionInProgress = true;
+                break;
+
+            case DRIVE_TO_INTAKE_3:
+                Log.i("RedFarAuto_6", "Starting DRIVE_TO_INTAKE_3");
+                runningActions.add(
+                        new ParallelAction(
+                                intakeSystem.getTurnOnAction(),
+                                mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                                        .turnTo(artifactHeading)
+                                        .setTangent(artifactHeading)
+                                        .strafeToConstantHeading(COLLECT_LINE_2_START.position)
+                                        .build())
+                );
+                stateTransitionInProgress = true;
+                break;
+            case INTAKE_BALLS_3:
+                Log.i("RedFarAuto_6", "Starting INTAKE_BALLS_3");
+                if (spindex.isFull()) {
+                    advanceToNextState();
+                } else {
+                    // Add ball check action (same as TeleOp)
+                    runningActions.add(
+                            new ParallelAction(
+                                    mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                                            .lineToY(COLLECT_LINE_2_END.position.y, new TranslationalVelConstraint(7), new ProfileAccelConstraint(-7, 7))
+                                            .build(),
+                                    intakeSystem.checkForBallIntakeAndGetAction()
+                            ));
+                    stateTransitionInProgress = true;
+                }
+                break;
+            case DRIVE_TO_LAUNCH_3:
+                Log.i("RedFarAuto_6", "Starting DRIVE_TO_LAUNCH_3");
+                runningActions.add(
+                        new SequentialAction(
+                                mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                                        .setTangent(reverseArtifactHeading)
+                                        .strafeToLinearHeading(LAUNCH_POS.position, LAUNCH_POS.heading)
+                                        .build(),
+                                spindex.moveToSlotZeroLaunchPosition() //move to full slot so we don't end up spitting out a ball that we took in
+                        )
+                );
+                stateTransitionInProgress = true;
+                break;
+
+            case LAUNCH_ALL_3:
+                Log.i("RedFarAuto_6", "Starting LAUNCH_ALL_3");
+                runningActions.add(
+                        new SequentialAction(
+                                new SleepAction(PRE_LAUNCH_SLEEP_SECONDS),
+                                launchSystem.getPerformLaunchOnAllSlots()
+                        )
+                );
                 stateTransitionInProgress = true;
                 break;
 
@@ -381,7 +441,7 @@ public class RedFarAuto_6 extends BaseAuto {
                 currentState = AutoState.LAUNCH_ALL_PRELOAD;
                 break;
             case LAUNCH_ALL_PRELOAD:
-                currentState = AutoState.DRIVE_TO_INTAKE_1;
+                currentState = AutoState.DRIVE_TO_INTAKE_2;
                 break;
             case DRIVE_TO_INTAKE_1:
                 currentState = AutoState.INTAKE_BALLS_1;
@@ -393,7 +453,7 @@ public class RedFarAuto_6 extends BaseAuto {
                 currentState = AutoState.LAUNCH_ALL_1;
                 break;
             case LAUNCH_ALL_1:
-                currentState = AutoState.MOVE_AWAY_FROM_LINE;
+                currentState = AutoState.DRIVE_TO_INTAKE_2;
                 break;
             case DRIVE_TO_INTAKE_2:
                 currentState = AutoState.INTAKE_BALLS_2;
@@ -405,6 +465,18 @@ public class RedFarAuto_6 extends BaseAuto {
                 currentState = AutoState.LAUNCH_ALL_2;
                 break;
             case LAUNCH_ALL_2:
+                currentState = AutoState.DRIVE_TO_INTAKE_3;
+                break;
+            case DRIVE_TO_INTAKE_3:
+                currentState = AutoState.INTAKE_BALLS_3;
+                break;
+            case INTAKE_BALLS_3:
+                currentState = AutoState.DRIVE_TO_LAUNCH_3;
+                break;
+            case DRIVE_TO_LAUNCH_3:
+                currentState = AutoState.LAUNCH_ALL_3;
+                break;
+            case LAUNCH_ALL_3:
                 currentState = AutoState.MOVE_AWAY_FROM_LINE;
                 break;
             default:

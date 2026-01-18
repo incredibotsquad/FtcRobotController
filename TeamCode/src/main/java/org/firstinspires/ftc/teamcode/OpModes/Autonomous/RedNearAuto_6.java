@@ -65,7 +65,6 @@ public class RedNearAuto_6 extends BaseAuto {
 
     public Pose2d MOVE_OFF_LINE = new Pose2d(-48, 24  * multiplier, artifactHeading);
 
-    private static double ALIGNMENT_WAIT_SECONDS = 2;
 
     // ========== TIMEOUTS (tunable via FTC Dashboard) ==========
     public static double TIMEOUT_INIT_MS = 0;      // INIT state timeout

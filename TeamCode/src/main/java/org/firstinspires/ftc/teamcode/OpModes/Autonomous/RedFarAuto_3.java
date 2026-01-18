@@ -9,6 +9,8 @@ import android.util.Log;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.SequentialAction;
+import com.acmerobotics.roadrunner.SleepAction;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -40,6 +42,7 @@ public class RedFarAuto_3 extends BaseAuto {
 
     public Pose2d MOVE_OFF_LINE = new Pose2d(53, 36  * multiplier, obeliskHeading);
 
+    private double PRE_LAUNCH_SLEEP_SECONDS = 1;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -90,12 +93,15 @@ public class RedFarAuto_3 extends BaseAuto {
                     new ParallelAction(
                             moveToLaunchPosition,
                             new LaunchFlywheelAction(robotHardware, FLYWHEEL_FULL_TICKS_PER_SEC * FLYWHEEL_POWER_COEFFICIENT_FAR, false),
-                            intakeSystem.updateBallColorsAction()
+                            spindex.moveToSlotZeroLaunchPosition()
                     )
             );
 
             runBlockingWithBackground(
-                    launchSystem.getPerformLaunchOnAllSlots()
+                    new SequentialAction(
+                            new SleepAction(PRE_LAUNCH_SLEEP_SECONDS),
+                            launchSystem.getPerformLaunchOnAllSlots()
+                    )
             );
 
             runBlockingWithBackground(

@@ -85,13 +85,13 @@ public class ChassisControl {
 
         Pose2d pose = mecanumDrive.localizer.getPose();
 
-        Log.i("Chassis Control", "Raw position update: x: " + pose.position.x + " y: " + pose.position.y + " heading: " + Math.toDegrees(pose.heading.toDouble()));
+//        Log.i("Chassis Control", "Raw position update: x: " + pose.position.x + " y: " + pose.position.y + " heading: " + Math.toDegrees(pose.heading.toDouble()));
 
         Pose2d floorPose = new Pose2d(new Vector2d(Math.floor(pose.position.x), Math.floor(pose.position.y)), pose.heading);
 
         CrossOpModeStorage.currentPose = floorPose;
 
-        Log.i("Chassis Control", "Floor position update: x: " + floorPose.position.x + " y: " + floorPose.position.y + " heading: " + Math.toDegrees(floorPose.heading.toDouble()));
+//        Log.i("Chassis Control", "Floor position update: x: " + floorPose.position.x + " y: " + floorPose.position.y + " heading: " + Math.toDegrees(floorPose.heading.toDouble()));
     }
 
     public void initializeMecanumDrive() {
