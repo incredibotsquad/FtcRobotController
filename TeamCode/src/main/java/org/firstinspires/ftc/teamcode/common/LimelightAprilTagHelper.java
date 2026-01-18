@@ -61,7 +61,6 @@ public class LimelightAprilTagHelper  {
 
         if (result.isValid()) { // Tag is visible
             botPose = result.getBotpose();
-//            botPose = result.getBotpose_MT2();
         }
 
         return botPose;

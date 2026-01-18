@@ -43,7 +43,7 @@ public class LaunchSystem {
     private LimelightAprilTagHelper limelightAprilTagHelper;
     private ElapsedTime turretAlignmentThrottleTimer;
     private ElapsedTime turretTagNotFoundTimer;
-    public static int TURRET_VELOCITY = 4000;
+    public static int TURRET_VELOCITY_COARSE = 4000;
     public static int TURRET_VELOCITY_FINE = 1500;  // Slower velocity for fine adjustments
 
     public static int TURRET_CENTERED_POSITION = 0;
@@ -83,9 +83,7 @@ public class LaunchSystem {
     }
 
     private TurretBlendedAlignmentState blendedAlignmentState = TurretBlendedAlignmentState.BLENDED_COARSE;
-
     private Pose2d lastPoseWeTransitionedToFineAlignment = null;
-
 
     // ========== NEW ROBUST ALIGNMENT SYSTEM PARAMETERS ==========
     // Thresholds for alignment state machine
@@ -592,6 +590,18 @@ public class LaunchSystem {
 
                     if (Math.abs(errorDeg) < TURRET_FINE_TOLERANCE_DEGREES) {
                         Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalBlended : POI yaw within tolerance of: " + TURRET_FINE_TOLERANCE_DEGREES);
+
+                        //robot is now aligned - copy this into robot pose.
+                        Pose3D llPose = limelightAprilTagHelper.getRobotPoseFromAprilTags();
+                        if (llPose != null) {
+                            double currTurretDegrees = robotHardware.getLaunchTurretPosition() * TURRET_DEGREES_PER_TICK;
+                            double robotHeading = llPose.getOrientation().getYaw() + currTurretDegrees;
+
+                            robotHardware.correctedRobotPoseViaLimelight = new Pose2d(llPose.getPosition().x, llPose.getPosition().y, Math.toRadians(robotHeading));
+
+                            Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalBlended : correctedRobotPoseViaLimelight x: " + robotHardware.correctedRobotPoseViaLimelight.position.x + " y: " + robotHardware.correctedRobotPoseViaLimelight.position.y + " yaw: " + Math.toDegrees(robotHardware.correctedRobotPoseViaLimelight.heading.toDouble()));
+                        }
+
                         blendedAlignmentState = TurretBlendedAlignmentState.BLENDED_ALIGNED;
                         return;
                     }
@@ -622,7 +632,7 @@ public class LaunchSystem {
 
                         Log.i("== LAUNCH SYSTEM ==", "AlignTurretToGoalBlended: POI yaw error: current position: " + currentTurretPosition + " new turret position: " + newMotorPosition);
 
-                        robotHardware.setLaunchTurretPosition(newMotorPosition);
+                        robotHardware.setLaunchTurretPositionAndVelocity(newMotorPosition, TURRET_VELOCITY_FINE);
 
                         break;
                     }
@@ -965,7 +975,7 @@ public class LaunchSystem {
         // ============ STATE MACHINE LOGIC ============
         double effectiveError;
         int targetTurretPosition;
-        int turretVelocity = TURRET_VELOCITY;
+        int turretVelocity = TURRET_VELOCITY_COARSE;
 
         switch (currentAlignmentState) {
             case LOCKED:
@@ -1038,7 +1048,7 @@ public class LaunchSystem {
             default:
                 // Use odometry only for coarse alignment
                 effectiveError = odometryTargetDegrees;
-                turretVelocity = TURRET_VELOCITY;
+                turretVelocity = TURRET_VELOCITY_COARSE;
 
                 Log.i("== LAUNCH SYSTEM ==", "AlignTurretRobust: CurrentState: " + currentAlignmentState + ": effectiveError: " + effectiveError);
 

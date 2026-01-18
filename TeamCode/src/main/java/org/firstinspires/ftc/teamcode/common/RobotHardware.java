@@ -1,12 +1,12 @@
 package org.firstinspires.ftc.teamcode.common;
 
 import static org.firstinspires.ftc.teamcode.Actions.SpindexAction.SPINDEX_POSITION_TOLERANCE;
-import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.TURRET_VELOCITY;
+import static org.firstinspires.ftc.teamcode.subsystems.LaunchSystem.TURRET_VELOCITY_COARSE;
 
 import android.util.Log;
 
 import com.acmerobotics.dashboard.config.Config;
-import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
+import com.acmerobotics.roadrunner.Pose2d;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.hardware.AnalogInput;
@@ -65,6 +65,8 @@ public class RobotHardware {
     public static double TURRET_I = 3.0;
     public static double TURRET_D = 0;
     public static double TURRET_F = 0;
+
+    public Pose2d correctedRobotPoseViaLimelight = null;
 
 //    private GoBildaPinpointDriver pinpointDriver;
 
@@ -347,7 +349,7 @@ public class RobotHardware {
 
     public void setLaunchTurretPosition(int pos) {
 //        Log.i("=== ROBOTHARDWARE ===", " setLaunchTurretPosition: " + pos);
-        setLaunchTurretPositionAndVelocity(pos, TURRET_VELOCITY);
+        setLaunchTurretPositionAndVelocity(pos, TURRET_VELOCITY_COARSE);
     }
 
     public void setLaunchTurretPositionAndVelocity(int pos, int velocity) {
