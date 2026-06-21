@@ -8,10 +8,13 @@ import com.arcrobotics.ftclib.hardware.motors.MotorEx;
 import com.arcrobotics.ftclib.hardware.motors.MotorGroup;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
+
 public class LaunchSubsystem extends SubsystemBase {
     private final MotorEx leftLaunchMotor;
     private final MotorEx rightLaunchMotor;
     private final SimpleServo gateServo;
+    private final SimpleServo hoodServo;
     private static final double TARGET_RPM = 250.0;
     private static final double TARGET_RPM_TOLERANCE = 50;
 
@@ -19,7 +22,7 @@ public class LaunchSubsystem extends SubsystemBase {
     private static final double LAUNCH_GATE_OPEN = 0;
     private static final double LAUNCH_GATE_CLOSED = 1;
 
-    public LaunchSubsystem(HardwareMap hardwareMap) {
+    public LaunchSubsystem(HardwareMap hardwareMap, Telemetry telemetry) {
         leftLaunchMotor = new MotorEx(hardwareMap, "leftLaunchMotor", Motor.GoBILDA.BARE);
         leftLaunchMotor.setRunMode(Motor.RunMode.VelocityControl);
         rightLaunchMotor = new MotorEx(hardwareMap, "rightLaunchMotor", Motor.GoBILDA.BARE);
@@ -27,6 +30,7 @@ public class LaunchSubsystem extends SubsystemBase {
         rightLaunchMotor.setInverted(true);
 
         gateServo = new SimpleServo(hardwareMap, "gateServo", 0, 270);
+        hoodServo = new SimpleServo(hardwareMap, "hoodServo", 0, 270);
     }
 
     public void spinUpAtRPM() {
@@ -51,6 +55,14 @@ public class LaunchSubsystem extends SubsystemBase {
 
     public void closeGate() {
         gateServo.setPosition(LAUNCH_GATE_CLOSED);
+    }
+
+    public void setHoodPosition(double position) {
+        hoodServo.setPosition(position);
+    }
+
+    public double getHoodPosition() {
+        return hoodServo.getPosition();
     }
 
 

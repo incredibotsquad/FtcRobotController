@@ -14,18 +14,22 @@ public class MainTeleOp extends CommandOpMode {
 
     @Override
     public void initialize() {
-        // 1. Initialize the robot container
-        incredibot = new Incredibot(hardwareMap, Incredibot.OpModeType.TELEOP);
-        
-        // 2. Set up controllers
+
+        //Set up controllers
         driverGamepad = new GamepadEx(gamepad1);
 
-        // 3. Assign default commands or button bindings
-        incredibot.driveSubsystem.setDefaultCommand(new InstantCommand(
-                () -> incredibot.driveSubsystem.drive(
-                        driverGamepad.getLeftY(),
-                        driverGamepad.getLeftX(),
-                        driverGamepad.getRightX()
-        )));
+        // Initialize the robot container
+        incredibot = new Incredibot(hardwareMap, Incredibot.OpModeType.TELEOP, driverGamepad, telemetry);
+
+
+    }
+
+    @Override
+    public void run() {
+        // Run the scheduler first so all subsystems execute their periodic() blocks
+        super.run();
+
+        // One unified update call to push everyone's data to the screen at once!
+        telemetry.update();
     }
 }

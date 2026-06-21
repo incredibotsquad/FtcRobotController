@@ -6,6 +6,8 @@ import com.arcrobotics.ftclib.hardware.motors.Motor;
 import com.arcrobotics.ftclib.hardware.motors.MotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
+
 public class DriveSubsystem extends SubsystemBase {
     private final MecanumDrive mecanumDrive;
     private final MotorEx frontLeftMotor;
@@ -13,7 +15,7 @@ public class DriveSubsystem extends SubsystemBase {
     private final MotorEx backLeftMotor;
     private final MotorEx backRightMotor;
 
-    public DriveSubsystem(HardwareMap hardwareMap) {
+    public DriveSubsystem(HardwareMap hardwareMap, Telemetry telemetry) {
         frontLeftMotor = new MotorEx(hardwareMap, "frontLeftMotor", Motor.GoBILDA.RPM_435);
         frontRightMotor = new MotorEx(hardwareMap, "frontRightMotor", Motor.GoBILDA.RPM_435);
         backLeftMotor = new MotorEx(hardwareMap, "backLeftMotor", Motor.GoBILDA.RPM_435);
