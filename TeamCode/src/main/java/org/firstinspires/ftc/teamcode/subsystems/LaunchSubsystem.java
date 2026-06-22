@@ -29,8 +29,8 @@ public class LaunchSubsystem extends SubsystemBase {
         rightLaunchMotor.setRunMode(Motor.RunMode.VelocityControl);
         rightLaunchMotor.setInverted(true);
 
-        gateServo = new SimpleServo(hardwareMap, "gateServo", 0, 270);
-        hoodServo = new SimpleServo(hardwareMap, "hoodServo", 0, 270);
+        gateServo = new SimpleServo(hardwareMap, "launchGateServo", 0, 270);
+        hoodServo = new SimpleServo(hardwareMap, "launchHoodServo", 0, 270);
     }
 
     public void spinUpAtRPM() {

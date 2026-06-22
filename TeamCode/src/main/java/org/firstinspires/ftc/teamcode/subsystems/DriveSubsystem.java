@@ -17,9 +17,16 @@ public class DriveSubsystem extends SubsystemBase {
 
     public DriveSubsystem(HardwareMap hardwareMap, Telemetry telemetry) {
         frontLeftMotor = new MotorEx(hardwareMap, "frontLeftMotor", Motor.GoBILDA.RPM_435);
+        frontLeftMotor.setZeroPowerBehavior(Motor.ZeroPowerBehavior.BRAKE);
+
         frontRightMotor = new MotorEx(hardwareMap, "frontRightMotor", Motor.GoBILDA.RPM_435);
+        frontRightMotor.setZeroPowerBehavior(Motor.ZeroPowerBehavior.BRAKE);
+
         backLeftMotor = new MotorEx(hardwareMap, "backLeftMotor", Motor.GoBILDA.RPM_435);
+        backLeftMotor.setZeroPowerBehavior(Motor.ZeroPowerBehavior.BRAKE);
+
         backRightMotor = new MotorEx(hardwareMap, "backRightMotor", Motor.GoBILDA.RPM_435);
+        backRightMotor.setZeroPowerBehavior(Motor.ZeroPowerBehavior.BRAKE);
 
         //this will auto reverse the right side motors
         mecanumDrive = new MecanumDrive(frontLeftMotor, frontRightMotor, backLeftMotor, backRightMotor);

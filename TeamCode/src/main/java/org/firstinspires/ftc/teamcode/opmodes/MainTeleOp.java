@@ -21,7 +21,6 @@ public class MainTeleOp extends CommandOpMode {
         // Initialize the robot container
         incredibot = new Incredibot(hardwareMap, Incredibot.OpModeType.TELEOP, driverGamepad, telemetry);
 
-
     }
 
     @Override

@@ -8,6 +8,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.commands.AutoAimTurretCommand;
+import org.firstinspires.ftc.teamcode.commands.DriveRobotCommand;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
@@ -53,16 +54,10 @@ public class Incredibot extends Robot {
 
         // 3. Assign default commands or button bindings
         // The default command gets automatically scheduled when there is no other command for the subsystem.
-        driveSubsystem.setDefaultCommand(new InstantCommand(
-                () -> driveSubsystem.drive(
-                        driverGamepad.getLeftY(),
-                        driverGamepad.getLeftX(),
-                        driverGamepad.getRightX()
-                )));
 
-        // Assign the background tracking loop here!
-        // The scheduler will now call execute() on this command every single frame.
-        turretSubsystem.setDefaultCommand(new AutoAimTurretCommand(turretSubsystem, odometrySubsystem));
+        driveSubsystem.setDefaultCommand(new DriveRobotCommand(driveSubsystem, driverGamepad));
+
+        initCommon();
     }
 
     public void initAuto() {
@@ -71,5 +66,17 @@ public class Incredibot extends Robot {
 
         // Notice: We don't bind ANY gamepads here.
         // The robot will rely purely on scripted sequential commands.
+
+        initCommon();
+    }
+
+    private void initCommon() {
+
+        //start intake
+        intakeSubsystem.startIntake();
+
+        // Assign the background tracking loop here!
+        // The scheduler will now call execute() on this command every single frame.
+        turretSubsystem.setDefaultCommand(new AutoAimTurretCommand(turretSubsystem, odometrySubsystem));
     }
 }

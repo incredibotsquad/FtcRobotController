@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import com.arcrobotics.ftclib.command.SubsystemBase;
 import com.arcrobotics.ftclib.hardware.motors.CRServo;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
@@ -11,9 +10,7 @@ public class LiftSubsystem extends SubsystemBase {
     private final CRServo leftLiftServo;
     private final CRServo rightLiftServo;
 
-    ElapsedTime liftTimer;
 
-    private static final double LIFT_DURATION = 3000;
     public LiftSubsystem(HardwareMap hardwareMap, Telemetry telemetry) {
         leftLiftServo = new CRServo(hardwareMap, "leftLiftServo");
 
@@ -21,26 +18,17 @@ public class LiftSubsystem extends SubsystemBase {
         rightLiftServo.setInverted(true);
     }
 
-    public void liftRobot() {
-        liftTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
-
-        while (liftTimer.milliseconds() < LIFT_DURATION) {
-            leftLiftServo.set(1);
-            rightLiftServo.set(1);
-        }
-
-        leftLiftServo.set(0);
-        rightLiftServo.set(0);
+    public void startLiftUp() {
+        leftLiftServo.set(1);
+        rightLiftServo.set(1);
     }
 
-    public void resetLift() {
-        liftTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+    public void startLiftDown() {
+        leftLiftServo.set(-1);
+        rightLiftServo.set(-1);
+    }
 
-        while (liftTimer.milliseconds() < LIFT_DURATION) {
-            leftLiftServo.set(-1);
-            rightLiftServo.set(-1);
-        }
-
+    public void stopLift() {
         leftLiftServo.set(0);
         rightLiftServo.set(0);
     }

@@ -26,17 +26,16 @@ public class IntakeSubsystem extends SubsystemBase {
         intakeMotor.setRunMode(Motor.RunMode.RawPower);
 
         // Get the digital sensor from the hardware map and Set the channel as an input
-        beamBreak1 = hardwareMap.get(DigitalChannel.class, "laserDigitalInput");
+        beamBreak1 = hardwareMap.get(DigitalChannel.class, "ballSensorLow");
         beamBreak1.setMode(DigitalChannel.Mode.INPUT);
 
-        beamBreak2 = hardwareMap.get(DigitalChannel.class, "laserDigitalInput");
+        beamBreak2 = hardwareMap.get(DigitalChannel.class, "ballSensorMid");
         beamBreak2.setMode(DigitalChannel.Mode.INPUT);
 
-        beamBreak3 = hardwareMap.get(DigitalChannel.class, "laserDigitalInput");
+        beamBreak3 = hardwareMap.get(DigitalChannel.class, "ballSensorHigh");
         beamBreak3.setMode(DigitalChannel.Mode.INPUT);
 
         artifactCountLight = hardwareMap.get(SimpleServo.class, "artifactCountLight");
-
     }
 
     public void startIntake() {
