@@ -11,10 +11,10 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 public class IntakeSubsystem extends SubsystemBase {
     private final MotorEx intakeMotor;
-    private SimpleServo artifactCountLight;
-    private DigitalChannel beamBreak1;
-    private DigitalChannel beamBreak2;
-    private DigitalChannel beamBreak3;
+    private final SimpleServo artifactCountLight;
+    private final DigitalChannel beamBreak1;
+    private final DigitalChannel beamBreak2;
+    private final DigitalChannel beamBreak3;
 
     public static double ZERO_BALL_COLOR = 0;
     public static double ONE_BALL_COLOR = 0.29; //RED
@@ -26,13 +26,13 @@ public class IntakeSubsystem extends SubsystemBase {
         intakeMotor.setRunMode(Motor.RunMode.RawPower);
 
         // Get the digital sensor from the hardware map and Set the channel as an input
-        beamBreak1 = hardwareMap.get(DigitalChannel.class, "ballSensorLow");
+        beamBreak1 = hardwareMap.get(DigitalChannel.class, "ballSensorHigh");
         beamBreak1.setMode(DigitalChannel.Mode.INPUT);
 
         beamBreak2 = hardwareMap.get(DigitalChannel.class, "ballSensorMid");
         beamBreak2.setMode(DigitalChannel.Mode.INPUT);
 
-        beamBreak3 = hardwareMap.get(DigitalChannel.class, "ballSensorHigh");
+        beamBreak3 = hardwareMap.get(DigitalChannel.class, "ballSensorLow");
         beamBreak3.setMode(DigitalChannel.Mode.INPUT);
 
         artifactCountLight = hardwareMap.get(SimpleServo.class, "artifactCountLight");

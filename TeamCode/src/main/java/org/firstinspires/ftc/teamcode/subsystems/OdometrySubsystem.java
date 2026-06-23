@@ -40,6 +40,22 @@ public class OdometrySubsystem extends SubsystemBase {
         pinpoint.resetPosAndIMU();
     }
 
+    public Pose2d getPose() {
+        return currentPose;
+    }
+
+    public void resetPose(Pose2d newPose) {
+        // Allows you to reset the location (e.g., at the start of Autonomous)
+        pinpoint.setPosition(new Pose2D(
+            DistanceUnit.INCH,
+            newPose.getX(),
+            newPose.getY(),
+            AngleUnit.RADIANS,
+            newPose.getRotation().getRadians()
+        ));
+    }
+
+
     @Override
     public void periodic() {
         // CRITICAL: Must be called every loop to pull fresh numbers from the coprocessor
@@ -58,20 +74,4 @@ public class OdometrySubsystem extends SubsystemBase {
         telemetry.addData("Heading (Deg)", headingDegrees);
     }
 
-    // --- Public Getters ---
-
-    public Pose2d getPose() {
-        return currentPose;
-    }
-
-    public void resetPose(Pose2d newPose) {
-        // Allows you to reset the location (e.g., at the start of Autonomous)
-        pinpoint.setPosition(new Pose2D(
-            DistanceUnit.INCH,
-            newPose.getX(),
-            newPose.getY(),
-            AngleUnit.RADIANS,
-            newPose.getRotation().getRadians()
-        ));
-    }
 }

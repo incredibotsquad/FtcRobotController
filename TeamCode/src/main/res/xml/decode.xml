@@ -9,8 +9,13 @@
             <goBILDA5202SeriesMotor name="backLeftMotor" port="2" />
             <goBILDA5202SeriesMotor name="backRightMotor" port="3" />
 
-            <Servo name="LeftLiftServo" port="0" />
-            <Servo name="RightLiftServo" port="1" />
+            <Servo name="leftLiftServo" port="0" />
+            <Servo name="rightLiftServo" port="1" />
+
+            <AnalogInput name="liftServoEncoder" port="0" />
+
+<!--            Touch Sensor only sends a signal to the Control Hub through the n+1 communication channel- will only work on the odd-numbered digital ports.-->
+            <RevTouchSensor name="liftResetSensor" port="1" />
 
 
 <!--            <goBILDAPinpoint name="PinpointOdo" port="2" bus="2"/>-->
@@ -34,7 +39,6 @@
             <DigitalDevice name="ballSensorMid" port="2" />
             <DigitalDevice name="ballSensorHigh" port="4" />
 
-<!--            <RevTouchSensor name="SpindexLimitSwitch" port="2" />-->
         </LynxModule>
 
     </LynxUsbDevice>

@@ -7,30 +7,35 @@ import org.firstinspires.ftc.teamcode.subsystems.LiftSubsystem;
 
 public class LiftRobotDownCommand extends CommandBase {
     private final LiftSubsystem liftSubsystem;
-    ElapsedTime liftTimer;
-    private static final double LIFT_DURATION = 3000;
+//    ElapsedTime liftTimer;
+//    private static final double LIFT_DURATION = 3000;
 
     public LiftRobotDownCommand(LiftSubsystem liftSubsystem) {
         this.liftSubsystem = liftSubsystem;
 
         // This command strictly controls the lift subsystem
         addRequirements(liftSubsystem);
-        //TODO: ADD CODE TO
     }
 
     @Override
     public void initialize() {
-        liftTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+
+//        liftTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
     }
 
     @Override
     public void execute() {
-        liftSubsystem.startLiftDown();
+        // If the switch isn't pressed yet, keep moving down
+        if (!liftSubsystem.isLimitSwitchPressed()) {
+            liftSubsystem.startLiftDown();
+        }
     }
 
     @Override
     public boolean isFinished() {
-        return liftTimer.milliseconds() >= LIFT_DURATION; // Returns false so it runs continuously in the background
+        // The command is done as soon as the limit switch is triggered
+        return liftSubsystem.isLimitSwitchPressed();
+//        return liftTimer.milliseconds() >= LIFT_DURATION; // Returns false so it runs continuously in the background
     }
 
     @Override

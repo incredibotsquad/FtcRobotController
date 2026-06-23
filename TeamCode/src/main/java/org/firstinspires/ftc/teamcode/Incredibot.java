@@ -1,19 +1,18 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.arcrobotics.ftclib.command.CommandScheduler;
-import com.arcrobotics.ftclib.command.InstantCommand;
 import com.arcrobotics.ftclib.command.Robot;
 import com.arcrobotics.ftclib.gamepad.GamepadEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.teamcode.commands.AutoAimTurretCommand;
+import org.firstinspires.ftc.teamcode.commands.AutoAimCommand;
 import org.firstinspires.ftc.teamcode.commands.DriveRobotCommand;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.TurretSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 
 public class Incredibot extends Robot {
     // enum to specify opmode type
@@ -25,8 +24,8 @@ public class Incredibot extends Robot {
     // Subsystems
     public final DriveSubsystem driveSubsystem;
     public final IntakeSubsystem intakeSubsystem;
+    public final LaunchGateSubsystem launchGateSubsystem;
     public final LaunchSubsystem launchSubsystem;
-    public final TurretSubsystem turretSubsystem;
     public final OdometrySubsystem odometrySubsystem;
 
     // Hardware
@@ -38,9 +37,9 @@ public class Incredibot extends Robot {
         // Initialize subsystems - they initialize their own hardware
         driveSubsystem = new DriveSubsystem(hwMap, telemetry);
         intakeSubsystem = new IntakeSubsystem(hwMap, telemetry);
-        launchSubsystem = new LaunchSubsystem(hwMap, telemetry);
+        launchGateSubsystem = new LaunchGateSubsystem(hwMap, telemetry);
         odometrySubsystem = new OdometrySubsystem(hwMap, telemetry);
-        turretSubsystem = new TurretSubsystem(hwMap, telemetry);
+        launchSubsystem = new LaunchSubsystem(hwMap, telemetry);
 
         if (opModeType == OpModeType.TELEOP) {
             initTeleop(driverGamepad);
@@ -77,6 +76,6 @@ public class Incredibot extends Robot {
 
         // Assign the background tracking loop here!
         // The scheduler will now call execute() on this command every single frame.
-        turretSubsystem.setDefaultCommand(new AutoAimTurretCommand(turretSubsystem, odometrySubsystem));
+        launchSubsystem.setDefaultCommand(new AutoAimCommand(launchSubsystem, odometrySubsystem));
     }
 }
