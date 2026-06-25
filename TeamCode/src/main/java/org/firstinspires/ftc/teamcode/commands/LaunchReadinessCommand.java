@@ -5,7 +5,7 @@ import com.arcrobotics.ftclib.geometry.Pose2d;
 import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 
-public class AutoAimCommand extends CommandBase {
+public class LaunchReadinessCommand extends CommandBase {
     private final LaunchSubsystem launchSubsystem;
     private final OdometrySubsystem odometry;
 
@@ -15,11 +15,8 @@ public class AutoAimCommand extends CommandBase {
     private static final double TARGET_X = 72.0;
     private static final double TARGET_Y = 0.0;
 
-    public static double ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT = 0.3;    //RED
-    public static double ROBOT_ALIGNED_TO_SHOOT_LIGHT = 0.5;    //GREEN
-    public static double ROBOT_ALIGNMENT_NOT_POSSIBLE_LIGHT = 0;
 
-    public AutoAimCommand(LaunchSubsystem launchSubsystem, OdometrySubsystem odometry) {
+    public LaunchReadinessCommand(LaunchSubsystem launchSubsystem, OdometrySubsystem odometry) {
         this.launchSubsystem = launchSubsystem;
         this.odometry = odometry;
         
@@ -52,11 +49,6 @@ public class AutoAimCommand extends CommandBase {
         double targetHoodPos = getHoodPositionFromCurrentPose(currentPose);
         launchSubsystem.setHoodPosition(targetHoodPos);
 
-        //handle the alignment indicator light
-        if (launchSubsystem.isReadyToLaunch(targetRPM, localizedTargetAngle, targetHoodPos))
-            launchSubsystem.setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
-        else
-            launchSubsystem.setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
     }
 
     @Override

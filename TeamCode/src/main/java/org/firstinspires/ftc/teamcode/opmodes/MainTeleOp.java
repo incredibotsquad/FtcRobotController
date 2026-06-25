@@ -11,15 +11,21 @@ import org.firstinspires.ftc.teamcode.Incredibot;
 public class MainTeleOp extends CommandOpMode {
     private Incredibot incredibot;
     private GamepadEx driverGamepad;
-
+    private GamepadEx operatorGamepad;
     @Override
     public void initialize() {
 
         //Set up controllers
         driverGamepad = new GamepadEx(gamepad1);
+        operatorGamepad = new GamepadEx(gamepad2);
 
         // Initialize the robot container
-        incredibot = new Incredibot(hardwareMap, Incredibot.OpModeType.TELEOP, driverGamepad, telemetry);
+        incredibot = new Incredibot(
+                hardwareMap,
+                Incredibot.OpModeType.TELEOP,
+                driverGamepad,
+                operatorGamepad,
+                telemetry);
 
     }
 

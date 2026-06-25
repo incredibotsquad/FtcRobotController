@@ -65,14 +65,7 @@ public class IntakeSubsystem extends SubsystemBase {
         artifactCountLight.setPosition(color);
     }
 
-    /*
-     * This method is called periodically by the CommandScheduler. Useful for updating subsystem-specific state that you don't want to offload to a Command.
-     * Teams should try to be consistent within their own codebases about which responsibilities will be handled by Commands, and which will be handled here.
-     * Excellent for sending telemetry or updating dashboards, but optional!
-     * */
-    @Override
-    public void periodic() {
-
+    public int getArtifactCount() {
         int artifactCount = 0;
 
         // Read the sensor state (true = HIGH, false = LOW)
@@ -87,8 +80,18 @@ public class IntakeSubsystem extends SubsystemBase {
         stateHigh = beamBreak3.getState();
         if (stateHigh)
             artifactCount++;
+        return artifactCount;
+    }
 
-        updateStatusLight(artifactCount);
+    /*
+     * This method is called periodically by the CommandScheduler. Useful for updating subsystem-specific state that you don't want to offload to a Command.
+     * Teams should try to be consistent within their own codebases about which responsibilities will be handled by Commands, and which will be handled here.
+     * Excellent for sending telemetry or updating dashboards, but optional!
+     * */
+    @Override
+    public void periodic() {
+
+        updateStatusLight(getArtifactCount());
 
         // (You would pass a telemetry object into the subsystem constructor to use this)
         // telemetry.addData("Launcher Ready", isReady);

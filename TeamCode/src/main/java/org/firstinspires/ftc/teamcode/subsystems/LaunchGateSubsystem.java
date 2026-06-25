@@ -17,17 +17,24 @@ public class LaunchGateSubsystem extends SubsystemBase {
     private static final double LAUNCH_GATE_OPEN = 0;
     private static final double LAUNCH_GATE_CLOSED = 1;
 
+    private boolean isGateOpen;
     public LaunchGateSubsystem(HardwareMap hardwareMap, Telemetry telemetry) {
 
         gateServo = new SimpleServo(hardwareMap, "launchGateServo", 0, 270);
     }
 
     public void openGate() {
+        isGateOpen = true;
         gateServo.setPosition(LAUNCH_GATE_OPEN);
     }
 
     public void closeGate() {
+        isGateOpen = false;
         gateServo.setPosition(LAUNCH_GATE_CLOSED);
+    }
+
+    public boolean isGateOpen() {
+        return isGateOpen;
     }
 
     /*

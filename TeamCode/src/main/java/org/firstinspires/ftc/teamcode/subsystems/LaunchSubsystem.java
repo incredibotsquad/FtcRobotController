@@ -17,6 +17,17 @@ public class LaunchSubsystem extends SubsystemBase {
 
     private static final double TARGET_RPM = 250.0;
     private static final double TARGET_RPM_TOLERANCE = 50;
+    private static final double TURRET_POSITION_TOLERANCE = 0.05;
+    private static final double HOOD_POSITION_TOLERANCE = 0.05;
+
+    private volatile double targetRPM;
+    private volatile double targetTurretPos;
+    private volatile double targetHoodPos;
+
+    public static double ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT = 0.3;    //RED
+    public static double ROBOT_ALIGNED_TO_SHOOT_LIGHT = 0.5;    //GREEN
+    public static double ROBOT_ALIGNMENT_NOT_POSSIBLE_LIGHT = 0;
+
     public LaunchSubsystem(HardwareMap hardwareMap, Telemetry telemetry) {
         leftLaunchMotor = new MotorEx(hardwareMap, "leftLaunchMotor", Motor.GoBILDA.BARE);
         leftLaunchMotor.setRunMode(Motor.RunMode.VelocityControl);
@@ -34,6 +45,7 @@ public class LaunchSubsystem extends SubsystemBase {
     }
 
     public void setTurretPosition(double position) {
+        this.targetTurretPos = position;
         turretServo.setPosition(position);
     }
 
@@ -43,6 +55,7 @@ public class LaunchSubsystem extends SubsystemBase {
     }
 
     public void setHoodPosition(double position) {
+        this.targetHoodPos = position;
         hoodServo.setPosition(position);
     }
 
@@ -54,13 +67,15 @@ public class LaunchSubsystem extends SubsystemBase {
     * Spins up the flywheel to the specified RPM. Converts to TPS internally
     * */
     public void spinUpFlywheelToRPM(double targetRPM) {
+        this.targetRPM = targetRPM;
         double ticksPerSecond = (targetRPM * Motor.GoBILDA.BARE.getCPR()) / 60.0;
         leftLaunchMotor.setVelocity(ticksPerSecond);
         rightLaunchMotor.setVelocity(ticksPerSecond);
     }
 
-    public double getCurrentFlywheelTPS() {
-        return (leftLaunchMotor.getVelocity() + rightLaunchMotor.getVelocity()) / 2.0;
+    public double getCurrentFlywheelRPM() {
+        double tps = (leftLaunchMotor.getVelocity() + rightLaunchMotor.getVelocity()) / 2.0;
+        return (tps * 60.0) / Motor.GoBILDA.BARE.getCPR();
     }
 
     // TODO: dummy functions from the motor version to compile the code.
@@ -76,24 +91,19 @@ public class LaunchSubsystem extends SubsystemBase {
      * Checks if the flywheel, turret, and hood are all within acceptable tolerances
      * to ensure a successful shot.
      *
-     * @param targetRPM The RPM we are aiming for
-     * @param targetTurretPos The servo position (0.0 to 1.0) the turret should be at
-     * @param targetHoodPos The servo position (0.0 to 1.0) the hood should be at
      * @return true if all systems are ready
      */
-    public boolean isReadyToLaunch(double targetRPM, double targetTurretPos, double targetHoodPos) {
+    public boolean isReadyToLaunch() {
         // 1. Check Flywheel RPM
-        // We convert current TPS back to RPM for comparison
-        double currentRPM = (getCurrentFlywheelTPS() * 60.0) / Motor.GoBILDA.BARE.getCPR();
-        boolean flywheelReady = Math.abs(currentRPM - targetRPM) < TARGET_RPM_TOLERANCE;
+        boolean flywheelReady = Math.abs(getCurrentFlywheelRPM() - targetRPM) < TARGET_RPM_TOLERANCE;
 
         // 2. Check Turret Alignment
         // Servos move fast, but we check if it has reached the target
-        // A tolerance of 0.05 is usually safe for servo positioning
-        boolean turretReady = Math.abs(getTurretPosition() - targetTurretPos) < 0.05;
+        // A small tolerance is used for servo positioning
+        boolean turretReady = Math.abs(getTurretPosition() - targetTurretPos) < TURRET_POSITION_TOLERANCE;
 
         // 3. Check Hood Alignment
-        boolean hoodReady = Math.abs(getHoodPosition() - targetHoodPos) < 0.05;
+        boolean hoodReady = Math.abs(getHoodPosition() - targetHoodPos) < HOOD_POSITION_TOLERANCE;
 
         return flywheelReady && turretReady && hoodReady;
     }
@@ -105,6 +115,11 @@ public class LaunchSubsystem extends SubsystemBase {
      * */
     @Override
     public void periodic() {
+        //handle the alignment indicator light
+        if (isReadyToLaunch())
+            setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
+        else
+            setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
 
         // (You would pass a telemetry object into the subsystem constructor to use this)
         // telemetry.addData("Launcher Ready", isReady);
