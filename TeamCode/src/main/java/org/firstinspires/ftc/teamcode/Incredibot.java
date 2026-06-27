@@ -62,11 +62,11 @@ public class Incredibot extends Robot {
         driveSubsystem.setDefaultCommand(new DriveRobotCommand(driveSubsystem, driverGamepad));
 
         // 2. AUTO-FIRE TOGGLE (While held)
-        operatorGamepad
-                .getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER)
-                .whileHeld(new AutoFireCommand(launchSubsystem, launchGateSubsystem, odometrySubsystem));
+//        operatorGamepad
+//                .getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER)
+//                .whileHeld(new AutoFireCommand(launchSubsystem, launchGateSubsystem, odometrySubsystem));
 
-        initCommon();
+//        initCommon();
     }
 
     public void initAuto() {

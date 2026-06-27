@@ -11,10 +11,10 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 public class IntakeSubsystem extends SubsystemBase {
     private final MotorEx intakeMotor;
-    private final SimpleServo artifactCountLight;
-    private final DigitalChannel beamBreak1;
-    private final DigitalChannel beamBreak2;
-    private final DigitalChannel beamBreak3;
+//    private final SimpleServo artifactCountLight;
+//    private final DigitalChannel beamBreak1;
+//    private final DigitalChannel beamBreak2;
+//    private final DigitalChannel beamBreak3;
 
     public static double ZERO_BALL_COLOR = 0;
     public static double ONE_BALL_COLOR = 0.29; //RED
@@ -26,16 +26,16 @@ public class IntakeSubsystem extends SubsystemBase {
         intakeMotor.setRunMode(Motor.RunMode.RawPower);
 
         // Get the digital sensor from the hardware map and Set the channel as an input
-        beamBreak1 = hardwareMap.get(DigitalChannel.class, "ballSensorHigh");
-        beamBreak1.setMode(DigitalChannel.Mode.INPUT);
+//        beamBreak1 = hardwareMap.get(DigitalChannel.class, "ballSensorHigh");
+//        beamBreak1.setMode(DigitalChannel.Mode.INPUT);
+//
+//        beamBreak2 = hardwareMap.get(DigitalChannel.class, "ballSensorMid");
+//        beamBreak2.setMode(DigitalChannel.Mode.INPUT);
+//
+//        beamBreak3 = hardwareMap.get(DigitalChannel.class, "ballSensorLow");
+//        beamBreak3.setMode(DigitalChannel.Mode.INPUT);
 
-        beamBreak2 = hardwareMap.get(DigitalChannel.class, "ballSensorMid");
-        beamBreak2.setMode(DigitalChannel.Mode.INPUT);
-
-        beamBreak3 = hardwareMap.get(DigitalChannel.class, "ballSensorLow");
-        beamBreak3.setMode(DigitalChannel.Mode.INPUT);
-
-        artifactCountLight = hardwareMap.get(SimpleServo.class, "artifactCountLight");
+//        artifactCountLight = hardwareMap.get(SimpleServo.class, "artifactCountLight");
     }
 
     public void startIntake() {
@@ -62,26 +62,26 @@ public class IntakeSubsystem extends SubsystemBase {
                 break;
         }
 
-        artifactCountLight.setPosition(color);
+//        artifactCountLight.setPosition(color);
     }
 
-    public int getArtifactCount() {
-        int artifactCount = 0;
-
-        // Read the sensor state (true = HIGH, false = LOW)
-        boolean stateHigh = beamBreak1.getState();
-        if (stateHigh)
-            artifactCount++;
-
-        stateHigh = beamBreak2.getState();
-        if (stateHigh)
-            artifactCount++;
-
-        stateHigh = beamBreak3.getState();
-        if (stateHigh)
-            artifactCount++;
-        return artifactCount;
-    }
+//    public int getArtifactCount() {
+//        int artifactCount = 0;
+//
+//        // Read the sensor state (true = HIGH, false = LOW)
+//        boolean stateHigh = beamBreak1.getState();
+//        if (stateHigh)
+//            artifactCount++;
+//
+//        stateHigh = beamBreak2.getState();
+//        if (stateHigh)
+//            artifactCount++;
+//
+//        stateHigh = beamBreak3.getState();
+//        if (stateHigh)
+//            artifactCount++;
+//        return artifactCount;
+//    }
 
     /*
      * This method is called periodically by the CommandScheduler. Useful for updating subsystem-specific state that you don't want to offload to a Command.
@@ -91,7 +91,7 @@ public class IntakeSubsystem extends SubsystemBase {
     @Override
     public void periodic() {
 
-        updateStatusLight(getArtifactCount());
+//        updateStatusLight(getArtifactCount());
 
         // (You would pass a telemetry object into the subsystem constructor to use this)
         // telemetry.addData("Launcher Ready", isReady);

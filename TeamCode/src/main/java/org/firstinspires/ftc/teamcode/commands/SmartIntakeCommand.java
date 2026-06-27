@@ -22,7 +22,7 @@ public class SmartIntakeCommand extends CommandBase {
         // Condition A: Launch gate is open (Resetting/Launching)
         // Condition B: We have fewer than 3 artifacts
         boolean isLaunching = launchGate.isGateOpen();
-        boolean needsMoreArtifacts = intake.getArtifactCount() < 3;
+        boolean needsMoreArtifacts = true; //intake.getArtifactCount() < 3;
 
         if (isLaunching || needsMoreArtifacts) {
             intake.startIntake();

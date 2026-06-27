@@ -4,7 +4,9 @@ import com.arcrobotics.ftclib.command.SubsystemBase;
 import com.arcrobotics.ftclib.hardware.SimpleServo;
 import com.arcrobotics.ftclib.hardware.motors.Motor;
 import com.arcrobotics.ftclib.hardware.motors.MotorEx;
+import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
@@ -13,7 +15,7 @@ public class LaunchSubsystem extends SubsystemBase {
     private final MotorEx rightLaunchMotor;
     private final SimpleServo turretServo;
     private final SimpleServo hoodServo;
-    private final SimpleServo alignmentIndicatorLight;
+//    private final SimpleServo alignmentIndicatorLight;
 
     private static final double TARGET_RPM = 250.0;
     private static final double TARGET_RPM_TOLERANCE = 50;
@@ -37,11 +39,11 @@ public class LaunchSubsystem extends SubsystemBase {
 
         turretServo = new SimpleServo(hardwareMap, "turretServo", 0, 1800);
         hoodServo = new SimpleServo(hardwareMap, "launchHoodServo", 0, 270);
-        alignmentIndicatorLight = new SimpleServo(hardwareMap, "alignmentIndicatorLight", 0, 270);
+//        alignmentIndicatorLight = new SimpleServo(hardwareMap, "alignmentIndicatorLight", 0, 270);
     }
 
     public void setAlignmentLightColor(double color) {
-        alignmentIndicatorLight.setPosition(color);
+//        alignmentIndicatorLight.setPosition(color);
     }
 
     public void setTurretPosition(double position) {
@@ -63,6 +65,18 @@ public class LaunchSubsystem extends SubsystemBase {
         return hoodServo.getPosition();
     }
 
+    public void setFlywheelPIDF(double p, double i, double d, double f) {
+        leftLaunchMotor.motorEx.setPIDFCoefficients(
+                DcMotor.RunMode.RUN_USING_ENCODER,
+                new PIDFCoefficients(p, i, d, f)
+        );
+
+        rightLaunchMotor.motorEx.setPIDFCoefficients(
+                DcMotor.RunMode.RUN_USING_ENCODER,
+                new PIDFCoefficients(p, i, d, f)
+        );
+    }
+
     /*
     * Spins up the flywheel to the specified RPM. Converts to TPS internally
     * */
@@ -73,9 +87,11 @@ public class LaunchSubsystem extends SubsystemBase {
         rightLaunchMotor.setVelocity(ticksPerSecond);
     }
 
+    public double getFlywheelVelocityTPS() {
+        return (leftLaunchMotor.getVelocity() + rightLaunchMotor.getVelocity()) / 2.0;
+    }
     public double getCurrentFlywheelRPM() {
-        double tps = (leftLaunchMotor.getVelocity() + rightLaunchMotor.getVelocity()) / 2.0;
-        return (tps * 60.0) / Motor.GoBILDA.BARE.getCPR();
+        return (getFlywheelVelocityTPS() * 60.0) / Motor.GoBILDA.BARE.getCPR();
     }
 
     // TODO: dummy functions from the motor version to compile the code.
