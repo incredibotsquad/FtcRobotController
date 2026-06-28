@@ -1,18 +1,28 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.arcrobotics.ftclib.command.SubsystemBase;
+import com.arcrobotics.ftclib.controller.PIDController;
+import com.arcrobotics.ftclib.controller.wpilibcontroller.SimpleMotorFeedforward;
 import com.arcrobotics.ftclib.hardware.SimpleServo;
 import com.arcrobotics.ftclib.hardware.motors.Motor;
 import com.arcrobotics.ftclib.hardware.motors.MotorEx;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 public class LaunchSubsystem extends SubsystemBase {
+
     private final MotorEx leftLaunchMotor;
     private final MotorEx rightLaunchMotor;
+
+//
+//    private final DcMotorEx leftLaunchMotor;
+//    private final DcMotorEx rightLaunchMotor;
+
     private final SimpleServo turretServo;
     private final SimpleServo hoodServo;
 //    private final SimpleServo alignmentIndicatorLight;
@@ -30,17 +40,56 @@ public class LaunchSubsystem extends SubsystemBase {
     public static double ROBOT_ALIGNED_TO_SHOOT_LIGHT = 0.5;    //GREEN
     public static double ROBOT_ALIGNMENT_NOT_POSSIBLE_LIGHT = 0;
 
+
+    // Inside LaunchSubsystem
+    private PIDController flywheelPID = new PIDController(0.005, 0, 0);
+    // ks = static friction, kv = velocity gain (How much power to hold a speed)
+    private SimpleMotorFeedforward flywheelFF = new SimpleMotorFeedforward(0, 0.00045);
+
+
     public LaunchSubsystem(HardwareMap hardwareMap, Telemetry telemetry) {
         leftLaunchMotor = new MotorEx(hardwareMap, "leftLaunchMotor", Motor.GoBILDA.BARE);
-        leftLaunchMotor.setRunMode(Motor.RunMode.VelocityControl);
+        leftLaunchMotor.setRunMode(Motor.RunMode.RawPower);
+
         rightLaunchMotor = new MotorEx(hardwareMap, "rightLaunchMotor", Motor.GoBILDA.BARE);
-        rightLaunchMotor.setRunMode(Motor.RunMode.VelocityControl);
+        rightLaunchMotor.setRunMode(Motor.RunMode.RawPower);
         rightLaunchMotor.setInverted(true);
+
+
+//        leftLaunchMotor = hardwareMap.get(DcMotorEx.class,"leftLaunchMotor");
+//        leftLaunchMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+//
+//        rightLaunchMotor = hardwareMap.get(DcMotorEx.class,"rightLaunchMotor");
+//        rightLaunchMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+//        rightLaunchMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
         turretServo = new SimpleServo(hardwareMap, "turretServo", 0, 1800);
         hoodServo = new SimpleServo(hardwareMap, "launchHoodServo", 0, 270);
 //        alignmentIndicatorLight = new SimpleServo(hardwareMap, "alignmentIndicatorLight", 0, 270);
     }
+
+    public void updateFlywheel(double targetRPM) {
+        this.targetRPM = targetRPM;
+
+        // Convert RPM to Ticks Per Second
+        double targetTPS = (targetRPM * Motor.GoBILDA.BARE.getCPR()) / 60.0;
+
+        // Get current velocity from encoders
+        double currentTPS = getFlywheelVelocityTPS();
+
+        // 1. Calculate PID (Correction)
+        double pidOutput = flywheelPID.calculate(currentTPS, targetTPS);
+
+        // 2. Calculate Feedforward (The "Predicted" power needed for this speed)
+        double ffOutput = flywheelFF.calculate(targetTPS);
+
+        // 3. Combine and set power (Manual mode)
+        double totalPower = pidOutput + ffOutput;
+
+        leftLaunchMotor.set(totalPower);
+        rightLaunchMotor.set(totalPower);
+    }
+
 
     public void setAlignmentLightColor(double color) {
 //        alignmentIndicatorLight.setPosition(color);
@@ -65,17 +114,42 @@ public class LaunchSubsystem extends SubsystemBase {
         return hoodServo.getPosition();
     }
 
-    public void setFlywheelPIDF(double p, double i, double d, double f) {
-        leftLaunchMotor.motorEx.setPIDFCoefficients(
-                DcMotor.RunMode.RUN_USING_ENCODER,
-                new PIDFCoefficients(p, i, d, f)
-        );
-
-        rightLaunchMotor.motorEx.setPIDFCoefficients(
-                DcMotor.RunMode.RUN_USING_ENCODER,
-                new PIDFCoefficients(p, i, d, f)
-        );
+    /**
+     * Allows live tuning of the PID coefficients from an OpMode.
+     */
+    public void setFlywheelPID(double p, double i, double d) {
+        flywheelPID.setPID(p, i, d);
     }
+
+    /**
+     * Allows live tuning of the Feedforward coefficients.
+     * Note: SimpleMotorFeedforward is immutable, so we create a new instance.
+     *
+     * @param ks Static friction (voltage to overcome friction)
+     * @param kv Velocity gain (voltage per tick/second)
+     */
+    public void updateFeedforward(double ks, double kv) {
+        flywheelFF = new SimpleMotorFeedforward(ks, kv);
+    }
+
+    /**
+     * Exposes the PID controller for advanced tracking/telemetry
+     */
+    public PIDController getPIDController() {
+        return flywheelPID;
+    }
+
+//    public void setFlywheelPIDF(double p, double i, double d, double f) {
+//        leftLaunchMotor.setPIDFCoefficients(
+//                DcMotor.RunMode.RUN_USING_ENCODER,
+//                new PIDFCoefficients(p, i, d, f)
+//        );
+//
+//        rightLaunchMotor.setPIDFCoefficients(
+//                DcMotor.RunMode.RUN_USING_ENCODER,
+//                new PIDFCoefficients(p, i, d, f)
+//        );
+//    }
 
     /*
     * Spins up the flywheel to the specified RPM. Converts to TPS internally
@@ -99,8 +173,12 @@ public class LaunchSubsystem extends SubsystemBase {
     public double getTurretAngle() { return 0; }
     public void alignTurretToAngle(double currentAngle, double targetAngle) {}
     public void stop() {
-        leftLaunchMotor.setVelocity(0);
-        rightLaunchMotor.setVelocity(0);
+//        leftLaunchMotor.setVelocity(0);
+//        rightLaunchMotor.setVelocity(0);
+
+        this.targetRPM = 0;
+        leftLaunchMotor.set(0);
+        rightLaunchMotor.set(0);
     }
 
     /**
@@ -131,6 +209,12 @@ public class LaunchSubsystem extends SubsystemBase {
      * */
     @Override
     public void periodic() {
+        if (targetRPM > 0) {
+            updateFlywheel(targetRPM);
+        } else {
+            stop();
+        }
+
         //handle the alignment indicator light
         if (isReadyToLaunch())
             setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);

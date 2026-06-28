@@ -6,19 +6,22 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 
-@Disabled
 @TeleOp(name = "FlywheelTuner", group = "Tests")
 public class FlywheelTuner extends LinearOpMode {
 
     // ===== PIDF tuning values =====
-    public static double P = 1.0;
+    public static double P = 0; //35
     public static double I = 0.0;
     public static double D = 0.0;
-    public static double F = 12.5; // Start with F = 32767 / MaxTPS
+    public static double F = 0; // Start with F = 32767 / MaxTPS 12.5
+
+    public static double kS = 0; //
+    public static double kV = 0; //
+
 
     // ===== Velocity targets =====
-    public static double highVelocityRPM = 1650;   // ticks/sec (inferred) 1302
-    public static double lowVelocityRPM = 1200;   // ticks/sec (inferred) 1204
+    public static double highVelocityRPM = 4500;   // ticks/sec (inferred) 1302
+    public static double lowVelocityRPM = 3100;   // ticks/sec (inferred) 1204
     double curTargetVelocity = highVelocityRPM;
 
     // ===== Step sizes for tuning =====
@@ -57,11 +60,14 @@ public class FlywheelTuner extends LinearOpMode {
             // PIDF adjustments
             // ===============================
             if (gamepad1.dpadLeftWasPressed()) {
-                F -= stepSizes[stepIndex];
+//                F -= stepSizes[stepIndex];
+
+                kS -= stepSizes[stepIndex];
             }
 
             if (gamepad1.dpadRightWasPressed()) {
-                F += stepSizes[stepIndex];
+//                F += stepSizes[stepIndex];
+                kS += stepSizes[stepIndex];
             }
 
             if (gamepad1.dpadUpWasPressed()) {
@@ -72,12 +78,30 @@ public class FlywheelTuner extends LinearOpMode {
                 P -= stepSizes[stepIndex];
             }
 
-            launcher.setFlywheelPIDF(P, I, D, F);
+            if (gamepad1.leftTriggerWasPressed())
+            {
+                kV -= stepSizes[stepIndex];
+
+            }
+
+            if (gamepad1.rightTriggerWasPressed())
+            {
+                kV += stepSizes[stepIndex];
+
+            }
+
+
+            //launcher.setFlywheelPIDF(P, I, D, F);
+
+            launcher.setFlywheelPID(P, I, D);
+            launcher.updateFeedforward(kS, kV);
 
             // ===============================
             // Set velocity
             // ===============================
-            launcher.spinUpFlywheelToRPM(curTargetVelocity);
+//            launcher.spinUpFlywheelToRPM(curTargetVelocity);
+
+            launcher.updateFlywheel(curTargetVelocity);
 
             double curVelocity = launcher.getCurrentFlywheelRPM();
             double error = curTargetVelocity - curVelocity;
@@ -92,7 +116,9 @@ public class FlywheelTuner extends LinearOpMode {
             telemetry.addLine("-----------------------------------------");
 
             telemetry.addData("Tuning P (D-Pad U/D)", "%.4f", P);
-            telemetry.addData("Tuning F (D-Pad L/R)", "%.4f", F);
+            telemetry.addData("Tuning kS (D-Pad L/R)", "%.4f", kS);
+            telemetry.addData("Tuning kV (Trigger L/R)", "%.4f", kV);
+//            telemetry.addData("Tuning F (D-Pad L/R)", "%.4f", F);
             telemetry.addData("Step Size (B Button)", "%.4f", stepSizes[stepIndex]);
 
             telemetry.update();

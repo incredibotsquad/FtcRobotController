@@ -14,14 +14,14 @@ public class AutoFireCommand extends CommandBase {
     // Define the vertices of your Triangle Zones (Example coordinates in inches)
     // TODO: UPDATE THESE NUMBERS
     // Area 1: Big Triangle
-    private static final double T1X1 = 12.0, T1Y1 = 12.0;
-    private static final double T1X2 = 48.0, T1Y2 = 12.0;
-    private static final double T1X3 = 30.0, T1Y3 = 48.0;
+    private static final double T1X1 = 72.0, T1Y1 = 72.0;
+    private static final double T1X2 = 0.0, T1Y2 = 144.0;
+    private static final double T1X3 = 144.0, T1Y3 = 144.0;
 
     // Area 2: Small Triangle
-    private static final double T2X1 = 12.0, T2Y1 = 12.0;
-    private static final double T2X2 = 48.0, T2Y2 = 12.0;
-    private static final double T2X3 = 30.0, T2Y3 = 48.0;
+    private static final double T2X1 = 72.0, T2Y1 = 24.0;
+    private static final double T2X2 = 48.0, T2Y2 = 0.0;
+    private static final double T2X3 = 96.0, T2Y3 = 0.0;
 
     public AutoFireCommand(LaunchSubsystem launcher, LaunchGateSubsystem gate, OdometrySubsystem odometry) {
         this.launcher = launcher;
