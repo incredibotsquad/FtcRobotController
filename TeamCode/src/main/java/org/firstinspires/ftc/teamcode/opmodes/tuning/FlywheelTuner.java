@@ -1,5 +1,6 @@
-package org.firstinspires.ftc.teamcode.opmodes.tuning;
-
+import com.arcrobotics.ftclib.gamepad.GamepadEx;
+import com.arcrobotics.ftclib.gamepad.GamepadKeys;
+import com.arcrobotics.ftclib.hardware.motors.Motor;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -34,14 +35,16 @@ public class FlywheelTuner extends LinearOpMode {
     public void runOpMode() throws InterruptedException {
         // Initialize the subsystem
         LaunchSubsystem launcher = new LaunchSubsystem(hardwareMap, telemetry);
+        GamepadEx gp1 = new GamepadEx(gamepad1);
         waitForStart();
 
         while (opModeIsActive()) {
+            gp1.readButtons();
 
             // ===============================
             // Target velocity toggle
             // ===============================
-            if (gamepad1.yWasPressed()) {
+            if (gp1.wasJustPressed(GamepadKeys.Button.Y)) {
                 if (curTargetVelocity == highVelocityRPM) {
                     curTargetVelocity = lowVelocityRPM;
                 } else {
@@ -52,42 +55,56 @@ public class FlywheelTuner extends LinearOpMode {
             // ===============================
             // Step size cycling
             // ===============================
-            if (gamepad1.bWasPressed()) {
+            if (gp1.wasJustPressed(GamepadKeys.Button.B)) {
                 stepIndex = (stepIndex + 1) % stepSizes.length;
             }
 
             // ===============================
             // PIDF adjustments
             // ===============================
-            if (gamepad1.dpadLeftWasPressed()) {
+            if (gp1.wasJustPressed(GamepadKeys.Button.DPAD_LEFT)) {
 //                F -= stepSizes[stepIndex];
 
                 kS -= stepSizes[stepIndex];
             }
 
-            if (gamepad1.dpadRightWasPressed()) {
+            if (gp1.wasJustPressed(GamepadKeys.Button.DPAD_RIGHT)) {
 //                F += stepSizes[stepIndex];
                 kS += stepSizes[stepIndex];
             }
 
-            if (gamepad1.dpadUpWasPressed()) {
+            if (gp1.wasJustPressed(GamepadKeys.Button.DPAD_UP)) {
                 P += stepSizes[stepIndex];
             }
 
-            if (gamepad1.dpadDownWasPressed()) {
+            if (gp1.wasJustPressed(GamepadKeys.Button.DPAD_DOWN)) {
                 P -= stepSizes[stepIndex];
             }
 
-            if (gamepad1.leftTriggerWasPressed())
+            if (gp1.wasJustPressed(GamepadKeys.Button.LEFT_BUMPER))
             {
                 kV -= stepSizes[stepIndex];
 
             }
 
-            if (gamepad1.rightTriggerWasPressed())
+            if (gp1.wasJustPressed(GamepadKeys.Button.RIGHT_BUMPER))
             {
                 kV += stepSizes[stepIndex];
 
+            }
+
+            // ===============================
+            // AUTO-OPTIMIZE kV (RB + X)
+            // ===============================
+            if (gp1.isDown(GamepadKeys.Button.RIGHT_BUMPER) && gp1.wasJustPressed(GamepadKeys.Button.X)) {
+                double targetTPS = (curTargetVelocity * Motor.GoBILDA.BARE.getCPR()) / 60.0;
+                double currentTPS = launcher.getFlywheelVelocityTPS();
+                
+                if (targetTPS > 0 && currentTPS > 100) {
+                    double currentError = targetTPS - currentTPS;
+                    double currentPower = (P * currentError) + (kS + (kV * targetTPS));
+                    kV = Math.max(0, (currentPower - kS) / currentTPS);
+                }
             }
 
 
