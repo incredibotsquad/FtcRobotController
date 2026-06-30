@@ -1,73 +1,71 @@
 <?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
 <Robot type="FirstInspires-FTC">
     <LynxUsbDevice name="Control Hub Portal" serialNumber="(embedded)" parentModuleAddress="173">
-        <LynxModule name="Expansion Hub 2" port="2">
-            <goBILDA5202SeriesMotor name="leftLaunchMotor" port="0" />
-            <goBILDA5202SeriesMotor name="rightLaunchMotor" port="1" />
-            <goBILDA5202SeriesMotor name="backLeftMotor" port="2" />
-            <goBILDA5202SeriesMotor name="frontLeftMotor" port="3" />
-            <Servo name="launchGateServo" port="0" />
-            <Servo name="launchHoodServo" port="1" />
-            <goBILDAPinpoint name="pinpoint" port="0" bus="3" />
-        </LynxModule>
 
         <LynxModule name="Control Hub" port="173">
-            <goBILDA5202SeriesMotor name="backRightMotor" port="0" />
+
+            <goBILDA5202SeriesMotor name="frontLeftMotor" port="0" />
             <goBILDA5202SeriesMotor name="frontRightMotor" port="1" />
-            <goBILDA5202SeriesMotor name="intakeMotor" port="2" />
-            <Servo name="turretServo" port="2" />
-<!--            <Servo name="turretServoB" port="3" />-->
-            <ControlHubImuBHI260AP name="imu" port="0" bus="0" />
+            <goBILDA5202SeriesMotor name="backLeftMotor" port="2" />
+            <goBILDA5202SeriesMotor name="backRightMotor" port="3" />
+
+            <Servo name="leftLiftServo" port="0" />
+            <Servo name="rightLiftServo" port="1" />
+
+            <AnalogInput name="liftServoEncoder" port="0" />
+
+<!--            Touch Sensor only sends a signal to the Control Hub through the n+1 communication channel- will only work on the odd-numbered digital ports.-->
+            <RevTouchSensor name="liftResetSensor" port="1" />
+
+
+<!--            <ControlHubImuBHI260AP name="imu" port="0" bus="0" />-->
+
         </LynxModule>
+
+        <LynxModule name="Expansion Hub 2" port="2">
+            <goBILDA5202SeriesMotor name="intakeMotor" port="0" />
+            <goBILDA5202SeriesMotor name="leftLaunchMotor" port="1" />
+            <goBILDA5202SeriesMotor name="rightLaunchMotor" port="2" />
+
+            <Servo name="launchGateServo" port="0" />
+            <Servo name="launchHoodServo" port="1" />
+            <Servo name="artifactCountLight" port="2" />
+            <Servo name="alignmentIndicatorLight" port="3" />
+
+            <AnalogInput name="launchHoodServoEncoder" port="0" />
+
+            <DigitalDevice name="ballSensorLow" port="0" />
+            <DigitalDevice name="ballSensorMid" port="2" />
+            <DigitalDevice name="ballSensorHigh" port="4" />
+
+            <goBILDAPinpoint name="PinpointOdo" port="0" bus="3"/>
+
+        </LynxModule>
+
     </LynxUsbDevice>
+    <EthernetDevice name="limelight" serialNumber="EthernetOverUsb:eth0:172.29.0.21" port="-1" ipAddress="172.29.0.1" />
 </Robot>
 
+<!--    <?xml version='1.0' encoding='UTF-8' standalone='yes' ?>-->
+<!--    <Robot type="FirstInspires-FTC">-->
+<!--        <LynxUsbDevice name="Control Hub Portal" serialNumber="(embedded)" parentModuleAddress="173">-->
+<!--            <LynxModule name="Expansion Hub 2" port="2">-->
+<!--                <goBILDA5202SeriesMotor name="leftLaunchMotor" port="0" />-->
+<!--                <goBILDA5202SeriesMotor name="rightLaunchMotor" port="1" />-->
+<!--                <goBILDA5202SeriesMotor name="backLeftMotor" port="2" />-->
+<!--                <goBILDA5202SeriesMotor name="frontLeftMotor" port="3" />-->
+<!--                <Servo name="launchGateServo" port="0" />-->
+<!--                <Servo name="launchHoodServo" port="1" />-->
+<!--                <goBILDAPinpoint name="pinpoint" port="0" bus="3" />-->
+<!--            </LynxModule>-->
 
-    <!--<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>-->
-<!--<Robot type="FirstInspires-FTC">-->
-<!--    <LynxUsbDevice name="Control Hub Portal" serialNumber="(embedded)" parentModuleAddress="173">-->
-
-<!--        <LynxModule name="Control Hub" port="173">-->
-
-<!--            <goBILDA5202SeriesMotor name="frontLeftMotor" port="0" />-->
-<!--            <goBILDA5202SeriesMotor name="frontRightMotor" port="1" />-->
-<!--            <goBILDA5202SeriesMotor name="backLeftMotor" port="2" />-->
-<!--            <goBILDA5202SeriesMotor name="backRightMotor" port="3" />-->
-
-<!--            <Servo name="leftLiftServo" port="0" />-->
-<!--            <Servo name="rightLiftServo" port="1" />-->
-
-<!--            <AnalogInput name="liftServoEncoder" port="0" />-->
-
-<!--&lt;!&ndash;            Touch Sensor only sends a signal to the Control Hub through the n+1 communication channel- will only work on the odd-numbered digital ports.&ndash;&gt;-->
-<!--            <RevTouchSensor name="liftResetSensor" port="1" />-->
-
-
-<!--&lt;!&ndash;            <ControlHubImuBHI260AP name="imu" port="0" bus="0" />&ndash;&gt;-->
-
-<!--        </LynxModule>-->
-
-<!--        <LynxModule name="Expansion Hub 2" port="2">-->
-<!--            <goBILDA5202SeriesMotor name="intakeMotor" port="0" />-->
-<!--            <goBILDA5202SeriesMotor name="leftLaunchMotor" port="1" />-->
-<!--            <goBILDA5202SeriesMotor name="rightLaunchMotor" port="2" />-->
-
-<!--            <Servo name="launchGateServo" port="0" />-->
-<!--            <Servo name="launchHoodServo" port="1" />-->
-<!--            <Servo name="artifactCountLight" port="2" />-->
-<!--            <Servo name="alignmentIndicatorLight" port="3" />-->
-
-<!--            <AnalogInput name="launchHoodServoEncoder" port="0" />-->
-
-<!--            <DigitalDevice name="ballSensorLow" port="0" />-->
-<!--            <DigitalDevice name="ballSensorMid" port="2" />-->
-<!--            <DigitalDevice name="ballSensorHigh" port="4" />-->
-
-<!--            <goBILDAPinpoint name="PinpointOdo" port="0" bus="3"/>-->
-
-<!--        </LynxModule>-->
-
-<!--    </LynxUsbDevice>-->
-<!--    <EthernetDevice name="limelight" serialNumber="EthernetOverUsb:eth0:172.29.0.21" port="-1" ipAddress="172.29.0.1" />-->
-<!--</Robot>-->
-
+<!--            <LynxModule name="Control Hub" port="173">-->
+<!--                <goBILDA5202SeriesMotor name="backRightMotor" port="0" />-->
+<!--                <goBILDA5202SeriesMotor name="frontRightMotor" port="1" />-->
+<!--                <goBILDA5202SeriesMotor name="intakeMotor" port="2" />-->
+<!--                <Servo name="turretServo" port="2" />-->
+<!--                &lt;!&ndash;            <Servo name="turretServoB" port="3" />&ndash;&gt;-->
+<!--                <ControlHubImuBHI260AP name="imu" port="0" bus="0" />-->
+<!--            </LynxModule>-->
+<!--        </LynxUsbDevice>-->
+<!--    </Robot>-->

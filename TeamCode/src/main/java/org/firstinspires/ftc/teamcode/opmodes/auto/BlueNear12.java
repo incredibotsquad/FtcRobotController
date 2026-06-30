@@ -33,6 +33,7 @@ public class BlueNear12 extends CommandOpMode {
     //defining our PathChains
     private PathChain scorePreload, grabPickup1, scorePickup1, grabPickup2, scorePickup2, grabPickup3, scorePickup3, leave;
 
+    //this is where we would interlace other commands
     public Command autoRoutine() {
         return sequential(
                 /* Go To Score Command*/
