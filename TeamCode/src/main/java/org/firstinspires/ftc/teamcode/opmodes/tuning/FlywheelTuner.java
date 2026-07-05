@@ -1,12 +1,17 @@
+package org.firstinspires.ftc.teamcode.opmodes.tuning;
+
 import com.arcrobotics.ftclib.gamepad.GamepadEx;
 import com.arcrobotics.ftclib.gamepad.GamepadKeys;
 import com.arcrobotics.ftclib.hardware.motors.Motor;
+import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 
+@Configurable
 @TeleOp(name = "FlywheelTuner", group = "Tests")
 public class FlywheelTuner extends LinearOpMode {
 
@@ -16,13 +21,13 @@ public class FlywheelTuner extends LinearOpMode {
     public static double D = 0.0;
     public static double F = 0; // Start with F = 32767 / MaxTPS 12.5
 
-    public static double kS = 0; //
-    public static double kV = 0; //
+    public static double kS = 0.18; //
+    public static double kV = 0.00058; //
 
 
     // ===== Velocity targets =====
-    public static double highVelocityRPM = 4500;   // ticks/sec (inferred) 1302
-    public static double lowVelocityRPM = 3100;   // ticks/sec (inferred) 1204
+    public static double highVelocityRPM = 2500;   // ticks/sec (inferred) 1302
+    public static double lowVelocityRPM = 1100;   // ticks/sec (inferred) 1204
     double curTargetVelocity = highVelocityRPM;
 
     // ===== Step sizes for tuning =====
@@ -35,9 +40,10 @@ public class FlywheelTuner extends LinearOpMode {
     public void runOpMode() throws InterruptedException {
         // Initialize the subsystem
         LaunchSubsystem launcher = new LaunchSubsystem(hardwareMap, telemetry);
+        IntakeSubsystem intake = new IntakeSubsystem(hardwareMap, telemetry);
         GamepadEx gp1 = new GamepadEx(gamepad1);
         waitForStart();
-
+        intake.startIntake();
         while (opModeIsActive()) {
             gp1.readButtons();
 

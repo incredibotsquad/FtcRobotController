@@ -2,40 +2,33 @@ package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.arcrobotics.ftclib.command.SubsystemBase;
 import com.arcrobotics.ftclib.hardware.SimpleServo;
-import com.arcrobotics.ftclib.hardware.motors.Motor;
-import com.arcrobotics.ftclib.hardware.motors.MotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
-public class LaunchGateSubsystem extends SubsystemBase {
+public class LaunchKickSubsystem extends SubsystemBase {
+    private final SimpleServo kickServo;
 
-    private final SimpleServo gateServo;
+    private static final double LAUNCH_KICK_KICK = 1;
+    private static final double LAUNCH_KICK_REST = 0.35;
 
-
-    //TODO: TUNE THESE VALUES
-    private static final double LAUNCH_GATE_OPEN = 0.43;
-    private static final double LAUNCH_GATE_CLOSED = 0.3;
-
-    private boolean isGateOpen;
-    public LaunchGateSubsystem(HardwareMap hardwareMap, Telemetry telemetry) {
-        gateServo = new SimpleServo(hardwareMap, "launchGateServo", 0, 270);
-        gateServo.setInverted(true);
-        isGateOpen = true;
+    private boolean isKicking;
+    public LaunchKickSubsystem(HardwareMap hardwareMap, Telemetry telemetry) {
+        kickServo = new SimpleServo(hardwareMap, "launchKickServo", 0, 270);
     }
 
-    public void openGate() {
-        isGateOpen = true;
-        gateServo.setPosition(LAUNCH_GATE_OPEN);
+    public void kickBall() {
+        isKicking = true;
+        kickServo.setPosition(LAUNCH_KICK_KICK);
     }
 
-    public void closeGate() {
-        isGateOpen = false;
-        gateServo.setPosition(LAUNCH_GATE_CLOSED);
+    public void closeKick() {
+        isKicking = false;
+        kickServo.setPosition(LAUNCH_KICK_REST);
     }
 
-    public boolean isGateOpen() {
-        return isGateOpen;
+    public boolean isKicking() {
+        return isKicking;
     }
 
     /*

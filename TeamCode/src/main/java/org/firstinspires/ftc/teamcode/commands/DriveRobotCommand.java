@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.commands;
 
+import android.util.Log;
+
 import com.arcrobotics.ftclib.command.CommandBase;
 import com.arcrobotics.ftclib.gamepad.GamepadEx;
 import com.arcrobotics.ftclib.geometry.Pose2d;
@@ -21,6 +23,7 @@ public class DriveRobotCommand extends CommandBase {
 
     @Override
     public void execute() {
+//        Log.i("DriveRobotCommand", "execute. left y:" + driverGamepad.getLeftY() + " left x: " + driverGamepad.getLeftX() + " right X: " +  driverGamepad.getRightX());
         driveSubsystem.drive(driverGamepad.getLeftY(), driverGamepad.getLeftX(), driverGamepad.getRightX());
     }
 

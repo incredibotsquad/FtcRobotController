@@ -7,19 +7,19 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 
 public class LaunchBallsCommand extends CommandBase {
     private final LaunchSubsystem launcher;
-    private final LaunchGateSubsystem gateSubsystem;
+    private final LaunchGateSubsystem launchGate;
     private final ElapsedTime timer;
-    private static final double LAUNCH_TIMEOUT = 1500; // 1.5 seconds to clear all balls
+    private static final double LAUNCH_TIMEOUT = 1000; // 1.5 seconds to clear all balls
 
-    public LaunchBallsCommand(LaunchSubsystem launcher, LaunchGateSubsystem gateSubsystem) {
+    public LaunchBallsCommand(LaunchSubsystem launcher, LaunchGateSubsystem launchGate) {
         this.launcher = launcher;
-        this.gateSubsystem = gateSubsystem;
+        this.launchGate = launchGate;
         this.timer = new ElapsedTime();
         
         // We require the GATE so no other command moves it.
         // We do NOT require the LAUNCHER so the AutoAimCommand 
         // can keep adjusting the aim while we are firing.
-        addRequirements(gateSubsystem);
+        addRequirements(launchGate);
     }
 
     @Override
@@ -31,12 +31,12 @@ public class LaunchBallsCommand extends CommandBase {
     public void execute() {
         // Only open the gate if the flywheel and turret are ready
         if (launcher.isReadyToLaunch()) {
-            gateSubsystem.openGate();
+            launchGate.openGate();
+            timer.reset(); // Reset timer so we get a full 1.5s once ready again
         } else {
             // If we lose aim (e.g. robot bumped), close gate immediately 
             // to stop firing mid-air
-            gateSubsystem.closeGate();
-            timer.reset(); // Reset timer so we get a full 1.5s once ready again
+            launchGate.closeGate();
         }
     }
 
@@ -49,6 +49,6 @@ public class LaunchBallsCommand extends CommandBase {
     @Override
     public void end(boolean interrupted) {
         // Safety: Always close the gate when the command ends
-        gateSubsystem.closeGate();
+        launchGate.closeGate();
     }
 }

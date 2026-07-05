@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
-import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.telemetry;
+
+import android.util.Log;
 
 import com.arcrobotics.ftclib.command.SubsystemBase;
 import com.arcrobotics.ftclib.geometry.Pose2d;
@@ -11,6 +12,7 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
+import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 import org.firstinspires.ftc.teamcode.drivers.GoBildaPinpointDriver; // Path to your driver
 
 public class OdometrySubsystem extends SubsystemBase {
@@ -18,7 +20,12 @@ public class OdometrySubsystem extends SubsystemBase {
     private final GoBildaPinpointDriver pinpoint;
     private Pose2d currentPose = new Pose2d();
 
+    private Telemetry telemetry;
+
     public OdometrySubsystem(HardwareMap hardwareMap, Telemetry telemetry) {
+
+        this.telemetry = telemetry;
+
         // Initialize the Pinpoint hardware device from the map
         // Note: Avoid I2C Port 0 if possible, as the Control Hub IMU shares it.
         pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
@@ -30,7 +37,7 @@ public class OdometrySubsystem extends SubsystemBase {
         // 2. Define your physical pod offsets (in millimeters relative to the center of rotation)
         // Adjust these numbers based on where you physically bolted your pods!
         //TODO: update these offset numbers
-        pinpoint.setOffsets(-60.0, 40.0, DistanceUnit.INCH);
+        pinpoint.setOffsets(-2.0, -5.0, DistanceUnit.INCH);
 
         // 3. Set directions if your pods read backward
         pinpoint.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD, 
@@ -68,6 +75,9 @@ public class OdometrySubsystem extends SubsystemBase {
         double headingDegrees = pinpoint.getHeading(AngleUnit.DEGREES);
 
         currentPose = new Pose2d(xInches, yInches, new Rotation2d(Math.toRadians(headingDegrees)));
+        CrossOpModeStorage.currentPose = currentPose;
+
+//        Log.i("Odometry", "X Position: " + xInches + " Y Position: " + yInches + " Heading: " + headingDegrees);
 
         telemetry.addData("X Position", xInches);
         telemetry.addData("Y Position", yInches);

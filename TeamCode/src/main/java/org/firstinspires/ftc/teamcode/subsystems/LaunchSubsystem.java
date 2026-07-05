@@ -1,16 +1,14 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import android.util.Log;
+
 import com.arcrobotics.ftclib.command.SubsystemBase;
 import com.arcrobotics.ftclib.controller.PIDController;
 import com.arcrobotics.ftclib.controller.wpilibcontroller.SimpleMotorFeedforward;
 import com.arcrobotics.ftclib.hardware.SimpleServo;
 import com.arcrobotics.ftclib.hardware.motors.Motor;
 import com.arcrobotics.ftclib.hardware.motors.MotorEx;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
@@ -24,7 +22,7 @@ public class LaunchSubsystem extends SubsystemBase {
 //    private final DcMotorEx rightLaunchMotor;
 
     private final SimpleServo turretServo;
-    private final SimpleServo hoodServo;
+    private final SimpleServo visorServo;
 //    private final SimpleServo alignmentIndicatorLight;
 
     private static final double TARGET_RPM = 250.0;
@@ -40,11 +38,17 @@ public class LaunchSubsystem extends SubsystemBase {
     public static double ROBOT_ALIGNED_TO_SHOOT_LIGHT = 0.5;    //GREEN
     public static double ROBOT_ALIGNMENT_NOT_POSSIBLE_LIGHT = 0;
 
+    public static double LAUNCH_VISOR_LOW = 0.26;
+    public static double LAUNCH_VISOR_HIGH = 0.7;
+
+    public static double TURRET_MIN = 0.0;
+    public static double TURRET_MID = 0.54;
+    public static double TURRET_MAX = 0.9;
 
     // Inside LaunchSubsystem
-    private PIDController flywheelPID = new PIDController(0.005, 0, 0);
+    private PIDController flywheelPID = new PIDController(0.000, 0, 0);
     // ks = static friction, kv = velocity gain (How much power to hold a speed)
-    private SimpleMotorFeedforward flywheelFF = new SimpleMotorFeedforward(0, 0.00045);
+    private SimpleMotorFeedforward flywheelFF = new SimpleMotorFeedforward(0.18, 0.00058); //45
 
 
     public LaunchSubsystem(HardwareMap hardwareMap, Telemetry telemetry) {
@@ -64,7 +68,7 @@ public class LaunchSubsystem extends SubsystemBase {
 //        rightLaunchMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
         turretServo = new SimpleServo(hardwareMap, "turretServo", 0, 1800);
-        hoodServo = new SimpleServo(hardwareMap, "launchHoodServo", 0, 270);
+        visorServo = new SimpleServo(hardwareMap, "launchVisorServo", 0, 270);
 //        alignmentIndicatorLight = new SimpleServo(hardwareMap, "alignmentIndicatorLight", 0, 270);
     }
 
@@ -86,6 +90,8 @@ public class LaunchSubsystem extends SubsystemBase {
         // 3. Combine and set power (Manual mode)
         double totalPower = pidOutput + ffOutput;
 
+        Log.i("Launch Subsystem", "Setting flywheel power to " + totalPower);
+
         leftLaunchMotor.set(totalPower);
         rightLaunchMotor.set(totalPower);
     }
@@ -106,12 +112,19 @@ public class LaunchSubsystem extends SubsystemBase {
     }
 
     public void setHoodPosition(double position) {
+
+        if (position < LAUNCH_VISOR_LOW) {
+            position = LAUNCH_VISOR_LOW;
+        } else if (position > LAUNCH_VISOR_HIGH) {
+            position = LAUNCH_VISOR_HIGH;
+        }
+
         this.targetHoodPos = position;
-        hoodServo.setPosition(position);
+        visorServo.setPosition(position);
     }
 
     public double getHoodPosition() {
-        return hoodServo.getPosition();
+        return visorServo.getPosition();
     }
 
     /**

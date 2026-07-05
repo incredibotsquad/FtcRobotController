@@ -1,7 +1,10 @@
 package org.firstinspires.ftc.teamcode;
 
 
+import android.util.Log;
+
 import com.arcrobotics.ftclib.command.CommandScheduler;
+import com.arcrobotics.ftclib.command.InstantCommand;
 import com.arcrobotics.ftclib.command.Robot;
 import com.arcrobotics.ftclib.gamepad.GamepadEx;
 import com.arcrobotics.ftclib.gamepad.GamepadKeys;
@@ -60,13 +63,29 @@ public class Incredibot extends Robot {
         // The default command gets automatically scheduled when there is no other command for the subsystem.
 
         driveSubsystem.setDefaultCommand(new DriveRobotCommand(driveSubsystem, driverGamepad));
+//        register(odometrySubsystem);
 
         // 2. AUTO-FIRE TOGGLE (While held)
 //        operatorGamepad
 //                .getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER)
 //                .whileHeld(new AutoFireCommand(launchSubsystem, launchGateSubsystem, odometrySubsystem));
 
-//        initCommon();
+//        driverGamepad.getGamepadButton(GamepadKeys.Button.A).
+//                whenPressed(new InstantCommand(
+//                        () -> {
+//                            Log.i("Incredibot", "Inside key press lambda");
+//                            if (launchGateSubsystem.isGateOpen()) {
+//                                Log.i("Incredibot", "Inside key press lambda - closing");
+//                                launchGateSubsystem.closeGate();
+//                            }
+//                            else {
+//                                Log.i("Incredibot", "Inside key press lambda - opening");
+//                                launchGateSubsystem.openGate();
+//                            }
+//                        }
+//                        ));
+
+        initCommon();
     }
 
     public void initAuto() {
@@ -86,6 +105,6 @@ public class Incredibot extends Robot {
 
         // Assign the background tracking loop here!
         // The scheduler will now call execute() on this command every single frame.
-        launchSubsystem.setDefaultCommand(new LaunchReadinessCommand(launchSubsystem, odometrySubsystem));
+//        launchSubsystem.setDefaultCommand(new LaunchReadinessCommand(launchSubsystem, odometrySubsystem));
     }
 }

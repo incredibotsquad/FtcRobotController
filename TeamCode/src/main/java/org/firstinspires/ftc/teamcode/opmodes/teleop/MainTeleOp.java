@@ -6,7 +6,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.Incredibot;
 
-@TeleOp(name = "MainTeleOp")
+@TeleOp(name = "MainTeleOp", group = "TeleOp")
 public class MainTeleOp extends CommandOpMode {
     private Incredibot incredibot;
     private GamepadEx driverGamepad;
@@ -25,7 +25,6 @@ public class MainTeleOp extends CommandOpMode {
                 driverGamepad,
                 operatorGamepad,
                 telemetry);
-
     }
 
     @Override

@@ -1,5 +1,8 @@
 package org.firstinspires.ftc.teamcode.opmodes.tuning;
 
+import android.util.Log;
+
+import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -8,24 +11,24 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 //@Disabled
 
-@Disabled
+@Configurable
 @TeleOp(name="ServoTest", group="Tests")
 public class ServoTest extends LinearOpMode {
 
     // Declare OpMode members.
-    public static String servo1Name = "SpindexServo";
+    public static String servo1Name = "launchGateServo";
     public static double servo1Position = 0.5;
 
     public static boolean enableServo2 = false;
-    public static String servo2Name = "LaunchKickServo";
+    public static String servo2Name = "launchVisorServo";
     public static double servo2Position = 0.5;
 
     public static boolean enableServo3 = false;
-    public static String servo3Name = "LaunchTurretServo";
+    public static String servo3Name = "launchKickServo";
     public static double servo3Position = 0.5;
 
     public static boolean enableServo4 = false;
-    public static String servo4Name = "LaunchVisorServo";
+    public static String servo4Name = "turretServo";
     public static double servo4Position = 0.5;
 
 
@@ -51,6 +54,7 @@ public class ServoTest extends LinearOpMode {
 
         while (opModeInInit()) {
             Servo1 = hardwareMap.get(Servo.class, servo1Name);
+            Servo1.setDirection(Servo.Direction.REVERSE);
 
             if (enableServo2) {
                 Servo2 = hardwareMap.get(Servo.class, servo2Name);
@@ -76,6 +80,9 @@ public class ServoTest extends LinearOpMode {
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
             if(gamepad1.aWasPressed()) {
+
+                Log.i("Servo Tuner", "a was pressed");
+
                 Servo1.setPosition(servo1Position);
 
                 if (enableServo2) {
