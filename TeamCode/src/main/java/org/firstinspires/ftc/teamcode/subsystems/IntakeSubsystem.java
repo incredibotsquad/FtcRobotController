@@ -6,6 +6,7 @@ import com.arcrobotics.ftclib.command.SubsystemBase;
 import com.arcrobotics.ftclib.hardware.SimpleServo;
 import com.arcrobotics.ftclib.hardware.motors.Motor;
 import com.arcrobotics.ftclib.hardware.motors.MotorEx;
+import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
@@ -23,7 +24,7 @@ public class IntakeSubsystem extends SubsystemBase {
     public static double TWO_BALL_COLOR = 0.388; //YELLOW
     public static double THREE_BALL_COLOR = 0.5; //GREEN
 
-    public IntakeSubsystem(HardwareMap hardwareMap, Telemetry telemetry) {
+    public IntakeSubsystem(HardwareMap hardwareMap, TelemetryManager telemetry) {
         intakeMotor = new MotorEx(hardwareMap, "intakeMotor", Motor.GoBILDA.RPM_1150);
         intakeMotor.setRunMode(Motor.RunMode.RawPower);
 

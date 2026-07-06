@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.opmodes.auto;
 
 import com.arcrobotics.ftclib.command.CommandOpMode;
+import com.bylazar.telemetry.PanelsTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
 import org.firstinspires.ftc.teamcode.Incredibot;
@@ -67,7 +68,7 @@ public class BlueNear12 extends CommandOpMode {
 
         // Initialize the robot container
         // We pass 'null' for gamepads since it's Autonomous
-        robot = new Incredibot(hardwareMap, Incredibot.OpModeType.AUTO, null, null, telemetry);
+        robot = new Incredibot(hardwareMap, Incredibot.OpModeType.AUTO, null, null, PanelsTelemetry.INSTANCE.getTelemetry());
 
         Scheduler.schedule(autoRoutine());
     }

@@ -4,6 +4,7 @@ import com.arcrobotics.ftclib.command.SubsystemBase;
 import com.arcrobotics.ftclib.hardware.SimpleServo;
 import com.arcrobotics.ftclib.hardware.motors.Motor;
 import com.arcrobotics.ftclib.hardware.motors.MotorEx;
+import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
@@ -18,7 +19,7 @@ public class LaunchGateSubsystem extends SubsystemBase {
     private static final double LAUNCH_GATE_CLOSED = 0.3;
 
     private boolean isGateOpen;
-    public LaunchGateSubsystem(HardwareMap hardwareMap, Telemetry telemetry) {
+    public LaunchGateSubsystem(HardwareMap hardwareMap, TelemetryManager telemetry) {
         gateServo = new SimpleServo(hardwareMap, "launchGateServo", 0, 270);
         gateServo.setInverted(true);
         isGateOpen = true;

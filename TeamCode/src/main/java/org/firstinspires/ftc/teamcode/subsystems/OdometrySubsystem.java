@@ -6,6 +6,8 @@ import android.util.Log;
 import com.arcrobotics.ftclib.command.SubsystemBase;
 import com.arcrobotics.ftclib.geometry.Pose2d;
 import com.arcrobotics.ftclib.geometry.Rotation2d;
+import com.bylazar.telemetry.PanelsTelemetry;
+import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
@@ -20,9 +22,9 @@ public class OdometrySubsystem extends SubsystemBase {
     private final GoBildaPinpointDriver pinpoint;
     private Pose2d currentPose = new Pose2d();
 
-    private Telemetry telemetry;
+    private TelemetryManager telemetry;
 
-    public OdometrySubsystem(HardwareMap hardwareMap, Telemetry telemetry) {
+    public OdometrySubsystem(HardwareMap hardwareMap, TelemetryManager telemetry) {
 
         this.telemetry = telemetry;
 
@@ -36,7 +38,6 @@ public class OdometrySubsystem extends SubsystemBase {
 
         // 2. Define your physical pod offsets (in millimeters relative to the center of rotation)
         // Adjust these numbers based on where you physically bolted your pods!
-        //TODO: update these offset numbers
         pinpoint.setOffsets(-2.0, -5.0, DistanceUnit.INCH);
 
         // 3. Set directions if your pods read backward
@@ -45,6 +46,8 @@ public class OdometrySubsystem extends SubsystemBase {
 
         // Reset the position to (0,0) heading 0 upon initialization
         pinpoint.resetPosAndIMU();
+
+        Log.i("Odometry subsystem", "Resetting pinpoint ");
     }
 
     public Pose2d getPose() {
@@ -53,6 +56,9 @@ public class OdometrySubsystem extends SubsystemBase {
 
     public void resetPose(Pose2d newPose) {
         // Allows you to reset the location (e.g., at the start of Autonomous)
+
+        Log.i("Odometry subsystem", "Reset pose. X: " + newPose.getX() + " Y: " + newPose.getY() + " Angle: " + newPose.getRotation().getDegrees());
+
         pinpoint.setPosition(new Pose2D(
             DistanceUnit.INCH,
             newPose.getX(),
@@ -60,8 +66,9 @@ public class OdometrySubsystem extends SubsystemBase {
             AngleUnit.RADIANS,
             newPose.getRotation().getRadians()
         ));
-    }
 
+        pinpoint.update();
+    }
 
     @Override
     public void periodic() {
@@ -79,9 +86,8 @@ public class OdometrySubsystem extends SubsystemBase {
 
 //        Log.i("Odometry", "X Position: " + xInches + " Y Position: " + yInches + " Heading: " + headingDegrees);
 
-        telemetry.addData("X Position", xInches);
-        telemetry.addData("Y Position", yInches);
-        telemetry.addData("Heading (Deg)", headingDegrees);
+        telemetry.addData("Odometry: X Position", xInches);
+        telemetry.addData("Odometry: Y Position", yInches);
+        telemetry.addData("Odometry: Heading (Deg)", headingDegrees);
     }
-
 }

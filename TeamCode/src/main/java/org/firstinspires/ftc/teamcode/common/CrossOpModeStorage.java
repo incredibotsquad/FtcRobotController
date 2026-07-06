@@ -11,7 +11,7 @@ public class CrossOpModeStorage {
     //0,0 and obelisk heading is the default
     public static Pose2d currentPose = new Pose2d();
 
-    public static AllianceColors allianceColor = AllianceColors.BLUE;
+    public static AllianceColors allianceColor = AllianceColors.RED;
 
     public static double turretPosition = 0;
 }

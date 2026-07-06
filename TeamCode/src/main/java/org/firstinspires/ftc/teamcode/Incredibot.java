@@ -8,10 +8,12 @@ import com.arcrobotics.ftclib.command.InstantCommand;
 import com.arcrobotics.ftclib.command.Robot;
 import com.arcrobotics.ftclib.gamepad.GamepadEx;
 import com.arcrobotics.ftclib.gamepad.GamepadKeys;
+import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.commands.AutoFireCommand;
+import org.firstinspires.ftc.teamcode.commands.LaunchBallsCommand;
 import org.firstinspires.ftc.teamcode.commands.LaunchReadinessCommand;
 import org.firstinspires.ftc.teamcode.commands.DriveRobotCommand;
 import org.firstinspires.ftc.teamcode.commands.SmartIntakeCommand;
@@ -37,9 +39,11 @@ public class Incredibot extends Robot {
 
     // Hardware
     private final HardwareMap hwMap;
+    private TelemetryManager telemetry;
 
-    public Incredibot(HardwareMap hardwareMap, OpModeType opModeType, GamepadEx driverGamepad, GamepadEx operatorGamepad, Telemetry telemetry) {
+    public Incredibot(HardwareMap hardwareMap, OpModeType opModeType, GamepadEx driverGamepad, GamepadEx operatorGamepad, TelemetryManager telemetry) {
         this.hwMap = hardwareMap;
+        this.telemetry = telemetry;
 
         // Initialize subsystems - they initialize their own hardware
         driveSubsystem = new DriveSubsystem(hwMap, telemetry);
@@ -53,7 +57,6 @@ public class Incredibot extends Robot {
         } else if (opModeType == OpModeType.AUTO) {
             initAuto();
         }
-
     }
 
     public void initTeleop(GamepadEx driverGamepad, GamepadEx operatorGamepad) {
@@ -63,6 +66,10 @@ public class Incredibot extends Robot {
         // The default command gets automatically scheduled when there is no other command for the subsystem.
 
         driveSubsystem.setDefaultCommand(new DriveRobotCommand(driveSubsystem, driverGamepad));
+
+        driverGamepad.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER).
+                whenPressed(new LaunchBallsCommand(launchSubsystem, launchGateSubsystem));
+
 //        register(odometrySubsystem);
 
         // 2. AUTO-FIRE TOGGLE (While held)
@@ -99,12 +106,13 @@ public class Incredibot extends Robot {
     }
 
     private void initCommon() {
+        register(driveSubsystem, intakeSubsystem, launchGateSubsystem, launchSubsystem, odometrySubsystem);
 
         // It will start at match start and manage itself based on sensor data
         intakeSubsystem.setDefaultCommand(new SmartIntakeCommand(intakeSubsystem, launchGateSubsystem));
 
         // Assign the background tracking loop here!
         // The scheduler will now call execute() on this command every single frame.
-//        launchSubsystem.setDefaultCommand(new LaunchReadinessCommand(launchSubsystem, odometrySubsystem));
+        launchSubsystem.setDefaultCommand(new LaunchReadinessCommand(launchSubsystem, odometrySubsystem, telemetry));
     }
 }

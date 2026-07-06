@@ -8,12 +8,13 @@ import com.arcrobotics.ftclib.controller.wpilibcontroller.SimpleMotorFeedforward
 import com.arcrobotics.ftclib.hardware.SimpleServo;
 import com.arcrobotics.ftclib.hardware.motors.Motor;
 import com.arcrobotics.ftclib.hardware.motors.MotorEx;
+import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 public class LaunchSubsystem extends SubsystemBase {
-
+//
     private final MotorEx leftLaunchMotor;
     private final MotorEx rightLaunchMotor;
 
@@ -23,16 +24,16 @@ public class LaunchSubsystem extends SubsystemBase {
 
     private final SimpleServo turretServo;
     private final SimpleServo visorServo;
-//    private final SimpleServo alignmentIndicatorLight;
+    private final SimpleServo alignmentIndicatorLight;
 
     private static final double TARGET_RPM = 250.0;
-    private static final double TARGET_RPM_TOLERANCE = 50;
+    private static final double TARGET_RPM_TOLERANCE = 100;
     private static final double TURRET_POSITION_TOLERANCE = 0.05;
-    private static final double HOOD_POSITION_TOLERANCE = 0.05;
+    private static final double VISOR_POSITION_TOLERANCE = 0.05;
 
     private volatile double targetRPM;
     private volatile double targetTurretPos;
-    private volatile double targetHoodPos;
+    private volatile double targetVisorPos;
 
     public static double ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT = 0.3;    //RED
     public static double ROBOT_ALIGNED_TO_SHOOT_LIGHT = 0.5;    //GREEN
@@ -48,10 +49,10 @@ public class LaunchSubsystem extends SubsystemBase {
     // Inside LaunchSubsystem
     private PIDController flywheelPID = new PIDController(0.000, 0, 0);
     // ks = static friction, kv = velocity gain (How much power to hold a speed)
-    private SimpleMotorFeedforward flywheelFF = new SimpleMotorFeedforward(0.18, 0.00058); //45
+    private SimpleMotorFeedforward flywheelFF = new SimpleMotorFeedforward(0.1, 0.00058); //45
 
 
-    public LaunchSubsystem(HardwareMap hardwareMap, Telemetry telemetry) {
+    public LaunchSubsystem(HardwareMap hardwareMap, TelemetryManager telemetry) {
         leftLaunchMotor = new MotorEx(hardwareMap, "leftLaunchMotor", Motor.GoBILDA.BARE);
         leftLaunchMotor.setRunMode(Motor.RunMode.RawPower);
 
@@ -69,7 +70,7 @@ public class LaunchSubsystem extends SubsystemBase {
 
         turretServo = new SimpleServo(hardwareMap, "turretServo", 0, 1800);
         visorServo = new SimpleServo(hardwareMap, "launchVisorServo", 0, 270);
-//        alignmentIndicatorLight = new SimpleServo(hardwareMap, "alignmentIndicatorLight", 0, 270);
+        alignmentIndicatorLight = new SimpleServo(hardwareMap, "alignmentIndicatorLight", 0, 270);
     }
 
     public void updateFlywheel(double targetRPM) {
@@ -90,15 +91,15 @@ public class LaunchSubsystem extends SubsystemBase {
         // 3. Combine and set power (Manual mode)
         double totalPower = pidOutput + ffOutput;
 
-        Log.i("Launch Subsystem", "Setting flywheel power to " + totalPower);
+//        Log.i("Launch Subsystem", "Setting flywheel power to " + totalPower);
 
-        leftLaunchMotor.set(totalPower);
-        rightLaunchMotor.set(totalPower);
+//        leftLaunchMotor.set(totalPower);
+//        rightLaunchMotor.set(totalPower);
     }
 
 
     public void setAlignmentLightColor(double color) {
-//        alignmentIndicatorLight.setPosition(color);
+        alignmentIndicatorLight.setPosition(color);
     }
 
     public void setTurretPosition(double position) {
@@ -107,11 +108,10 @@ public class LaunchSubsystem extends SubsystemBase {
     }
 
     public double getTurretPosition() {
-        // TODO: UPDATE THIS TO USE ENCODERS IF POSSIBLE
         return turretServo.getPosition();
     }
 
-    public void setHoodPosition(double position) {
+    public void setVisorPosition(double position) {
 
         if (position < LAUNCH_VISOR_LOW) {
             position = LAUNCH_VISOR_LOW;
@@ -119,7 +119,7 @@ public class LaunchSubsystem extends SubsystemBase {
             position = LAUNCH_VISOR_HIGH;
         }
 
-        this.targetHoodPos = position;
+        this.targetVisorPos = position;
         visorServo.setPosition(position);
     }
 
@@ -145,14 +145,7 @@ public class LaunchSubsystem extends SubsystemBase {
         flywheelFF = new SimpleMotorFeedforward(ks, kv);
     }
 
-    /**
-     * Exposes the PID controller for advanced tracking/telemetry
-     */
-    public PIDController getPIDController() {
-        return flywheelPID;
-    }
-
-//    public void setFlywheelPIDF(double p, double i, double d, double f) {
+    public void setFlywheelPIDF(double p, double i, double d, double f) {
 //        leftLaunchMotor.setPIDFCoefficients(
 //                DcMotor.RunMode.RUN_USING_ENCODER,
 //                new PIDFCoefficients(p, i, d, f)
@@ -162,7 +155,7 @@ public class LaunchSubsystem extends SubsystemBase {
 //                DcMotor.RunMode.RUN_USING_ENCODER,
 //                new PIDFCoefficients(p, i, d, f)
 //        );
-//    }
+    }
 
     /*
     * Spins up the flywheel to the specified RPM. Converts to TPS internally
@@ -186,12 +179,13 @@ public class LaunchSubsystem extends SubsystemBase {
     public double getTurretAngle() { return 0; }
     public void alignTurretToAngle(double currentAngle, double targetAngle) {}
     public void stop() {
-//        leftLaunchMotor.setVelocity(0);
-//        rightLaunchMotor.setVelocity(0);
-
         this.targetRPM = 0;
-        leftLaunchMotor.set(0);
-        rightLaunchMotor.set(0);
+
+        leftLaunchMotor.setVelocity(0);
+        rightLaunchMotor.setVelocity(0);
+
+//        leftLaunchMotor.set(0);
+//        rightLaunchMotor.set(0);
     }
 
     /**
@@ -210,9 +204,9 @@ public class LaunchSubsystem extends SubsystemBase {
         boolean turretReady = Math.abs(getTurretPosition() - targetTurretPos) < TURRET_POSITION_TOLERANCE;
 
         // 3. Check Hood Alignment
-        boolean hoodReady = Math.abs(getHoodPosition() - targetHoodPos) < HOOD_POSITION_TOLERANCE;
+        boolean visorReady = Math.abs(getHoodPosition() - targetVisorPos) < VISOR_POSITION_TOLERANCE;
 
-        return flywheelReady && turretReady && hoodReady;
+        return flywheelReady && turretReady && visorReady;
     }
 
     /*
@@ -222,11 +216,11 @@ public class LaunchSubsystem extends SubsystemBase {
      * */
     @Override
     public void periodic() {
-        if (targetRPM > 0) {
-            updateFlywheel(targetRPM);
-        } else {
-            stop();
-        }
+//        if (targetRPM > 0) {
+//            updateFlywheel(targetRPM);
+//        } else {
+//            stop();
+//        }
 
         //handle the alignment indicator light
         if (isReadyToLaunch())

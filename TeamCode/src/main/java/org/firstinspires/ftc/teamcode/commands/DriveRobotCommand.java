@@ -24,7 +24,7 @@ public class DriveRobotCommand extends CommandBase {
     @Override
     public void execute() {
 //        Log.i("DriveRobotCommand", "execute. left y:" + driverGamepad.getLeftY() + " left x: " + driverGamepad.getLeftX() + " right X: " +  driverGamepad.getRightX());
-        driveSubsystem.drive(driverGamepad.getLeftY(), driverGamepad.getLeftX(), driverGamepad.getRightX());
+        driveSubsystem.drive(-driverGamepad.getLeftX(), -driverGamepad.getLeftY(), -driverGamepad.getRightX());
     }
 
     @Override

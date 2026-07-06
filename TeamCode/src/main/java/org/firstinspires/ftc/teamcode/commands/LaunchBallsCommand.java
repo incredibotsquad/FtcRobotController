@@ -9,17 +9,17 @@ public class LaunchBallsCommand extends CommandBase {
     private final LaunchSubsystem launcher;
     private final LaunchGateSubsystem launchGate;
     private final ElapsedTime timer;
-    private static final double LAUNCH_TIMEOUT = 1000; // 1.5 seconds to clear all balls
+    private static final double LAUNCH_DURATION = 1000; // 1 second to clear all balls
 
-    public LaunchBallsCommand(LaunchSubsystem launcher, LaunchGateSubsystem launchGate) {
-        this.launcher = launcher;
-        this.launchGate = launchGate;
+    public LaunchBallsCommand(LaunchSubsystem launchSubsystem, LaunchGateSubsystem launchGateSubsystem) {
+        this.launcher = launchSubsystem;
+        this.launchGate = launchGateSubsystem;
         this.timer = new ElapsedTime();
         
         // We require the GATE so no other command moves it.
         // We do NOT require the LAUNCHER so the AutoAimCommand 
         // can keep adjusting the aim while we are firing.
-        addRequirements(launchGate);
+        addRequirements(launchGateSubsystem);
     }
 
     @Override
@@ -32,18 +32,18 @@ public class LaunchBallsCommand extends CommandBase {
         // Only open the gate if the flywheel and turret are ready
         if (launcher.isReadyToLaunch()) {
             launchGate.openGate();
-            timer.reset(); // Reset timer so we get a full 1.5s once ready again
         } else {
             // If we lose aim (e.g. robot bumped), close gate immediately 
             // to stop firing mid-air
             launchGate.closeGate();
+            timer.reset(); // Reset timer so we get a full LAUNCH_DURATION once ready again
         }
     }
 
     @Override
     public boolean isFinished() {
         // Finish once the gate has been open and ready for 1.5 seconds
-        return launcher.isReadyToLaunch() && timer.milliseconds() > LAUNCH_TIMEOUT;
+        return launcher.isReadyToLaunch() && timer.milliseconds() > LAUNCH_DURATION;
     }
 
     @Override

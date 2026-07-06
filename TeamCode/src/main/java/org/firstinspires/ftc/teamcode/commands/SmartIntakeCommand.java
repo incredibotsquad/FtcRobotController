@@ -4,14 +4,18 @@ package org.firstinspires.ftc.teamcode.commands;
 import android.util.Log;
 
 import com.arcrobotics.ftclib.command.CommandBase;
+import com.bylazar.configurables.annotations.Configurable;
+import com.qualcomm.robotcore.util.ElapsedTime;
+
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 
+@Configurable
 public class SmartIntakeCommand extends CommandBase {
+    public  static double DELAYED_STOP_DURATION_MILLIS = 1500;
     private final IntakeSubsystem intake;
     private final LaunchGateSubsystem launchGate;
-
+    private ElapsedTime delayedStoptimer;
     public SmartIntakeCommand(IntakeSubsystem intake, LaunchGateSubsystem launchGate) {
         this.intake = intake;
         this.launchGate = launchGate;
@@ -31,13 +35,20 @@ public class SmartIntakeCommand extends CommandBase {
 
         if (isLaunching || needsMoreArtifacts) {
 //            Log.i("SmartIntakeCommand", "Staring intake: ");
-            intake.startIntake();
+//            intake.startIntake();
+            delayedStoptimer = null;
+
         } else {
             // We have 3 and we aren't launching
             Log.i("SmartIntakeCommand", "Stopping intake: ");
-            //TODO: keep running the intake for another half a second.
-            // Cannot just add a timer here - it would block the main loop.
-            intake.stopIntake();
+
+            //keep running the intake for another half a second.
+            if (delayedStoptimer == null) {
+                delayedStoptimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+            }
+            else if (delayedStoptimer.milliseconds() > DELAYED_STOP_DURATION_MILLIS) {
+                intake.stopIntake();
+            }
         }
     }
 
