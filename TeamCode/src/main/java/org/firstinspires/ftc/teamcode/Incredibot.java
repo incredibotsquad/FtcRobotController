@@ -20,6 +20,7 @@ import org.firstinspires.ftc.teamcode.commands.SmartIntakeCommand;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LaunchKickSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 
@@ -33,8 +34,9 @@ public class Incredibot extends Robot {
     // Subsystems
     public final DriveSubsystem driveSubsystem;
     public final IntakeSubsystem intakeSubsystem;
-    public final LaunchGateSubsystem launchGateSubsystem;
     public final LaunchSubsystem launchSubsystem;
+    public final LaunchGateSubsystem launchGateSubsystem;
+    public final LaunchKickSubsystem launchKickSubsystem;
     public final OdometrySubsystem odometrySubsystem;
 
     // Hardware
@@ -51,6 +53,7 @@ public class Incredibot extends Robot {
         launchGateSubsystem = new LaunchGateSubsystem(hwMap, telemetry);
         odometrySubsystem = new OdometrySubsystem(hwMap, telemetry);
         launchSubsystem = new LaunchSubsystem(hwMap, telemetry);
+        launchKickSubsystem = new LaunchKickSubsystem(hardwareMap, telemetry);
 
         if (opModeType == OpModeType.TELEOP) {
             initTeleop(driverGamepad, operatorGamepad);
@@ -62,13 +65,15 @@ public class Incredibot extends Robot {
     public void initTeleop(GamepadEx driverGamepad, GamepadEx operatorGamepad) {
         CommandScheduler.getInstance().reset();
 
+        initCommon();
+
         // 3. Assign default commands or button bindings
         // The default command gets automatically scheduled when there is no other command for the subsystem.
 
         driveSubsystem.setDefaultCommand(new DriveRobotCommand(driveSubsystem, driverGamepad));
 
         driverGamepad.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER).
-                whenPressed(new LaunchBallsCommand(launchSubsystem, launchGateSubsystem));
+                whenHeld(new LaunchBallsCommand(launchSubsystem, launchGateSubsystem));
 
 //        register(odometrySubsystem);
 
@@ -92,21 +97,21 @@ public class Incredibot extends Robot {
 //                        }
 //                        ));
 
-        initCommon();
     }
 
     public void initAuto() {
         // Clear out any lingering commands or bindings from previous runs
         CommandScheduler.getInstance().reset();
 
+        initCommon();
+
         // Notice: We don't bind ANY gamepads here.
         // The robot will rely purely on scripted sequential commands.
 
-        initCommon();
     }
 
     private void initCommon() {
-        register(driveSubsystem, intakeSubsystem, launchGateSubsystem, launchSubsystem, odometrySubsystem);
+        register(driveSubsystem, intakeSubsystem, launchGateSubsystem, launchSubsystem, odometrySubsystem, launchKickSubsystem);
 
         // It will start at match start and manage itself based on sensor data
         intakeSubsystem.setDefaultCommand(new SmartIntakeCommand(intakeSubsystem, launchGateSubsystem));

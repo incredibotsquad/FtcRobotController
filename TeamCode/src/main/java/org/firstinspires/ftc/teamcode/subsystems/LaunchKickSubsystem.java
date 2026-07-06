@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.arcrobotics.ftclib.command.SubsystemBase;
 import com.arcrobotics.ftclib.hardware.SimpleServo;
+import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
@@ -13,7 +14,7 @@ public class LaunchKickSubsystem extends SubsystemBase {
     private static final double LAUNCH_KICK_REST = 0.35;
 
     private boolean isKicking;
-    public LaunchKickSubsystem(HardwareMap hardwareMap, Telemetry telemetry) {
+    public LaunchKickSubsystem(HardwareMap hardwareMap, TelemetryManager telemetry) {
         kickServo = new SimpleServo(hardwareMap, "launchKickServo", 0, 270);
     }
 

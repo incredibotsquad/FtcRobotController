@@ -100,7 +100,7 @@ public class LaunchReadinessCommand extends CommandBase {
         // Get the interpolated constants
         FlywheelConstants current = getFlywheelConstantsBasedOnDistance(distanceToTarget);
 
-        telemetry.addData("Distnace to target", distanceToTarget);
+        telemetry.addData("Distance to target", distanceToTarget);
         telemetry.addData("Flywheel RPM", current.targetRPM);
         telemetry.addData("Flywheel P", current.P);
         telemetry.addData("Flywheel I", current.I);
@@ -115,22 +115,52 @@ public class LaunchReadinessCommand extends CommandBase {
     }
 
     private void updateTurretAlignmentFromCurrentPose(Pose2d currentPose) {
-        // 2. Calculate trigonometry delta relative to the target
+        // 1. Calculate the absolute field angle to the target
         double deltaX = TARGET_X - currentPose.getX();
         double deltaY = TARGET_Y - currentPose.getY();
 
-        // Math.atan2 returns radians; convert it to degrees for your turret
+        // Math.atan2(y, x) returns the angle in radians
         double absoluteTargetAngle = Math.toDegrees(Math.atan2(deltaY, deltaX));
 
-        // 3. Compensate for the robot's own chassis heading
+        // 2. Account for the robot's current chassis heading
         double robotHeading = currentPose.getRotation().getDegrees();
-        double localizedTargetAngle = absoluteTargetAngle - robotHeading;
 
-        // 4. Update the turret PID controller
-//        launchSubsystem.alignTurretToAngle(launchSubsystem.getTurretAngle(), localizedTargetAngle);
+        // This is the angle the turret needs to be at relative to the front of the robot
+        double relativeTargetAngle = absoluteTargetAngle - robotHeading;
 
-        //TODO: UPDATE THIS FUNCTION TO ALIGN TURRET TO GOAL
-        launchSubsystem.setTurretPosition(LaunchSubsystem.TURRET_MID);
+        // 3. Normalize the angle to be within [-180, 180]
+        // This ensures the turret takes the shortest path to the goal
+        while (relativeTargetAngle > 180) relativeTargetAngle -= 360;
+        while (relativeTargetAngle < -180) relativeTargetAngle += 360;
+
+        /*
+         * MECHANICAL CALCULATION:
+         * Ratio: 112 teeth (Turret) / 29 teeth (Servo) = 3.862
+         * Servo: GoBILDA 5-Turn = 1800 degrees of total travel (0.0 to 1.0)
+         *
+         * Formula:
+         * (TargetDegrees * Ratio) / TotalServoRange
+         */
+        double GEAR_RATIO = 112.0 / 29.0;
+        double TOTAL_SERVO_RANGE = 1620.0; // servo range is 1800 but we are only going up to 0.9
+
+        // Calculate how many degrees the servo needs to rotate away from center
+        double servoOffsetDegrees = relativeTargetAngle * GEAR_RATIO;
+
+        // Convert that degree offset into a 0.0 - 1.0 servo position
+        double servoPosAdjustment = servoOffsetDegrees / TOTAL_SERVO_RANGE;
+
+        // 4. Combine with the Midpoint
+        double finalServoPosition = LaunchSubsystem.TURRET_MID - servoPosAdjustment;
+
+        // Safety Clamp: Don't let the code command the servo beyond its hardware limits
+        finalServoPosition = Math.max(LaunchSubsystem.TURRET_MIN, Math.min(LaunchSubsystem.TURRET_MAX, finalServoPosition));
+
+        // 5. Apply to hardware and Telemetry
+        launchSubsystem.setTurretPosition(finalServoPosition);
+
+        telemetry.addData("Turret Target Angle", relativeTargetAngle);
+        telemetry.addData("Turret Servo Position", finalServoPosition);
     }
 
     private void updateVisorPositionFromCurrentPose(Pose2d currentPose) {
@@ -169,5 +199,4 @@ public class LaunchReadinessCommand extends CommandBase {
     private double interpolate(double start, double end, double t) {
         return start + (end - start) * t;
     }
-
 }

@@ -2,15 +2,13 @@ package org.firstinspires.ftc.teamcode.opmodes.teleop;
 
 import com.arcrobotics.ftclib.command.CommandOpMode;
 import com.arcrobotics.ftclib.gamepad.GamepadEx;
-import com.arcrobotics.ftclib.geometry.Pose2d;
-import com.arcrobotics.ftclib.geometry.Rotation2d;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.Incredibot;
 
-@TeleOp(name = "MainTeleOp", group = "TeleOp")
-public class MainTeleOp extends CommandOpMode {
+@TeleOp(name = "IncredibotsMecanumDrive", group = "TeleOp")
+public class IncredibotsMecanumDrive extends CommandOpMode {
     private Incredibot incredibot;
     private GamepadEx driverGamepad;
     private GamepadEx operatorGamepad;
@@ -30,7 +28,8 @@ public class MainTeleOp extends CommandOpMode {
                 operatorGamepad,
                 PanelsTelemetry.INSTANCE.getTelemetry());
 
-        incredibot.odometrySubsystem.resetPose(new Pose2d(72, 72,  Rotation2d.fromDegrees(90)));
+        //TODO: get this from CrossOpModeStorage
+        incredibot.odometrySubsystem.resetPose(72, 72,0);
     }
 
     @Override

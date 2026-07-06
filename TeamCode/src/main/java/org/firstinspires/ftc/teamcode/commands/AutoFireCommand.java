@@ -7,8 +7,8 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
 
 public class AutoFireCommand extends CommandBase {
-    private final LaunchSubsystem launcher;
-    private final LaunchGateSubsystem gate;
+    private final LaunchSubsystem launchSubsystem;
+    private final LaunchGateSubsystem launchGateSubsystem;
     private final OdometrySubsystem odometry;
 
     // Define the vertices of your Triangle Zones (Example coordinates in inches)
@@ -23,11 +23,11 @@ public class AutoFireCommand extends CommandBase {
     private static final double T2X2 = 48.0, T2Y2 = 0.0;
     private static final double T2X3 = 96.0, T2Y3 = 0.0;
 
-    public AutoFireCommand(LaunchSubsystem launcher, LaunchGateSubsystem gate, OdometrySubsystem odometry) {
-        this.launcher = launcher;
-        this.gate = gate;
+    public AutoFireCommand(LaunchSubsystem launchSubsystem, LaunchGateSubsystem launchGateSubsystem, OdometrySubsystem odometry) {
+        this.launchSubsystem = launchSubsystem;
+        this.launchGateSubsystem = launchGateSubsystem;
         this.odometry = odometry;
-        addRequirements(gate); 
+        addRequirements(launchGateSubsystem);
     }
 
     @Override
@@ -46,19 +46,19 @@ public class AutoFireCommand extends CommandBase {
         
         // 2. Check if systems are aimed and flywheels are at RPM
         // This uses the target variables updated by LaunchReadinessCommand
-        boolean systemReady = launcher.isReadyToLaunch();
+        boolean systemReady = launchSubsystem.isReadyToLaunch();
 
         // 3. Automatic Trigger
         if (inZone && systemReady) {
-            gate.openGate();
+            launchGateSubsystem.openGate();
         } else {
-            gate.closeGate();
+            launchGateSubsystem.closeGate();
         }
     }
 
     @Override
     public void end(boolean interrupted) {
-        gate.closeGate();
+        launchGateSubsystem.closeGate();
     }
 
     private boolean isPointInTriangle(double px, double py, double x1, double y1, double x2, double y2, double x3, double y3) {

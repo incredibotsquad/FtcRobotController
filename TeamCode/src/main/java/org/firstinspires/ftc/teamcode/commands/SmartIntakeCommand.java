@@ -35,7 +35,7 @@ public class SmartIntakeCommand extends CommandBase {
 
         if (isLaunching || needsMoreArtifacts) {
 //            Log.i("SmartIntakeCommand", "Staring intake: ");
-//            intake.startIntake();
+            intake.startIntake();
             delayedStoptimer = null;
 
         } else {

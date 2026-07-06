@@ -69,6 +69,7 @@ public class LaunchSubsystem extends SubsystemBase {
 //        rightLaunchMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
         turretServo = new SimpleServo(hardwareMap, "turretServo", 0, 1800);
+        turretServo.setInverted(true);
         visorServo = new SimpleServo(hardwareMap, "launchVisorServo", 0, 270);
         alignmentIndicatorLight = new SimpleServo(hardwareMap, "alignmentIndicatorLight", 0, 270);
     }
@@ -93,8 +94,8 @@ public class LaunchSubsystem extends SubsystemBase {
 
 //        Log.i("Launch Subsystem", "Setting flywheel power to " + totalPower);
 
-//        leftLaunchMotor.set(totalPower);
-//        rightLaunchMotor.set(totalPower);
+        leftLaunchMotor.set(totalPower);
+        rightLaunchMotor.set(totalPower);
     }
 
 

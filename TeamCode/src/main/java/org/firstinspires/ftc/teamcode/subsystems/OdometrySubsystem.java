@@ -6,11 +6,10 @@ import android.util.Log;
 import com.arcrobotics.ftclib.command.SubsystemBase;
 import com.arcrobotics.ftclib.geometry.Pose2d;
 import com.arcrobotics.ftclib.geometry.Rotation2d;
-import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
@@ -47,26 +46,32 @@ public class OdometrySubsystem extends SubsystemBase {
         // Reset the position to (0,0) heading 0 upon initialization
         pinpoint.resetPosAndIMU();
 
-        Log.i("Odometry subsystem", "Resetting pinpoint ");
+        ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+
+        while (timer.milliseconds() < 500) {
+//            Log.i("Odometry subsystem", "Resetting pinpoint ");
+        }
+        pinpoint.update();
+
+//        Pose2D resetPose = pinpoint.getPosition();
+//        Log.i("Odometry subsystem", "Pose after resetting pinpoint: X: " + resetPose.getX(DistanceUnit.INCH) + " Y: " + resetPose.getY(DistanceUnit.INCH) + " Angle: " + resetPose.getHeading(AngleUnit.DEGREES));
+
     }
 
     public Pose2d getPose() {
         return currentPose;
     }
 
-    public void resetPose(Pose2d newPose) {
-        // Allows you to reset the location (e.g., at the start of Autonomous)
+    // Allows you to reset the location (e.g., at the start of Autonomous)
+    public void resetPose(double xInches, double yInches, double rotationDegrees) {
 
-        Log.i("Odometry subsystem", "Reset pose. X: " + newPose.getX() + " Y: " + newPose.getY() + " Angle: " + newPose.getRotation().getDegrees());
+        Log.i("Odometry subsystem", "Reset pose. X: " + xInches + " Y: " + yInches + " Angle: " + rotationDegrees);
 
-        pinpoint.setPosition(new Pose2D(
-            DistanceUnit.INCH,
-            newPose.getX(),
-            newPose.getY(),
-            AngleUnit.RADIANS,
-            newPose.getRotation().getRadians()
-        ));
+        pinpoint.setPosX(xInches, DistanceUnit.INCH);
+        pinpoint.setPosY(yInches, DistanceUnit.INCH);
+        pinpoint.setHeading(Math.toRadians(rotationDegrees), AngleUnit.RADIANS);
 
+        //force an update so the hardware registers it
         pinpoint.update();
     }
 
@@ -79,15 +84,19 @@ public class OdometrySubsystem extends SubsystemBase {
         // FTCLib natively handles position as a Pose2d(x, y, Rotation2d)
         double xInches = pinpoint.getPosX(DistanceUnit.INCH); // Returns position in inches
         double yInches = pinpoint.getPosY(DistanceUnit.INCH);
-        double headingDegrees = pinpoint.getHeading(AngleUnit.DEGREES);
 
-        currentPose = new Pose2d(xInches, yInches, new Rotation2d(Math.toRadians(headingDegrees)));
+//        double headingDegrees = pinpoint.getHeading(AngleUnit.DEGREES);
+
+
+        double headingRadians = pinpoint.getHeading(AngleUnit.RADIANS);
+
+        currentPose = new Pose2d(xInches, yInches, new Rotation2d(headingRadians));
         CrossOpModeStorage.currentPose = currentPose;
 
 //        Log.i("Odometry", "X Position: " + xInches + " Y Position: " + yInches + " Heading: " + headingDegrees);
 
         telemetry.addData("Odometry: X Position", xInches);
         telemetry.addData("Odometry: Y Position", yInches);
-        telemetry.addData("Odometry: Heading (Deg)", headingDegrees);
+        telemetry.addData("Odometry: Heading (Deg)", Math.toDegrees(headingRadians) + 360); //adding for ease of readability
     }
 }

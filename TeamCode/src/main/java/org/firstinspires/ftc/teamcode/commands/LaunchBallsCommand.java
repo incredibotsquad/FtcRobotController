@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.commands;
 
+import android.util.Log;
+
 import com.arcrobotics.ftclib.command.CommandBase;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
@@ -31,8 +33,10 @@ public class LaunchBallsCommand extends CommandBase {
     public void execute() {
         // Only open the gate if the flywheel and turret are ready
         if (launcher.isReadyToLaunch()) {
+            Log.i("LaunchBallsCommand", "Execute: launcher ready: opening gate");
             launchGate.openGate();
         } else {
+            Log.i("LaunchBallsCommand", "Execute: launcher not ready to launch");
             // If we lose aim (e.g. robot bumped), close gate immediately 
             // to stop firing mid-air
             launchGate.closeGate();
@@ -46,8 +50,13 @@ public class LaunchBallsCommand extends CommandBase {
         return launcher.isReadyToLaunch() && timer.milliseconds() > LAUNCH_DURATION;
     }
 
+    /**
+     * Called when the command ends - either normally via finished or if interrrupted / cancelled.
+     * this ensures the gate closes always
+     * @param interrupted true if the command was cancelled**/
     @Override
     public void end(boolean interrupted) {
+        Log.i("LaunchBallsCommand", "End: command interrupted: " + interrupted);
         // Safety: Always close the gate when the command ends
         launchGate.closeGate();
     }
