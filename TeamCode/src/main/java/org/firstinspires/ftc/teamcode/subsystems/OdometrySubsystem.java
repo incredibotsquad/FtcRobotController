@@ -84,10 +84,6 @@ public class OdometrySubsystem extends SubsystemBase {
         // FTCLib natively handles position as a Pose2d(x, y, Rotation2d)
         double xInches = pinpoint.getPosX(DistanceUnit.INCH); // Returns position in inches
         double yInches = pinpoint.getPosY(DistanceUnit.INCH);
-
-//        double headingDegrees = pinpoint.getHeading(AngleUnit.DEGREES);
-
-
         double headingRadians = pinpoint.getHeading(AngleUnit.RADIANS);
 
         currentPose = new Pose2d(xInches, yInches, new Rotation2d(headingRadians));

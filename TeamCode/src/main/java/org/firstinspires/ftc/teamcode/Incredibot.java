@@ -72,31 +72,18 @@ public class Incredibot extends Robot {
 
         driveSubsystem.setDefaultCommand(new DriveRobotCommand(driveSubsystem, driverGamepad));
 
-        driverGamepad.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER).
+        //TODO: CREATE AN OVERRIDE TO LOCK THE TURRET IN CENTER POSITION IN CASE TELEMETRY MESSES UP
+        //TODO: MAKE SURE THE LAUNCHER GATE IS CLOSED UPON BOT START - WE WILL DO IT MANUALLY BUT WE NEED TO DO IT IN CODE AS WELL
+        //TODO: ADD AN OPTION TO INITIALIZE AN ALLIANCE COLOR IN TELEOP
+
+        driverGamepad.getGamepadButton(GamepadKeys.Button.LEFT_BUMPER).
                 whenHeld(new LaunchBallsCommand(launchSubsystem, launchGateSubsystem));
 
 //        register(odometrySubsystem);
 
         // 2. AUTO-FIRE TOGGLE (While held)
-//        operatorGamepad
-//                .getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER)
-//                .whileHeld(new AutoFireCommand(launchSubsystem, launchGateSubsystem, odometrySubsystem));
-
-//        driverGamepad.getGamepadButton(GamepadKeys.Button.A).
-//                whenPressed(new InstantCommand(
-//                        () -> {
-//                            Log.i("Incredibot", "Inside key press lambda");
-//                            if (launchGateSubsystem.isGateOpen()) {
-//                                Log.i("Incredibot", "Inside key press lambda - closing");
-//                                launchGateSubsystem.closeGate();
-//                            }
-//                            else {
-//                                Log.i("Incredibot", "Inside key press lambda - opening");
-//                                launchGateSubsystem.openGate();
-//                            }
-//                        }
-//                        ));
-
+        driverGamepad.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER)
+                .whileHeld(new AutoFireCommand(launchSubsystem, launchGateSubsystem, odometrySubsystem));
     }
 
     public void initAuto() {

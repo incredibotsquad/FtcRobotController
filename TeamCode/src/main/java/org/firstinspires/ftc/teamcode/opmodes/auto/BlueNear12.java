@@ -1,6 +1,8 @@
 package org.firstinspires.ftc.teamcode.opmodes.auto;
 
+import com.arcrobotics.ftclib.command.Command;
 import com.arcrobotics.ftclib.command.CommandOpMode;
+import com.arcrobotics.ftclib.command.SequentialCommandGroup;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
@@ -11,12 +13,8 @@ import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
-import com.pedropathing.ivy.Command;
-import com.pedropathing.ivy.Scheduler;
 import com.pedropathing.paths.PathChain;
 
-import static com.pedropathing.ivy.pedro.PedroCommands.*;
-import static com.pedropathing.ivy.groups.Groups.*;
 @Autonomous(name = "Blue Near 1+2", group = "Autonomous")
 public class BlueNear12 extends CommandOpMode {
 
@@ -36,30 +34,39 @@ public class BlueNear12 extends CommandOpMode {
 
     //this is where we would interlace other commands
     public Command autoRoutine() {
-        return sequential(
-                /* Go To Score Command*/
-                follow(follower, scorePreload),
-                /* Collect 3 Artifacts Command*/
-                follow(follower, grabPickup1, true),
-                /* Go Back To Score Command*/
-                follow(follower, scorePickup1, true),
-                /* Collect 3 Artifacts Command*/
-                follow(follower, grabPickup2, true),
-                /* Go Back To Score Command*/
-                follow(follower, scorePickup2, true),
-                /* Collect 3 Artifacts Command*/
-                follow(follower, grabPickup3, true),
-                /* Go Back To Score Command*/
-                follow(follower, scorePickup3, true),
-                /* Leave Start Line Command*/
-                follow(follower, leave, true)
+        return new SequentialCommandGroup(
+            // We use a custom lambda or a FollowerCommand to run the paths
+            runPath(scorePreload),
+
+            // Example of interlacing a robot action (e.g., launching)
+            // new LaunchBallsCommand(robot.launchSubsystem),
+
+            runPath(grabPickup1, true),
+            runPath(scorePickup1, true),
+
+            runPath(grabPickup2, true),
+            runPath(scorePickup2, true),
+
+            runPath(grabPickup3, true),
+            runPath(scorePickup3, true),
+
+            runPath(leave, true)
         );
+    }
+
+    private Command runPath(PathChain path, boolean holdEnd) {
+        return new com.arcrobotics.ftclib.command.RunCommand(
+                () -> follower.followPath(path, holdEnd),
+                robot.odometrySubsystem // Assuming odometrySubsystem owns the follower
+        ).interruptOn(() -> !follower.isBusy());
+    }
+
+    private Command runPath(PathChain path) {
+        return runPath(path, false);
     }
 
     @Override
     public void initialize() {
-
-        Scheduler.reset();
 
         // Setup Pedro Follower (This should be initialized in your OdometrySubsystem usually)
         follower = Constants.createFollower(hardwareMap);
@@ -70,7 +77,7 @@ public class BlueNear12 extends CommandOpMode {
         // We pass 'null' for gamepads since it's Autonomous
         robot = new Incredibot(hardwareMap, Incredibot.OpModeType.AUTO, null, null, PanelsTelemetry.INSTANCE.getTelemetry());
 
-        Scheduler.schedule(autoRoutine());
+        schedule(autoRoutine());
     }
 
     public void buildPaths() {
@@ -125,9 +132,8 @@ public class BlueNear12 extends CommandOpMode {
 
     @Override
     public void run() {
-        super.run();
+        super.run(); // super.run() triggers the FTCLib Scheduler automatically
         follower.update(); // Crucial for Pedro Pathing to calculate movements
-        Scheduler.execute();
 
         telemetry.addData("x", follower.getPose().getX());
         telemetry.addData("y", follower.getPose().getY());

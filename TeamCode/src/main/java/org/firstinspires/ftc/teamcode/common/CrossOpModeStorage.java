@@ -8,7 +8,13 @@ import com.arcrobotics.ftclib.geometry.Pose2d;
  * A static field allows data to persist between opmodes.
  */
 public class CrossOpModeStorage {
-    //0,0 and obelisk heading is the default
+
+    public static final double BLUE_TARGET_X = 0.0;
+    public static final double BLUE_TARGET_Y = 144.0;
+
+    public static final double RED_TARGET_X = 144.0;
+    public static final double RED_TARGET_Y = 144.0;
+
     public static Pose2d currentPose = new Pose2d();
 
     public static AllianceColors allianceColor = AllianceColors.RED;

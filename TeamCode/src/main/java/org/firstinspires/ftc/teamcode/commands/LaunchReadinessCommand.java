@@ -19,11 +19,7 @@ public class LaunchReadinessCommand extends CommandBase {
 
     // Define the fixed field coordinate you want to point at (e.g., center of the backdrop or goal)
 
-    private static final double BLUE_TARGET_X = 0.0;
-    private static final double BLUE_TARGET_Y = 144.0;
 
-    private static final double RED_TARGET_X = 144.0;
-    private static final double RED_TARGET_Y = 144.0;
 
     private double TARGET_X;
     private double TARGET_Y;
@@ -56,12 +52,12 @@ public class LaunchReadinessCommand extends CommandBase {
         this.telemetry = telemetry;
 
         if (CrossOpModeStorage.allianceColor == AllianceColors.BLUE) {
-            TARGET_X = BLUE_TARGET_X;
-            TARGET_Y = BLUE_TARGET_Y;
+            TARGET_X = CrossOpModeStorage.BLUE_TARGET_X;
+            TARGET_Y = CrossOpModeStorage.BLUE_TARGET_Y;
         }
         else {
-            TARGET_X = RED_TARGET_X;
-            TARGET_Y = RED_TARGET_Y;
+            TARGET_X = CrossOpModeStorage.RED_TARGET_X;
+            TARGET_Y = CrossOpModeStorage.RED_TARGET_Y;
         }
         
         // This command strictly controls the launch Subsystem
