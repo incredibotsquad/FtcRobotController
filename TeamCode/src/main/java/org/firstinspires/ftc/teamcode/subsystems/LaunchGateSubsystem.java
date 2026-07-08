@@ -15,14 +15,13 @@ public class LaunchGateSubsystem extends SubsystemBase {
 
 
     //TODO: TUNE THESE VALUES
-    private static final double LAUNCH_GATE_OPEN = 0.43;
-    private static final double LAUNCH_GATE_CLOSED = 0.3;
+    private static final double LAUNCH_GATE_OPEN = 0.35;
+    private static final double LAUNCH_GATE_CLOSED = 0.12;
 
     private boolean isGateOpen;
     public LaunchGateSubsystem(HardwareMap hardwareMap, TelemetryManager telemetry) {
         gateServo = new SimpleServo(hardwareMap, "launchGateServo", 0, 270);
-        gateServo.setInverted(true);
-        isGateOpen = true;
+        isGateOpen = false;
     }
 
     public void openGate() {

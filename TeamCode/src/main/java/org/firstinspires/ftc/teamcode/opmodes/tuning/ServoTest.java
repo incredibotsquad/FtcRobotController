@@ -54,7 +54,7 @@ public class ServoTest extends LinearOpMode {
 
         while (opModeInInit()) {
             Servo1 = hardwareMap.get(Servo.class, servo1Name);
-            Servo1.setDirection(Servo.Direction.REVERSE);
+//            Servo1.setDirection(Servo.Direction.REVERSE);
 
             if (enableServo2) {
                 Servo2 = hardwareMap.get(Servo.class, servo2Name);

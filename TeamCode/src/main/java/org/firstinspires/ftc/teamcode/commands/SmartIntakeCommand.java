@@ -12,7 +12,7 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
 
 @Configurable
 public class SmartIntakeCommand extends CommandBase {
-    public  static double DELAYED_STOP_DURATION_MILLIS = 1500;
+    public  static double DELAYED_STOP_DURATION_MILLIS = 500;
     private final IntakeSubsystem intake;
     private final LaunchGateSubsystem launchGate;
     private ElapsedTime delayedStoptimer;
@@ -34,19 +34,21 @@ public class SmartIntakeCommand extends CommandBase {
 //        Log.i("SmartIntakeCommand", "needsMoreArtifacts: " + needsMoreArtifacts);
 
         if (isLaunching || needsMoreArtifacts) {
-//            Log.i("SmartIntakeCommand", "Staring intake: ");
+            Log.i("SmartIntakeCommand", "Staring intake: ");
             intake.startIntake();
             delayedStoptimer = null;
 
         } else {
             // We have 3 and we aren't launching
-            Log.i("SmartIntakeCommand", "Stopping intake: ");
 
             //keep running the intake for another half a second.
             if (delayedStoptimer == null) {
                 delayedStoptimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
             }
             else if (delayedStoptimer.milliseconds() > DELAYED_STOP_DURATION_MILLIS) {
+
+                Log.i("SmartIntakeCommand", "Stopping intake: ");
+
                 intake.stopIntake();
             }
         }

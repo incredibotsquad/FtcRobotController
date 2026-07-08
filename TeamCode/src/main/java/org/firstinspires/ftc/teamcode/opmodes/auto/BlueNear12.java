@@ -7,6 +7,7 @@ import com.bylazar.telemetry.PanelsTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
 import org.firstinspires.ftc.teamcode.Incredibot;
+import org.firstinspires.ftc.teamcode.commands.FollowPathCommand;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 import com.pedropathing.follower.Follower;
@@ -32,44 +33,13 @@ public class BlueNear12 extends CommandOpMode {
     //defining our PathChains
     private PathChain scorePreload, grabPickup1, scorePickup1, grabPickup2, scorePickup2, grabPickup3, scorePickup3, leave;
 
-    //this is where we would interlace other commands
-    public Command autoRoutine() {
-        return new SequentialCommandGroup(
-            // We use a custom lambda or a FollowerCommand to run the paths
-            runPath(scorePreload),
-
-            // Example of interlacing a robot action (e.g., launching)
-            // new LaunchBallsCommand(robot.launchSubsystem),
-
-            runPath(grabPickup1, true),
-            runPath(scorePickup1, true),
-
-            runPath(grabPickup2, true),
-            runPath(scorePickup2, true),
-
-            runPath(grabPickup3, true),
-            runPath(scorePickup3, true),
-
-            runPath(leave, true)
-        );
-    }
-
-    private Command runPath(PathChain path, boolean holdEnd) {
-        return new com.arcrobotics.ftclib.command.RunCommand(
-                () -> follower.followPath(path, holdEnd),
-                robot.odometrySubsystem // Assuming odometrySubsystem owns the follower
-        ).interruptOn(() -> !follower.isBusy());
-    }
-
-    private Command runPath(PathChain path) {
-        return runPath(path, false);
-    }
-
     @Override
     public void initialize() {
 
         // Setup Pedro Follower (This should be initialized in your OdometrySubsystem usually)
         follower = Constants.createFollower(hardwareMap);
+
+//        Pedro Pathing uses complex math (Bezier curves). Never generate new Path() inside the loop() or execute() methods. Always build your PathChain objects in the initialize() phase so the robot starts moving the instant the match begins.
         buildPaths();
         follower.setStartingPose(startPose);
 
@@ -77,7 +47,7 @@ public class BlueNear12 extends CommandOpMode {
         // We pass 'null' for gamepads since it's Autonomous
         robot = new Incredibot(hardwareMap, Incredibot.OpModeType.AUTO, null, null, PanelsTelemetry.INSTANCE.getTelemetry());
 
-        schedule(autoRoutine());
+        schedule(getAutoRoutine());
     }
 
     public void buildPaths() {
@@ -128,6 +98,26 @@ public class BlueNear12 extends CommandOpMode {
                 .addPath(new BezierLine(scorePose, endPose))
                 .setConstantHeadingInterpolation(scorePose.getHeading())
                 .build();
+    }
+
+    public Command getAutoRoutine() {
+        return new SequentialCommandGroup(
+                new FollowPathCommand(follower, scorePreload, true),
+
+                // Example of interlacing a robot action (e.g., launching)
+                // new LaunchBallsCommand(robot.launchSubsystem),
+
+                new FollowPathCommand(follower, grabPickup1, true),
+                new FollowPathCommand(follower, scorePickup1, true),
+
+                new FollowPathCommand(follower, grabPickup2, true),
+                new FollowPathCommand(follower, scorePickup2, true),
+
+                new FollowPathCommand(follower, grabPickup3, true),
+                new FollowPathCommand(follower, scorePickup3, true),
+
+                new FollowPathCommand(follower, leave, true)
+        );
     }
 
     @Override
