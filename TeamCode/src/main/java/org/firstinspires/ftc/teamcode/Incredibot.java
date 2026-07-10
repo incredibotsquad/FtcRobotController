@@ -79,8 +79,8 @@ public class Incredibot extends Robot {
         //TODO: CREATE AN OVERRIDE TO LOCK THE TURRET IN CENTER POSITION IN CASE ODOMETRY MESSES UP
         //TODO: ADD AN OPTION TO INITIALIZE AN ALLIANCE COLOR IN TELEOP
 
-        operatorGamepad.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER).
-                whenHeld(new LaunchBallsCommand(launchSubsystem, launchGateSubsystem));
+        operatorGamepad.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER)
+                .whenPressed(new LaunchBallsCommand(launchSubsystem, launchGateSubsystem));
 
 //        register(odometrySubsystem);
 

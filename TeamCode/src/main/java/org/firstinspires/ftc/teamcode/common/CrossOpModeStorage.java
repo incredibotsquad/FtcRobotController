@@ -10,10 +10,10 @@ import com.arcrobotics.ftclib.geometry.Pose2d;
 public class CrossOpModeStorage {
 
     public static final double BLUE_TARGET_X = 0.0;
-    public static final double BLUE_TARGET_Y = 144.0;
+    public static final double BLUE_TARGET_Y = 134.0;
 
-    public static final double RED_TARGET_X = 144.0;
-    public static final double RED_TARGET_Y = 144.0;
+    public static final double RED_TARGET_X = 134.0;
+    public static final double RED_TARGET_Y = 134.0;
 
     public static Pose2d currentPose = new Pose2d();
 
