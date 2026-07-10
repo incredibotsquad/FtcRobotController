@@ -16,6 +16,11 @@ public class DriveSubsystem extends SubsystemBase {
     private final MotorEx backLeftMotor;
     private final MotorEx backRightMotor;
 
+    public static String FRONT_LEFT_MOTOR_NAME = "frontLeftMotor";
+    public static String FRONT_RIGHT_MOTOR_NAME = "frontRightMotor";
+    public static String BACK_LEFT_MOTOR_NAME = "backLeftMotor";
+    public static String BACK_RIGHT_MOTOR_NAME = "backRightMotor";
+
     public DriveSubsystem(HardwareMap hardwareMap, TelemetryManager telemetry) {
         frontLeftMotor = new MotorEx(hardwareMap, "frontLeftMotor", Motor.GoBILDA.RPM_435);
         frontLeftMotor.setZeroPowerBehavior(Motor.ZeroPowerBehavior.BRAKE);
