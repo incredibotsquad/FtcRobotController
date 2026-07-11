@@ -53,7 +53,7 @@ public class IntakeSubsystem extends SubsystemBase {
         intakeMotor.set(-1);
     }
 
-    private void updateStatusLight(int artifactCount) {
+    public void updateStatusLight(int artifactCount) {
 
         double color =  ZERO_BALL_COLOR;
 
@@ -112,8 +112,6 @@ public class IntakeSubsystem extends SubsystemBase {
      * */
     @Override
     public void periodic() {
-
-        updateStatusLight(getArtifactCount());
 
         // (You would pass a telemetry object into the subsystem constructor to use this)
         // telemetry.addData("Launcher Ready", isReady);

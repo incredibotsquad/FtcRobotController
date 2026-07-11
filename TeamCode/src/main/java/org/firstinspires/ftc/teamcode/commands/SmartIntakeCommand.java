@@ -1,8 +1,5 @@
 package org.firstinspires.ftc.teamcode.commands;
 
-
-import android.util.Log;
-
 import com.arcrobotics.ftclib.command.CommandBase;
 import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -14,14 +11,21 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchKickSubsystem;
 @Configurable
 public class SmartIntakeCommand extends CommandBase {
     public static double STABLE_STORAGE_MS = 200;
-    public  static double DELAYED_STOP_MS = 500;
-    public static double KICKER_PULSE_MS = 200; // Time kicker stays extended
+    public static double DELAYED_STOP_MS = 500;
+    public static double KICKER_PULSE_MS = 200;
+    public static double KICK_STABILITY_MS = 300; // NEW: Duration to wait before kicking
+
     private final IntakeSubsystem intakeSubsystem;
     private final LaunchGateSubsystem launchGate;
     private final LaunchKickSubsystem launchKick;
-    private ElapsedTime stableTimer;
-    private ElapsedTime kickTimer = new ElapsedTime();
+
+    private final ElapsedTime kickTimer = new ElapsedTime();
+    private final ElapsedTime kickStabilityTimer = new ElapsedTime(); // NEW
     private ElapsedTime stopDelayTimer;
+
+    private int lastRawCount = -1;
+    private int stableCount = 0;
+    private final ElapsedTime countStabilityTimer = new ElapsedTime();
 
     public SmartIntakeCommand(IntakeSubsystem intakeSubsystem, LaunchGateSubsystem launchGate, LaunchKickSubsystem launchKick) {
         this.intakeSubsystem = intakeSubsystem;
@@ -31,53 +35,54 @@ public class SmartIntakeCommand extends CommandBase {
         addRequirements(intakeSubsystem, launchKick);
     }
 
-
     @Override
     public void execute() {
-        boolean isLaunching = launchGate.isGateOpen();
+        // --- 1. STABLE COUNT & LIGHT LOGIC ---
+        int currentRawCount = intakeSubsystem.getArtifactCount();
 
-        // --- 1. SENSOR STABILITY LOGIC ---
+        if (currentRawCount != lastRawCount) {
+            countStabilityTimer.reset();
+            lastRawCount = currentRawCount;
+        }
+
+        if (countStabilityTimer.milliseconds() > STABLE_STORAGE_MS) {
+            stableCount = currentRawCount;
+        }
+
+        intakeSubsystem.updateStatusLight(stableCount);
+
+        // --- 2. INTAKE MOTOR CONTROL ---
+        boolean isLaunching = launchGate.isGateOpen();
+        boolean isConfirmedFull = (stableCount == 3);
+
+        if (isLaunching || !isConfirmedFull) {
+            intakeSubsystem.startIntake();
+            stopDelayTimer = null;
+        } else {
+            if (stopDelayTimer == null) {
+                stopDelayTimer = new ElapsedTime();
+            } else if (stopDelayTimer.milliseconds() > DELAYED_STOP_MS) {
+                intakeSubsystem.stopIntake();
+            }
+        }
+
+        // --- 3. AUTO-KICK LOGIC ---
         boolean low = intakeSubsystem.isLowSensorBlocked();
         boolean mid = intakeSubsystem.isMidSensorBlocked();
         boolean high = intakeSubsystem.isHighSensorBlocked();
 
-        // Start stableTimer if all three are blocked, reset it if they aren't
-        if (low && mid && high) {
-            if (stableTimer == null) {
-                stableTimer = new ElapsedTime();
+        boolean isStuck = isLaunching && high && !mid && !low;
+
+        if (isStuck) {
+            // Check if the stuck state has been stable for X ms
+            if (kickStabilityTimer.milliseconds() > KICK_STABILITY_MS) {
+                launchKick.extendKicker();
+                kickTimer.reset();
             }
         } else {
-            stableTimer = null;
-        }
+            // Reset stability if the condition is no longer met
+            kickStabilityTimer.reset();
 
-        // A "Confirmed Full" state requires all 3 sensors to be blocked for 200ms
-        boolean isConfirmedFull = (stableTimer != null && stableTimer.milliseconds() > STABLE_STORAGE_MS);
-
-        // --- 2. INTAKE MOTOR CONTROL ---
-        if (isLaunching || !isConfirmedFull) {
-            // Run intake if we are shooting OR if we aren't confirmed full yet
-            intakeSubsystem.startIntake();
-            stopDelayTimer = null;
-            Log.i("SmartIntakeCommand", "Staring intake: ");
-        } else {
-            // We are Confirmed Full and not launching
-            if (stopDelayTimer == null) {
-                stopDelayTimer = new ElapsedTime();
-            } else if (stopDelayTimer.milliseconds() > DELAYED_STOP_MS) {
-                // Only stop after the extra "seating" time
-                intakeSubsystem.stopIntake();
-                Log.i("SmartIntakeCommand", "Stopping intake: ");
-            }
-        }
-
-        // --- 3. AUTO-KICK LOGIC (Timer is Essential here) ---
-        // If launching and ONLY the top ball is left (stuck in dead zone)
-        if (isLaunching && high && !mid && !low) {
-            launchKick.extendKicker();
-            kickTimer.reset(); // Keep resetting while the condition is true
-        } else {
-            // Condition is no longer met (either ball moved or we stopped launching)
-            // BUT we wait for the pulse timer to finish before retracting
             if (kickTimer.milliseconds() > KICKER_PULSE_MS) {
                 launchKick.retractKicker();
             }
@@ -86,6 +91,6 @@ public class SmartIntakeCommand extends CommandBase {
 
     @Override
     public boolean isFinished() {
-        return false; // This stays active throughout the match
+        return false;
     }
 }
