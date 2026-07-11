@@ -195,7 +195,11 @@ public class LaunchReadinessCommand extends CommandBase {
     private void applyShotSolution(ShotSolution solution) {
         FlywheelConstants current = solution.flywheelConstants;
 
-        launchSubsystem.setTurretPosition(solution.turretServoPosition);
+        if(launchSubsystem.isTurretLocked())
+            launchSubsystem.setTurretPosition(LaunchSubsystem.TURRET_MID);
+        else
+            launchSubsystem.setTurretPosition(solution.turretServoPosition);
+
         launchSubsystem.setFlywheelPID(current.P, current.I, current.D);
         launchSubsystem.updateFeedforward(current.kS, current.kV);
         launchSubsystem.updateFlywheel(current.targetRPM);
