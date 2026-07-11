@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Moving Shot Compensation Tuning Guide</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --ink: #162033;
+      --muted: #596579;
+      --line: #ccd4e2;
+      --blue: #245f9f;
+      --blue-bg: #e8f2ff;
+      --green: #24734b;
+      --green-bg: #e9f7ef;
+      --amber: #9b6618;
+      --amber-bg: #fff3d8;
+      --red: #b43b48;
+      --red-bg: #ffedf0;
+      --code: #edf1f7;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.5;
+    }
+
+    header {
+      padding: 34px 28px 28px;
+      background: #172236;
+      color: white;
+      border-bottom: 5px solid #2e7cc4;
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+      font-size: 32px;
+      letter-spacing: 0;
+    }
+
+    header p {
+      margin: 0;
+      max-width: 980px;
+      color: #d8e0ec;
+      font-size: 16px;
+    }
+
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    section {
+      margin: 0 0 22px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 10px 24px rgba(31, 41, 55, 0.07);
+    }
+
+    h2 {
+      margin: 0;
+      padding: 15px 18px;
+      background: #fbfcff;
+      border-bottom: 1px solid var(--line);
+      font-size: 21px;
+    }
+
+    h3 {
+      margin: 18px 0 8px;
+      font-size: 17px;
+    }
+
+    .content {
+      padding: 18px;
+    }
+
+    p {
+      margin: 0 0 12px;
+    }
+
+    ul,
+    ol {
+      margin-top: 0;
+      padding-left: 22px;
+    }
+
+    li + li {
+      margin-top: 5px;
+    }
+
+    code {
+      background: var(--code);
+      border: 1px solid #d8e0eb;
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.92em;
+    }
+
+    pre {
+      overflow-x: auto;
+      background: #111827;
+      color: #e5edf7;
+      border-radius: 8px;
+      padding: 14px;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th,
+    td {
+      text-align: left;
+      vertical-align: top;
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    th {
+      background: #f8faff;
+      color: #1f2937;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-size: 12px;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fff;
+    }
+
+    .callout {
+      border-left: 5px solid var(--blue);
+      background: var(--blue-bg);
+      padding: 12px 14px;
+      border-radius: 6px;
+      margin: 12px 0;
+    }
+
+    .warn {
+      border-left-color: var(--amber);
+      background: var(--amber-bg);
+    }
+
+    .danger {
+      border-left-color: var(--red);
+      background: var(--red-bg);
+    }
+
+    .ok {
+      border-left-color: var(--green);
+      background: var(--green-bg);
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(120px, 1fr));
+      gap: 10px;
+      margin: 12px 0;
+    }
+
+    .step {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #ffffff;
+      min-height: 92px;
+      position: relative;
+    }
+
+    .step strong {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .step p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 860px) {
+      main {
+        padding: 14px;
+      }
+
+      .grid,
+      .flow {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Moving Shot Compensation Tuning Guide</h1>
+    <p>
+      This guide explains the optional shooting-on-the-move code, what it changes,
+      how the math works, and which values should be tested and tuned before making
+      it the normal competition path.
+    </p>
+  </header>
+
+  <main>
+    <section>
+      <h2>What Changed</h2>
+      <div class="content">
+        <p>
+          The robot now has an optional moving-shot path. It is controlled by this flag:
+        </p>
+        <pre>LaunchReadinessCommand.ENABLE_MOVING_SHOT_COMPENSATION = false;</pre>
+        <div class="callout ok">
+          The flag defaults to <code>false</code>, so the robot still uses the original
+          static pose-based shot behavior unless the team explicitly enables moving-shot
+          compensation.
+        </div>
+        <div class="grid">
+          <div class="card">
+            <h3>Files Changed</h3>
+            <ul>
+              <li><code>OdometrySubsystem.java</code>: estimates robot velocity and acceleration.</li>
+              <li><code>LaunchReadinessCommand.java</code>: computes static and moving shot solutions.</li>
+              <li><code>LaunchSubsystem.java</code>: adds a shot-solution readiness gate.</li>
+              <li><code>AutoFireCommand.java</code>: adds zone-specific speed limits when moving mode is enabled.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Design Goal</h3>
+            <p>
+              Keep the existing shot code safe and available, while adding a testable alternate
+              path that accounts for robot translational velocity.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>High-Level Flow</h2>
+      <div class="content">
+        <div class="flow">
+          <div class="step">
+            <strong>1. Read Pose</strong>
+            <p>Pinpoint provides X, Y, and heading in <code>OdometrySubsystem.periodic()</code>.</p>
+          </div>
+          <div class="step">
+            <strong>2. Estimate Velocity</strong>
+            <p>Velocity is calculated from pose change divided by loop time.</p>
+          </div>
+          <div class="step">
+            <strong>3. Calculate Shots</strong>
+            <p><code>LaunchReadinessCommand</code> calculates both static and moving shot solutions.</p>
+          </div>
+          <div class="step">
+            <strong>4. Apply Active Mode</strong>
+            <p>The static solution is used unless moving-shot compensation is enabled.</p>
+          </div>
+          <div class="step">
+            <strong>5. Gate Fire</strong>
+            <p><code>AutoFireCommand</code> opens the gate only if zone, readiness, and speed checks pass.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Velocity Calculation</h2>
+      <div class="content">
+        <p>
+          Velocity is calculated in <code>OdometrySubsystem</code> from the Pinpoint pose stream.
+          It does not depend on Pedro Pathing, so it works in TeleOp and Autonomous.
+        </p>
+        <pre>fieldVelocity = new Translation2d(
+    (newPose.getX() - previousPose.getX()) / dtSeconds,
+    (newPose.getY() - previousPose.getY()) / dtSeconds
+);</pre>
+        <p>
+          This produces field-relative velocity in inches per second:
+        </p>
+        <ul>
+          <li><code>vx</code>: robot speed along the field X axis.</li>
+          <li><code>vy</code>: robot speed along the field Y axis.</li>
+          <li><code>speed</code>: <code>sqrt(vx^2 + vy^2)</code>.</li>
+        </ul>
+        <pre>fieldAcceleration = new Translation2d(
+    (fieldVelocity.getX() - previousVelocity.getX()) / dtSeconds,
+    (fieldVelocity.getY() - previousVelocity.getY()) / dtSeconds
+);</pre>
+        <p>
+          Acceleration is also estimated, but the first moving-shot version does not use it for control.
+          It is available for future filtering or more advanced prediction.
+        </p>
+        <div class="callout warn">
+          Velocity based on raw pose differences can be noisy. Watch telemetry while the robot is stopped:
+          speed should be close to zero. If it jitters too much, add filtering before trusting high-speed shots.
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Shot Estimation Logic</h2>
+      <div class="content">
+        <h3>Static Shot</h3>
+        <p>
+          The original static shot aims directly at the real target coordinate:
+        </p>
+        <pre>target = (TARGET_X, TARGET_Y)</pre>
+        <p>
+          From that target, the code calculates:
+        </p>
+        <ul>
+          <li>Distance to target.</li>
+          <li>Turret angle relative to robot heading.</li>
+          <li>Turret servo position.</li>
+          <li>Flywheel constants from the distance lookup table.</li>
+          <li>Visor position, currently fixed to <code>LAUNCH_VISOR_LOW</code>.</li>
+        </ul>
+
+        <h3>Moving Shot</h3>
+        <p>
+          The moving shot shifts the aim target opposite the robot's field-relative velocity.
+          This is a first-order compensation for the ball inheriting robot velocity when launched.
+        </p>
+        <pre>compensationTime = estimatedFlightTime + BURST_MIDPOINT_SECONDS</pre>
+        <pre>compensatedTargetX = TARGET_X - velocityX * compensationTime
+compensatedTargetY = TARGET_Y - velocityY * compensationTime</pre>
+        <p>
+          Then the same turret/RPM/visor calculation is run against the compensated target.
+        </p>
+        <div class="callout">
+          Example: if the robot is moving +X at 20 in/s and compensation time is 0.5 s,
+          the compensated target moves 10 inches in the -X direction. The turret aims slightly
+          behind the true goal so the ball's inherited robot velocity carries it toward the goal.
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Why Burst Timing Matters</h2>
+      <div class="content">
+        <p>
+          Opening the launch gate releases all three balls. That means the shot is a burst, not
+          three individually-aimed shots. The robot may move between ball 1, ball 2, and ball 3.
+        </p>
+        <p>
+          The code uses <code>BURST_MIDPOINT_SECONDS</code> to aim for the middle of the burst.
+          This tries to balance the error across all three balls rather than perfectly optimizing only
+          the first ball.
+        </p>
+        <pre>compensationTime = flightTime + burstMidpoint</pre>
+        <div class="callout warn">
+          If all three balls spread in the direction of robot travel, tune burst midpoint and speed caps
+          before increasing aggression.
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Tunable Variables</h2>
+      <div class="content">
+        <table>
+          <thead>
+            <tr>
+              <th>Variable</th>
+              <th>Current Value</th>
+              <th>Where</th>
+              <th>Meaning</th>
+              <th>How To Tune</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>ENABLE_MOVING_SHOT_COMPENSATION</code></td>
+              <td><code>false</code></td>
+              <td><code>LaunchReadinessCommand</code></td>
+              <td>Master switch for moving-shot compensation.</td>
+              <td>Keep false while validating telemetry. Turn true only during controlled testing.</td>
+            </tr>
+            <tr>
+              <td><code>SHOT_FLIGHT_BASE_SECONDS</code></td>
+              <td><code>0.25</code></td>
+              <td><code>LaunchReadinessCommand</code></td>
+              <td>Base estimate for how long a ball is in flight.</td>
+              <td>Increase if shots miss in the direction of robot travel. Decrease if they miss opposite travel.</td>
+            </tr>
+            <tr>
+              <td><code>SHOT_FLIGHT_SECONDS_PER_INCH</code></td>
+              <td><code>0.0035</code></td>
+              <td><code>LaunchReadinessCommand</code></td>
+              <td>Additional flight time added per inch of distance.</td>
+              <td>Tune after base time. Increase if longer shots need more lead than shorter shots.</td>
+            </tr>
+            <tr>
+              <td><code>BURST_MIDPOINT_SECONDS</code></td>
+              <td><code>0.175</code></td>
+              <td><code>LaunchReadinessCommand</code></td>
+              <td>Extra time to aim for the middle of the three-ball release.</td>
+              <td>Measure or estimate the time from gate open to the middle ball exiting. Tune for tightest 3-ball group.</td>
+            </tr>
+            <tr>
+              <td><code>MAX_COMPENSATED_SPEED_IPS</code></td>
+              <td><code>24.0</code></td>
+              <td><code>LaunchReadinessCommand</code></td>
+              <td>Global speed safety limit for declaring a moving shot solution ready.</td>
+              <td>Start lower if shots are inconsistent. Raise only after the math is proven.</td>
+            </tr>
+            <tr>
+              <td><code>MAX_TARGET_LEAD_INCHES</code></td>
+              <td><code>18.0</code></td>
+              <td><code>LaunchReadinessCommand</code></td>
+              <td>Maximum distance the target may be shifted for compensation.</td>
+              <td>If this trips often, the robot is moving too fast or the time estimates are too high.</td>
+            </tr>
+            <tr>
+              <td><code>CLOSE_ZONE_MAX_MOVING_SHOT_SPEED_IPS</code></td>
+              <td><code>18.0</code></td>
+              <td><code>AutoFireCommand</code></td>
+              <td>Auto-fire speed cap in the large goal-side launch zone.</td>
+              <td>Start around 8-10 in/s for first tests, then raise if consistency is good.</td>
+            </tr>
+            <tr>
+              <td><code>FAR_ZONE_MAX_MOVING_SHOT_SPEED_IPS</code></td>
+              <td><code>6.0</code></td>
+              <td><code>AutoFireCommand</code></td>
+              <td>Auto-fire speed cap in the small audience-side launch zone.</td>
+              <td>Keep conservative. This zone is small, so the legal window is short.</td>
+            </tr>
+            <tr>
+              <td><code>LOOKUP_TABLE</code></td>
+              <td>75, 95, 115, 130 in entries</td>
+              <td><code>LaunchReadinessCommand</code></td>
+              <td>Distance-to-flywheel constants table.</td>
+              <td>Tune static shots first. Moving shot uses effective compensated distance through the same table.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>Safety and Readiness Gates</h2>
+      <div class="content">
+        <p>
+          A moving shot is only considered ready when all normal launcher checks pass and the shot
+          solution is safe.
+        </p>
+        <pre>shotSolutionReady =
+    robotSpeedIps &lt;= MAX_COMPENSATED_SPEED_IPS
+    &amp;&amp; leadDistanceInches &lt;= MAX_TARGET_LEAD_INCHES
+    &amp;&amp; !turretTargetClamped;</pre>
+        <p>
+          <code>LaunchSubsystem.isReadyToLaunch()</code> now includes this readiness flag:
+        </p>
+        <pre>return flywheelReady &amp;&amp; turretReady &amp;&amp; visorReady &amp;&amp; shotSolutionReady;</pre>
+        <p>
+          In <code>AutoFireCommand</code>, moving mode also has zone-specific speed limits:
+        </p>
+        <pre>close zone speed cap = 18 in/s
+far zone speed cap   = 6 in/s</pre>
+        <div class="callout danger">
+          Manual firing currently opens the gate through <code>LaunchBallsCommand</code>. If that command
+          does not check <code>isReadyToLaunch()</code>, manual fire can still release balls even when
+          the moving shot solution is not ready.
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Telemetry To Watch</h2>
+      <div class="content">
+        <table>
+          <thead>
+            <tr>
+              <th>Telemetry</th>
+              <th>What It Means</th>
+              <th>Good Sign</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>Odometry: Speed</code></td>
+              <td>Current robot translational speed in inches/sec.</td>
+              <td>Near zero when stopped; smooth changes while driving.</td>
+            </tr>
+            <tr>
+              <td><code>Shot Mode</code></td>
+              <td>Whether static or moving solution is active.</td>
+              <td><code>STATIC</code> during baseline tests, <code>MOVING</code> during moving tests.</td>
+            </tr>
+            <tr>
+              <td><code>Shot Ready</code></td>
+              <td>Whether the selected shot solution passes readiness checks.</td>
+              <td>True only when speed, lead, turret, visor, and flywheel are acceptable.</td>
+            </tr>
+            <tr>
+              <td><code>Moving Shot Lead Inches</code></td>
+              <td>How far the aim point is shifted from the real goal.</td>
+              <td>Small at low speed. Grows with speed and distance.</td>
+            </tr>
+            <tr>
+              <td><code>Moving Shot Angle Delta</code></td>
+              <td>Difference between moving-compensated aim angle and static aim angle.</td>
+              <td>Changes direction when robot drives the opposite way.</td>
+            </tr>
+            <tr>
+              <td><code>Moving Shot RPM Delta</code></td>
+              <td>Difference between moving-compensated RPM and static RPM.</td>
+              <td>Usually smaller than angle delta; should not jump wildly.</td>
+            </tr>
+            <tr>
+              <td><code>Moving Shot Turret Clamped</code></td>
+              <td>Whether the calculated turret target exceeded mechanical limits.</td>
+              <td>False. If true, do not trust that shot.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>Testing Plan</h2>
+      <div class="content">
+        <ol>
+          <li>Deploy with <code>ENABLE_MOVING_SHOT_COMPENSATION = false</code>.</li>
+          <li>Drive without shooting and confirm velocity telemetry is reasonable.</li>
+          <li>Run normal static shots while stopped. Confirm no regression.</li>
+          <li>Watch moving-shot telemetry while static mode is still active.</li>
+          <li>Enable moving mode only after telemetry looks believable.</li>
+          <li>Test in the large close/goal-side zone first at very low speed.</li>
+          <li>Lower <code>CLOSE_ZONE_MAX_MOVING_SHOT_SPEED_IPS</code> if spread is too large.</li>
+          <li>Tune <code>BURST_MIDPOINT_SECONDS</code> to tighten the 3-ball burst.</li>
+          <li>Tune flight time constants only after burst timing looks reasonable.</li>
+          <li>Keep the small far/audience-side zone conservative until close-zone shots are reliable.</li>
+        </ol>
+        <div class="callout ok">
+          The fastest path to consistency is to make static shots excellent first, then add moving compensation
+          slowly with speed caps.
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Tuning Symptoms</h2>
+      <div class="content">
+        <table>
+          <thead>
+            <tr>
+              <th>Symptom</th>
+              <th>Likely Cause</th>
+              <th>Adjustment</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Shots miss in the direction the robot is moving.</td>
+              <td>Not enough lead time.</td>
+              <td>Increase <code>BURST_MIDPOINT_SECONDS</code> or flight time.</td>
+            </tr>
+            <tr>
+              <td>Shots miss opposite the direction the robot is moving.</td>
+              <td>Too much lead time.</td>
+              <td>Decrease <code>BURST_MIDPOINT_SECONDS</code> or flight time.</td>
+            </tr>
+            <tr>
+              <td>Ball 1 and ball 3 spread too far apart.</td>
+              <td>Robot is moving too fast during the burst.</td>
+              <td>Lower zone speed caps or shorten gate-open/burst duration mechanically.</td>
+            </tr>
+            <tr>
+              <td>Auto-fire will not open the gate in moving mode.</td>
+              <td>Speed too high, lead too high, turret clamped, or flywheel not ready.</td>
+              <td>Check <code>Shot Ready</code>, speed, lead inches, and turret clamped telemetry.</td>
+            </tr>
+            <tr>
+              <td>Velocity telemetry jumps while stopped.</td>
+              <td>Pose noise or loop timing noise.</td>
+              <td>Add velocity filtering before raising shot speed caps.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>Recommended Competition Defaults</h2>
+      <div class="content">
+        <ul>
+          <li>Keep <code>ENABLE_MOVING_SHOT_COMPENSATION</code> available as a quick disable switch.</li>
+          <li>Use moving compensation first in the large goal-side launch zone.</li>
+          <li>Keep far/audience-side zone speed very low because the zone is small.</li>
+          <li>Do not raise speed caps until the 3-ball burst is consistent at lower speeds.</li>
+          <li>Before making moving mode the default, confirm manual and auto shooting both respect readiness.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

@@ -34,6 +34,7 @@ public class LaunchSubsystem extends SubsystemBase {
     private volatile double targetRPM;
     private volatile double targetTurretPos;
     private volatile double targetVisorPos;
+    private volatile boolean shotSolutionReady = true;
 
     public static double ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT = 0.3;    //RED
     public static double ROBOT_ALIGNED_TO_SHOOT_LIGHT = 0.5;    //GREEN
@@ -185,6 +186,14 @@ public class LaunchSubsystem extends SubsystemBase {
         return (getFlywheelVelocityTPS() * 60.0) / Motor.GoBILDA.BARE.getCPR();
     }
 
+    public void setShotSolutionReady(boolean shotSolutionReady) {
+        this.shotSolutionReady = shotSolutionReady;
+    }
+
+    public boolean isShotSolutionReady() {
+        return shotSolutionReady;
+    }
+
     // TODO: dummy functions from the motor version to compile the code.
     //remove once decided.
     public double getTurretAngle() { return 0; }
@@ -217,7 +226,7 @@ public class LaunchSubsystem extends SubsystemBase {
         // 3. Check Hood Alignment
         boolean visorReady = Math.abs(getHoodPosition() - targetVisorPos) < VISOR_POSITION_TOLERANCE;
 
-        return flywheelReady && turretReady && visorReady;
+        return flywheelReady && turretReady && visorReady && shotSolutionReady;
     }
 
     /*

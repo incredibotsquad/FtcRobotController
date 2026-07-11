@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.commands;
 import com.arcrobotics.ftclib.command.CommandBase;
 import com.arcrobotics.ftclib.geometry.Pose2d;
 import com.arcrobotics.ftclib.geometry.Translation2d;
+import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.TelemetryManager;
 
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
@@ -13,13 +14,18 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
+@Configurable
 public class LaunchReadinessCommand extends CommandBase {
     private final LaunchSubsystem launchSubsystem;
     private final OdometrySubsystem odometry;
 
     // Define the fixed field coordinate you want to point at (e.g., center of the backdrop or goal)
-
-
+    public static boolean ENABLE_MOVING_SHOT_COMPENSATION = false;
+    public static double SHOT_FLIGHT_BASE_SECONDS = 0.25;
+    public static double SHOT_FLIGHT_SECONDS_PER_INCH = 0.0035;
+    public static double BURST_MIDPOINT_SECONDS = 0.175;
+    public static double MAX_COMPENSATED_SPEED_IPS = 24.0;
+    public static double MAX_TARGET_LEAD_INCHES = 18.0;
 
     private double TARGET_X;
     private double TARGET_Y;
@@ -33,6 +39,21 @@ public class LaunchReadinessCommand extends CommandBase {
             this.P = p; this.I = i; this.D = d;
             this.kS = ks; this.kV = kv; this.targetRPM = rpm;
         }
+    }
+
+    private static class ShotSolution {
+        double targetX;
+        double targetY;
+        double distanceToTarget;
+        double relativeTargetAngle;
+        double turretServoPosition;
+        double visorPosition;
+        double robotSpeedIps;
+        double compensationTimeSeconds;
+        double leadDistanceInches;
+        boolean turretTargetClamped;
+        boolean shotSolutionReady;
+        FlywheelConstants flywheelConstants;
     }
 
     // 2. The Lookup Table (Distance in Inches -> Constants)
@@ -70,14 +91,12 @@ public class LaunchReadinessCommand extends CommandBase {
         // 1. Get current robot posture from odometry
         Pose2d currentPose = odometry.getPose();
 
-        if(launchSubsystem.isTurretLocked())
-            launchSubsystem.setTurretPosition(LaunchSubsystem.TURRET_MID);
-        else
-            updateTurretAlignmentFromCurrentPose(currentPose);
+        ShotSolution staticSolution = calculateStaticShot(currentPose);
+        ShotSolution movingSolution = calculateVelocityCompensatedShot(currentPose, staticSolution.distanceToTarget);
+        ShotSolution activeSolution = ENABLE_MOVING_SHOT_COMPENSATION ? movingSolution : staticSolution;
 
-        updateFlywheelRPMFromCurrentPose(currentPose);
-
-        updateVisorPositionFromCurrentPose(currentPose);
+        applyShotSolution(activeSolution);
+        addShotTelemetry(staticSolution, movingSolution, activeSolution);
     }
 
     @Override
@@ -90,34 +109,42 @@ public class LaunchReadinessCommand extends CommandBase {
         launchSubsystem.stop();
     }
 
-    private void updateFlywheelRPMFromCurrentPose(Pose2d currentPose) {
-        // Define your target coordinate point (X, Y)
-        Translation2d targetLocation = new Translation2d(TARGET_X, TARGET_Y);
-
-        // FTCLib calculates the straight-line distance automatically!
-        double distanceToTarget = currentPose.getTranslation().getDistance(targetLocation);
-
-        // Get the interpolated constants
-        FlywheelConstants current = getFlywheelConstantsBasedOnDistance(distanceToTarget);
-
-        telemetry.addData("Distance to target", distanceToTarget);
-        telemetry.addData("Flywheel RPM", current.targetRPM);
-        telemetry.addData("Flywheel P", current.P);
-        telemetry.addData("Flywheel I", current.I);
-        telemetry.addData("Flywheel D", current.D);
-        telemetry.addData("Flywheel kS", current.kS);
-        telemetry.addData("Flywheel kV", current.kV);
-
-        // Apply them to the subsystem
-        launchSubsystem.setFlywheelPID(current.P, current.I, current.D);
-        launchSubsystem.updateFeedforward(current.kS, current.kV);
-        launchSubsystem.updateFlywheel(current.targetRPM);
+    private ShotSolution calculateStaticShot(Pose2d currentPose) {
+        ShotSolution solution = calculateShotForTarget(currentPose, new Translation2d(TARGET_X, TARGET_Y));
+        solution.shotSolutionReady = true;
+        return solution;
     }
 
-    private void updateTurretAlignmentFromCurrentPose(Pose2d currentPose) {
+    private ShotSolution calculateVelocityCompensatedShot(Pose2d currentPose, double staticDistanceToTarget) {
+        Translation2d velocity = odometry.getFieldVelocity();
+        double compensationTimeSeconds = estimateFlightTimeSeconds(staticDistanceToTarget) + BURST_MIDPOINT_SECONDS;
+
+        Translation2d compensatedTarget = new Translation2d(
+                TARGET_X - velocity.getX() * compensationTimeSeconds,
+                TARGET_Y - velocity.getY() * compensationTimeSeconds
+        );
+
+        ShotSolution solution = calculateShotForTarget(currentPose, compensatedTarget);
+        solution.compensationTimeSeconds = compensationTimeSeconds;
+        solution.robotSpeedIps = odometry.getFieldSpeedInchesPerSecond();
+        solution.leadDistanceInches = new Translation2d(TARGET_X, TARGET_Y).getDistance(compensatedTarget);
+        solution.shotSolutionReady =
+                solution.robotSpeedIps <= MAX_COMPENSATED_SPEED_IPS &&
+                solution.leadDistanceInches <= MAX_TARGET_LEAD_INCHES &&
+                !solution.turretTargetClamped;
+
+        return solution;
+    }
+
+    private ShotSolution calculateShotForTarget(Pose2d currentPose, Translation2d targetLocation) {
+        ShotSolution solution = new ShotSolution();
+        solution.targetX = targetLocation.getX();
+        solution.targetY = targetLocation.getY();
+        solution.distanceToTarget = currentPose.getTranslation().getDistance(targetLocation);
+
         // 1. Calculate the absolute field angle to the target
-        double deltaX = TARGET_X - currentPose.getX();
-        double deltaY = TARGET_Y - currentPose.getY();
+        double deltaX = targetLocation.getX() - currentPose.getX();
+        double deltaY = targetLocation.getY() - currentPose.getY();
 
         // Math.atan2(y, x) returns the angle in radians
         double absoluteTargetAngle = Math.toDegrees(Math.atan2(deltaY, deltaX));
@@ -151,21 +178,55 @@ public class LaunchReadinessCommand extends CommandBase {
         double servoPosAdjustment = servoOffsetDegrees / TOTAL_SERVO_RANGE;
 
         // 4. Combine with the Midpoint
-        double finalServoPosition = LaunchSubsystem.TURRET_MID - servoPosAdjustment;
+        double unclampedServoPosition = LaunchSubsystem.TURRET_MID - servoPosAdjustment;
 
         // Safety Clamp: Don't let the code command the servo beyond its hardware limits
-        finalServoPosition = Math.max(LaunchSubsystem.TURRET_MIN, Math.min(LaunchSubsystem.TURRET_MAX, finalServoPosition));
+        double finalServoPosition = Math.max(LaunchSubsystem.TURRET_MIN, Math.min(LaunchSubsystem.TURRET_MAX, unclampedServoPosition));
 
-        // 5. Apply to hardware and Telemetry
-        launchSubsystem.setTurretPosition(finalServoPosition);
+        solution.relativeTargetAngle = relativeTargetAngle;
+        solution.turretServoPosition = finalServoPosition;
+        solution.turretTargetClamped = Math.abs(finalServoPosition - unclampedServoPosition) > 0.0001;
+        solution.visorPosition = LaunchSubsystem.LAUNCH_VISOR_LOW;
+        solution.flywheelConstants = getFlywheelConstantsBasedOnDistance(solution.distanceToTarget);
 
-        telemetry.addData("Turret Target Angle", relativeTargetAngle);
-        telemetry.addData("Turret Servo Position", finalServoPosition);
+        return solution;
     }
 
-    private void updateVisorPositionFromCurrentPose(Pose2d currentPose) {
-        //TODO: UPDATE THIS FUNCTION
-        launchSubsystem.setVisorPosition(LaunchSubsystem.LAUNCH_VISOR_LOW);
+    private void applyShotSolution(ShotSolution solution) {
+        FlywheelConstants current = solution.flywheelConstants;
+
+        launchSubsystem.setTurretPosition(solution.turretServoPosition);
+        launchSubsystem.setFlywheelPID(current.P, current.I, current.D);
+        launchSubsystem.updateFeedforward(current.kS, current.kV);
+        launchSubsystem.updateFlywheel(current.targetRPM);
+        launchSubsystem.setVisorPosition(solution.visorPosition);
+        launchSubsystem.setShotSolutionReady(solution.shotSolutionReady);
+    }
+
+    private void addShotTelemetry(ShotSolution staticSolution, ShotSolution movingSolution, ShotSolution activeSolution) {
+        FlywheelConstants current = activeSolution.flywheelConstants;
+
+        telemetry.addData("Shot Mode", ENABLE_MOVING_SHOT_COMPENSATION ? "MOVING" : "STATIC");
+        telemetry.addData("Shot Ready", activeSolution.shotSolutionReady);
+        telemetry.addData("Distance to target", activeSolution.distanceToTarget);
+        telemetry.addData("Flywheel RPM", current.targetRPM);
+        telemetry.addData("Flywheel P", current.P);
+        telemetry.addData("Flywheel I", current.I);
+        telemetry.addData("Flywheel D", current.D);
+        telemetry.addData("Flywheel kS", current.kS);
+        telemetry.addData("Flywheel kV", current.kV);
+        telemetry.addData("Turret Target Angle", activeSolution.relativeTargetAngle);
+        telemetry.addData("Turret Servo Position", activeSolution.turretServoPosition);
+        telemetry.addData("Robot Speed IPS", movingSolution.robotSpeedIps);
+        telemetry.addData("Moving Shot Time", movingSolution.compensationTimeSeconds);
+        telemetry.addData("Moving Shot Lead Inches", movingSolution.leadDistanceInches);
+        telemetry.addData("Moving Shot Angle Delta", movingSolution.relativeTargetAngle - staticSolution.relativeTargetAngle);
+        telemetry.addData("Moving Shot RPM Delta", movingSolution.flywheelConstants.targetRPM - staticSolution.flywheelConstants.targetRPM);
+        telemetry.addData("Moving Shot Turret Clamped", movingSolution.turretTargetClamped);
+    }
+
+    private double estimateFlightTimeSeconds(double distanceInches) {
+        return SHOT_FLIGHT_BASE_SECONDS + SHOT_FLIGHT_SECONDS_PER_INCH * distanceInches;
     }
 
     public FlywheelConstants getFlywheelConstantsBasedOnDistance(double distanceFromTarget) {

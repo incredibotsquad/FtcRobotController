@@ -36,6 +36,8 @@ public class AutoFireCommand extends CommandBase {
     private static double TARGET_X, TARGET_Y;
 
     public static double MIN_DISTANCE_FOR_AUTOFIRE = 85;
+    public static double CLOSE_ZONE_MAX_MOVING_SHOT_SPEED_IPS = 18.0;
+    public static double FAR_ZONE_MAX_MOVING_SHOT_SPEED_IPS = 6.0;
 
     public AutoFireCommand(LaunchSubsystem launchSubsystem, LaunchGateSubsystem launchGateSubsystem, OdometrySubsystem odometry) {
         this.launchSubsystem = launchSubsystem;
@@ -73,15 +75,24 @@ public class AutoFireCommand extends CommandBase {
         }
 
         // Check if the center OR any of the 4 corners are in the zone
-        boolean inZone = false;
+        boolean inCloseZone = false;
+        boolean inFarZone = false;
         List<Translation2d> pointsToCheck = getRobotPoints(currentPose);
 
         for (Translation2d p : pointsToCheck) {
-            if (isPointInTriangle(p.getX(), p.getY(), T1X1, T1Y1, T1X2, T1Y2, T1X3, T1Y3) ||
-                    isPointInTriangle(p.getX(), p.getY(), T2X1, T2Y1, T2X2, T2Y2, T2X3, T2Y3)) {
-                inZone = true;
-                break; // Stop checking once we know we are in
+            if (isPointInTriangle(p.getX(), p.getY(), T1X1, T1Y1, T1X2, T1Y2, T1X3, T1Y3)) {
+                inCloseZone = true;
             }
+            if (isPointInTriangle(p.getX(), p.getY(), T2X1, T2Y1, T2X2, T2Y2, T2X3, T2Y3)) {
+                inFarZone = true;
+            }
+        }
+
+        boolean inZone = inCloseZone || inFarZone;
+
+        if (LaunchReadinessCommand.ENABLE_MOVING_SHOT_COMPENSATION && !isMovingShotSpeedAllowed(inCloseZone, inFarZone)) {
+            launchGateSubsystem.closeGate();
+            return;
         }
         
         // 2. Check if systems are aimed and flywheels are at RPM
@@ -101,6 +112,20 @@ public class AutoFireCommand extends CommandBase {
     @Override
     public void end(boolean interrupted) {
         launchGateSubsystem.closeGate();
+    }
+
+    private boolean isMovingShotSpeedAllowed(boolean inCloseZone, boolean inFarZone) {
+        double speedIps = odometry.getFieldSpeedInchesPerSecond();
+
+        if (inCloseZone) {
+            return speedIps <= CLOSE_ZONE_MAX_MOVING_SHOT_SPEED_IPS;
+        }
+
+        if (inFarZone) {
+            return speedIps <= FAR_ZONE_MAX_MOVING_SHOT_SPEED_IPS;
+        }
+
+        return false;
     }
 
     /**
