@@ -34,7 +34,13 @@ public class LimelightSubsystem extends SubsystemBase {
      * @param isRed Pass true for Red Alliance (24), false for Blue Alliance (20).
      */
     public void setAlliance(boolean isRed) {
-        this.targetTagId = isRed ? 24 : 20;
+        if (isRed) {
+            this.targetTagId = 24;
+            limelight.pipelineSwitch(6);
+        } else {
+            this.targetTagId = 20;
+            limelight.pipelineSwitch(7);
+        }
     }
 
     /**
@@ -45,9 +51,7 @@ public class LimelightSubsystem extends SubsystemBase {
         LLResult result = limelight.getLatestResult();
 
         if (result != null && result.isValid()) {
-            // Get all AprilTags currently seen by the camera
-            List<LLResultTypes.ClassifierResult> targets = result.getClassifierResults();
-            // Note: If using the standard 3D pipeline, use getFiducialResults()
+            // We only care about Fiducials (AprilTags) for pose estimation
             List<LLResultTypes.FiducialResult> fiducials = result.getFiducialResults();
 
             boolean targetSeen = false;

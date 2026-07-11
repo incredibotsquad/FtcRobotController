@@ -49,6 +49,10 @@ public class IntakeSubsystem extends SubsystemBase {
         intakeMotor.set(0);
     }
 
+    public void reverseIntake() {
+        intakeMotor.set(-1);
+    }
+
     private void updateStatusLight(int artifactCount) {
 
         double color =  ZERO_BALL_COLOR;

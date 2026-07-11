@@ -16,6 +16,7 @@ import org.firstinspires.ftc.teamcode.commands.DriveRobotCommand;
 import org.firstinspires.ftc.teamcode.commands.RelocalizeCommand;
 import org.firstinspires.ftc.teamcode.commands.ResetKickCommand;
 import org.firstinspires.ftc.teamcode.commands.SmartIntakeCommand;
+import org.firstinspires.ftc.teamcode.commands.ReverseIntakeCommand;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
@@ -85,6 +86,9 @@ public class Incredibot extends Robot {
                         new InstantCommand(() -> launchSubsystem.setTurretLock(true)),
                         new InstantCommand(() -> launchSubsystem.setTurretLock(false))
                 );
+
+        operatorGamepad.getGamepadButton(GamepadKeys.Button.BACK)
+                .whenPressed(new ReverseIntakeCommand(intakeSubsystem, 2.0));
 
         operatorGamepad.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER)
                 .whileHeld(new LaunchBallsCommand(launchSubsystem, launchGateSubsystem));
