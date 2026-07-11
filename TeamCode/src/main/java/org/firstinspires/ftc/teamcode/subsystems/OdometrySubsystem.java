@@ -82,6 +82,21 @@ public class OdometrySubsystem extends SubsystemBase {
         pinpoint.update();
     }
 
+    // Inside OdometrySubsystem.java
+
+    /**
+     * Updates the internal Pinpoint position with a new pose.
+     * We use this to correct drift using Limelight.
+     */
+    public void updatePoseFromLimelight(Pose2d correctedPose) {
+        // We update the Pinpoint's internal X, Y and Heading
+        pinpoint.setPosX(correctedPose.getX(), DistanceUnit.INCH);
+        pinpoint.setPosY(correctedPose.getY(), DistanceUnit.INCH);
+        pinpoint.setHeading(correctedPose.getHeading(), AngleUnit.RADIANS);
+
+        pinpoint.update();
+    }
+
     @Override
     public void periodic() {
         // CRITICAL: Must be called every loop to pull fresh numbers from the coprocessor

@@ -51,6 +51,8 @@ public class LaunchSubsystem extends SubsystemBase {
     // ks = static friction, kv = velocity gain (How much power to hold a speed)
     private SimpleMotorFeedforward flywheelFF = new SimpleMotorFeedforward(0.1, 0.00058); //45
 
+    // Inside LaunchSubsystem.java
+    private boolean turretLocked = false;
 
     public LaunchSubsystem(HardwareMap hardwareMap, TelemetryManager telemetry) {
         leftLaunchMotor = new MotorEx(hardwareMap, "leftLaunchMotor", Motor.GoBILDA.BARE);
@@ -72,6 +74,14 @@ public class LaunchSubsystem extends SubsystemBase {
         turretServo.setInverted(true);
         visorServo = new SimpleServo(hardwareMap, "launchVisorServo", 0, 270);
         alignmentIndicatorLight = new SimpleServo(hardwareMap, "alignmentIndicatorLight", 0, 270);
+    }
+
+    public void setTurretLock(boolean locked) {
+        this.turretLocked = locked;
+    }
+
+    public boolean isTurretLocked() {
+        return turretLocked;
     }
 
     public void updateFlywheel(double targetRPM) {

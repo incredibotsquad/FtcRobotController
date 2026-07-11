@@ -1,8 +1,5 @@
 package org.firstinspires.ftc.teamcode;
 
-
-import android.util.Log;
-
 import com.arcrobotics.ftclib.command.CommandScheduler;
 import com.arcrobotics.ftclib.command.InstantCommand;
 import com.arcrobotics.ftclib.command.Robot;
@@ -11,16 +8,19 @@ import com.arcrobotics.ftclib.gamepad.GamepadKeys;
 import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
-import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.commands.AutoFireCommand;
+import org.firstinspires.ftc.teamcode.commands.CloseGateCommand;
 import org.firstinspires.ftc.teamcode.commands.LaunchBallsCommand;
 import org.firstinspires.ftc.teamcode.commands.LaunchReadinessCommand;
 import org.firstinspires.ftc.teamcode.commands.DriveRobotCommand;
+import org.firstinspires.ftc.teamcode.commands.RelocalizeCommand;
+import org.firstinspires.ftc.teamcode.commands.ResetKickCommand;
 import org.firstinspires.ftc.teamcode.commands.SmartIntakeCommand;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchKickSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LimelightSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 
@@ -38,7 +38,7 @@ public class Incredibot extends Robot {
     public final LaunchGateSubsystem launchGateSubsystem;
     public final LaunchKickSubsystem launchKickSubsystem;
     public final OdometrySubsystem odometrySubsystem;
-
+    public final LimelightSubsystem limelightSubsystem;
     // Hardware
     private final HardwareMap hwMap;
     private TelemetryManager telemetry;
@@ -54,6 +54,7 @@ public class Incredibot extends Robot {
         odometrySubsystem = new OdometrySubsystem(hwMap, telemetry);
         launchSubsystem = new LaunchSubsystem(hwMap, telemetry);
         launchKickSubsystem = new LaunchKickSubsystem(hardwareMap, telemetry);
+        limelightSubsystem = new LimelightSubsystem(hwMap, telemetry);
 
         if (opModeType == OpModeType.TELEOP) {
             initTeleop(driverGamepad, operatorGamepad);
@@ -62,12 +63,12 @@ public class Incredibot extends Robot {
         }
     }
 
+    public void setAlliance(boolean isRed) {
+        limelightSubsystem.setAlliance(isRed);
+    }
+
     public void initTeleop(GamepadEx driverGamepad, GamepadEx operatorGamepad) {
         CommandScheduler.getInstance().reset();
-
-        //TODO: MAKE SURE THE LAUNCHER GATE IS CLOSED UPON BOT START - WE WILL DO IT MANUALLY BUT WE NEED TO DO IT IN CODE AS WELL
-        //THIS CANNOT BE HERE IN INIT - HAS TO BE DONE FIRST THING AFTER START
-        launchGateSubsystem.closeGate();
 
         initCommon();
 
@@ -76,13 +77,17 @@ public class Incredibot extends Robot {
 
         driveSubsystem.setDefaultCommand(new DriveRobotCommand(driveSubsystem, driverGamepad));
 
-        //TODO: CREATE AN OVERRIDE TO LOCK THE TURRET IN CENTER POSITION IN CASE ODOMETRY MESSES UP
         //TODO: ADD AN OPTION TO INITIALIZE AN ALLIANCE COLOR IN TELEOP
 
-        operatorGamepad.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER)
-                .whenPressed(new LaunchBallsCommand(launchSubsystem, launchGateSubsystem));
+        // 3. TURRET LOCK OVERRIDE - Pressing START toggles the turret lock
+        operatorGamepad.getGamepadButton(GamepadKeys.Button.START)
+                .toggleWhenPressed(
+                        new InstantCommand(() -> launchSubsystem.setTurretLock(true)),
+                        new InstantCommand(() -> launchSubsystem.setTurretLock(false))
+                );
 
-//        register(odometrySubsystem);
+        operatorGamepad.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER)
+                .whileHeld(new LaunchBallsCommand(launchSubsystem, launchGateSubsystem));
 
         // 2. AUTO-FIRE TOGGLE (While held)
         operatorGamepad.getGamepadButton(GamepadKeys.Button.LEFT_BUMPER)
@@ -97,17 +102,27 @@ public class Incredibot extends Robot {
 
         // Notice: We don't bind ANY gamepads here.
         // The robot will rely purely on scripted sequential commands.
-
     }
 
     private void initCommon() {
         register(driveSubsystem, intakeSubsystem, launchGateSubsystem, launchSubsystem, odometrySubsystem, launchKickSubsystem);
 
+        // 1. SET THE DEFAULT COMMAND FOR THE GATE
+        // This will run at match start and any time the gate isn't being used by a launcher command.
+        launchGateSubsystem.setDefaultCommand(new CloseGateCommand(launchGateSubsystem));
+
+        // 2. SET THE DEFAULT COMMAND FOR THE KICK
+        // This will run at match start and any time the gate isn't being used by a launcher command.
+        launchKickSubsystem.setDefaultCommand(new ResetKickCommand(launchKickSubsystem));
+
         // It will start at match start and manage itself based on sensor data
-        intakeSubsystem.setDefaultCommand(new SmartIntakeCommand(intakeSubsystem, launchGateSubsystem));
+        intakeSubsystem.setDefaultCommand(new SmartIntakeCommand(intakeSubsystem, launchGateSubsystem, launchKickSubsystem));
 
         // Assign the background tracking loop here!
         // The scheduler will now call execute() on this command every single frame.
         launchSubsystem.setDefaultCommand(new LaunchReadinessCommand(launchSubsystem, odometrySubsystem, telemetry));
+
+        limelightSubsystem.setDefaultCommand(new RelocalizeCommand(limelightSubsystem, odometrySubsystem, driveSubsystem));
+
     }
 }

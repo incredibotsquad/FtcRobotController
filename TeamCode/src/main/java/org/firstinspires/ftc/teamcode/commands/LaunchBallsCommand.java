@@ -10,25 +10,15 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 public class LaunchBallsCommand extends CommandBase {
     private final LaunchSubsystem launcher;
     private final LaunchGateSubsystem launchGate;
-    private final ElapsedTime timer;
-    private static final double LAUNCH_DURATION = 2000; // 1 second to clear all balls
-
-    private boolean initialized = false;
 
     public LaunchBallsCommand(LaunchSubsystem launchSubsystem, LaunchGateSubsystem launchGateSubsystem) {
         this.launcher = launchSubsystem;
         this.launchGate = launchGateSubsystem;
-        this.timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
-        this.initialized = false;
-        
+
         // We require the GATE so no other command moves it.
         // We do NOT require the LAUNCHER so the AutoAimCommand 
         // can keep adjusting the aim while we are firing.
         addRequirements(launchGateSubsystem);
-    }
-
-    @Override
-    public void initialize() {
     }
 
     @Override
@@ -45,12 +35,6 @@ public class LaunchBallsCommand extends CommandBase {
 //            timer.reset(); // Reset timer so we get a full LAUNCH_DURATION once ready again
 //        }
 
-        if (!initialized) {
-            Log.i("LaunchBallsCommand", "Initialize - resetting timer");
-            timer.reset();
-            initialized = true;
-        }
-
         Log.i("LaunchBallsCommand", "Execute: opening gate without any checks");
         launchGate.openGate();
 
@@ -58,14 +42,9 @@ public class LaunchBallsCommand extends CommandBase {
 
     @Override
     public boolean isFinished() {
-        boolean finished = timer.milliseconds() > LAUNCH_DURATION;
-        // Finish once the gate has been open and ready for 1 seconds
-
-        Log.i("LaunchBallsCommand", "Finished returned: " + finished);
-
-        return finished;
-//        return launcher.isReadyToLaunch() && timer.milliseconds() > LAUNCH_DURATION;
+        return true;
     }
+
 
     /**
      * Called when the command ends - either normally via finished or if interrupted / cancelled.
@@ -75,7 +54,6 @@ public class LaunchBallsCommand extends CommandBase {
     public void end(boolean interrupted) {
         Log.i("LaunchBallsCommand", "End: command interrupted: " + interrupted);
         // Safety: Always close the gate when the command ends
-        initialized = false;
         launchGate.closeGate();
     }
 }

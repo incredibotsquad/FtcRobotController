@@ -41,4 +41,25 @@ public class DriveSubsystem extends SubsystemBase {
     public void drive(double x, double y, double rotation) {
         mecanumDrive.driveRobotCentric(x, y, rotation);
     }
+
+    /**
+     * Returns the average velocity of the drivetrain.
+     * Calculated as the average of the absolute velocities of all 4 motors.
+     * Units: Ticks per second.
+     */
+    public double getVelocity() {
+        return (Math.abs(frontLeftMotor.getCorrectedVelocity()) +
+                Math.abs(frontRightMotor.getCorrectedVelocity()) +
+                Math.abs(backLeftMotor.getCorrectedVelocity()) +
+                Math.abs(backRightMotor.getCorrectedVelocity())) / 4.0;
+    }
+
+    /**
+     * Helper to check if the robot is effectively stationary.
+     * Useful for Limelight/AprilTag relocalization.
+     */
+    public boolean isEffectivelyStationary() {
+        // 20 ticks per second is a very slow crawl, effectively stopped
+        return getVelocity() < 20.0;
+    }
 }

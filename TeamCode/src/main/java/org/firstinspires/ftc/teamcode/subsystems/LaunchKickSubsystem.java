@@ -5,8 +5,6 @@ import com.arcrobotics.ftclib.hardware.SimpleServo;
 import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
-import org.firstinspires.ftc.robotcore.external.Telemetry;
-
 public class LaunchKickSubsystem extends SubsystemBase {
     private final SimpleServo kickServo;
 
@@ -18,12 +16,12 @@ public class LaunchKickSubsystem extends SubsystemBase {
         kickServo = new SimpleServo(hardwareMap, "launchKickServo", 0, 270);
     }
 
-    public void kickBall() {
+    public void extendKicker() {
         isKicking = true;
         kickServo.setPosition(LAUNCH_KICK_KICK);
     }
 
-    public void closeKick() {
+    public void retractKicker() {
         isKicking = false;
         kickServo.setPosition(LAUNCH_KICK_REST);
     }

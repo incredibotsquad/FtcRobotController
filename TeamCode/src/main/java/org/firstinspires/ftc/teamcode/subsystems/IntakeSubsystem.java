@@ -72,21 +72,33 @@ public class IntakeSubsystem extends SubsystemBase {
         int artifactCount = 0;
 
         // Read the sensor state (true = HIGH, false = LOW)
-        boolean stateHigh = beamBreakHigh.getState();
+        boolean stateHigh = isHighSensorBlocked();
 //        Log.i("Intake Subsystem", " Beambreak high detected a ball: " + stateHigh);
         if (stateHigh)
             artifactCount++;
 
-        stateHigh = beamBreakMid.getState();
+        stateHigh = isMidSensorBlocked();
 //        Log.i("Intake Subsystem", " Beambreak mid detected a ball: " + stateHigh);
         if (stateHigh)
             artifactCount++;
 
-        stateHigh = beamBreakLow.getState();
+        stateHigh = isLowSensorBlocked();
 //        Log.i("Intake Subsystem", " Beambreak low detected a ball: " + stateHigh);
         if (stateHigh)
             artifactCount++;
         return artifactCount;
+    }
+
+    public boolean isHighSensorBlocked() {
+        return beamBreakHigh.getState();
+    }
+
+    public boolean isMidSensorBlocked() {
+        return beamBreakMid.getState();
+    }
+
+    public boolean isLowSensorBlocked() {
+        return beamBreakLow.getState();
     }
 
     /*

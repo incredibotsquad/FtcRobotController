@@ -70,7 +70,10 @@ public class LaunchReadinessCommand extends CommandBase {
         // 1. Get current robot posture from odometry
         Pose2d currentPose = odometry.getPose();
 
-        updateTurretAlignmentFromCurrentPose(currentPose);
+        if(launchSubsystem.isTurretLocked())
+            launchSubsystem.setTurretPosition(LaunchSubsystem.TURRET_MID);
+        else
+            updateTurretAlignmentFromCurrentPose(currentPose);
 
         updateFlywheelRPMFromCurrentPose(currentPose);
 

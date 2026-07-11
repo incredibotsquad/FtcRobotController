@@ -9,47 +9,77 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LaunchKickSubsystem;
 
 @Configurable
 public class SmartIntakeCommand extends CommandBase {
-    public  static double DELAYED_STOP_DURATION_MILLIS = 500;
-    private final IntakeSubsystem intake;
+    public static double STABLE_STORAGE_MS = 200;
+    public  static double DELAYED_STOP_MS = 500;
+    public static double KICKER_PULSE_MS = 200; // Time kicker stays extended
+    private final IntakeSubsystem intakeSubsystem;
     private final LaunchGateSubsystem launchGate;
-    private ElapsedTime delayedStoptimer;
-    public SmartIntakeCommand(IntakeSubsystem intake, LaunchGateSubsystem launchGate) {
-        this.intake = intake;
-        this.launchGate = launchGate;
+    private final LaunchKickSubsystem launchKick;
+    private ElapsedTime stableTimer;
+    private ElapsedTime kickTimer = new ElapsedTime();
+    private ElapsedTime stopDelayTimer;
 
-        addRequirements(intake);
+    public SmartIntakeCommand(IntakeSubsystem intakeSubsystem, LaunchGateSubsystem launchGate, LaunchKickSubsystem launchKick) {
+        this.intakeSubsystem = intakeSubsystem;
+        this.launchGate = launchGate;
+        this.launchKick = launchKick;
+
+        addRequirements(intakeSubsystem, launchKick);
     }
+
 
     @Override
     public void execute() {
-        // Condition A: Launch gate is open (Resetting/Launching)
-        // Condition B: We have fewer than 3 artifacts
         boolean isLaunching = launchGate.isGateOpen();
-        boolean needsMoreArtifacts = intake.getArtifactCount() < 3;
 
-//        Log.i("SmartIntakeCommand", "isLaunching: " + isLaunching);
-//        Log.i("SmartIntakeCommand", "needsMoreArtifacts: " + needsMoreArtifacts);
+        // --- 1. SENSOR STABILITY LOGIC ---
+        boolean low = intakeSubsystem.isLowSensorBlocked();
+        boolean mid = intakeSubsystem.isMidSensorBlocked();
+        boolean high = intakeSubsystem.isHighSensorBlocked();
 
-        if (isLaunching || needsMoreArtifacts) {
-            Log.i("SmartIntakeCommand", "Staring intake: ");
-            intake.startIntake();
-            delayedStoptimer = null;
-
-        } else {
-            // We have 3 and we aren't launching
-
-            //keep running the intake for another half a second.
-            if (delayedStoptimer == null) {
-                delayedStoptimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+        // Start stableTimer if all three are blocked, reset it if they aren't
+        if (low && mid && high) {
+            if (stableTimer == null) {
+                stableTimer = new ElapsedTime();
             }
-            else if (delayedStoptimer.milliseconds() > DELAYED_STOP_DURATION_MILLIS) {
+        } else {
+            stableTimer = null;
+        }
 
+        // A "Confirmed Full" state requires all 3 sensors to be blocked for 200ms
+        boolean isConfirmedFull = (stableTimer != null && stableTimer.milliseconds() > STABLE_STORAGE_MS);
+
+        // --- 2. INTAKE MOTOR CONTROL ---
+        if (isLaunching || !isConfirmedFull) {
+            // Run intake if we are shooting OR if we aren't confirmed full yet
+            intakeSubsystem.startIntake();
+            stopDelayTimer = null;
+            Log.i("SmartIntakeCommand", "Staring intake: ");
+        } else {
+            // We are Confirmed Full and not launching
+            if (stopDelayTimer == null) {
+                stopDelayTimer = new ElapsedTime();
+            } else if (stopDelayTimer.milliseconds() > DELAYED_STOP_MS) {
+                // Only stop after the extra "seating" time
+                intakeSubsystem.stopIntake();
                 Log.i("SmartIntakeCommand", "Stopping intake: ");
+            }
+        }
 
-                intake.stopIntake();
+        // --- 3. AUTO-KICK LOGIC (Timer is Essential here) ---
+        // If launching and ONLY the top ball is left (stuck in dead zone)
+        if (isLaunching && high && !mid && !low) {
+            launchKick.extendKicker();
+            kickTimer.reset(); // Keep resetting while the condition is true
+        } else {
+            // Condition is no longer met (either ball moved or we stopped launching)
+            // BUT we wait for the pulse timer to finish before retracting
+            if (kickTimer.milliseconds() > KICKER_PULSE_MS) {
+                launchKick.retractKicker();
             }
         }
     }
