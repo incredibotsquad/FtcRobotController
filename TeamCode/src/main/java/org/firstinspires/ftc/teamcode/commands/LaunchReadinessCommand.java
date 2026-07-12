@@ -71,7 +71,10 @@ public class LaunchReadinessCommand extends CommandBase {
     static {
         // Distance (inches), P, I, D, kS, kV, targetRPM
         // These numbers are examples; populate with your tuned values
-        FAR_LOOKUP_TABLE.put(126.0, new FlywheelConstants(0.02, 0, 0, 0.1, 0.00066, 2250));
+        FAR_LOOKUP_TABLE.put(126.0, new FlywheelConstants(0.0125, 0, 0, 0.1, 0.00061, 2150));
+        FAR_LOOKUP_TABLE.put(134.0, new FlywheelConstants(0.014, 0, 0, 0.1, 0.00061, 2175));
+        FAR_LOOKUP_TABLE.put(139.0, new FlywheelConstants(0.015, 0, 0, 0.1, 0.00061, 2220));
+        FAR_LOOKUP_TABLE.put(145.0, new FlywheelConstants(0.02, 0, 0, 0.1, 0.000623, 2270));
     }
 
     public LaunchReadinessCommand(LaunchSubsystem launchSubsystem, OdometrySubsystem odometry, TelemetryManager telemetry) {
