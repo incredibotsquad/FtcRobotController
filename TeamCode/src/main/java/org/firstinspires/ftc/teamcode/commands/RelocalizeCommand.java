@@ -31,6 +31,8 @@ public class RelocalizeCommand extends CommandBase {
         this.drive = drive;
 
         windowTimer.reset();
+
+        addRequirements(limelight);
     }
 
     @Override

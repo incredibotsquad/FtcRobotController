@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.commands;
 
+import android.util.Log;
+
 import com.arcrobotics.ftclib.command.CommandBase;
 import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -76,6 +78,7 @@ public class SmartIntakeCommand extends CommandBase {
         if (isStuck) {
             // Check if the stuck state has been stable for X ms
             if (kickStabilityTimer.milliseconds() > KICK_STABILITY_MS) {
+                Log.i("SmartIntakeCommand", "Kick firing");
                 launchKick.extendKicker();
                 kickTimer.reset();
             }
@@ -84,6 +87,7 @@ public class SmartIntakeCommand extends CommandBase {
             kickStabilityTimer.reset();
 
             if (kickTimer.milliseconds() > KICKER_PULSE_MS) {
+                Log.i("SmartIntakeCommand", "Kick reset");
                 launchKick.retractKicker();
             }
         }
