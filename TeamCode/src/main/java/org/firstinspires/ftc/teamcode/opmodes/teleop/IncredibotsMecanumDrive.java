@@ -30,8 +30,6 @@ public class IncredibotsMecanumDrive extends LinearOpMode { // Changed this
                 operatorGamepad,
                 PanelsTelemetry.INSTANCE.getTelemetry());
 
-        incredibot.setAlliance(CrossOpModeStorage.allianceColor == AllianceColors.RED);
-
         // Schedule the RelocalizeCommand
         // In LinearOpMode, we schedule it once here
         RelocalizeCommand relocalizeCommand = new RelocalizeCommand(

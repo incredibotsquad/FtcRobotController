@@ -17,6 +17,8 @@ import org.firstinspires.ftc.teamcode.commands.RelocalizeCommand;
 import org.firstinspires.ftc.teamcode.commands.ResetKickCommand;
 import org.firstinspires.ftc.teamcode.commands.SmartIntakeCommand;
 import org.firstinspires.ftc.teamcode.commands.ReverseIntakeCommand;
+import org.firstinspires.ftc.teamcode.common.AllianceColors;
+import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
@@ -62,10 +64,8 @@ public class Incredibot extends Robot {
         } else if (opModeType == OpModeType.AUTO) {
             initAuto();
         }
-    }
 
-    public void setAlliance(boolean isRed) {
-        limelightSubsystem.setAlliance(isRed);
+        limelightSubsystem.setAlliance(CrossOpModeStorage.allianceColor == AllianceColors.RED);
     }
 
     public void initTeleop(GamepadEx driverGamepad, GamepadEx operatorGamepad) {

@@ -9,6 +9,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 
 @Configurable
@@ -36,10 +37,12 @@ public class FlywheelTuner extends LinearOpMode {
         // Initialize Subsystems
         LaunchSubsystem launcher = new LaunchSubsystem(hardwareMap, panelsTelemetry.getTelemetry());
         IntakeSubsystem intake = new IntakeSubsystem(hardwareMap, panelsTelemetry.getTelemetry());
+        LaunchGateSubsystem gate = new LaunchGateSubsystem(hardwareMap, panelsTelemetry.getTelemetry());
         GamepadEx gp1 = new GamepadEx(gamepad1);
 
         waitForStart();
         intake.startIntake();
+        gate.closeGate();
 
         while (opModeIsActive()) {
             gp1.readButtons();
@@ -52,6 +55,13 @@ public class FlywheelTuner extends LinearOpMode {
             // Cycle Step Size (B)
             if (gp1.wasJustPressed(GamepadKeys.Button.B)) {
                 stepIndex = (stepIndex + 1) % stepSizes.length;
+            }
+
+            if (gp1.wasJustPressed(GamepadKeys.Button.A)){
+                if (gate.isGateOpen())
+                    gate.closeGate();
+                else
+                    gate.openGate();
             }
 
             // D-Pad and Bumper adjustments for P, kS, kV

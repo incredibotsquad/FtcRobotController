@@ -157,18 +157,6 @@ public class LaunchSubsystem extends SubsystemBase {
         flywheelFF = new SimpleMotorFeedforward(ks, kv);
     }
 
-    public void setFlywheelPIDF(double p, double i, double d, double f) {
-//        leftLaunchMotor.setPIDFCoefficients(
-//                DcMotor.RunMode.RUN_USING_ENCODER,
-//                new PIDFCoefficients(p, i, d, f)
-//        );
-//
-//        rightLaunchMotor.setPIDFCoefficients(
-//                DcMotor.RunMode.RUN_USING_ENCODER,
-//                new PIDFCoefficients(p, i, d, f)
-//        );
-    }
-
     /*
     * Spins up the flywheel to the specified RPM. Converts to TPS internally
     * */
@@ -194,18 +182,11 @@ public class LaunchSubsystem extends SubsystemBase {
         return shotSolutionReady;
     }
 
-    // TODO: dummy functions from the motor version to compile the code.
-    //remove once decided.
-    public double getTurretAngle() { return 0; }
-    public void alignTurretToAngle(double currentAngle, double targetAngle) {}
     public void stop() {
         this.targetRPM = 0;
 
-        leftLaunchMotor.setVelocity(0);
-        rightLaunchMotor.setVelocity(0);
-
-//        leftLaunchMotor.set(0);
-//        rightLaunchMotor.set(0);
+        leftLaunchMotor.set(0);
+        rightLaunchMotor.set(0);
     }
 
     /**

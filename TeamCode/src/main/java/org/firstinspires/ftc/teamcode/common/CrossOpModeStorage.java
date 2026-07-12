@@ -10,7 +10,7 @@ import com.arcrobotics.ftclib.geometry.Rotation2d;
  */
 public class CrossOpModeStorage {
 
-    public static final double BLUE_TARGET_X = 0.0;
+    public static final double BLUE_TARGET_X = 10.0;
     public static final double BLUE_TARGET_Y = 134.0;
 
     public static final double RED_TARGET_X = 134.0;
