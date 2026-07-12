@@ -47,6 +47,17 @@ public class LaunchSubsystem extends SubsystemBase {
     public static double TURRET_MID = 0.54;
     public static double TURRET_MAX = 0.9;
 
+    /*
+     * MECHANICAL CALCULATION:
+     * Ratio: 112 teeth (Turret) / 29 teeth (Servo) = 3.862
+     * Servo: GoBILDA 5-Turn = 1800 degrees of total travel (0.0 to 1.0)
+     *
+     * Formula:
+     * (TargetDegrees * Ratio) / TotalServoRange
+     */
+    public static double GEAR_RATIO = 112.0 / 29.0;
+    public static double TOTAL_SERVO_RANGE = 1620.0; // servo range is 1800 but we are only going up to 0.9
+
     // Inside LaunchSubsystem
     private PIDController flywheelPID = new PIDController(0.000, 0, 0);
     // ks = static friction, kv = velocity gain (How much power to hold a speed)
@@ -165,6 +176,23 @@ public class LaunchSubsystem extends SubsystemBase {
         double ticksPerSecond = (targetRPM * Motor.GoBILDA.BARE.getCPR()) / 60.0;
         leftLaunchMotor.setVelocity(ticksPerSecond);
         rightLaunchMotor.setVelocity(ticksPerSecond);
+    }
+
+    /**
+     * Returns the turret angle in radians relative to the robot chassis.
+     * 0 radians is forward, positive is counter-clockwise.
+     */
+    public double getTurretAngleRadians() {
+        // turret only goes from 0 to1620 degrees
+        double totalRangeDegrees = 1620.0;
+
+        // Calculate the difference from the center (Midpoint)
+        // If increasing the servo position turns the turret counter-clockwise,
+        // use (current - mid). If it turns clockwise, use (mid - current).
+        double currentPos = turretServo.getPosition();
+        double angleDegrees = (currentPos - TURRET_MID) * totalRangeDegrees;
+
+        return Math.toRadians(angleDegrees);
     }
 
     public double getFlywheelVelocityTPS() {

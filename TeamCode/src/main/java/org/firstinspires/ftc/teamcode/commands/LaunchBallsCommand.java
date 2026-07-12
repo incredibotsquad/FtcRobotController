@@ -10,10 +10,15 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 public class LaunchBallsCommand extends CommandBase {
     private final LaunchSubsystem launcher;
     private final LaunchGateSubsystem launchGate;
+    private boolean initialized = false;
+    private final ElapsedTime timer;
+    private static final double LAUNCH_DURATION = 1500; // 1.5 second to clear all balls
 
     public LaunchBallsCommand(LaunchSubsystem launchSubsystem, LaunchGateSubsystem launchGateSubsystem) {
         this.launcher = launchSubsystem;
         this.launchGate = launchGateSubsystem;
+        this.initialized = false;
+        this.timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
         // We require the GATE so no other command moves it.
         // We do NOT require the LAUNCHER so the AutoAimCommand 
@@ -34,6 +39,11 @@ public class LaunchBallsCommand extends CommandBase {
 //            launchGate.closeGate();
 //            timer.reset(); // Reset timer so we get a full LAUNCH_DURATION once ready again
 //        }
+        if (!initialized) {
+            Log.i("LaunchBallsCommand", "Initialize - resetting timer");
+            timer.reset();
+            initialized = true;
+        }
 
         Log.i("LaunchBallsCommand", "Execute: opening gate without any checks");
         launchGate.openGate();
@@ -42,9 +52,13 @@ public class LaunchBallsCommand extends CommandBase {
 
     @Override
     public boolean isFinished() {
-        return true;
-    }
+        boolean finished = timer.milliseconds() > LAUNCH_DURATION;
+        // Finish once the gate has been open and ready for 1 seconds
 
+        Log.i("LaunchBallsCommand", "Finished returned: " + finished);
+
+        return finished;
+    }
 
     /**
      * Called when the command ends - either normally via finished or if interrupted / cancelled.
@@ -54,6 +68,7 @@ public class LaunchBallsCommand extends CommandBase {
     public void end(boolean interrupted) {
         Log.i("LaunchBallsCommand", "End: command interrupted: " + interrupted);
         // Safety: Always close the gate when the command ends
+        initialized = false;
         launchGate.closeGate();
     }
 }

@@ -46,7 +46,7 @@ public class Incredibot extends Robot {
     private final HardwareMap hwMap;
     private TelemetryManager telemetry;
 
-    public Incredibot(HardwareMap hardwareMap, OpModeType opModeType, GamepadEx driverGamepad, GamepadEx operatorGamepad, TelemetryManager telemetry) {
+    public Incredibot(HardwareMap hardwareMap, TelemetryManager telemetry) {
         this.hwMap = hardwareMap;
         this.telemetry = telemetry;
 
@@ -59,13 +59,15 @@ public class Incredibot extends Robot {
         launchKickSubsystem = new LaunchKickSubsystem(hardwareMap, telemetry);
         limelightSubsystem = new LimelightSubsystem(hwMap, telemetry);
 
+        limelightSubsystem.setAlliance(CrossOpModeStorage.allianceColor == AllianceColors.RED);
+    }
+
+    public void initialize(OpModeType opModeType, GamepadEx driverGamepad, GamepadEx operatorGamepad) {
         if (opModeType == OpModeType.TELEOP) {
             initTeleop(driverGamepad, operatorGamepad);
         } else if (opModeType == OpModeType.AUTO) {
             initAuto();
         }
-
-        limelightSubsystem.setAlliance(CrossOpModeStorage.allianceColor == AllianceColors.RED);
     }
 
     public void initTeleop(GamepadEx driverGamepad, GamepadEx operatorGamepad) {
@@ -91,7 +93,7 @@ public class Incredibot extends Robot {
                 .whenPressed(new ReverseIntakeCommand(intakeSubsystem, 2.0));
 
         operatorGamepad.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER)
-                .whileHeld(new LaunchBallsCommand(launchSubsystem, launchGateSubsystem));
+                .whenPressed(new LaunchBallsCommand(launchSubsystem, launchGateSubsystem));
 
         // 2. AUTO-FIRE TOGGLE (While held)
         operatorGamepad.getGamepadButton(GamepadKeys.Button.LEFT_BUMPER)
@@ -126,7 +128,6 @@ public class Incredibot extends Robot {
         // The scheduler will now call execute() on this command every single frame.
         launchSubsystem.setDefaultCommand(new LaunchReadinessCommand(launchSubsystem, odometrySubsystem, telemetry));
 
-        limelightSubsystem.setDefaultCommand(new RelocalizeCommand(limelightSubsystem, odometrySubsystem, driveSubsystem));
-
+        limelightSubsystem.setDefaultCommand(new RelocalizeCommand(limelightSubsystem, odometrySubsystem, launchSubsystem, driveSubsystem));
     }
 }

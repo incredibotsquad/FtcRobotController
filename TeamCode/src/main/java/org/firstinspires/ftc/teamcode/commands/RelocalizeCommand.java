@@ -1,10 +1,13 @@
 package org.firstinspires.ftc.teamcode.commands;
 
+import android.util.Log;
+
 import com.arcrobotics.ftclib.command.CommandBase;
 import com.arcrobotics.ftclib.geometry.Pose2d;
 import com.arcrobotics.ftclib.geometry.Rotation2d;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LimelightSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
 
@@ -15,6 +18,7 @@ public class RelocalizeCommand extends CommandBase {
     private final LimelightSubsystem limelight;
     private final OdometrySubsystem odometry;
     private final DriveSubsystem drive;
+    private final LaunchSubsystem launchSubsystem;
 
     private final List<Pose2d> samples = new ArrayList<>();
     private final ElapsedTime windowTimer = new ElapsedTime();
@@ -25,9 +29,11 @@ public class RelocalizeCommand extends CommandBase {
 
     public RelocalizeCommand(LimelightSubsystem limelight,
                              OdometrySubsystem odometry,
+                             LaunchSubsystem launchSubsystem,
                              DriveSubsystem drive) {
         this.limelight = limelight;
         this.odometry = odometry;
+        this.launchSubsystem = launchSubsystem;
         this.drive = drive;
 
         windowTimer.reset();
@@ -43,6 +49,8 @@ public class RelocalizeCommand extends CommandBase {
             windowTimer.reset();
             return;
         }
+
+        Log.i("Relocalize command", "Inside execute");
 
         // Try to get a frame from Limelight
         Pose2d currentFrame = limelight.getLatestFieldPose();
@@ -105,17 +113,38 @@ public class RelocalizeCommand extends CommandBase {
                 finalHeading += p.getHeading();
             }
 
-            Pose2d filteredPose = new Pose2d(
+            // This is the Pose of the TURRET on the field
+            Pose2d turretFieldPose = new Pose2d(
                     finalX / filteredSamples.size(),
                     finalY / filteredSamples.size(),
                     new Rotation2d(finalHeading / filteredSamples.size())
             );
 
+            // --- TURRET COMPENSATION LOGIC ---
+
+            // 1. Get the current turret angle relative to the robot chassis (in Radians)
+            // Replace 'odometry.getTurretAngle()' with your actual method
+            double turretAngleRelativeToRobot = launchSubsystem.getTurretAngleRadians();
+
+            // 2. The true robot heading is the (Limelight Heading - Turret Angle)
+            // Example: Limelight sees 90deg, Turret is turned 30deg right. Robot is actually at 60deg.
+            double robotHeading = turretFieldPose.getHeading() - turretAngleRelativeToRobot;
+
+            // 3. Construct the corrected Robot Pose
+            Pose2d correctedRobotPose = new Pose2d(
+                    turretFieldPose.getX(),
+                    turretFieldPose.getY(),
+                    new Rotation2d(robotHeading)
+            );
+
             // Final Sanity Check: Don't let the camera teleport the robot more than 12 inches
-            double distanceToOdometry = filteredPose.getTranslation().getDistance(odometry.getPose().getTranslation());
+            double distanceToOdometry = correctedRobotPose.getTranslation().getDistance(odometry.getPose().getTranslation());
+
             if (distanceToOdometry < 12.0) {
-                odometry.updatePoseFromLimelight(filteredPose);
+                // Update odometry with the chassis-relative corrected pose
+                odometry.updatePoseFromLimelight(correctedRobotPose);
             }
+
         }
     }
 }

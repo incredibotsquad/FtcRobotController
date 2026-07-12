@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import android.util.Log;
+
 import com.arcrobotics.ftclib.command.SubsystemBase;
 import com.arcrobotics.ftclib.geometry.Pose2d;
 import com.arcrobotics.ftclib.geometry.Rotation2d;
@@ -23,8 +25,6 @@ public class LimelightSubsystem extends SubsystemBase {
     private int targetTagId = -1;
     public LimelightSubsystem(HardwareMap hardwareMap, TelemetryManager telemetry) {
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
-        limelight.pipelineSwitch(0); // Ensure your AprilTag pipeline is index 0
-        limelight.start();
 
         this.telemetry = telemetry;
     }
@@ -41,6 +41,7 @@ public class LimelightSubsystem extends SubsystemBase {
             this.targetTagId = 20;
             limelight.pipelineSwitch(7);
         }
+        limelight.start();
     }
 
     /**
@@ -57,6 +58,7 @@ public class LimelightSubsystem extends SubsystemBase {
             boolean targetSeen = false;
             for (LLResultTypes.FiducialResult f : fiducials) {
                 if (f.getFiducialId() == targetTagId) {
+                    Log.i("Limelight subsystem", "found FiducialResult");
                     targetSeen = true;
                     break;
                 }
@@ -66,6 +68,9 @@ public class LimelightSubsystem extends SubsystemBase {
             if (targetSeen) {
                 Pose3D botpose = result.getBotpose();
                 if (botpose != null) {
+
+                    Log.i("Limelight subsystem", "found botpose from target");
+
                     return new Pose2d(
                             botpose.getPosition().toUnit(DistanceUnit.INCH).x,
                             botpose.getPosition().toUnit(DistanceUnit.INCH).y,

@@ -25,9 +25,6 @@ public class IncredibotsMecanumDrive extends LinearOpMode { // Changed this
 
         incredibot = new Incredibot(
                 hardwareMap,
-                Incredibot.OpModeType.TELEOP,
-                driverGamepad,
-                operatorGamepad,
                 PanelsTelemetry.INSTANCE.getTelemetry());
 
         // Schedule the RelocalizeCommand
@@ -35,11 +32,15 @@ public class IncredibotsMecanumDrive extends LinearOpMode { // Changed this
         RelocalizeCommand relocalizeCommand = new RelocalizeCommand(
                 incredibot.limelightSubsystem,
                 incredibot.odometrySubsystem,
+                incredibot.launchSubsystem,
                 incredibot.driveSubsystem
         );
-        relocalizeCommand.schedule();
 
+        //TODO: remove this statement when the one below is uncommented
         incredibot.odometrySubsystem.resetPose(CrossOpModeStorage.currentPose.getX(), CrossOpModeStorage.currentPose.getY(), Math.toDegrees(CrossOpModeStorage.currentPose.getHeading()));
+
+        //TODO: UNCOMMENT THIS OUT
+        relocalizeCommand.schedule();
 
         // 2. THE INIT-LOOP (Runs after you hit INIT, but before you hit START)
         while (opModeInInit()) {
@@ -55,6 +56,9 @@ public class IncredibotsMecanumDrive extends LinearOpMode { // Changed this
 
         // 3. START PHASE (Runs once when you hit the START button)
         waitForStart();
+
+        //this is done later to avoid all the other commands from running.
+        incredibot.initialize(Incredibot.OpModeType.TELEOP, driverGamepad, operatorGamepad);
 
         // 4. MAIN TELEOP LOOP
         while (opModeIsActive() && !isStopRequested()) {

@@ -112,12 +112,38 @@ public class OdometrySubsystem extends SubsystemBase {
      * We use this to correct drift using Limelight.
      */
     public void updatePoseFromLimelight(Pose2d correctedPose) {
+
+        Log.i("Odometry Subsystem", "Updating pose from limelight. Old pose: " + currentPose.toString() + " New pose: " + correctedPose.toString());
+
         // We update the Pinpoint's internal X, Y and Heading
         pinpoint.setPosX(correctedPose.getX(), DistanceUnit.INCH);
         pinpoint.setPosY(correctedPose.getY(), DistanceUnit.INCH);
         pinpoint.setHeading(correctedPose.getHeading(), AngleUnit.RADIANS);
 
         pinpoint.update();
+    }
+
+    private void updateVelocityEstimate(Pose2d newPose) {
+        long now = System.nanoTime();
+
+        if (previousUpdateNanos != 0) {
+            double dtSeconds = (now - previousUpdateNanos) / 1.0e9;
+
+            if (dtSeconds > 0.0) {
+                Translation2d previousVelocity = fieldVelocity;
+                fieldVelocity = new Translation2d(
+                        (newPose.getX() - previousPose.getX()) / dtSeconds,
+                        (newPose.getY() - previousPose.getY()) / dtSeconds
+                );
+                fieldAcceleration = new Translation2d(
+                        (fieldVelocity.getX() - previousVelocity.getX()) / dtSeconds,
+                        (fieldVelocity.getY() - previousVelocity.getY()) / dtSeconds
+                );
+            }
+        }
+
+        previousPose = newPose;
+        previousUpdateNanos = now;
     }
 
     @Override
@@ -145,28 +171,5 @@ public class OdometrySubsystem extends SubsystemBase {
         telemetry.addData("Odometry: X Velocity", fieldVelocity.getX());
         telemetry.addData("Odometry: Y Velocity", fieldVelocity.getY());
         telemetry.addData("Odometry: Speed", getFieldSpeedInchesPerSecond());
-    }
-
-    private void updateVelocityEstimate(Pose2d newPose) {
-        long now = System.nanoTime();
-
-        if (previousUpdateNanos != 0) {
-            double dtSeconds = (now - previousUpdateNanos) / 1.0e9;
-
-            if (dtSeconds > 0.0) {
-                Translation2d previousVelocity = fieldVelocity;
-                fieldVelocity = new Translation2d(
-                        (newPose.getX() - previousPose.getX()) / dtSeconds,
-                        (newPose.getY() - previousPose.getY()) / dtSeconds
-                );
-                fieldAcceleration = new Translation2d(
-                        (fieldVelocity.getX() - previousVelocity.getX()) / dtSeconds,
-                        (fieldVelocity.getY() - previousVelocity.getY()) / dtSeconds
-                );
-            }
-        }
-
-        previousPose = newPose;
-        previousUpdateNanos = now;
     }
 }

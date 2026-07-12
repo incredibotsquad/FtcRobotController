@@ -45,7 +45,8 @@ public class BlueNear12 extends CommandOpMode {
 
         // Initialize the robot container
         // We pass 'null' for gamepads since it's Autonomous
-        robot = new Incredibot(hardwareMap, Incredibot.OpModeType.AUTO, null, null, PanelsTelemetry.INSTANCE.getTelemetry());
+        robot = new Incredibot(hardwareMap, PanelsTelemetry.INSTANCE.getTelemetry());
+        robot.initialize(Incredibot.OpModeType.AUTO, null, null);
 
         schedule(getAutoRoutine());
     }

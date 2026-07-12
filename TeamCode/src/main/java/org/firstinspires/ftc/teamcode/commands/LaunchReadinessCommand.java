@@ -169,22 +169,11 @@ public class LaunchReadinessCommand extends CommandBase {
         while (relativeTargetAngle > 180) relativeTargetAngle -= 360;
         while (relativeTargetAngle < -180) relativeTargetAngle += 360;
 
-        /*
-         * MECHANICAL CALCULATION:
-         * Ratio: 112 teeth (Turret) / 29 teeth (Servo) = 3.862
-         * Servo: GoBILDA 5-Turn = 1800 degrees of total travel (0.0 to 1.0)
-         *
-         * Formula:
-         * (TargetDegrees * Ratio) / TotalServoRange
-         */
-        double GEAR_RATIO = 112.0 / 29.0;
-        double TOTAL_SERVO_RANGE = 1620.0; // servo range is 1800 but we are only going up to 0.9
-
         // Calculate how many degrees the servo needs to rotate away from center
-        double servoOffsetDegrees = relativeTargetAngle * GEAR_RATIO;
+        double servoOffsetDegrees = relativeTargetAngle * LaunchSubsystem.GEAR_RATIO;
 
         // Convert that degree offset into a 0.0 - 1.0 servo position
-        double servoPosAdjustment = servoOffsetDegrees / TOTAL_SERVO_RANGE;
+        double servoPosAdjustment = servoOffsetDegrees / LaunchSubsystem.TOTAL_SERVO_RANGE;
 
         // 4. Combine with the Midpoint
         double unclampedServoPosition = LaunchSubsystem.TURRET_MID - servoPosAdjustment;
