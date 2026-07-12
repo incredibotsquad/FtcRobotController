@@ -57,15 +57,24 @@ public class LaunchReadinessCommand extends CommandBase {
     }
 
     // 2. The Lookup Table (Distance in Inches -> Constants)
-    private static final NavigableMap<Double, FlywheelConstants> LOOKUP_TABLE = new TreeMap<>();
+    private static final NavigableMap<Double, FlywheelConstants> NEAR_LOOKUP_TABLE = new TreeMap<>();
     static {
         // Distance (inches), P, I, D, kS, kV, targetRPM
         // These numbers are examples; populate with your tuned values
-        //subtracting 10 inches
-        LOOKUP_TABLE.put(75.0,  new FlywheelConstants(0.015, 0, 0, 0.1, 0.00061, 1650));
-        LOOKUP_TABLE.put(95.0,  new FlywheelConstants(0.015, 0, 0, 0.1, 0.000615, 1700));
-        LOOKUP_TABLE.put(115.0,  new FlywheelConstants(0.0125, 0, 0, 0.1, 0.000625, 1800));
-        LOOKUP_TABLE.put(130.0, new FlywheelConstants(0.02, 0, 0, 0.1, 0.00066, 2250));
+        NEAR_LOOKUP_TABLE.put(71.0,  new FlywheelConstants(0.015, 0, 0, 0.1, 0.00061, 1650));
+        NEAR_LOOKUP_TABLE.put(88.0,  new FlywheelConstants(0.015, 0, 0, 0.1, 0.000615, 1700));
+        NEAR_LOOKUP_TABLE.put(105.0,  new FlywheelConstants(0.02, 0, 0, 0.1, 0.000625, 1850));
+        NEAR_LOOKUP_TABLE.put(115.0,  new FlywheelConstants(0.0228, 0, 0, 0.1, 0.00063, 1850));
+    }
+
+    private static final NavigableMap<Double, FlywheelConstants> FAR_LOOKUP_TABLE = new TreeMap<>();
+    static {
+        // Distance (inches), P, I, D, kS, kV, targetRPM
+        // These numbers are examples; populate with your tuned values
+        FAR_LOOKUP_TABLE.put(126.0, new FlywheelConstants(0.0125, 0, 0, 0.1, 0.00061, 2150));
+        FAR_LOOKUP_TABLE.put(134.0, new FlywheelConstants(0.014, 0, 0, 0.1, 0.00061, 2175));
+        FAR_LOOKUP_TABLE.put(139.0, new FlywheelConstants(0.015, 0, 0, 0.1, 0.00061, 2220));
+        FAR_LOOKUP_TABLE.put(145.0, new FlywheelConstants(0.02, 0, 0, 0.1, 0.000623, 2270));
     }
 
     public LaunchReadinessCommand(LaunchSubsystem launchSubsystem, OdometrySubsystem odometry, TelemetryManager telemetry) {
@@ -230,20 +239,31 @@ public class LaunchReadinessCommand extends CommandBase {
     }
 
     public FlywheelConstants getFlywheelConstantsBasedOnDistance(double distanceFromTarget) {
-        // Find the keys immediately below and above our current distance
-        Double lowKey = LOOKUP_TABLE.floorKey(distanceFromTarget);
-        Double highKey = LOOKUP_TABLE.ceilingKey(distanceFromTarget);
+        // 1. Determine which table to use.
+        // If distance is greater than the max near distance (115.0), use the Far table.
+        NavigableMap<Double, FlywheelConstants> activeTable = NEAR_LOOKUP_TABLE;
 
-        // Edge case: Distance is smaller than our lowest tuned point
-        if (lowKey == null) return LOOKUP_TABLE.get(highKey);
-        // Edge case: Distance is larger than our highest tuned point
-        if (highKey == null) return LOOKUP_TABLE.get(lowKey);
+        if (distanceFromTarget > NEAR_LOOKUP_TABLE.lastKey()) {
+            activeTable = FAR_LOOKUP_TABLE;
+        }
+
+        // 2. Find the keys immediately below and above our current distance in the active table
+        Double lowKey = activeTable.floorKey(distanceFromTarget);
+        Double highKey = activeTable.ceilingKey(distanceFromTarget);
+
+        // Edge case: Distance is smaller than the active table's lowest tuned point
+        // (e.g., if we are in the FAR table but distance is 120, this returns the 130.0 entry)
+        if (lowKey == null) return activeTable.get(highKey);
+
+        // Edge case: Distance is larger than the active table's highest tuned point
+        if (highKey == null) return activeTable.get(lowKey);
+
         // Exact match
-        if (lowKey.equals(highKey)) return LOOKUP_TABLE.get(lowKey);
+        if (lowKey.equals(highKey)) return activeTable.get(lowKey);
 
-        // Perform Linear Interpolation between the two points
-        FlywheelConstants low = LOOKUP_TABLE.get(lowKey);
-        FlywheelConstants high = LOOKUP_TABLE.get(highKey);
+        // 3. Perform Linear Interpolation between the two points in the active table
+        FlywheelConstants low = activeTable.get(lowKey);
+        FlywheelConstants high = activeTable.get(highKey);
 
         double t = (distanceFromTarget - lowKey) / (highKey - lowKey); // 0.0 to 1.0 factor
 
