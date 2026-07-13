@@ -16,7 +16,7 @@ public class SmartIntakeCommand extends CommandBase {
     public static double DELAYED_STOP_MS = 500;
     public static double KICKER_PULSE_MS = 200;
     public static double KICK_STABILITY_MS = 300; // NEW: Duration to wait before kicking
-
+    public static boolean TURN_OFF_INTAKE = false;
     private final IntakeSubsystem intakeSubsystem;
     private final LaunchGateSubsystem launchGate;
     private final LaunchKickSubsystem launchKick;
@@ -58,7 +58,9 @@ public class SmartIntakeCommand extends CommandBase {
         boolean isConfirmedFull = (stableCount == 3);
 
         if (isLaunching || !isConfirmedFull) {
-            intakeSubsystem.startIntake();
+            if(!TURN_OFF_INTAKE)
+                intakeSubsystem.startIntake();
+
             stopDelayTimer = null;
         } else {
             if (stopDelayTimer == null) {

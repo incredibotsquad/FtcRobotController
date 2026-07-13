@@ -8,11 +8,14 @@ import com.arcrobotics.ftclib.controller.wpilibcontroller.SimpleMotorFeedforward
 import com.arcrobotics.ftclib.hardware.SimpleServo;
 import com.arcrobotics.ftclib.hardware.motors.Motor;
 import com.arcrobotics.ftclib.hardware.motors.MotorEx;
+import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 
+@Configurable
 public class LaunchSubsystem extends SubsystemBase {
 //
     private final MotorEx leftLaunchMotor;
@@ -56,7 +59,7 @@ public class LaunchSubsystem extends SubsystemBase {
      * (TargetDegrees * Ratio) / TotalServoRange
      */
     public static double GEAR_RATIO = 112.0 / 29.0;
-    public static double TOTAL_SERVO_RANGE = 1620.0; // servo range is 1800 but we are only going up to 0.9
+    public static double TOTAL_SERVO_RANGE = 1620; // servo range is 1800 but we are only going up to 0.9
 
     // Inside LaunchSubsystem
     private PIDController flywheelPID = new PIDController(0.000, 0, 0);
@@ -65,6 +68,8 @@ public class LaunchSubsystem extends SubsystemBase {
 
     // Inside LaunchSubsystem.java
     private boolean turretLocked = false;
+
+    public static boolean SKIP_FLYWHEEL = false;
 
     public LaunchSubsystem(HardwareMap hardwareMap, TelemetryManager telemetry) {
         leftLaunchMotor = new MotorEx(hardwareMap, "leftLaunchMotor", Motor.GoBILDA.BARE);
@@ -116,8 +121,10 @@ public class LaunchSubsystem extends SubsystemBase {
 
 //        Log.i("Launch Subsystem", "Setting flywheel power to " + totalPower);
 
-        leftLaunchMotor.set(totalPower);
-        rightLaunchMotor.set(totalPower);
+        if (!SKIP_FLYWHEEL) {
+            leftLaunchMotor.set(totalPower);
+            rightLaunchMotor.set(totalPower);
+        }
     }
 
 
@@ -128,6 +135,7 @@ public class LaunchSubsystem extends SubsystemBase {
     public void setTurretPosition(double position) {
         this.targetTurretPos = position;
         turretServo.setPosition(position);
+        CrossOpModeStorage.turretPosition = position;
     }
 
     public double getTurretPosition() {
@@ -183,13 +191,14 @@ public class LaunchSubsystem extends SubsystemBase {
      * 0 radians is forward, positive is counter-clockwise.
      */
     public double getTurretAngleRadians() {
-        // turret only goes from 0 to1620 degrees
-        double totalRangeDegrees = 1620.0;
+        // turret only goes from 0 to 1620 degrees
+        double totalRangeDegrees = TOTAL_SERVO_RANGE;
 
         // Calculate the difference from the center (Midpoint)
         // If increasing the servo position turns the turret counter-clockwise,
         // use (current - mid). If it turns clockwise, use (mid - current).
-        double currentPos = turretServo.getPosition();
+        //get this from crossopmode storage since this function is used to relocalize
+        double currentPos = CrossOpModeStorage.turretPosition;
         double angleDegrees = (currentPos - TURRET_MID) * totalRangeDegrees;
 
         return Math.toRadians(angleDegrees);

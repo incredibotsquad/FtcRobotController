@@ -5,6 +5,8 @@ import android.util.Log;
 import com.arcrobotics.ftclib.command.CommandBase;
 import com.arcrobotics.ftclib.geometry.Pose2d;
 import com.arcrobotics.ftclib.geometry.Rotation2d;
+import com.bylazar.configurables.annotations.Configurable;
+import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
@@ -14,18 +16,21 @@ import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
 import java.util.ArrayList;
 import java.util.List;
 
+@Configurable
 public class RelocalizeCommand extends CommandBase {
     private final LimelightSubsystem limelight;
     private final OdometrySubsystem odometry;
     private final DriveSubsystem drive;
     private final LaunchSubsystem launchSubsystem;
 
-    private final List<Pose2d> samples = new ArrayList<>();
+    private final List<Pose> samples = new ArrayList<>();
     private final ElapsedTime windowTimer = new ElapsedTime();
 
     // CONFIGURATION
     private static final double COLLECTION_WINDOW_MS = 200; // Collect for 0.2 seconds
     private static final int MIN_REQUIRED_SAMPLES = 5;      // Need at least 5 frames
+
+    public static double STD_DEV_THRESHOLD = 1.5;
 
     public RelocalizeCommand(LimelightSubsystem limelight,
                              OdometrySubsystem odometry,
@@ -50,17 +55,21 @@ public class RelocalizeCommand extends CommandBase {
             return;
         }
 
-        Log.i("Relocalize command", "Inside execute");
-
         // Try to get a frame from Limelight
-        Pose2d currentFrame = limelight.getLatestFieldPose();
+        Pose currentFrame = limelight.getLatestFieldPose();
+
         if (currentFrame != null) {
             samples.add(currentFrame);
+
+//            Log.i("Relocalize command", "Inside execute. New pose: " + currentFrame.toString());
+
         }
 
         // Once the window expires, process the samples
         if (windowTimer.milliseconds() >= COLLECTION_WINDOW_MS) {
             if (samples.size() >= MIN_REQUIRED_SAMPLES) {
+//                Log.i("Relocalize command", "Collected samples: " + samples.size());
+
                 processAndApply();
             }
             samples.clear();
@@ -73,7 +82,7 @@ public class RelocalizeCommand extends CommandBase {
 
         // 1. Calculate the raw average (mean) of the samples
         double rawSumX = 0, rawSumY = 0, rawSumHeading = 0;
-        for (Pose2d p : samples) {
+        for (Pose p : samples) {
             rawSumX += p.getX();
             rawSumY += p.getY();
             rawSumHeading += p.getHeading();
@@ -83,7 +92,7 @@ public class RelocalizeCommand extends CommandBase {
 
         // 2. Calculate Standard Deviation to find how "spread out" the data is
         double varianceSumX = 0, varianceSumY = 0;
-        for (Pose2d p : samples) {
+        for (Pose p : samples) {
             varianceSumX += Math.pow(p.getX() - meanX, 2);
             varianceSumY += Math.pow(p.getY() - meanY, 2);
         }
@@ -92,59 +101,80 @@ public class RelocalizeCommand extends CommandBase {
 
         // 3. Filter the samples: Keep only those within 1.5 Standard Deviations
         // This removes the "jumps" where the camera briefly sees a wrong tag or floor reflection
-        List<Pose2d> filteredSamples = new ArrayList<>();
-        double threshold = 1.5;
+        List<Pose> filteredSamples = new ArrayList<>();
+        double threshold = STD_DEV_THRESHOLD;
 
-        for (Pose2d p : samples) {
+        for (Pose p : samples) {
             boolean isOutlierX = Math.abs(p.getX() - meanX) > (stdDevX * threshold);
             boolean isOutlierY = Math.abs(p.getY() - meanY) > (stdDevY * threshold);
 
+//            Log.i("Relocalize command", "Filtering samples. X out:" + isOutlierX + " y out: " + isOutlierY);
+
             if (!isOutlierX && !isOutlierY) {
+                Log.i("Relocalize command", "Filtering samples. Added point: " + p.toString());
                 filteredSamples.add(p);
             }
         }
 
+        Log.i("Relocalize command", "Number of filtered samples: " + filteredSamples.size());
+
         // 4. If we still have enough clean samples, calculate the final average
         if (filteredSamples.size() >= 3) {
-            double finalX = 0, finalY = 0, finalHeading = 0;
-            for (Pose2d p : filteredSamples) {
-                finalX += p.getX();
-                finalY += p.getY();
-                finalHeading += p.getHeading();
+            // 1. Get the average field-relative pose reported by Limelight
+            double sumX = 0, sumY = 0, sumHeading = 0;
+            for (Pose p : filteredSamples) {
+                sumX += p.getX();
+                sumY += p.getY();
+                sumHeading += p.getHeading();
             }
 
-            // This is the Pose of the TURRET on the field
-            Pose2d turretFieldPose = new Pose2d(
-                    finalX / filteredSamples.size(),
-                    finalY / filteredSamples.size(),
-                    new Rotation2d(finalHeading / filteredSamples.size())
-            );
+            // This is the absolute angle the Limelight is facing on the field
+            double absoluteLimelightHeading = sumHeading / filteredSamples.size();
+            double avgX = sumX / filteredSamples.size();
+            double avgY = sumY / filteredSamples.size();
 
-            // --- TURRET COMPENSATION LOGIC ---
+            // 2. Get the current Turret Servo Position from the LaunchSubsystem
+            double currentServoPos = launchSubsystem.getTurretPosition();
 
-            // 1. Get the current turret angle relative to the robot chassis (in Radians)
-            // Replace 'odometry.getTurretAngle()' with your actual method
-            double turretAngleRelativeToRobot = launchSubsystem.getTurretAngleRadians();
+            // 3. Reverse the Servo -> Degree math from LaunchReadinessCommand
+            // Note: servoPosAdjustment = servoOffsetDegrees / TOTAL_SERVO_RANGE
+            double servoPosAdjustment = LaunchSubsystem.TURRET_MID - currentServoPos;
+            double servoOffsetDegrees = servoPosAdjustment * LaunchSubsystem.TOTAL_SERVO_RANGE;
 
-            // 2. The true robot heading is the (Limelight Heading - Turret Angle)
-            // Example: Limelight sees 90deg, Turret is turned 30deg right. Robot is actually at 60deg.
-            double robotHeading = turretFieldPose.getHeading() - turretAngleRelativeToRobot;
+            // 4. Reverse the Gear Ratio to get degrees relative to Chassis
+            // Note: servoOffsetDegrees = relativeTargetAngle * GEAR_RATIO
+            double relativeTurretAngle = servoOffsetDegrees / LaunchSubsystem.GEAR_RATIO;
 
-            // 3. Construct the corrected Robot Pose
+            // 5. Calculate true Robot Heading
+            // Since absoluteTarget = robotHeading + relativeAngle
+            double robotHeadingDegrees = Math.toDegrees(absoluteLimelightHeading) - relativeTurretAngle;
+
+            // Normalize heading to [-180, 180]
+            while (robotHeadingDegrees > 180) robotHeadingDegrees -= 360;
+            while (robotHeadingDegrees < -180) robotHeadingDegrees += 360;
+
+            // 6. Create the corrected pose
             Pose2d correctedRobotPose = new Pose2d(
-                    turretFieldPose.getX(),
-                    turretFieldPose.getY(),
-                    new Rotation2d(robotHeading)
+                    avgX,
+                    avgY,
+                    Rotation2d.fromDegrees(robotHeadingDegrees)
             );
+
+            Log.i("Relocalize command", "Pose from odometry: " + odometry.getPose().toString());
+
+            Log.i("Relocalize command", "Calculated robot pose: " + correctedRobotPose.toString());
 
             // Final Sanity Check: Don't let the camera teleport the robot more than 12 inches
             double distanceToOdometry = correctedRobotPose.getTranslation().getDistance(odometry.getPose().getTranslation());
 
-            if (distanceToOdometry < 12.0) {
-                // Update odometry with the chassis-relative corrected pose
-                odometry.updatePoseFromLimelight(correctedRobotPose);
-            }
+            Log.i("Relocalize command", "Distance to odometry: " + distanceToOdometry);
 
+            if (distanceToOdometry < 12.0) {
+                Log.i("Relocalize command", "Performed all filtering - calling odometry to update pose");
+
+                // Update odometry with the chassis-relative corrected pose
+//                odometry.updatePoseFromLimelight(correctedRobotPose);
+            }
         }
     }
 }

@@ -3,13 +3,14 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import android.util.Log;
 
 import com.arcrobotics.ftclib.command.SubsystemBase;
-import com.arcrobotics.ftclib.geometry.Pose2d;
-import com.arcrobotics.ftclib.geometry.Rotation2d;
 import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.pedropathing.ftc.FTCCoordinates;
+import com.pedropathing.geometry.PedroCoordinates;
+import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
@@ -36,19 +37,21 @@ public class LimelightSubsystem extends SubsystemBase {
     public void setAlliance(boolean isRed) {
         if (isRed) {
             this.targetTagId = 24;
-            limelight.pipelineSwitch(6);
+            limelight.pipelineSwitch(7);
         } else {
             this.targetTagId = 20;
-            limelight.pipelineSwitch(7);
+            limelight.pipelineSwitch(6);
         }
         limelight.start();
+
+        Log.i("Limelight subsystem", "Alliance set to red: " + isRed);
     }
 
     /**
      * Returns the robot's pose on the field based on AprilTags.
      * Returns null if no tags are in view.
      */
-    public Pose2d getLatestFieldPose() {
+    public Pose getLatestFieldPose() {
         LLResult result = limelight.getLatestResult();
 
         if (result != null && result.isValid()) {
@@ -69,13 +72,13 @@ public class LimelightSubsystem extends SubsystemBase {
                 Pose3D botpose = result.getBotpose();
                 if (botpose != null) {
 
-                    Log.i("Limelight subsystem", "found botpose from target");
+                    Log.i("Limelight subsystem", "found botpose from target. X: " + botpose.getPosition().toUnit(DistanceUnit.INCH).x + " y: " + botpose.getPosition().toUnit(DistanceUnit.INCH).y + " R: " + botpose.getOrientation().getYaw(AngleUnit.DEGREES));
 
-                    return new Pose2d(
+                    return new Pose(
                             botpose.getPosition().toUnit(DistanceUnit.INCH).x,
                             botpose.getPosition().toUnit(DistanceUnit.INCH).y,
-                            new Rotation2d(botpose.getOrientation().getYaw(AngleUnit.RADIANS))
-                    );
+                            botpose.getOrientation().getYaw(AngleUnit.RADIANS),
+                            FTCCoordinates.INSTANCE).getAsCoordinateSystem(PedroCoordinates.INSTANCE);
                 }
             }
         }

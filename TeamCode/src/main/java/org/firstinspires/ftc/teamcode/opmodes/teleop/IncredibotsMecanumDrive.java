@@ -36,10 +36,11 @@ public class IncredibotsMecanumDrive extends LinearOpMode { // Changed this
                 incredibot.driveSubsystem
         );
 
-        //TODO: remove this statement when the one below is uncommented
+        //use cross opmode storage to ensure odometry knows where we started from.
+        //odometry subsystem periodically updates this in cross oomode storage.
         incredibot.odometrySubsystem.resetPose(CrossOpModeStorage.currentPose.getX(), CrossOpModeStorage.currentPose.getY(), Math.toDegrees(CrossOpModeStorage.currentPose.getHeading()));
 
-        //TODO: UNCOMMENT THIS OUT
+        //relocalize based on april tags
         relocalizeCommand.schedule();
 
         // 2. THE INIT-LOOP (Runs after you hit INIT, but before you hit START)
