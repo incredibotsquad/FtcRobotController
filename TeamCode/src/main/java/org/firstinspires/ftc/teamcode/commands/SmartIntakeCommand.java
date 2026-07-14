@@ -15,6 +15,7 @@ public class SmartIntakeCommand extends CommandBase {
     public static double STABLE_STORAGE_MS = 200;
     public static double DELAYED_STOP_MS = 500;
     public static double KICKER_PULSE_MS = 200;
+    public static double INTAKE_MOTOR_STOP_DELAY_MS = 2000; // Time in ms to keep intake motor running after transfer stops
     public static double KICK_STABILITY_MS = 300; // NEW: Duration to wait before kicking
     public static boolean TURN_OFF_INTAKE = false;
     private final IntakeSubsystem intakeSubsystem;
@@ -63,10 +64,18 @@ public class SmartIntakeCommand extends CommandBase {
 
             stopDelayTimer = null;
         } else {
+            // 3 Balls Detected: Begin sequential shutdown
             if (stopDelayTimer == null) {
                 stopDelayTimer = new ElapsedTime();
-            } else if (stopDelayTimer.milliseconds() > DELAYED_STOP_MS) {
-                intakeSubsystem.stopIntake();
+            }
+            // Phase 1: Stop the Transfer motor first
+            if (stopDelayTimer.milliseconds() > DELAYED_STOP_MS) {
+                intakeSubsystem.stopTransferMotorOnly();
+            }
+
+            // Phase 2: Stop the Intake motor after a longer delay
+            if (stopDelayTimer.milliseconds() > INTAKE_MOTOR_STOP_DELAY_MS) {
+                intakeSubsystem.stopIntakeMotorOnly();
             }
         }
 

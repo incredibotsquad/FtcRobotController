@@ -126,7 +126,7 @@ public class Incredibot extends Robot {
 
         // Assign the background tracking loop here!
         // The scheduler will now call execute() on this command every single frame.
-        launchSubsystem.setDefaultCommand(new LaunchReadinessCommand(launchSubsystem, odometrySubsystem, telemetry));
+        launchSubsystem.setDefaultCommand(new LaunchReadinessCommand(launchSubsystem, odometrySubsystem, limelightSubsystem, telemetry));
 
         limelightSubsystem.setDefaultCommand(new RelocalizeCommand(limelightSubsystem, odometrySubsystem, launchSubsystem, driveSubsystem));
     }

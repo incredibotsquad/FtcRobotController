@@ -10,10 +10,9 @@ import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
-import org.firstinspires.ftc.robotcore.external.Telemetry;
-
 public class IntakeSubsystem extends SubsystemBase {
     private final MotorEx intakeMotor;
+    private final MotorEx transferMotor;
     private final SimpleServo artifactCountLight;
     private final DigitalChannel beamBreakHigh;
     private final DigitalChannel beamBreakMid;
@@ -25,8 +24,11 @@ public class IntakeSubsystem extends SubsystemBase {
     public static double THREE_BALL_COLOR = 0.5; //GREEN
 
     public IntakeSubsystem(HardwareMap hardwareMap, TelemetryManager telemetry) {
-        intakeMotor = new MotorEx(hardwareMap, "intakeMotor", Motor.GoBILDA.RPM_1150);
+        intakeMotor = new MotorEx(hardwareMap, "intakeMotor", Motor.GoBILDA.BARE);
         intakeMotor.setRunMode(Motor.RunMode.RawPower);
+
+        transferMotor = new MotorEx(hardwareMap, "transferMotor", Motor.GoBILDA.RPM_1150);
+        transferMotor.setRunMode(Motor.RunMode.RawPower);
 
         // Get the digital sensor from the hardware map and Set the channel as an input
         beamBreakHigh = hardwareMap.get(DigitalChannel.class, "ballSensorHigh");
@@ -43,14 +45,25 @@ public class IntakeSubsystem extends SubsystemBase {
 
     public void startIntake() {
         intakeMotor.set(1);
+        transferMotor.set(1);
+    }
+
+    public void stopIntakeMotorOnly() {
+        intakeMotor.set(0);
+    }
+
+    public void stopTransferMotorOnly() {
+        transferMotor.set(0);
     }
 
     public void stopIntake() {
         intakeMotor.set(0);
+        transferMotor.set(0);
     }
 
     public void reverseIntake() {
         intakeMotor.set(-1);
+        transferMotor.set(-1);
     }
 
     public void updateStatusLight(int artifactCount) {

@@ -1,16 +1,22 @@
 package org.firstinspires.ftc.teamcode.commands;
 
+import android.util.Log;
+
 import com.arcrobotics.ftclib.command.CommandBase;
 import com.arcrobotics.ftclib.geometry.Pose2d;
 import com.arcrobotics.ftclib.geometry.Translation2d;
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.TelemetryManager;
+import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
+import org.firstinspires.ftc.teamcode.subsystems.LimelightSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
@@ -18,6 +24,7 @@ import java.util.TreeMap;
 public class LaunchReadinessCommand extends CommandBase {
     private final LaunchSubsystem launchSubsystem;
     private final OdometrySubsystem odometry;
+    private final LimelightSubsystem limelightSubsystem;
 
     // Define the fixed field coordinate you want to point at (e.g., center of the backdrop or goal)
     public static boolean ENABLE_MOVING_SHOT_COMPENSATION = false;
@@ -26,6 +33,15 @@ public class LaunchReadinessCommand extends CommandBase {
     public static double BURST_MIDPOINT_SECONDS = 0.175;
     public static double MAX_COMPENSATED_SPEED_IPS = 24.0;
     public static double MAX_TARGET_LEAD_INCHES = 18.0;
+
+    // Feature Flags and Tuning
+    public static boolean ENABLE_VISION_CORRECTION = false;
+    public static double VISION_STABILITY_THRESHOLD_IPS = 3.0; // Max speed allowed for vision lock
+    public static double VISION_CORRECTION_GAIN = 0.05; // Sensitivity of the vision fine-tuning
+
+    // ... existing fields ...
+    public static int VISION_SAMPLE_SIZE = 5;
+    private final List<Pose> visionPoseSamples = new ArrayList<>();
 
     private double TARGET_X;
     private double TARGET_Y;
@@ -77,9 +93,10 @@ public class LaunchReadinessCommand extends CommandBase {
         FAR_LOOKUP_TABLE.put(145.0, new FlywheelConstants(0.02, 0, 0, 0.1, 0.000623, 2270));
     }
 
-    public LaunchReadinessCommand(LaunchSubsystem launchSubsystem, OdometrySubsystem odometry, TelemetryManager telemetry) {
+    public LaunchReadinessCommand(LaunchSubsystem launchSubsystem, OdometrySubsystem odometry, LimelightSubsystem limelight, TelemetryManager telemetry) {
         this.launchSubsystem = launchSubsystem;
         this.odometry = odometry;
+        this.limelightSubsystem = limelight;
         this.telemetry = telemetry;
 
         if (CrossOpModeStorage.allianceColor == AllianceColors.BLUE) {
@@ -151,44 +168,142 @@ public class LaunchReadinessCommand extends CommandBase {
         solution.targetY = targetLocation.getY();
         solution.distanceToTarget = currentPose.getTranslation().getDistance(targetLocation);
 
-        // 1. Calculate the absolute field angle to the target
+        // --- STANDARD ODOMETRY CALCULATION ---
         double deltaX = targetLocation.getX() - currentPose.getX();
         double deltaY = targetLocation.getY() - currentPose.getY();
-
-        // Math.atan2(y, x) returns the angle in radians
         double absoluteTargetAngle = Math.toDegrees(Math.atan2(deltaY, deltaX));
-
-        // 2. Account for the robot's current chassis heading
         double robotHeading = currentPose.getRotation().getDegrees();
-
-        // This is the angle the turret needs to be at relative to the front of the robot
         double relativeTargetAngle = absoluteTargetAngle - robotHeading;
 
-        // 3. Normalize the angle to be within [-180, 180]
-        // This ensures the turret takes the shortest path to the goal
         while (relativeTargetAngle > 180) relativeTargetAngle -= 360;
         while (relativeTargetAngle < -180) relativeTargetAngle += 360;
 
-        // Calculate how many degrees the servo needs to rotate away from center
         double servoOffsetDegrees = relativeTargetAngle * LaunchSubsystem.GEAR_RATIO;
-
-        // Convert that degree offset into a 0.0 - 1.0 servo position
         double servoPosAdjustment = servoOffsetDegrees / LaunchSubsystem.TOTAL_SERVO_RANGE;
+        double odometryServoPosition = LaunchSubsystem.TURRET_MID - servoPosAdjustment;
 
-        // 4. Combine with the Midpoint
-        double unclampedServoPosition = LaunchSubsystem.TURRET_MID - servoPosAdjustment;
+        // --- VISION FINE-TUNING LOGIC ---
+        double finalServoPosition = odometryServoPosition;
 
-        // Safety Clamp: Don't let the code command the servo beyond its hardware limits
-        double finalServoPosition = Math.max(LaunchSubsystem.TURRET_MIN, Math.min(LaunchSubsystem.TURRET_MAX, unclampedServoPosition));
+        if (ENABLE_VISION_CORRECTION) {
+            double currentSpeed = odometry.getFieldSpeedInchesPerSecond();
+
+            // Check if robot is stable enough to use vision
+            if (currentSpeed < VISION_STABILITY_THRESHOLD_IPS) {
+                // Get the horizontal offset of the target from Limelight (tx)
+                // Assuming your LimelightSubsystem has getHorizontalOffset() which returns degrees
+                Pose limelightRobotPose = limelightSubsystem.getLatestFieldPose();
+
+                if (limelightRobotPose != null){
+
+                    visionPoseSamples.add(limelightRobotPose);
+
+                    // 2. Statistical Filtering of the Heading component
+                    if (visionPoseSamples.size() >= VISION_SAMPLE_SIZE) {
+                        // Calculate Mean Heading
+                        double sumHeading = 0;
+                        for (Pose p : visionPoseSamples) {
+                            sumHeading += Math.toDegrees(p.getHeading());
+                        }
+                        double meanHeading = sumHeading / visionPoseSamples.size();
+
+                        // Calculate Standard Deviation
+                        double variance = 0;
+                        for (Pose p : visionPoseSamples) {
+                            variance += Math.pow(Math.toDegrees(p.getHeading()) - meanHeading, 2);
+                        }
+                        double stdDev = Math.sqrt(variance / visionPoseSamples.size());
+
+                        // Filter samples: Keep those within 1 StdDev (or keep all if noise is very low)
+                        double filteredHeadingSum = 0;
+                        int validCount = 0;
+                        for (Pose p : visionPoseSamples) {
+                            double heading = Math.toDegrees(p.getHeading());
+                            if (Math.abs(heading - meanHeading) <= stdDev || stdDev < 0.5) {
+                                filteredHeadingSum += heading;
+                                validCount++;
+                            }
+                        }
+
+                        if (validCount > 0) {
+                            // This is our stable heading error relative to the target
+                            double stableTargetOffsetDegrees = filteredHeadingSum / validCount;
+
+                            // 3. Apply the correction to the turret servo
+                            // Convert degrees of error into a servo position adjustment
+                            double visionAdjustment = (stableTargetOffsetDegrees * LaunchSubsystem.GEAR_RATIO)
+                                    / LaunchSubsystem.TOTAL_SERVO_RANGE;
+
+                            Log.i("LaunchReadinessCommand", "Vision adjustment added");
+
+                            // Subtract visionAdjustment to center the turret on the target
+                            finalServoPosition = odometryServoPosition - visionAdjustment;
+                        }
+                    }
+                } else {
+                    // Clear samples when moving fast to avoid using stale data when we stop
+                    visionPoseSamples.clear();
+                }
+            }
+        }
+
+        // Safety Clamp
+        double clampedServoPosition = Math.max(LaunchSubsystem.TURRET_MIN,
+                Math.min(LaunchSubsystem.TURRET_MAX, finalServoPosition));
 
         solution.relativeTargetAngle = relativeTargetAngle;
-        solution.turretServoPosition = finalServoPosition;
-        solution.turretTargetClamped = Math.abs(finalServoPosition - unclampedServoPosition) > 0.0001;
+        solution.turretServoPosition = clampedServoPosition;
+        solution.turretTargetClamped = Math.abs(clampedServoPosition - finalServoPosition) > 0.0001;
         solution.visorPosition = LaunchSubsystem.LAUNCH_VISOR_LOW;
         solution.flywheelConstants = getFlywheelConstantsBasedOnDistance(solution.distanceToTarget);
 
         return solution;
     }
+
+//    private ShotSolution calculateShotForTarget(Pose2d currentPose, Translation2d targetLocation) {
+//        ShotSolution solution = new ShotSolution();
+//        solution.targetX = targetLocation.getX();
+//        solution.targetY = targetLocation.getY();
+//        solution.distanceToTarget = currentPose.getTranslation().getDistance(targetLocation);
+//
+//        // 1. Calculate the absolute field angle to the target
+//        double deltaX = targetLocation.getX() - currentPose.getX();
+//        double deltaY = targetLocation.getY() - currentPose.getY();
+//
+//        // Math.atan2(y, x) returns the angle in radians
+//        double absoluteTargetAngle = Math.toDegrees(Math.atan2(deltaY, deltaX));
+//
+//        // 2. Account for the robot's current chassis heading
+//        double robotHeading = currentPose.getRotation().getDegrees();
+//
+//        // This is the angle the turret needs to be at relative to the front of the robot
+//        double relativeTargetAngle = absoluteTargetAngle - robotHeading;
+//
+//        // 3. Normalize the angle to be within [-180, 180]
+//        // This ensures the turret takes the shortest path to the goal
+//        while (relativeTargetAngle > 180) relativeTargetAngle -= 360;
+//        while (relativeTargetAngle < -180) relativeTargetAngle += 360;
+//
+//        // Calculate how many degrees the servo needs to rotate away from center
+//        double servoOffsetDegrees = relativeTargetAngle * LaunchSubsystem.GEAR_RATIO;
+//
+//        // Convert that degree offset into a 0.0 - 1.0 servo position
+//        double servoPosAdjustment = servoOffsetDegrees / LaunchSubsystem.TOTAL_SERVO_RANGE;
+//
+//        // 4. Combine with the Midpoint
+//        double unclampedServoPosition = LaunchSubsystem.TURRET_MID - servoPosAdjustment;
+//
+//        // Safety Clamp: Don't let the code command the servo beyond its hardware limits
+//        double finalServoPosition = Math.max(LaunchSubsystem.TURRET_MIN, Math.min(LaunchSubsystem.TURRET_MAX, unclampedServoPosition));
+//
+//        solution.relativeTargetAngle = relativeTargetAngle;
+//        solution.turretServoPosition = finalServoPosition;
+//        solution.turretTargetClamped = Math.abs(finalServoPosition - unclampedServoPosition) > 0.0001;
+//        solution.visorPosition = LaunchSubsystem.LAUNCH_VISOR_LOW;
+//        solution.flywheelConstants = getFlywheelConstantsBasedOnDistance(solution.distanceToTarget);
+//
+//        return solution;
+//    }
 
     private void applyShotSolution(ShotSolution solution) {
         FlywheelConstants current = solution.flywheelConstants;

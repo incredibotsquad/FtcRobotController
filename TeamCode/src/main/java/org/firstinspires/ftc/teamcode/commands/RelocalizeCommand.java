@@ -60,9 +60,7 @@ public class RelocalizeCommand extends CommandBase {
 
         if (currentFrame != null) {
             samples.add(currentFrame);
-
 //            Log.i("Relocalize command", "Inside execute. New pose: " + currentFrame.toString());
-
         }
 
         // Once the window expires, process the samples
@@ -145,6 +143,8 @@ public class RelocalizeCommand extends CommandBase {
             // Note: servoOffsetDegrees = relativeTargetAngle * GEAR_RATIO
             double relativeTurretAngle = servoOffsetDegrees / LaunchSubsystem.GEAR_RATIO;
 
+            Log.i("Relocalize command", "relativeTurretAngle: " + relativeTurretAngle);
+
             // 5. Calculate true Robot Heading
             // Since absoluteTarget = robotHeading + relativeAngle
             double robotHeadingDegrees = Math.toDegrees(absoluteLimelightHeading) - relativeTurretAngle;
@@ -160,14 +160,14 @@ public class RelocalizeCommand extends CommandBase {
                     Rotation2d.fromDegrees(robotHeadingDegrees)
             );
 
-            Log.i("Relocalize command", "Pose from odometry: " + odometry.getPose().toString());
+            Log.i("Relocalize command", "Odometry pose old: " + odometry.getPose().toString());
 
-            Log.i("Relocalize command", "Calculated robot pose: " + correctedRobotPose.toString());
+            Log.i("Relocalize command", "Odometry pose new: Calculated robot pose: " + correctedRobotPose.toString());
 
             // Final Sanity Check: Don't let the camera teleport the robot more than 12 inches
             double distanceToOdometry = correctedRobotPose.getTranslation().getDistance(odometry.getPose().getTranslation());
 
-            Log.i("Relocalize command", "Distance to odometry: " + distanceToOdometry);
+            Log.i("Relocalize command", "Odometry pose: Distance to odometry: " + distanceToOdometry);
 
             if (distanceToOdometry < 12.0) {
                 Log.i("Relocalize command", "Performed all filtering - calling odometry to update pose");
