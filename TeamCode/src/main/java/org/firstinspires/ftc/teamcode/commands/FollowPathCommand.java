@@ -45,9 +45,11 @@ public class FollowPathCommand extends CommandBase {
     @Override
     public void execute() {
 
-        follower.update();
+        // Pedro Pathing update is usually handled in the OpMode's run()
+        // but we can check velocity here
 
-        // Pedro Pathing update is usually handled in the OpMode's run()         // but we can check velocity here
+//        follower.update();
+
         double currentVelocity = follower.getVelocity().getMagnitude();
 
         // If we are moving faster than the threshold, reset the timer
@@ -67,7 +69,7 @@ public class FollowPathCommand extends CommandBase {
     @Override
     public void end(boolean interrupted) {
         if (stallTimer.milliseconds() > STALL_TIMEOUT) {
-            Log.w("Auto", "Path Stalled! Moving to next command.");
+            Log.w("FollowPathCommand", "Path Stalled! Moving to next command.");
             follower.breakFollowing(); // Stop the motors immediately
         }
     }
