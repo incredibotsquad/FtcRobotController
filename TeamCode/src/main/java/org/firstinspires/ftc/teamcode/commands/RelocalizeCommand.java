@@ -27,10 +27,12 @@ public class RelocalizeCommand extends CommandBase {
     private final ElapsedTime windowTimer = new ElapsedTime();
 
     // CONFIGURATION
-    private static final double COLLECTION_WINDOW_MS = 200; // Collect for 0.2 seconds
-    private static final int MIN_REQUIRED_SAMPLES = 5;      // Need at least 5 frames
+    public static final double COLLECTION_WINDOW_MS = 200; // Collect for 0.2 seconds
+    public static final int MIN_REQUIRED_SAMPLES = 5;      // Need at least 5 frames
 
     public static double STD_DEV_THRESHOLD = 1.5;
+
+    public static boolean ENABLE_RELOCALIZATION = false;
 
     public RelocalizeCommand(LimelightSubsystem limelight,
                              OdometrySubsystem odometry,
@@ -48,6 +50,11 @@ public class RelocalizeCommand extends CommandBase {
 
     @Override
     public void execute() {
+        if(!ENABLE_RELOCALIZATION)
+            return;
+
+        Log.i("Relocalize command", "Inside execute.");
+
         // Only sample if the robot is nearly still to prevent motion blur
         if (!drive.isEffectivelyStationary()) {
             samples.clear();
@@ -60,13 +67,13 @@ public class RelocalizeCommand extends CommandBase {
 
         if (currentFrame != null) {
             samples.add(currentFrame);
-//            Log.i("Relocalize command", "Inside execute. New pose: " + currentFrame.toString());
+            Log.i("Relocalize command", "Inside execute. New pose: " + currentFrame.toString());
         }
 
         // Once the window expires, process the samples
         if (windowTimer.milliseconds() >= COLLECTION_WINDOW_MS) {
             if (samples.size() >= MIN_REQUIRED_SAMPLES) {
-//                Log.i("Relocalize command", "Collected samples: " + samples.size());
+                Log.i("Relocalize command", "Collected samples: " + samples.size());
 
                 processAndApply();
             }
@@ -106,7 +113,7 @@ public class RelocalizeCommand extends CommandBase {
             boolean isOutlierX = Math.abs(p.getX() - meanX) > (stdDevX * threshold);
             boolean isOutlierY = Math.abs(p.getY() - meanY) > (stdDevY * threshold);
 
-//            Log.i("Relocalize command", "Filtering samples. X out:" + isOutlierX + " y out: " + isOutlierY);
+            Log.i("Relocalize command", "Filtering samples. X out:" + isOutlierX + " y out: " + isOutlierY);
 
             if (!isOutlierX && !isOutlierY) {
                 Log.i("Relocalize command", "Filtering samples. Added point: " + p.toString());
@@ -173,7 +180,7 @@ public class RelocalizeCommand extends CommandBase {
                 Log.i("Relocalize command", "Performed all filtering - calling odometry to update pose");
 
                 // Update odometry with the chassis-relative corrected pose
-//                odometry.updatePoseFromLimelight(correctedRobotPose);
+                odometry.updatePoseFromLimelight(correctedRobotPose);
             }
         }
     }

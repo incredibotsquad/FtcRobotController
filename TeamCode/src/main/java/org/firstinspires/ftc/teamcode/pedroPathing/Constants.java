@@ -28,13 +28,14 @@ public class Constants {
     public static PathConstraints pathConstraints = new PathConstraints(0.96, 100, 1, 1);
 
     public static FollowerConstants followerConstants = new FollowerConstants()
-            .mass(13.61)
+            .mass(14.606)
             .headingPIDFCoefficients(new PIDFCoefficients(1, 0, 0.0005, 0.025))
-            .forwardZeroPowerAcceleration(-33.68622341684524)
-            .lateralZeroPowerAcceleration(-65.88495423300519)
-            .translationalPIDFCoefficients(new PIDFCoefficients(0.5, 0, 0.0005, 0.05))
-            .drivePIDFCoefficients(new FilteredPIDFCoefficients(1, 0.05, 0.0004, 0.6, 0.03))
-            .predictiveBrakingCoefficients(new PredictiveBrakingCoefficients(0.10, 0.08159212428882408,0.0018823947511389903));
+            .forwardZeroPowerAcceleration(-27.091104451670585)
+            .lateralZeroPowerAcceleration(-62.10366714784403)
+            .translationalPIDFCoefficients(new PIDFCoefficients(1, 0, 0.05, 0))
+            .drivePIDFCoefficients(new FilteredPIDFCoefficients(1, 0.005, 0.001, 0.6, 0.06))
+            .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(0.07, 0, 0.000075,0.6, 0.01))
+            .predictiveBrakingCoefficients(new PredictiveBrakingCoefficients(0.10, 0.11435982931991934,0.0013618902642373839));
 
     public static MecanumConstants driveConstants = new MecanumConstants()
             .maxPower(1)
@@ -42,8 +43,8 @@ public class Constants {
             .leftFrontMotorName(FRONT_LEFT_MOTOR_NAME)
             .rightRearMotorName(BACK_RIGHT_MOTOR_NAME)
             .leftRearMotorName(BACK_LEFT_MOTOR_NAME)
-            .xVelocity(69.02178699)
-            .yVelocity(49.46574726);
+            .xVelocity(73.78892024)
+            .yVelocity(55.614591823788146);
 
     public static PinpointConstants localizerConstants = new PinpointConstants()
             .forwardPodY(PINPOINT_X_OFFSET_INCH)

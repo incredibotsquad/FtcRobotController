@@ -16,6 +16,8 @@ public class DriveSubsystem extends SubsystemBase {
     private final MotorEx backLeftMotor;
     private final MotorEx backRightMotor;
 
+    public static double STATIONARY_THRESHOLD = 20.0;
+
     public static String FRONT_LEFT_MOTOR_NAME = "frontLeftMotor";
     public static String FRONT_RIGHT_MOTOR_NAME = "frontRightMotor";
     public static String BACK_LEFT_MOTOR_NAME = "backLeftMotor";
@@ -60,6 +62,6 @@ public class DriveSubsystem extends SubsystemBase {
      */
     public boolean isEffectivelyStationary() {
         // 20 ticks per second is a very slow crawl, effectively stopped
-        return getVelocity() < 20.0;
+        return getVelocity() < STATIONARY_THRESHOLD;
     }
 }

@@ -19,10 +19,10 @@ import java.util.TreeMap;
 
 @Configurable
 public class SmartIntakeCommand extends CommandBase {
-    public static double STABLE_STORAGE_MS = 200;
+    public static double STABLE_STORAGE_MS = 15;
     public static double DELAYED_STOP_MS = 500;
     public static double KICKER_PULSE_MS = 200;
-    public static double INTAKE_MOTOR_STOP_DELAY_MS = 2000; // Time in ms to keep intake motor running after transfer stops
+    public static double INTAKE_MOTOR_STOP_DELAY_MS = 1500; // Time in ms to keep intake motor running after transfer stops
     public static double KICK_STABILITY_MS = 300; // NEW: Duration to wait before kicking
     public static boolean TURN_OFF_INTAKE = false;
     private final IntakeSubsystem intakeSubsystem;

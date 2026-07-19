@@ -27,7 +27,7 @@ public class LaunchReadinessCommand extends CommandBase {
     private final LimelightSubsystem limelightSubsystem;
 
     // Define the fixed field coordinate you want to point at (e.g., center of the backdrop or goal)
-    public static boolean ENABLE_MOVING_SHOT_COMPENSATION = false;
+    public static boolean ENABLE_MOVING_SHOT_COMPENSATION = true;
     public static double SHOT_FLIGHT_BASE_SECONDS = 0.25;
     public static double SHOT_FLIGHT_SECONDS_PER_INCH = 0.0035;
     public static double BURST_MIDPOINT_SECONDS = 0.175;
@@ -35,7 +35,7 @@ public class LaunchReadinessCommand extends CommandBase {
     public static double MAX_TARGET_LEAD_INCHES = 18.0;
 
     // Feature Flags and Tuning
-    public static boolean ENABLE_VISION_CORRECTION = false;
+    public static boolean ENABLE_TURRET_VISION_CORRECTION = false;
     public static double VISION_STABILITY_THRESHOLD_IPS = 3.0; // Max speed allowed for vision lock
     public static double VISION_CORRECTION_GAIN = 0.05; // Sensitivity of the vision fine-tuning
 
@@ -185,7 +185,7 @@ public class LaunchReadinessCommand extends CommandBase {
         // --- VISION FINE-TUNING LOGIC ---
         double finalServoPosition = odometryServoPosition;
 
-        if (ENABLE_VISION_CORRECTION) {
+        if (ENABLE_TURRET_VISION_CORRECTION) {
             double currentSpeed = odometry.getFieldSpeedInchesPerSecond();
 
             // Check if robot is stable enough to use vision

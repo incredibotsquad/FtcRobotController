@@ -61,7 +61,7 @@ public class OdometrySubsystem extends SubsystemBase {
         ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
         while (timer.milliseconds() < 500) {
-//            Log.i("Odometry subsystem", "Resetting pinpoint ");
+            Log.i("Odometry subsystem", "Resetting pinpoint ");
         }
         pinpoint.update();
 

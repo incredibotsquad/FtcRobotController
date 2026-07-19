@@ -59,7 +59,7 @@ public class LaunchSubsystem extends SubsystemBase {
      * (TargetDegrees * Ratio) / TotalServoRange
      */
     public static double GEAR_RATIO = 112.0 / 29.0;
-    public static double TOTAL_SERVO_RANGE = 1620; // servo range is 1800 but we are only going up to 0.9
+    public static double TOTAL_SERVO_RANGE = 1800 * TURRET_MAX; // servo range is 1800 but we are only going up to 0.87
 
     // Inside LaunchSubsystem
     private PIDController flywheelPID = new PIDController(0.000, 0, 0);
