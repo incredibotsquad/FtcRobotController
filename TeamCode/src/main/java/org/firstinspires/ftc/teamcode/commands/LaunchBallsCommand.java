@@ -12,7 +12,10 @@ public class LaunchBallsCommand extends CommandBase {
     private final LaunchGateSubsystem launchGate;
     private boolean initialized = false;
     private final ElapsedTime timer;
-    private static final double LAUNCH_DURATION = 1500; // 1.5 second to clear all balls
+    private static final double LAUNCH_DURATION_SLOW = 1500; // 1.5 second to clear all balls
+    private static final double LAUNCH_DURATION_FAST = 500; // 1.5 second to clear all balls
+
+    private double LAUNCH_DURATION = LAUNCH_DURATION_SLOW;
 
     public LaunchBallsCommand(LaunchSubsystem launchSubsystem, LaunchGateSubsystem launchGateSubsystem) {
         this.launcher = launchSubsystem;
@@ -25,6 +28,20 @@ public class LaunchBallsCommand extends CommandBase {
         // can keep adjusting the aim while we are firing.
         addRequirements(launchGateSubsystem);
     }
+
+    public LaunchBallsCommand(LaunchSubsystem launchSubsystem, LaunchGateSubsystem launchGateSubsystem, boolean fast) {
+        this.launcher = launchSubsystem;
+        this.launchGate = launchGateSubsystem;
+        this.initialized = false;
+        this.timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+        LAUNCH_DURATION = LAUNCH_DURATION_FAST;
+
+        // We require the GATE so no other command moves it.
+        // We do NOT require the LAUNCHER so the AutoAimCommand
+        // can keep adjusting the aim while we are firing.
+        addRequirements(launchGateSubsystem);
+    }
+
 
     @Override
     public void execute() {

@@ -20,6 +20,7 @@ public class FollowPathCommand extends CommandBase {
     private ElapsedTime stallTimer = new ElapsedTime();
     private static final double STALL_VELOCITY_THRESHOLD = 0.5; // inches per second
     private static final double STALL_TIMEOUT = 750; // milliseconds before giving up
+    private static final double END_TOLERANCE = 3.0; // Finish when 1 inch away
 
     public FollowPathCommand(Follower follower, PathChain path, boolean holdEnd) {
         this.follower = follower;
@@ -61,9 +62,14 @@ public class FollowPathCommand extends CommandBase {
     @Override
     public boolean isFinished() {
         // Finish if:
-        // 1. Pedro says we are done
-        // 2. We have been stuck (velocity < threshold) for too long
-        return !follower.isBusy() || stallTimer.milliseconds() > STALL_TIMEOUT;
+        // 1. Pedro says done
+        // 2. We are "close enough" (Optimal for speed)
+        // 3. Stall Detection
+
+        double distanceRemaining = follower.getCurrentPath().getDistanceRemaining();
+        boolean closeEnough = distanceRemaining < END_TOLERANCE;
+
+        return !follower.isBusy() || closeEnough || stallTimer.milliseconds() > STALL_TIMEOUT;
     }
 
     @Override
