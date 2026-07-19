@@ -18,9 +18,11 @@ public class FollowPathCommand extends CommandBase {
 
     // Stall detection variables
     private ElapsedTime stallTimer = new ElapsedTime();
+    private final ElapsedTime initializationTimer = new ElapsedTime();
     private static final double STALL_VELOCITY_THRESHOLD = 0.5; // inches per second
     private static final double STALL_TIMEOUT = 750; // milliseconds before giving up
     private static final double END_TOLERANCE = 3.0; // Finish when 1 inch away
+    private static final double MINIMUM_RUN_TIME = 50.0; // Ensure at least 50ms of run time
 
     public FollowPathCommand(Follower follower, PathChain path, boolean holdEnd) {
         this.follower = follower;
@@ -32,6 +34,7 @@ public class FollowPathCommand extends CommandBase {
     public void initialize() {
         follower.followPath(path, holdEnd);
         stallTimer.reset();
+        initializationTimer.reset();
 
         /*
         * In some versions of Pedro Pathing, if isFinished() is checked before the very first
@@ -61,6 +64,12 @@ public class FollowPathCommand extends CommandBase {
 
     @Override
     public boolean isFinished() {
+        // SAFETY: Do not allow the Compiler.command to finish if it hasn't been running for 50ms.
+        // This prevents race conditions where isBusy() is checked before the path latches.
+        if (initializationTimer.milliseconds() < MINIMUM_RUN_TIME) {
+            return false;
+        }
+
         // Finish if:
         // 1. Pedro says done
         // 2. We are "close enough" (Optimal for speed)
