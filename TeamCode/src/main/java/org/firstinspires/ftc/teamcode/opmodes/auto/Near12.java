@@ -5,8 +5,10 @@ import com.arcrobotics.ftclib.command.Command;
 import com.arcrobotics.ftclib.command.CommandOpMode;
 import com.arcrobotics.ftclib.command.InstantCommand;
 import com.arcrobotics.ftclib.command.SequentialCommandGroup;
+import com.arcrobotics.ftclib.command.WaitUntilCommand;
 import com.arcrobotics.ftclib.geometry.Pose2d;
 import com.arcrobotics.ftclib.geometry.Rotation2d;
+import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
@@ -20,16 +22,19 @@ import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
+@Configurable
 @Autonomous(name = "Near 12", group = "Autonomous")
 public class Near12 extends CommandOpMode {
     private Incredibot robot;
     private Follower follower;
     private Poses poses;
     private Paths paths;
-
+    public static double INTAKE_WAIT = 750;
     private final ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
     private boolean resetTimer = false;
     public AllianceColors alliance = AllianceColors.RED; // Default
+
+    private final ElapsedTime intakeTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
     @Override
     public void initialize() {
@@ -41,11 +46,13 @@ public class Near12 extends CommandOpMode {
         // 2. Init Loop for Alliance Selection
         while (opModeInInit()) {
             if (gamepad1.xWasReleased()) {
-                CrossOpModeStorage.allianceColor = AllianceColors.BLUE;
+                alliance = AllianceColors.BLUE;
             }
             if (gamepad1.bWasReleased()) {
-                CrossOpModeStorage.allianceColor = AllianceColors.RED;
+                alliance = AllianceColors.RED;
             }
+
+            CrossOpModeStorage.allianceColor = alliance;
 
             telemetry.addData("STATUS", "READY - NEAR START");
             telemetry.addData("Selected Alliance: ", alliance.toString());
@@ -80,22 +87,51 @@ public class Near12 extends CommandOpMode {
 
     public Command getAutoRoutine() {
         return new SequentialCommandGroup(
-            // --- STEP 1: Main Autonomous Pathing ---
-            new SequentialCommandGroup(
-                new InstantCommand(() -> Log.i("Auto", "Starting Preload and Spikes")),
+                // --- STEP 1: Main Autonomous Pathing ---
+                new SequentialCommandGroup(
+                        new InstantCommand(() -> Log.i("Near12", "Starting Preload and Spikes")),
 
-                // 1. Run Near Preloads
-                new FollowPathCommand(follower, paths.NEAR_PRELOADS, true),
-                new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem),
+                        // 1. Run Near Preloads
+                        new FollowPathCommand(follower, paths.NEAR_PRELOADS, true),
+                        new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, true),
 
-                // 2. Run First Spike
-                new FollowPathCommand(follower, paths.NEAR_SPIKE_1, true),
-                new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem),
+                        // 2. Run First Spike
+                        new FollowPathCommand(follower, paths.NEAR_SPIKE_1, true),
+                        new FollowPathCommand(follower, paths.NEAR_SCORE_SPIKE_1, true),
+                        new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, true),
 
-                // 3. Run Second Spike
-                new FollowPathCommand(follower, paths.NEAR_SPIKE_2, true),
-                new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem)
-            )
+                        // 3. Run Second Spike
+                        new FollowPathCommand(follower, paths.NEAR_SPIKE_2, true),
+                        new FollowPathCommand(follower, paths.NEAR_SCORE_SPIKE_2, true),
+                        new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, true),
+
+                        //4. Run Gate cycle
+                        new FollowPathCommand(follower, paths.NEAR_GATE_1_PATH, true),
+                        new InstantCommand(()-> intakeTimer.reset()),
+                        new WaitUntilCommand(()-> (robot.intakeSubsystem.getArtifactCount() == 3 || intakeTimer.milliseconds() > INTAKE_WAIT)),
+                        new FollowPathCommand(follower, paths.NEAR_SCORE_GATE, true),
+                        new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, true),
+
+                        new FollowPathCommand(follower, paths.NEAR_GATE_1_PATH, true),
+                        new InstantCommand(()-> intakeTimer.reset()),
+                        new WaitUntilCommand(()-> (robot.intakeSubsystem.getArtifactCount() == 3 || intakeTimer.milliseconds() > INTAKE_WAIT)),
+                        new FollowPathCommand(follower, paths.NEAR_SCORE_GATE, true),
+                        new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, true),
+
+                        new FollowPathCommand(follower, paths.NEAR_GATE_1_PATH, true),
+                        new InstantCommand(()-> intakeTimer.reset()),
+                        new WaitUntilCommand(()-> (robot.intakeSubsystem.getArtifactCount() == 3 || intakeTimer.milliseconds() > INTAKE_WAIT)),
+                        new FollowPathCommand(follower, paths.NEAR_SCORE_GATE, true),
+                        new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, true),
+
+                        //5. Run Gate cycle
+//                new FollowPathCommand(follower, paths.NEAR_GATE, true),
+//                new FollowPathCommand(follower, paths.NEAR_GATE_2, true),
+//                new FollowPathCommand(follower, paths.NEAR_SCORE_GATE, true),
+
+
+                        new InstantCommand(() -> Log.i("Near12", "Seconds " + timer.seconds()))
+                )
 
                 // --- STEP 2: 25-Second "End Game" / Gate Logic ---
                 // If we finish the spikes and time is > 25s, we immediately go to the gate/park.

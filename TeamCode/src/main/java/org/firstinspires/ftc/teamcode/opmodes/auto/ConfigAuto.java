@@ -33,13 +33,14 @@ public class ConfigAuto extends CommandOpMode {
     private ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
     private enum AutoPath {
-        PRELOADS, HUMAN_PLAYER, TUNNEL, SPIKE_3, SPIKE_1, SPIKE_2, GATE
+        PRELOADS, SPIKE_1, SPIKE_2, SPIKE_3, TUNNEL, GATE, HUMAN_PLAYER
     }
+
     private List<AutoPath> pathOrder = new ArrayList<>();
 
     private boolean resetTimer = false;
 
-    public String alliance = "red";
+    public AllianceColors alliance = AllianceColors.RED; // Default
 
     public String position = "near";
 
@@ -56,12 +57,10 @@ public class ConfigAuto extends CommandOpMode {
 
         while(opModeInInit()){
             if(gamepad1.xWasReleased()){
-                alliance = "blue";
-                CrossOpModeStorage.allianceColor = AllianceColors.BLUE;
+                alliance = AllianceColors.BLUE;
             }
             if(gamepad1.bWasReleased()){
-                alliance = "red";
-                CrossOpModeStorage.allianceColor = AllianceColors.RED;
+                alliance = AllianceColors.RED;
             }
             if(gamepad1.aWasReleased()){
                 position = "far";
@@ -91,6 +90,8 @@ public class ConfigAuto extends CommandOpMode {
                 pathOrder.clear();
             }
 
+            CrossOpModeStorage.allianceColor = alliance;
+
             telemetry.addData("Selected Alliance", alliance);
             telemetry.addData("Selected Position", position);
             telemetry.addData("Selected Order", pathOrder.toString());
@@ -100,7 +101,7 @@ public class ConfigAuto extends CommandOpMode {
             telemetry.update();
         }
 
-        poses = new Poses(alliance.equals("red"));
+        poses = new Poses(alliance == AllianceColors.RED);
         if(position.equals("far")){
             follower.setStartingPose(poses.FAR_START_POSE);
             cycleTimer = 27;
