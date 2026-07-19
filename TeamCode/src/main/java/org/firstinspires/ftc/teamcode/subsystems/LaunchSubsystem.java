@@ -47,8 +47,8 @@ public class LaunchSubsystem extends SubsystemBase {
     public static double LAUNCH_VISOR_HIGH = 0.7;
 
     public static double TURRET_MIN = 0.0;
-    public static double TURRET_MID = 0.54;
-    public static double TURRET_MAX = 0.9;
+    public static double TURRET_MID = 0.5;
+    public static double TURRET_MAX = 0.87;
 
     /*
      * MECHANICAL CALCULATION:
@@ -71,7 +71,11 @@ public class LaunchSubsystem extends SubsystemBase {
 
     public static boolean SKIP_FLYWHEEL = false;
 
+    private TelemetryManager telemetry;
+
     public LaunchSubsystem(HardwareMap hardwareMap, TelemetryManager telemetry) {
+        this.telemetry = telemetry;
+
         leftLaunchMotor = new MotorEx(hardwareMap, "leftLaunchMotor", Motor.GoBILDA.BARE);
         leftLaunchMotor.setRunMode(Motor.RunMode.RawPower);
 
@@ -269,6 +273,7 @@ public class LaunchSubsystem extends SubsystemBase {
         // (You would pass a telemetry object into the subsystem constructor to use this)
         // telemetry.addData("Launcher Ready", isReady);
         // telemetry.addData("Current Speed", getCurrentVelocity());
+        telemetry.addData("Flywheel Target RPM: ", targetRPM);
     }
 }
 

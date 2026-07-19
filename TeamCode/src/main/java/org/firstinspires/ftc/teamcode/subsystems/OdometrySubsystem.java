@@ -173,8 +173,8 @@ public class OdometrySubsystem extends SubsystemBase {
         telemetry.addData("Odometry: X Position", xInches);
         telemetry.addData("Odometry: Y Position", yInches);
         telemetry.addData("Odometry: Heading (Deg)", Math.toDegrees(headingRadians) + 360); //adding for ease of readability
-        telemetry.addData("Odometry: X Velocity", fieldVelocity.getX());
-        telemetry.addData("Odometry: Y Velocity", fieldVelocity.getY());
-        telemetry.addData("Odometry: Speed", getFieldSpeedInchesPerSecond());
+//        telemetry.addData("Odometry: X Velocity", fieldVelocity.getX());
+//        telemetry.addData("Odometry: Y Velocity", fieldVelocity.getY());
+//        telemetry.addData("Odometry: Speed", getFieldSpeedInchesPerSecond());
     }
 }

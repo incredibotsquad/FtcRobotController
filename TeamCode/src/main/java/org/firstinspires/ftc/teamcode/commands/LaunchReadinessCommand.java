@@ -77,20 +77,20 @@ public class LaunchReadinessCommand extends CommandBase {
     static {
         // Distance (inches), P, I, D, kS, kV, targetRPM
         // These numbers are examples; populate with your tuned values
-        NEAR_LOOKUP_TABLE.put(71.0,  new FlywheelConstants(0.015, 0, 0, 0.1, 0.00061, 1650));
-        NEAR_LOOKUP_TABLE.put(88.0,  new FlywheelConstants(0.015, 0, 0, 0.1, 0.000615, 1700));
-        NEAR_LOOKUP_TABLE.put(105.0,  new FlywheelConstants(0.02, 0, 0, 0.1, 0.000625, 1850));
-        NEAR_LOOKUP_TABLE.put(115.0,  new FlywheelConstants(0.0228, 0, 0, 0.1, 0.00063, 1850));
+        NEAR_LOOKUP_TABLE.put(70.0,  new FlywheelConstants(0.0015, 0, 0, 0.05, 0.000345, 3500));
+        NEAR_LOOKUP_TABLE.put(87.0,  new FlywheelConstants(0.0035, 0, 0, 0.05, 0.00034, 3600));
+        NEAR_LOOKUP_TABLE.put(94.0,  new FlywheelConstants(0.0075, 0, 0, 0.05, 0.000345, 3700));
+        NEAR_LOOKUP_TABLE.put(110.0,  new FlywheelConstants(0.0045, 0, 0, 0.05, 0.000345, 3950));
     }
 
     private static final NavigableMap<Double, FlywheelConstants> FAR_LOOKUP_TABLE = new TreeMap<>();
     static {
         // Distance (inches), P, I, D, kS, kV, targetRPM
         // These numbers are examples; populate with your tuned values
-        FAR_LOOKUP_TABLE.put(126.0, new FlywheelConstants(0.0125, 0, 0, 0.1, 0.00061, 2150));
-        FAR_LOOKUP_TABLE.put(134.0, new FlywheelConstants(0.014, 0, 0, 0.1, 0.00061, 2175));
-        FAR_LOOKUP_TABLE.put(139.0, new FlywheelConstants(0.015, 0, 0, 0.1, 0.00061, 2220));
-        FAR_LOOKUP_TABLE.put(145.0, new FlywheelConstants(0.02, 0, 0, 0.1, 0.000623, 2270));
+        FAR_LOOKUP_TABLE.put(126.0, new FlywheelConstants(0.005, 0, 0, 0.05, 0.00034, 4200));
+        FAR_LOOKUP_TABLE.put(131.0, new FlywheelConstants(0.01, 0, 0, 0.05, 0.0003395, 4300));
+        FAR_LOOKUP_TABLE.put(136.0, new FlywheelConstants(0.01, 0, 0, 0.05, 0.0003465, 4325));
+        FAR_LOOKUP_TABLE.put(144.0, new FlywheelConstants(0.01, 0, 0, 0.05, 0.00034, 4400));
     }
 
     public LaunchReadinessCommand(LaunchSubsystem launchSubsystem, OdometrySubsystem odometry, LimelightSubsystem limelight, TelemetryManager telemetry) {

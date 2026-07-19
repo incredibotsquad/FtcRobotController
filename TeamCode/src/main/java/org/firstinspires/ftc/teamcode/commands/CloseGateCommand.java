@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.commands;
 
+import android.util.Log;
+
 import com.arcrobotics.ftclib.command.CommandBase;
 
 import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
@@ -13,6 +15,8 @@ public class CloseGateCommand extends CommandBase {
 
     @Override
     public void execute() {
+
+//        Log.i("CloseGateCommand", "Execute: closing gate");
         gate.closeGate();
     }
 }

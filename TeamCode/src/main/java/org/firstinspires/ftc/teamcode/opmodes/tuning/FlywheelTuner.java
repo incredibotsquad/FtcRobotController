@@ -20,11 +20,14 @@ public class FlywheelTuner extends LinearOpMode {
     public static double P = 0.0;
     public static double I = 0.0;
     public static double D = 0.0;
-    public static double kS = 0.1; //.18
+    public static double kS = 0.05; //.18
     public static double kV = 0.00058;
 
     public static double highVelocityRPM = 1100;
     public static double lowVelocityRPM = 1100;
+
+    public static double transferMotorPower = 1;
+
     double curTargetVelocity = highVelocityRPM;
 
     double[] stepSizes = {10.0, 1.0, 0.1, 0.01, 0.001, 0.0001, 0.00001};
@@ -41,7 +44,7 @@ public class FlywheelTuner extends LinearOpMode {
         GamepadEx gp1 = new GamepadEx(gamepad1);
 
         waitForStart();
-        intake.startIntake();
+//        intake.startIntake();
         gate.closeGate();
 
         while (opModeIsActive()) {
@@ -62,6 +65,13 @@ public class FlywheelTuner extends LinearOpMode {
                     gate.closeGate();
                 else
                     gate.openGate();
+            }
+
+            if (gp1.wasJustPressed(GamepadKeys.Button.X)) {
+                if (intake.isOn())
+                    intake.stopIntake();
+                else
+                    intake.startIntake();
             }
 
             // D-Pad and Bumper adjustments for P, kS, kV
@@ -87,6 +97,7 @@ public class FlywheelTuner extends LinearOpMode {
             launcher.setFlywheelPID(P, I, D);
             launcher.updateFeedforward(kS, kV);
             launcher.updateFlywheel(curTargetVelocity);
+            intake.setTransferMotorPower(transferMotorPower);
 
             // Calculate metrics for plotting
             double curVelocity = launcher.getCurrentFlywheelRPM();

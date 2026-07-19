@@ -18,13 +18,16 @@ public class IntakeSubsystem extends SubsystemBase {
     private final DigitalChannel beamBreakMid;
     private final DigitalChannel beamBreakLow;
 
+    private TelemetryManager telemetry;
     public static double ZERO_BALL_COLOR = 0;
     public static double ONE_BALL_COLOR = 0.29; //RED
     public static double TWO_BALL_COLOR = 0.388; //YELLOW
     public static double THREE_BALL_COLOR = 0.5; //GREEN
 
     public IntakeSubsystem(HardwareMap hardwareMap, TelemetryManager telemetry) {
+        this.telemetry = telemetry;
         intakeMotor = new MotorEx(hardwareMap, "intakeMotor", Motor.GoBILDA.BARE);
+        intakeMotor.setInverted(true);
         intakeMotor.setRunMode(Motor.RunMode.RawPower);
 
         transferMotor = new MotorEx(hardwareMap, "transferMotor", Motor.GoBILDA.RPM_1150);
@@ -46,6 +49,18 @@ public class IntakeSubsystem extends SubsystemBase {
     public void startIntake() {
         intakeMotor.set(1);
         transferMotor.set(1);
+    }
+
+    public boolean isOn() {
+        return (intakeMotor.get() > 0 || transferMotor.get() > 0);
+    }
+
+    public void setIntakeMotorPower(double power) {
+        intakeMotor.set(power);
+    }
+
+    public void setTransferMotorPower(double power) {
+        transferMotor.set(power);
     }
 
     public void stopIntakeMotorOnly() {
@@ -127,7 +142,7 @@ public class IntakeSubsystem extends SubsystemBase {
     public void periodic() {
 
         // (You would pass a telemetry object into the subsystem constructor to use this)
-        // telemetry.addData("Launcher Ready", isReady);
-        // telemetry.addData("Current Speed", getCurrentVelocity());
+         telemetry.addData("Transfer Power: ", transferMotor.get());
+         telemetry.addData("Artifact Count: ", getArtifactCount());
     }
 }

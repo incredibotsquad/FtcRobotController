@@ -104,6 +104,8 @@ public class Incredibot extends Robot {
         // Clear out any lingering commands or bindings from previous runs
         CommandScheduler.getInstance().reset();
 
+
+
         initCommon();
 
         // Notice: We don't bind ANY gamepads here.
@@ -122,7 +124,7 @@ public class Incredibot extends Robot {
         launchKickSubsystem.setDefaultCommand(new ResetKickCommand(launchKickSubsystem));
 
         // It will start at match start and manage itself based on sensor data
-        intakeSubsystem.setDefaultCommand(new SmartIntakeCommand(intakeSubsystem, launchGateSubsystem, launchKickSubsystem));
+        intakeSubsystem.setDefaultCommand(new SmartIntakeCommand(intakeSubsystem, launchGateSubsystem, launchKickSubsystem, odometrySubsystem));
 
         // Assign the background tracking loop here!
         // The scheduler will now call execute() on this command every single frame.
