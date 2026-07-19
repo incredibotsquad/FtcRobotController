@@ -16,7 +16,7 @@ public class CloseGateCommand extends CommandBase {
     @Override
     public void execute() {
 
-//        Log.i("CloseGateCommand", "Execute: closing gate");
+        Log.i("CloseGateCommand", "Execute: closing gate");
         gate.closeGate();
     }
 }

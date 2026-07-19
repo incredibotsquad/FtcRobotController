@@ -103,7 +103,7 @@ public class ConfigAuto extends CommandOpMode {
 
         poses = new Poses(alliance == AllianceColors.RED);
         if(position.equals("far")){
-            follower.setStartingPose(poses.FAR_START_POSE);
+            follower.setStartingPose(poses.FAR_INIT);
             cycleTimer = 27;
         }else{
             follower.setStartingPose(poses.NEAR_INIT);
@@ -219,7 +219,7 @@ public class ConfigAuto extends CommandOpMode {
                 case SPIKE_1:
                     return new SequentialCommandGroup(
                             new FollowPathCommand(follower, paths.NEAR_SPIKE_1, true),
-                            new FollowPathCommand(follower, paths.NEAR_SCORE_SPIKE_1, true),
+                            new FollowPathCommand(follower, paths.NEAR_SCORE_SPIKE_1_AFTER_GATE, true),
                             new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem)
                     );
                 case SPIKE_2:

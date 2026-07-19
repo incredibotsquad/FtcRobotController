@@ -13,15 +13,20 @@ public class LaunchBallsCommand extends CommandBase {
     private boolean initialized = false;
     private final ElapsedTime timer;
     private static final double LAUNCH_DURATION_SLOW = 1500; // 1.5 second to clear all balls
-    private static final double LAUNCH_DURATION_FAST = 500; // 1.5 second to clear all balls
+    private static final double LAUNCH_DURATION_FAST = 650; // 1.5 second to clear all balls
 
     private double LAUNCH_DURATION = LAUNCH_DURATION_SLOW;
+
+    private boolean waitForFlywheel = false;
 
     public LaunchBallsCommand(LaunchSubsystem launchSubsystem, LaunchGateSubsystem launchGateSubsystem) {
         this.launcher = launchSubsystem;
         this.launchGate = launchGateSubsystem;
         this.initialized = false;
         this.timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+
+        LAUNCH_DURATION = LAUNCH_DURATION_SLOW;
+        waitForFlywheel = false;
 
         // We require the GATE so no other command moves it.
         // We do NOT require the LAUNCHER so the AutoAimCommand 
@@ -34,7 +39,28 @@ public class LaunchBallsCommand extends CommandBase {
         this.launchGate = launchGateSubsystem;
         this.initialized = false;
         this.timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
-        LAUNCH_DURATION = LAUNCH_DURATION_FAST;
+
+        if (fast)
+            LAUNCH_DURATION = LAUNCH_DURATION_FAST;
+
+        waitForFlywheel = false;
+
+        // We require the GATE so no other command moves it.
+        // We do NOT require the LAUNCHER so the AutoAimCommand
+        // can keep adjusting the aim while we are firing.
+        addRequirements(launchGateSubsystem);
+    }
+
+    public LaunchBallsCommand(LaunchSubsystem launchSubsystem, LaunchGateSubsystem launchGateSubsystem, boolean fast, boolean waitForFlywheel) {
+        this.launcher = launchSubsystem;
+        this.launchGate = launchGateSubsystem;
+        this.initialized = false;
+        this.timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
+
+        if (fast)
+            LAUNCH_DURATION = LAUNCH_DURATION_FAST;
+
+        this.waitForFlywheel = waitForFlywheel;
 
         // We require the GATE so no other command moves it.
         // We do NOT require the LAUNCHER so the AutoAimCommand
@@ -56,14 +82,20 @@ public class LaunchBallsCommand extends CommandBase {
 //            launchGate.closeGate();
 //            timer.reset(); // Reset timer so we get a full LAUNCH_DURATION once ready again
 //        }
+
         if (!initialized) {
             Log.i("LaunchBallsCommand", "Initialize - resetting timer");
             timer.reset();
             initialized = true;
         }
 
-        Log.i("LaunchBallsCommand", "Execute: opening gate without any checks");
-        launchGate.openGate();
+        if (waitForFlywheel && !launcher.isReadyToLaunch()) {
+            Log.i("LaunchBallsCommand", "Waiting for flywheel to ramp up");
+            timer.reset();
+        } else {
+            Log.i("LaunchBallsCommand", "Execute: opening gate without any checks");
+            launchGate.openGate();
+        }
 
     }
 

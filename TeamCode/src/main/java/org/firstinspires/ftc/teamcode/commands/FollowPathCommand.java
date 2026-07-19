@@ -21,20 +21,20 @@ public class FollowPathCommand extends CommandBase {
     private final ElapsedTime initializationTimer = new ElapsedTime();
     private static final double STALL_VELOCITY_THRESHOLD = 0.5; // inches per second
     private static final double STALL_TIMEOUT = 750; // milliseconds before giving up
-    private static final double END_TOLERANCE = 3.0; // Finish when 1 inch away
-    private static final double MINIMUM_RUN_TIME = 50.0; // Ensure at least 50ms of run time
+    private static final double END_TOLERANCE = 1.0; // Finish when 1 inch away
+    private static final double MINIMUM_RUN_TIME = 500.0; // Ensure at least 50ms of run time
 
+    private boolean initialized = false;
     public FollowPathCommand(Follower follower, PathChain path, boolean holdEnd) {
         this.follower = follower;
         this.path = path;
         this.holdEnd = holdEnd;
+        this.initialized = false;
     }
 
     @Override
     public void initialize() {
         follower.followPath(path, holdEnd);
-        stallTimer.reset();
-        initializationTimer.reset();
 
         /*
         * In some versions of Pedro Pathing, if isFinished() is checked before the very first
@@ -48,6 +48,13 @@ public class FollowPathCommand extends CommandBase {
 
     @Override
     public void execute() {
+
+        if (!initialized) {
+            Log.i("Follow Path Command", "Initialize - resetting timer");
+            initializationTimer.reset();
+            stallTimer.reset();
+            initialized = true;
+        }
 
         // Pedro Pathing update is usually handled in the OpMode's run()
         // but we can check velocity here
@@ -78,14 +85,20 @@ public class FollowPathCommand extends CommandBase {
         double distanceRemaining = follower.getCurrentPath().getDistanceRemaining();
         boolean closeEnough = distanceRemaining < END_TOLERANCE;
 
-        return !follower.isBusy() || closeEnough || stallTimer.milliseconds() > STALL_TIMEOUT;
+        boolean retVal = !follower.isBusy() || closeEnough || stallTimer.milliseconds() > STALL_TIMEOUT;
+
+        Log.i("Follow Path Command", "distanceRemaining: " + distanceRemaining + " closeEnough: " + closeEnough + " retVal:" + retVal);
+
+        return retVal;
     }
 
     @Override
     public void end(boolean interrupted) {
         if (stallTimer.milliseconds() > STALL_TIMEOUT) {
-            Log.w("FollowPathCommand", "Path Stalled! Moving to next command.");
+            Log.w("Follow Path Command", "Path Stalled! Moving to next command.");
             follower.breakFollowing(); // Stop the motors immediately
         }
+
+        initialized = false;
     }
 }

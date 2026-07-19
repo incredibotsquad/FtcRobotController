@@ -27,7 +27,7 @@ public class LaunchSubsystem extends SubsystemBase {
     private final SimpleServo alignmentIndicatorLight;
 
     private static final double TARGET_RPM = 250.0;
-    private static final double TARGET_RPM_TOLERANCE = 100;
+    private static final double TARGET_RPM_TOLERANCE = 50;
     private static final double TURRET_POSITION_TOLERANCE = 0.05;
     private static final double VISOR_POSITION_TOLERANCE = 0.05;
 
