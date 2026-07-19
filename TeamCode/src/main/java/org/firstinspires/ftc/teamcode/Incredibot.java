@@ -85,8 +85,8 @@ public class Incredibot extends Robot {
         // 3. TURRET LOCK OVERRIDE - Pressing START toggles the turret lock
         operatorGamepad.getGamepadButton(GamepadKeys.Button.START)
                 .toggleWhenPressed(
-                        new InstantCommand(() -> launchSubsystem.setTurretLock(true)),
-                        new InstantCommand(() -> launchSubsystem.setTurretLock(false))
+                        new InstantCommand(() -> launchSubsystem.setLaunchReadinessLock(true)),
+                        new InstantCommand(() -> launchSubsystem.setLaunchReadinessLock(false))
                 );
 
         operatorGamepad.getGamepadButton(GamepadKeys.Button.BACK)

@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
-import android.util.Log;
-
 import com.arcrobotics.ftclib.command.SubsystemBase;
 import com.arcrobotics.ftclib.controller.PIDController;
 import com.arcrobotics.ftclib.controller.wpilibcontroller.SimpleMotorFeedforward;
@@ -12,7 +10,6 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
-import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 
 @Configurable
@@ -67,7 +64,7 @@ public class LaunchSubsystem extends SubsystemBase {
     private SimpleMotorFeedforward flywheelFF = new SimpleMotorFeedforward(0.1, 0.00058); //45
 
     // Inside LaunchSubsystem.java
-    private boolean turretLocked = false;
+    private boolean isLaunchReadinessLocked = false;
 
     public static boolean SKIP_FLYWHEEL = false;
 
@@ -83,7 +80,6 @@ public class LaunchSubsystem extends SubsystemBase {
         rightLaunchMotor.setRunMode(Motor.RunMode.RawPower);
         rightLaunchMotor.setInverted(true);
 
-
 //        leftLaunchMotor = hardwareMap.get(DcMotorEx.class,"leftLaunchMotor");
 //        leftLaunchMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 //
@@ -97,12 +93,12 @@ public class LaunchSubsystem extends SubsystemBase {
         alignmentIndicatorLight = new SimpleServo(hardwareMap, "alignmentIndicatorLight", 0, 270);
     }
 
-    public void setTurretLock(boolean locked) {
-        this.turretLocked = locked;
+    public void setLaunchReadinessLock(boolean locked) {
+        this.isLaunchReadinessLocked = locked;
     }
 
-    public boolean isTurretLocked() {
-        return turretLocked;
+    public boolean isLaunchReadinessLocked() {
+        return isLaunchReadinessLocked;
     }
 
     public void updateFlywheel(double targetRPM) {

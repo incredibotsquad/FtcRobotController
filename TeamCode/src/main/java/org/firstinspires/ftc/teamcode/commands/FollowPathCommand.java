@@ -3,13 +3,23 @@ package org.firstinspires.ftc.teamcode.commands;
 import android.util.Log;
 
 import com.arcrobotics.ftclib.command.CommandBase;
+import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.paths.PathChain;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
+import java.io.FileDescriptor;
+
+@Configurable
 public class FollowPathCommand extends CommandBase {
     private final Follower follower;
     private final PathChain path;
     private final boolean holdEnd;
+
+    // Stall detection variables
+    private ElapsedTime stallTimer = new ElapsedTime();
+    private static final double STALL_VELOCITY_THRESHOLD = 0.5; // inches per second
+    private static final double STALL_TIMEOUT = 750; // milliseconds before giving up
 
     public FollowPathCommand(Follower follower, PathChain path, boolean holdEnd) {
         this.follower = follower;
@@ -20,6 +30,7 @@ public class FollowPathCommand extends CommandBase {
     @Override
     public void initialize() {
         follower.followPath(path, holdEnd);
+        stallTimer.reset();
 
         /*
         * In some versions of Pedro Pathing, if isFinished() is checked before the very first
@@ -33,14 +44,31 @@ public class FollowPathCommand extends CommandBase {
 
     @Override
     public void execute() {
+
         follower.update();
+
+        // Pedro Pathing update is usually handled in the OpMode's run()         // but we can check velocity here
+        double currentVelocity = follower.getVelocity().getMagnitude();
+
+        // If we are moving faster than the threshold, reset the timer
+        if (currentVelocity > STALL_VELOCITY_THRESHOLD) {
+            stallTimer.reset();
+        }
     }
 
     @Override
     public boolean isFinished() {
-        // Command finishes when the follower is no longer busy
+        // Finish if:
+        // 1. Pedro says we are done
+        // 2. We have been stuck (velocity < threshold) for too long
+        return !follower.isBusy() || stallTimer.milliseconds() > STALL_TIMEOUT;
+    }
 
-        Log.i("FollowPathCommand", "Finished returned: " + !follower.isBusy());
-        return !follower.isBusy();
+    @Override
+    public void end(boolean interrupted) {
+        if (stallTimer.milliseconds() > STALL_TIMEOUT) {
+            Log.w("Auto", "Path Stalled! Moving to next command.");
+            follower.breakFollowing(); // Stop the motors immediately
+        }
     }
 }

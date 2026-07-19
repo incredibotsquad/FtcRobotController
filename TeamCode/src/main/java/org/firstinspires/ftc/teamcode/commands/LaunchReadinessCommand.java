@@ -27,7 +27,7 @@ public class LaunchReadinessCommand extends CommandBase {
     private final LimelightSubsystem limelightSubsystem;
 
     // Define the fixed field coordinate you want to point at (e.g., center of the backdrop or goal)
-    public static boolean ENABLE_MOVING_SHOT_COMPENSATION = true;
+    public static boolean ENABLE_MOVING_SHOT_COMPENSATION = false;
     public static double SHOT_FLIGHT_BASE_SECONDS = 0.25;
     public static double SHOT_FLIGHT_SECONDS_PER_INCH = 0.0035;
     public static double BURST_MIDPOINT_SECONDS = 0.175;
@@ -72,13 +72,15 @@ public class LaunchReadinessCommand extends CommandBase {
         FlywheelConstants flywheelConstants;
     }
 
+    private static double DISTANCE_FROM_APEX = 87.0;
+
     // 2. The Lookup Table (Distance in Inches -> Constants)
     private static final NavigableMap<Double, FlywheelConstants> NEAR_LOOKUP_TABLE = new TreeMap<>();
     static {
         // Distance (inches), P, I, D, kS, kV, targetRPM
         // These numbers are examples; populate with your tuned values
         NEAR_LOOKUP_TABLE.put(70.0,  new FlywheelConstants(0.0015, 0, 0, 0.05, 0.000345, 3500));
-        NEAR_LOOKUP_TABLE.put(87.0,  new FlywheelConstants(0.0035, 0, 0, 0.05, 0.00034, 3600));
+        NEAR_LOOKUP_TABLE.put(DISTANCE_FROM_APEX,  new FlywheelConstants(0.0035, 0, 0, 0.05, 0.00034, 3600));
         NEAR_LOOKUP_TABLE.put(94.0,  new FlywheelConstants(0.0075, 0, 0, 0.05, 0.000345, 3700));
         NEAR_LOOKUP_TABLE.put(110.0,  new FlywheelConstants(0.0045, 0, 0, 0.05, 0.000345, 3950));
     }
@@ -117,9 +119,23 @@ public class LaunchReadinessCommand extends CommandBase {
         // 1. Get current robot posture from odometry
         Pose2d currentPose = odometry.getPose();
 
-        ShotSolution staticSolution = calculateStaticShot(currentPose);
-        ShotSolution movingSolution = calculateVelocityCompensatedShot(currentPose, staticSolution.distanceToTarget);
-        ShotSolution activeSolution = ENABLE_MOVING_SHOT_COMPENSATION ? movingSolution : staticSolution;
+        ShotSolution staticSolution = new ShotSolution();
+        ShotSolution movingSolution = new ShotSolution();
+        ShotSolution activeSolution = new ShotSolution();
+
+        if (launchSubsystem.isLaunchReadinessLocked()){
+            activeSolution.turretServoPosition = LaunchSubsystem.TURRET_MID;
+            activeSolution.visorPosition = LaunchSubsystem.LAUNCH_VISOR_LOW;
+            activeSolution.distanceToTarget = DISTANCE_FROM_APEX;
+            activeSolution.flywheelConstants = getFlywheelConstantsBasedOnDistance(activeSolution.distanceToTarget);
+
+            activeSolution.shotSolutionReady = true;
+
+        } else {
+            staticSolution = calculateStaticShot(currentPose);
+            movingSolution = calculateVelocityCompensatedShot(currentPose, staticSolution.distanceToTarget);
+            activeSolution = ENABLE_MOVING_SHOT_COMPENSATION ? movingSolution : staticSolution;
+        }
 
         applyShotSolution(activeSolution);
         addShotTelemetry(staticSolution, movingSolution, activeSolution);
@@ -238,6 +254,8 @@ public class LaunchReadinessCommand extends CommandBase {
 
                             // Subtract visionAdjustment to center the turret on the target
                             finalServoPosition = odometryServoPosition - visionAdjustment;
+
+                            visionPoseSamples.clear();
                         }
                     }
                 } else {
@@ -308,11 +326,7 @@ public class LaunchReadinessCommand extends CommandBase {
     private void applyShotSolution(ShotSolution solution) {
         FlywheelConstants current = solution.flywheelConstants;
 
-        if(launchSubsystem.isTurretLocked())
-            launchSubsystem.setTurretPosition(LaunchSubsystem.TURRET_MID);
-        else
-            launchSubsystem.setTurretPosition(solution.turretServoPosition);
-
+        launchSubsystem.setTurretPosition(solution.turretServoPosition);
         launchSubsystem.setFlywheelPID(current.P, current.I, current.D);
         launchSubsystem.updateFeedforward(current.kS, current.kV);
         launchSubsystem.updateFlywheel(current.targetRPM);
