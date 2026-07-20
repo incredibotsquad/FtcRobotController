@@ -12,8 +12,8 @@ public class LaunchBallsCommand extends CommandBase {
     private final LaunchGateSubsystem launchGate;
     private boolean initialized = false;
     private final ElapsedTime timer;
-    private static final double LAUNCH_DURATION_SLOW = 1500; // 1.5 second to clear all balls
-    private static final double LAUNCH_DURATION_FAST = 650; // 1.5 second to clear all balls
+    private static final double LAUNCH_DURATION_SLOW = 1200; // 1.2 second to clear all balls
+    private static final double LAUNCH_DURATION_FAST = 650; // 650 ms second to clear all balls
 
     private double LAUNCH_DURATION = LAUNCH_DURATION_SLOW;
 
@@ -84,18 +84,35 @@ public class LaunchBallsCommand extends CommandBase {
 //        }
 
         if (!initialized) {
-            Log.i("LaunchBallsCommand", "Initialize - resetting timer");
-            timer.reset();
-            initialized = true;
+            if (waitForFlywheel && !launcher.isReadyToLaunch()) {
+                Log.i("LaunchBallsCommand", "Waiting for flywheel to ramp up");
+                timer.reset();
+                return;
+            }
+            else {
+                Log.i("LaunchBallsCommand", "Initialize - resetting timer");
+                timer.reset();
+                initialized = true;
+            }
         }
 
-        if (waitForFlywheel && !launcher.isReadyToLaunch()) {
-            Log.i("LaunchBallsCommand", "Waiting for flywheel to ramp up");
-            timer.reset();
-        } else {
-            Log.i("LaunchBallsCommand", "Execute: opening gate without any checks");
-            launchGate.openGate();
-        }
+        Log.i("LaunchBallsCommand", "Execute: opening gate without any checks");
+        launchGate.openGate();
+
+//
+//        if (!initialized) {
+//            Log.i("LaunchBallsCommand", "Initialize - resetting timer");
+//            timer.reset();
+//            initialized = true;
+//        }
+//
+//        if (waitForFlywheel && !launcher.isReadyToLaunch()) {
+//            Log.i("LaunchBallsCommand", "Waiting for flywheel to ramp up");
+//            timer.reset();
+//        } else {
+//            Log.i("LaunchBallsCommand", "Execute: opening gate without any checks");
+//            launchGate.openGate();
+//        }
 
     }
 

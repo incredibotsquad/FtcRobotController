@@ -15,6 +15,7 @@ import org.firstinspires.ftc.teamcode.subsystems.LimelightSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 
+import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
@@ -38,6 +39,8 @@ public class LaunchReadinessCommand extends CommandBase {
     public static boolean ENABLE_TURRET_VISION_CORRECTION = false;
     public static double VISION_STABILITY_THRESHOLD_IPS = 3.0; // Max speed allowed for vision lock
     public static double VISION_CORRECTION_GAIN = 0.05; // Sensitivity of the vision fine-tuning
+
+    public static double TURRET_SCALING_FACTOR = 1.08;
 
     // ... existing fields ...
     public static int VISION_SAMPLE_SIZE = 5;
@@ -100,6 +103,13 @@ public class LaunchReadinessCommand extends CommandBase {
         this.odometry = odometry;
         this.limelightSubsystem = limelight;
         this.telemetry = telemetry;
+        
+        // This command strictly controls the launch Subsystem
+        addRequirements(launchSubsystem);
+    }
+
+    @Override
+    public void execute() {
 
         if (CrossOpModeStorage.allianceColor == AllianceColors.BLUE) {
             TARGET_X = CrossOpModeStorage.BLUE_TARGET_X;
@@ -109,13 +119,7 @@ public class LaunchReadinessCommand extends CommandBase {
             TARGET_X = CrossOpModeStorage.RED_TARGET_X;
             TARGET_Y = CrossOpModeStorage.RED_TARGET_Y;
         }
-        
-        // This command strictly controls the launch Subsystem
-        addRequirements(launchSubsystem);
-    }
 
-    @Override
-    public void execute() {
         // 1. Get current robot posture from odometry
         Pose2d currentPose = odometry.getPose();
 
@@ -195,7 +199,9 @@ public class LaunchReadinessCommand extends CommandBase {
         while (relativeTargetAngle < -180) relativeTargetAngle += 360;
 
         double servoOffsetDegrees = relativeTargetAngle * LaunchSubsystem.GEAR_RATIO;
-        double servoPosAdjustment = servoOffsetDegrees / LaunchSubsystem.TOTAL_SERVO_RANGE;
+
+        double servoPosAdjustment = (servoOffsetDegrees / LaunchSubsystem.TOTAL_SERVO_RANGE) * TURRET_SCALING_FACTOR;
+
         double odometryServoPosition = LaunchSubsystem.TURRET_MID - servoPosAdjustment;
 
         // --- VISION FINE-TUNING LOGIC ---

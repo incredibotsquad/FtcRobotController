@@ -56,7 +56,7 @@ public class LaunchSubsystem extends SubsystemBase {
      * (TargetDegrees * Ratio) / TotalServoRange
      */
     public static double GEAR_RATIO = 112.0 / 29.0;
-    public static double TOTAL_SERVO_RANGE = 1800 * TURRET_MAX; // servo range is 1800 but we are only going up to 0.87
+    public static double TOTAL_SERVO_RANGE = 1800; // servo range is 1800 but we are only going up to 0.87
 
     // Inside LaunchSubsystem
     private PIDController flywheelPID = new PIDController(0.000, 0, 0);
@@ -184,24 +184,6 @@ public class LaunchSubsystem extends SubsystemBase {
         double ticksPerSecond = (targetRPM * Motor.GoBILDA.BARE.getCPR()) / 60.0;
         leftLaunchMotor.setVelocity(ticksPerSecond);
         rightLaunchMotor.setVelocity(ticksPerSecond);
-    }
-
-    /**
-     * Returns the turret angle in radians relative to the robot chassis.
-     * 0 radians is forward, positive is counter-clockwise.
-     */
-    public double getTurretAngleRadians() {
-        // turret only goes from 0 to 1620 degrees
-        double totalRangeDegrees = TOTAL_SERVO_RANGE;
-
-        // Calculate the difference from the center (Midpoint)
-        // If increasing the servo position turns the turret counter-clockwise,
-        // use (current - mid). If it turns clockwise, use (mid - current).
-        //get this from crossopmode storage since this function is used to relocalize
-        double currentPos = CrossOpModeStorage.turretPosition;
-        double angleDegrees = (currentPos - TURRET_MID) * totalRangeDegrees;
-
-        return Math.toRadians(angleDegrees);
     }
 
     public double getFlywheelVelocityTPS() {

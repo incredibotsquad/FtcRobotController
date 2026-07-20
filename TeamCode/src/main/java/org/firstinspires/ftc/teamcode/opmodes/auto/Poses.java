@@ -14,7 +14,8 @@ public class Poses {
 
 
     public final Pose HUMAN_PLAYER_POSE;
-    public final Pose FAR_INTAKE2_POSE;
+    public final Pose HUMAN_JIGGLE_BACKWARD;
+    public final Pose FAR_SPIKE_3_POSE;
     public final Pose SPIKE_3_CONTROL_POSE;
     public final Pose FAR_SPIKE_2_CONTROL_POSE;
     public final Pose FAR_SPIKE_1_CONTROL_POSE;
@@ -35,11 +36,13 @@ public class Poses {
 
         FAR_INIT = maybeMirror(new Pose(85, 9, Math.toRadians(0)), isRed);
         HUMAN_PLAYER_POSE = maybeMirror(new Pose(130, 10, Math.toRadians(0)), isRed);
-        FAR_INTAKE2_POSE = maybeMirror(new Pose(130, 35, Math.toRadians(0)), isRed);
-        SPIKE_3_CONTROL_POSE = maybeMirror(new Pose(100, 35, Math.toRadians(0)), isRed);
+        HUMAN_JIGGLE_BACKWARD = maybeMirror(new Pose(125, 10, Math.toRadians(0)), isRed);
+
+        FAR_SPIKE_3_POSE = maybeMirror(new Pose(130, 34, Math.toRadians(0)), isRed);
+        SPIKE_3_CONTROL_POSE = maybeMirror(new Pose(90, 40, Math.toRadians(0)), isRed);
         FAR_INTAKE3_POSE = maybeMirror(new Pose(130, 45, Math.toRadians(0)), isRed);
-        FAR_LAUNCH = maybeMirror(new Pose(85, 15, Math.toRadians(0)), isRed);
-        FAR_PARK = maybeMirror(new Pose(132, 48), isRed);
+        FAR_LAUNCH = maybeMirror(new Pose(90, 15, Math.toRadians(0)), isRed);
+        FAR_PARK = maybeMirror(new Pose(96, 36), isRed);
 
         PICKUP_1_POSE = maybeMirror(new Pose(17, 84, Math.toRadians(180)), isRed);
         PICKUP_2_POSE = maybeMirror(new Pose(12, 60, Math.toRadians(180)), isRed);
@@ -65,9 +68,9 @@ public class Poses {
 
         NEAR_1_PATH_GATE_CONTROL_1 = maybeMirror(new Pose(138, 77, Math.toRadians(0)), isRed);
         NEAR_1_PATH_GATE_CONTROL_2 = maybeMirror(new Pose(120, 49, Math.toRadians(0)), isRed);
-        NEAR_1_PATH_GATE_INTAKE = maybeMirror(new Pose(127, 52, Math.toRadians(60)), isRed);
 
-        NEAR_GATE_JIGGLE_BACKWORD_POSE = maybeMirror(new Pose(127, 47, NEAR_1_PATH_GATE_INTAKE.getHeading()), isRed);
+        NEAR_1_PATH_GATE_INTAKE = maybeMirror(new Pose(127, 52, Math.toRadians(60)), isRed);
+        NEAR_GATE_JIGGLE_BACKWORD_POSE = maybeMirror(new Pose(127, 47, Math.toRadians(60)), isRed);
 
 
         NEAR_PARK = maybeMirror(new Pose(132, 48), isRed);

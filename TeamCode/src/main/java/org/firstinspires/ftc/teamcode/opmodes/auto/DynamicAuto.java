@@ -201,25 +201,22 @@ public class DynamicAuto extends CommandOpMode {
     // --- DYNAMIC PATH BUILDERS ---
 
     private Command moveTo(Pose targetPose) {
-        return new InstantCommand(() -> {
             PathChain pc = follower.pathBuilder()
                     .addPath(new BezierLine(lastPathEndPose, targetPose))
                     .setLinearHeadingInterpolation(lastPathEndPose.getHeading(), targetPose.getHeading())
                     .build();
             lastPathEndPose = targetPose;
-            new FollowPathCommand(follower, pc, true).schedule();
-        });
+
+            return new FollowPathCommand(follower, pc, true);
     }
 
     private Command curveTo(Pose targetPose, Pose... controlPoints) {
-        return new InstantCommand(() -> {
             PathChain pc = follower.pathBuilder()
                     .addPath(new BezierCurve(combinePoses(lastPathEndPose, targetPose, controlPoints)))
                     .setLinearHeadingInterpolation(lastPathEndPose.getHeading(), targetPose.getHeading())
                     .build();
             lastPathEndPose = targetPose;
-            new FollowPathCommand(follower, pc, true).schedule();
-        });
+            return new FollowPathCommand(follower, pc, true);
     }
 
     private Pose[] combinePoses(Pose start, Pose end, Pose[] controls) {

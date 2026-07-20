@@ -47,6 +47,8 @@ public class Near9 extends CommandOpMode {
         robot.initialize(Incredibot.OpModeType.AUTO, null, null);
         follower = Constants.createFollower(this.hardwareMap);
 
+        robot.launchGateSubsystem.closeGate();
+
         // 2. Init Loop for Alliance Selection
         while (opModeInInit()) {
             if (gamepad1.xWasReleased()) {
@@ -95,10 +97,9 @@ public class Near9 extends CommandOpMode {
                 new SequentialCommandGroup(
                         new InstantCommand(() -> Log.i("Near 9", "Starting Preload and Spikes")),
 
-
                         // 1. Run Near Preloads
                         new FollowPathCommand(follower, paths.NEAR_PRELOADS, true),
-                        new WaitCommand(500),
+                        new WaitCommand(200),
                         new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, true, true),
 
                         // 2. Run First Spike

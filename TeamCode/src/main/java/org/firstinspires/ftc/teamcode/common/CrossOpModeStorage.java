@@ -12,11 +12,11 @@ import com.bylazar.configurables.annotations.Configurable;
 @Configurable
 public class CrossOpModeStorage {
 
-    public static final double BLUE_TARGET_X = 10.0;
-    public static final double BLUE_TARGET_Y = 134.0;
+    public static final double BLUE_TARGET_X = 13.25;
+    public static final double BLUE_TARGET_Y = 134.85;
 
-    public static final double RED_TARGET_X = 134.0;
-    public static final double RED_TARGET_Y = 134.0;
+    public static final double RED_TARGET_X = 130.75;
+    public static final double RED_TARGET_Y = 134.85;
 
     public static Pose2d currentPose = new Pose2d(72, 72, new Rotation2d(Math.toRadians(0)));
 
