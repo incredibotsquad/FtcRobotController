@@ -33,7 +33,7 @@ public class Poses {
         OPEN_GATE_CONTROL = maybeMirror(new Pose(115, 70, Math.toRadians(0)), isRed);
 
         HUMAN_PLAYER_POSE = maybeMirror(new Pose(130, 8, Math.toRadians(0)), isRed);
-        HUMAN_JIGGLE_BACKWARD = maybeMirror(new Pose(125, 10, Math.toRadians(0)), isRed);
+        HUMAN_JIGGLE_BACKWARD = maybeMirror(new Pose(125, 8, Math.toRadians(0)), isRed);
 
         ONE_PATH_GATE_INTAKE = maybeMirror(new Pose(127, 52, Math.toRadians(60)), isRed);
         GATE_INTAKE_JIGGLE_BACKWORD_POSE = maybeMirror(new Pose(127, 47, Math.toRadians(60)), isRed);
