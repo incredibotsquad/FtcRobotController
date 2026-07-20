@@ -142,7 +142,7 @@ public class LaunchReadinessCommand extends CommandBase {
         }
 
         applyShotSolution(activeSolution);
-        addShotTelemetry(staticSolution, movingSolution, activeSolution);
+//        addShotTelemetry(staticSolution, movingSolution, activeSolution);
     }
 
     @Override

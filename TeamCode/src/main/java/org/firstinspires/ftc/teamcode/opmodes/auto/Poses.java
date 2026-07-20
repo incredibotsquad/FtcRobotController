@@ -58,7 +58,7 @@ public class Poses {
         NEAR_OPEN_GATE = maybeMirror(new Pose(130, 73, Math.toRadians(0)), isRed);
         NEAR_OPEN_GATE_CONTROL_1 = maybeMirror(new Pose(115, 70, Math.toRadians(0)), isRed);
 
-        NEAR_FIRST_SPIKE = maybeMirror(new Pose(126, 85, Math.toRadians(0)), isRed);
+        NEAR_FIRST_SPIKE = maybeMirror(new Pose(124, 85, Math.toRadians(0)), isRed);
         NEAR_SECOND_SPIKE = maybeMirror(new Pose(130, 50, Math.toRadians(0)), isRed);
         NEAR_SECOND_SPIKE_CONTROL = maybeMirror(new Pose(89, 50), isRed);
 

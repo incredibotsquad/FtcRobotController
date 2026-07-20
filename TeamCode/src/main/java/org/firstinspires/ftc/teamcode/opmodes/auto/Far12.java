@@ -86,7 +86,9 @@ public class Far12 extends CommandOpMode {
         super.run();
         follower.update();
         Pose currentFollowerPose = follower.getPose();
-        CrossOpModeStorage.currentPose = new Pose2d(currentFollowerPose.getX(), currentFollowerPose.getY(), new Rotation2d(currentFollowerPose.getHeading()));
+
+        if (currentFollowerPose.getX() != 0 && currentFollowerPose.getY() != 0)
+            CrossOpModeStorage.currentPose = new Pose2d(currentFollowerPose.getX(), currentFollowerPose.getY(), new Rotation2d(currentFollowerPose.getHeading()));
     }
 
     public Command getAutoRoutine() {

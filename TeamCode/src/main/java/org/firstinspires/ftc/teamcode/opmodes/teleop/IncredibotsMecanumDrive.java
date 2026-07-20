@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.opmodes.teleop;
 
+import android.util.Log;
+
 import com.arcrobotics.ftclib.command.CommandScheduler;
 import com.arcrobotics.ftclib.gamepad.GamepadEx;
 import com.bylazar.telemetry.PanelsTelemetry;
@@ -36,9 +38,14 @@ public class IncredibotsMecanumDrive extends LinearOpMode { // Changed this
                 incredibot.driveSubsystem
         );
 
+
+
+        Log.i("IncredibotsMecanumDrive. Crossopmode pose: ", CrossOpModeStorage.currentPose.toString());
+
         //use cross opmode storage to ensure odometry knows where we started from.
         //odometry subsystem periodically updates this in cross oomode storage.
         incredibot.odometrySubsystem.resetPose(CrossOpModeStorage.currentPose.getX(), CrossOpModeStorage.currentPose.getY(), Math.toDegrees(CrossOpModeStorage.currentPose.getHeading()));
+        incredibot.launchSubsystem.setTurretPosition(CrossOpModeStorage.turretPosition);
 
         //relocalize based on april tags - this only schedules it once
         relocalizeCommand.schedule();
