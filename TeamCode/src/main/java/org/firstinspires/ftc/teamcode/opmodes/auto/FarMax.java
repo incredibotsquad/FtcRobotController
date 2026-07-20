@@ -26,8 +26,8 @@ import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 @Configurable
-@Autonomous(name = "Near 12", group = "Autonomous")
-public class Near12 extends CommandOpMode {
+@Autonomous(name = "Far Max", group = "Autonomous")
+public class FarMax extends CommandOpMode {
     private Incredibot robot;
     private Follower follower;
     private Poses poses;
@@ -37,23 +37,22 @@ public class Near12 extends CommandOpMode {
     private boolean resetTimer = false;
     public AllianceColors alliance = AllianceColors.RED; // Default
 
-    private final ElapsedTime intakeTimer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
-
     @Override
     public void initialize() {
         // 1. Subsystem Initialization
         robot = new Incredibot(hardwareMap, PanelsTelemetry.INSTANCE.getTelemetry());
         robot.initialize(Incredibot.OpModeType.AUTO, null, null);
-        follower = Constants.createFollower(this.hardwareMap);
 
         robot.launchGateSubsystem.closeGate();
 
+        follower = Constants.createFollower(this.hardwareMap);
+
         // 2. Init Loop for Alliance Selection
         while (opModeInInit()) {
-            if (gamepad1.xWasReleased()) {
+            if (gamepad2.xWasReleased()) {
                 alliance = AllianceColors.BLUE;
             }
-            if (gamepad1.bWasReleased()) {
+            if (gamepad2.bWasReleased()) {
                 alliance = AllianceColors.RED;
             }
 
@@ -69,10 +68,10 @@ public class Near12 extends CommandOpMode {
 
         // 3. Pose and Path Setup
         poses = new Poses(alliance == AllianceColors.RED);
-        follower.setStartingPose(poses.NEAR_INIT);
+        follower.setStartingPose(poses.FAR_INIT);
 
         paths = new Paths(follower, poses);
-        paths.buildNearPaths(); // Only build near paths
+        paths.buildFarPaths(); // Only build near paths
 
         // 4. Schedule the State Machine
         schedule(getAutoRoutine());
@@ -96,63 +95,70 @@ public class Near12 extends CommandOpMode {
         return new SequentialCommandGroup(
                 // --- STEP 1: Main Autonomous Pathing ---
                 new SequentialCommandGroup(
-                        new InstantCommand(() -> Log.i("Near12", "Starting Preload and Spikes")),
+                        new InstantCommand(() -> Log.i("Far Max", "Starting Preload and Spikes")),
 
-                        // 1. Run Near Preloads
-                        new FollowPathCommand(follower, paths.NEAR_PRELOADS, true),
-                        new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, true),
+                        new FollowPathCommand(follower, paths.FAR_PRELOADS, true),
+                        new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, false, true),
 
-                        // 2. Run First Spike
-                        new FollowPathCommand(follower, paths.NEAR_SPIKE_1, false),
-                        new FollowPathCommand(follower, paths.NEAR_OPEN_GATE, false),
-                        new FollowPathCommand(follower, paths.NEAR_SCORE_SPIKE_1_AFTER_GATE, true),
-                        new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem),
+                        new FollowPathCommand(follower, paths.FAR_SPIKE_3, true),
+                        new FollowPathCommand(follower, paths.FAR_SCORE_SPIKE_3, true),
+                        new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, false, true),
 
-                        // 3. Run Second Spike
-                        new FollowPathCommand(follower, paths.NEAR_SPIKE_2, false),
-                        new FollowPathCommand(follower, paths.NEAR_SCORE_SPIKE_2, true),
-                        new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, true),
-
-                        //gate cycle 1
-                        new FollowPathCommand(follower, paths.NEAR_GATE_1_PATH, true),
+                        //human player repeat sequence
+                        new FollowPathCommand(follower, paths.FAR_HUMAN_PLAYER, true),
                         new ParallelRaceGroup(
                                 new WaitCommand(INTAKE_WAIT),
                                 new WaitUntilCommand(()-> robot.intakeSubsystem.getArtifactCount() == 3),
                                 new RepeatCommand(
                                         new SequentialCommandGroup(
-                                                new FollowPathCommand(follower, paths.NEAR_JIGGLE_GATE_PATH_1, false),
-                                                new FollowPathCommand(follower, paths.NEAR_JIGGLE_GATE_PATH_2, false)))
-                                ),
-                        new FollowPathCommand(follower, paths.NEAR_SCORE_GATE, true),
-                        new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, true),
-
-                        // Gate cycle 2
-                        new FollowPathCommand(follower, paths.NEAR_GATE_1_PATH, true),
-                        new ParallelRaceGroup(
-                                new WaitCommand(INTAKE_WAIT),
-                                new WaitUntilCommand(()-> robot.intakeSubsystem.getArtifactCount() == 3),
-                                new RepeatCommand(
-                                        new SequentialCommandGroup(
-                                                new FollowPathCommand(follower, paths.NEAR_JIGGLE_GATE_PATH_1, false),
-                                                new FollowPathCommand(follower, paths.NEAR_JIGGLE_GATE_PATH_2, false)))
+                                                new FollowPathCommand(follower, paths.FAR_JIGGLE_GATE_PATH_1, false),
+                                                new FollowPathCommand(follower, paths.FAR_JIGGLE_GATE_PATH_2, false)))
                         ),
-                        new FollowPathCommand(follower, paths.NEAR_SCORE_GATE, true),
-                        new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, true),
+                        new FollowPathCommand(follower, paths.FAR_SCORE_HUMAN, true),
+                        new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, false, true),
 
-                        //gate cycle 3
-                        new FollowPathCommand(follower, paths.NEAR_GATE_1_PATH, true),
+                        //human player sequence 2
+                        new FollowPathCommand(follower, paths.FAR_HUMAN_PLAYER, true),
                         new ParallelRaceGroup(
                                 new WaitCommand(INTAKE_WAIT),
                                 new WaitUntilCommand(()-> robot.intakeSubsystem.getArtifactCount() == 3),
                                 new RepeatCommand(
                                         new SequentialCommandGroup(
-                                                new FollowPathCommand(follower, paths.NEAR_JIGGLE_GATE_PATH_1, false),
-                                                new FollowPathCommand(follower, paths.NEAR_JIGGLE_GATE_PATH_2, false)))
+                                                new FollowPathCommand(follower, paths.FAR_JIGGLE_GATE_PATH_1, false),
+                                                new FollowPathCommand(follower, paths.FAR_JIGGLE_GATE_PATH_2, false)))
                         ),
-                        new FollowPathCommand(follower, paths.NEAR_SCORE_LAST_GATE, true),
-                        new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, true),
+                        new FollowPathCommand(follower, paths.FAR_SCORE_HUMAN, true),
+                        new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, false, true),
 
-                        new InstantCommand(() -> Log.i("Near12", "Seconds " + timer.seconds()))
+                        //human player sequence 3
+                        new FollowPathCommand(follower, paths.FAR_HUMAN_PLAYER, true),
+                        new ParallelRaceGroup(
+                                new WaitCommand(INTAKE_WAIT),
+                                new WaitUntilCommand(()-> robot.intakeSubsystem.getArtifactCount() == 3),
+                                new RepeatCommand(
+                                        new SequentialCommandGroup(
+                                                new FollowPathCommand(follower, paths.FAR_JIGGLE_GATE_PATH_1, false),
+                                                new FollowPathCommand(follower, paths.FAR_JIGGLE_GATE_PATH_2, false)))
+                        ),
+                        new FollowPathCommand(follower, paths.FAR_SCORE_HUMAN, true),
+                        new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, false, true),
+
+                        //human player sequence 4
+                        new FollowPathCommand(follower, paths.FAR_HUMAN_PLAYER, true),
+                        new ParallelRaceGroup(
+                                new WaitCommand(INTAKE_WAIT),
+                                new WaitUntilCommand(()-> robot.intakeSubsystem.getArtifactCount() == 3),
+                                new RepeatCommand(
+                                        new SequentialCommandGroup(
+                                                new FollowPathCommand(follower, paths.FAR_JIGGLE_GATE_PATH_1, false),
+                                                new FollowPathCommand(follower, paths.FAR_JIGGLE_GATE_PATH_2, false)))
+                        ),
+                        new FollowPathCommand(follower, paths.FAR_SCORE_HUMAN, true),
+                        new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, false, true),
+
+                        new FollowPathCommand(follower, paths.FAR_PARK, true),
+
+                        new InstantCommand(() -> Log.i("Far Max", "Seconds " + timer.seconds()))
                 )
 
                 // --- STEP 2: 25-Second "End Game" / Gate Logic ---

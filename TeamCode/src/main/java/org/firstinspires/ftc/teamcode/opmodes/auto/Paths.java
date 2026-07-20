@@ -24,8 +24,8 @@ public class Paths {
 
     public void buildNearPaths() {
         NEAR_OPEN_GATE = follower.pathBuilder()
-                .addPath(new BezierCurve(poses.FIRST_SPIKE, poses.NEAR_OPEN_GATE_CONTROL, poses.NEAR_OPEN_GATE))
-                .setLinearHeadingInterpolation(poses.FIRST_SPIKE.getHeading(), poses.NEAR_OPEN_GATE.getHeading())
+                .addPath(new BezierCurve(poses.FIRST_SPIKE, poses.OPEN_GATE_CONTROL, poses.OPEN_GATE))
+                .setLinearHeadingInterpolation(poses.FIRST_SPIKE.getHeading(), poses.OPEN_GATE.getHeading())
                 .build();
 
         NEAR_PRELOADS = follower.pathBuilder()
@@ -39,7 +39,7 @@ public class Paths {
                 .build();
 
         NEAR_SCORE_SPIKE_1_AFTER_GATE = follower.pathBuilder()
-                .addPath(new BezierLine(poses.NEAR_OPEN_GATE, poses.NEAR_LAUNCH))
+                .addPath(new BezierLine(poses.OPEN_GATE, poses.NEAR_LAUNCH))
                 .setLinearHeadingInterpolation(poses.FIRST_SPIKE.getHeading(), poses.NEAR_LAUNCH.getHeading())
                 .build();
 
@@ -54,33 +54,33 @@ public class Paths {
                 .build();
 
         NEAR_GATE_1_PATH = follower.pathBuilder()
-                .addPath(new BezierCurve(poses.NEAR_LAUNCH, poses.NEAR_1_PATH_GATE_CONTROL_1, poses.NEAR_1_PATH_GATE_CONTROL_2, poses.NEAR_1_PATH_GATE_INTAKE))
-                .setLinearHeadingInterpolation(poses.NEAR_LAUNCH.getHeading(), poses.NEAR_1_PATH_GATE_INTAKE.getHeading())
+                .addPath(new BezierCurve(poses.NEAR_LAUNCH, poses.NEAR_1_PATH_GATE_CONTROL_1, poses.NEAR_1_PATH_GATE_CONTROL_2, poses.ONE_PATH_GATE_INTAKE))
+                .setLinearHeadingInterpolation(poses.NEAR_LAUNCH.getHeading(), poses.ONE_PATH_GATE_INTAKE.getHeading())
                 .build();
 
         NEAR_SCORE_GATE = follower.pathBuilder()
-                .addPath(new BezierLine(poses.NEAR_1_PATH_GATE_INTAKE, poses.NEAR_LAUNCH))
-                .setLinearHeadingInterpolation(poses.NEAR_1_PATH_GATE_INTAKE.getHeading(), poses.NEAR_LAUNCH.getHeading())
+                .addPath(new BezierLine(poses.ONE_PATH_GATE_INTAKE, poses.NEAR_LAUNCH))
+                .setLinearHeadingInterpolation(poses.ONE_PATH_GATE_INTAKE.getHeading(), poses.NEAR_LAUNCH.getHeading())
                 .build();
 
         NEAR_SCORE_LAST_GATE = follower.pathBuilder()
-                .addPath(new BezierLine(poses.NEAR_1_PATH_GATE_INTAKE, poses.NEAR_FINAL_LAUNCH))
-                .setLinearHeadingInterpolation(poses.NEAR_1_PATH_GATE_INTAKE.getHeading(), poses.NEAR_FINAL_LAUNCH.getHeading())
+                .addPath(new BezierLine(poses.ONE_PATH_GATE_INTAKE, poses.NEAR_FINAL_LAUNCH))
+                .setLinearHeadingInterpolation(poses.ONE_PATH_GATE_INTAKE.getHeading(), poses.NEAR_FINAL_LAUNCH.getHeading())
                 .build();
 
         NEAR_JIGGLE_GATE_PATH_1 = follower.pathBuilder()
-                .addPath(new BezierLine(poses.NEAR_1_PATH_GATE_INTAKE, poses.NEAR_GATE_JIGGLE_BACKWORD_POSE))
-                .setLinearHeadingInterpolation(poses.NEAR_1_PATH_GATE_INTAKE.getHeading(), poses.NEAR_GATE_JIGGLE_BACKWORD_POSE.getHeading())
+                .addPath(new BezierLine(poses.ONE_PATH_GATE_INTAKE, poses.GATE_INTAKE_JIGGLE_BACKWORD_POSE))
+                .setLinearHeadingInterpolation(poses.ONE_PATH_GATE_INTAKE.getHeading(), poses.GATE_INTAKE_JIGGLE_BACKWORD_POSE.getHeading())
                 .build();
 
         NEAR_JIGGLE_GATE_PATH_2 = follower.pathBuilder()
-                .addPath(new BezierLine(poses.NEAR_GATE_JIGGLE_BACKWORD_POSE, poses.NEAR_1_PATH_GATE_INTAKE))
-                .setLinearHeadingInterpolation(poses.NEAR_GATE_JIGGLE_BACKWORD_POSE.getHeading(), poses.NEAR_1_PATH_GATE_INTAKE.getHeading())
+                .addPath(new BezierLine(poses.GATE_INTAKE_JIGGLE_BACKWORD_POSE, poses.ONE_PATH_GATE_INTAKE))
+                .setLinearHeadingInterpolation(poses.GATE_INTAKE_JIGGLE_BACKWORD_POSE.getHeading(), poses.ONE_PATH_GATE_INTAKE.getHeading())
                 .build();
 
         NEAR_LEAVE = follower.pathBuilder()
-                .addPath(new BezierLine(poses.NEAR_LAUNCH, poses.NEAR_OPEN_GATE_CONTROL))
-                .setLinearHeadingInterpolation(poses.NEAR_LAUNCH.getHeading(), poses.NEAR_OPEN_GATE_CONTROL.getHeading())
+                .addPath(new BezierLine(poses.NEAR_LAUNCH, poses.OPEN_GATE_CONTROL))
+                .setLinearHeadingInterpolation(poses.NEAR_LAUNCH.getHeading(), poses.OPEN_GATE_CONTROL.getHeading())
                 .build();
     }
 

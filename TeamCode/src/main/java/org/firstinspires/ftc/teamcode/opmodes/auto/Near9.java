@@ -51,10 +51,10 @@ public class Near9 extends CommandOpMode {
 
         // 2. Init Loop for Alliance Selection
         while (opModeInInit()) {
-            if (gamepad1.xWasReleased()) {
+            if (gamepad2.xWasReleased()) {
                 alliance = AllianceColors.BLUE;
             }
-            if (gamepad1.bWasReleased()) {
+            if (gamepad2.bWasReleased()) {
                 alliance = AllianceColors.RED;
             }
 
