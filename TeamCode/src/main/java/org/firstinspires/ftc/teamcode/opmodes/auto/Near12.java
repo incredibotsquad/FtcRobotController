@@ -32,7 +32,7 @@ public class Near12 extends CommandOpMode {
     private Follower follower;
     private Poses poses;
     private Paths paths;
-    public static long INTAKE_WAIT = 2000;
+    public static long INTAKE_WAIT = 1500;
     private final ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
     private boolean resetTimer = false;
     public AllianceColors alliance = AllianceColors.RED; // Default
@@ -100,17 +100,16 @@ public class Near12 extends CommandOpMode {
 
                         // 1. Run Near Preloads
                         new FollowPathCommand(follower, paths.NEAR_PRELOADS, true),
-                        new WaitCommand(200),
-                        new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, true, true),
+                        new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, true),
 
                         // 2. Run First Spike
-                        new FollowPathCommand(follower, paths.NEAR_SPIKE_1, true),
-                        new FollowPathCommand(follower, paths.NEAR_OPEN_GATE, true),
+                        new FollowPathCommand(follower, paths.NEAR_SPIKE_1, false),
+                        new FollowPathCommand(follower, paths.NEAR_OPEN_GATE, false),
                         new FollowPathCommand(follower, paths.NEAR_SCORE_SPIKE_1_AFTER_GATE, true),
                         new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem),
 
                         // 3. Run Second Spike
-                        new FollowPathCommand(follower, paths.NEAR_SPIKE_2, true),
+                        new FollowPathCommand(follower, paths.NEAR_SPIKE_2, false),
                         new FollowPathCommand(follower, paths.NEAR_SCORE_SPIKE_2, true),
                         new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, true),
 
@@ -150,20 +149,8 @@ public class Near12 extends CommandOpMode {
                                                 new FollowPathCommand(follower, paths.NEAR_JIGGLE_GATE_PATH_1, false),
                                                 new FollowPathCommand(follower, paths.NEAR_JIGGLE_GATE_PATH_2, false)))
                         ),
-                        new FollowPathCommand(follower, paths.NEAR_SCORE_GATE, true),
+                        new FollowPathCommand(follower, paths.NEAR_SCORE_LAST_GATE, true),
                         new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, true),
-
-                        // move away from launch area
-                        new FollowPathCommand(follower, paths.NEAR_LEAVE, true),
-
-
-
-
-                        //5. Run Gate cycle
-//                new FollowPathCommand(follower, paths.NEAR_GATE, true),
-//                new FollowPathCommand(follower, paths.NEAR_GATE_2, true),
-//                new FollowPathCommand(follower, paths.NEAR_SCORE_GATE, true),
-
 
                         new InstantCommand(() -> Log.i("Near12", "Seconds " + timer.seconds()))
                 )

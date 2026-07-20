@@ -104,7 +104,7 @@ public class Near9 extends CommandOpMode {
                         // 1. Run Near Preloads
                         new FollowPathCommand(follower, paths.NEAR_PRELOADS, true),
                         new WaitCommand(200),
-                        new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, true, true),
+                        new LaunchBallsCommand(robot.launchSubsystem, robot.launchGateSubsystem, true),
 
                         // 2. Run First Spike
                         new FollowPathCommand(follower, paths.NEAR_SPIKE_1, true),
