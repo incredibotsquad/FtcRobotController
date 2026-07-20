@@ -142,7 +142,7 @@ public class LaunchReadinessCommand extends CommandBase {
         }
 
         applyShotSolution(activeSolution);
-//        addShotTelemetry(staticSolution, movingSolution, activeSolution);
+        addShotTelemetry(staticSolution, movingSolution, activeSolution);
     }
 
     @Override
@@ -344,22 +344,22 @@ public class LaunchReadinessCommand extends CommandBase {
         FlywheelConstants current = activeSolution.flywheelConstants;
 
         telemetry.addData("Shot Mode", ENABLE_MOVING_SHOT_COMPENSATION ? "MOVING" : "STATIC");
-        telemetry.addData("Shot Ready", activeSolution.shotSolutionReady);
-        telemetry.addData("Distance to target", activeSolution.distanceToTarget);
-        telemetry.addData("Flywheel RPM", current.targetRPM);
-        telemetry.addData("Flywheel P", current.P);
-        telemetry.addData("Flywheel I", current.I);
-        telemetry.addData("Flywheel D", current.D);
-        telemetry.addData("Flywheel kS", current.kS);
-        telemetry.addData("Flywheel kV", current.kV);
-        telemetry.addData("Turret Target Angle", activeSolution.relativeTargetAngle);
-        telemetry.addData("Turret Servo Position", activeSolution.turretServoPosition);
-        telemetry.addData("Robot Speed IPS", movingSolution.robotSpeedIps);
-        telemetry.addData("Moving Shot Time", movingSolution.compensationTimeSeconds);
-        telemetry.addData("Moving Shot Lead Inches", movingSolution.leadDistanceInches);
-        telemetry.addData("Moving Shot Angle Delta", movingSolution.relativeTargetAngle - staticSolution.relativeTargetAngle);
-        telemetry.addData("Moving Shot RPM Delta", movingSolution.flywheelConstants.targetRPM - staticSolution.flywheelConstants.targetRPM);
-        telemetry.addData("Moving Shot Turret Clamped", movingSolution.turretTargetClamped);
+//        telemetry.addData("Shot Ready", activeSolution.shotSolutionReady);
+//        telemetry.addData("Distance to target", activeSolution.distanceToTarget);
+//        telemetry.addData("Flywheel RPM", current.targetRPM);
+//        telemetry.addData("Flywheel P", current.P);
+//        telemetry.addData("Flywheel I", current.I);
+//        telemetry.addData("Flywheel D", current.D);
+//        telemetry.addData("Flywheel kS", current.kS);
+//        telemetry.addData("Flywheel kV", current.kV);
+//        telemetry.addData("Turret Target Angle", activeSolution.relativeTargetAngle);
+//        telemetry.addData("Turret Servo Position", activeSolution.turretServoPosition);
+//        telemetry.addData("Robot Speed IPS", movingSolution.robotSpeedIps);
+//        telemetry.addData("Moving Shot Time", movingSolution.compensationTimeSeconds);
+//        telemetry.addData("Moving Shot Lead Inches", movingSolution.leadDistanceInches);
+//        telemetry.addData("Moving Shot Angle Delta", movingSolution.relativeTargetAngle - staticSolution.relativeTargetAngle);
+//        telemetry.addData("Moving Shot RPM Delta", movingSolution.flywheelConstants.targetRPM - staticSolution.flywheelConstants.targetRPM);
+//        telemetry.addData("Moving Shot Turret Clamped", movingSolution.turretTargetClamped);
     }
 
     private double estimateFlightTimeSeconds(double distanceInches) {

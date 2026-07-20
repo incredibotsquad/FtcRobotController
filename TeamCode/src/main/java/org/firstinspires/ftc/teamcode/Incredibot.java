@@ -80,7 +80,12 @@ public class Incredibot extends Robot {
 
         driveSubsystem.setDefaultCommand(new DriveRobotCommand(driveSubsystem, driverGamepad));
 
-        //TODO: ADD AN OPTION TO INITIALIZE AN ALLIANCE COLOR IN TELEOP
+        //toggle for shooting on the move
+        operatorGamepad.getGamepadButton(GamepadKeys.Button.X)
+                        .toggleWhenPressed(
+                                new InstantCommand(() -> LaunchReadinessCommand.ENABLE_MOVING_SHOT_COMPENSATION = true),
+                                new InstantCommand(() -> LaunchReadinessCommand.ENABLE_MOVING_SHOT_COMPENSATION = false)
+                        );
 
         // 3. TURRET LOCK OVERRIDE - Pressing START toggles the turret lock
         operatorGamepad.getGamepadButton(GamepadKeys.Button.START)

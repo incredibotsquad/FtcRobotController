@@ -55,8 +55,8 @@ public class IncredibotsMecanumDrive extends LinearOpMode { // Changed this
             // Manually run the scheduler so the RelocalizeCommand can sample tags
             CommandScheduler.getInstance().run();
 
-            telemetry.addData("Status", "READY - Relocalizing...");
-            telemetry.addData("Current Pose", incredibot.odometrySubsystem.getPose().toString());
+//            telemetry.addData("Status", "READY - Relocalizing...");
+//            telemetry.addData("Current Pose", incredibot.odometrySubsystem.getPose().toString());
 
             // Update your custom telemetry panels
             PanelsTelemetry.INSTANCE.getTelemetry().update(telemetry);
