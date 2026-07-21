@@ -18,18 +18,20 @@ public class Poses {
     public final Pose FAR_SPIKE_2_CONTROL;
     public final Pose FAR_SPIKE_1_CONTROL;
     public final Pose FAR_PARK, FAR_1_PATH_GATE_CONTROL_1, FAR_1_PATH_GATE_CONTROL_2;
-
-    public final Pose NEAR_INIT, NEAR_FINAL_LAUNCH, ONE_PATH_GATE_INTAKE, GATE_INTAKE_JIGGLE_BACKWORD_POSE, OPEN_GATE_CONTROL, OPEN_GATE, NEAR_1_PATH_GATE_CONTROL_1, NEAR_1_PATH_GATE_CONTROL_2, NEAR_LAUNCH, FIRST_SPIKE, SECOND_SPIKE, NEAR_SPIKE_2_CONTROL, NEAR_HUMAN_CONTROL, NEAR_SPIKE_3_CONTROL;
+    public final Pose RELOCALIZE_STANCE;
+    public final Pose NEAR_INIT, NEAR_SPIKE_2_TO_LAUNCH_CONTROL, NEAR_FINAL_LAUNCH, NEAR_1_PATH_GATE_TO_LAUNCH_CONTROL, ONE_PATH_GATE_INTAKE, GATE_INTAKE_JIGGLE_BACKWORD_POSE, OPEN_GATE_CONTROL, OPEN_GATE, NEAR_1_PATH_GATE_CONTROL_1, NEAR_1_PATH_GATE_CONTROL_2, NEAR_LAUNCH, FIRST_SPIKE, SECOND_SPIKE, NEAR_SPIKE_2_CONTROL, NEAR_HUMAN_CONTROL, NEAR_SPIKE_3_CONTROL;
 
     public Poses(boolean isRed) {
 
         // ==================== COMMON POSES ====================
 
+        RELOCALIZE_STANCE = maybeMirror(new Pose(9, 9, Math.toRadians(180)), isRed);
+
         FIRST_SPIKE = maybeMirror(new Pose(124, 85, Math.toRadians(0)), isRed);
         SECOND_SPIKE = maybeMirror(new Pose(130, 55, Math.toRadians(0)), isRed);
         THIRD_SPIKE = maybeMirror(new Pose(130, 34, Math.toRadians(0)), isRed);
 
-        OPEN_GATE = maybeMirror(new Pose(130, 73, Math.toRadians(0)), isRed);
+        OPEN_GATE = maybeMirror(new Pose(126, 73, Math.toRadians(0)), isRed);
         OPEN_GATE_CONTROL = maybeMirror(new Pose(115, 70, Math.toRadians(0)), isRed);
 
         HUMAN_PLAYER_POSE = maybeMirror(new Pose(130, 8, Math.toRadians(0)), isRed);
@@ -58,10 +60,13 @@ public class Poses {
         NEAR_PARK = maybeMirror(new Pose(105, 70, Math.toRadians(0)), isRed);
 
         NEAR_SPIKE_2_CONTROL = maybeMirror(new Pose(90, 55), isRed);
+        NEAR_SPIKE_2_TO_LAUNCH_CONTROL = maybeMirror(new Pose(114, 47), isRed);
         NEAR_SPIKE_3_CONTROL = maybeMirror(new Pose(83, 26), isRed);
 
         NEAR_1_PATH_GATE_CONTROL_1 = maybeMirror(new Pose(138, 77, Math.toRadians(0)), isRed);
         NEAR_1_PATH_GATE_CONTROL_2 = maybeMirror(new Pose(120, 49, Math.toRadians(0)), isRed);
+
+        NEAR_1_PATH_GATE_TO_LAUNCH_CONTROL = maybeMirror(new Pose(112, 45), isRed);
 
         NEAR_HUMAN_CONTROL = maybeMirror(new Pose(80, 5), isRed);
     }

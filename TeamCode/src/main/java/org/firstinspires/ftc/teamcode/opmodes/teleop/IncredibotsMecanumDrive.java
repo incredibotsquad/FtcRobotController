@@ -9,8 +9,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode; // Changed this
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.Incredibot;
-import org.firstinspires.ftc.teamcode.commands.RelocalizeCommand;
-import org.firstinspires.ftc.teamcode.common.AllianceColors;
+import org.firstinspires.ftc.teamcode.commands.RelocalizeWithLimelightCommand;
 import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 
 @TeleOp(name = "IncredibotsMecanumDrive", group = "TeleOp")
@@ -31,7 +30,7 @@ public class IncredibotsMecanumDrive extends LinearOpMode { // Changed this
 
         // Schedule the RelocalizeCommand
         // In LinearOpMode, we schedule it once here
-        RelocalizeCommand relocalizeCommand = new RelocalizeCommand(
+        RelocalizeWithLimelightCommand relocalizeWithLimelightCommand = new RelocalizeWithLimelightCommand(
                 incredibot.limelightSubsystem,
                 incredibot.odometrySubsystem,
                 incredibot.launchSubsystem,
@@ -48,7 +47,7 @@ public class IncredibotsMecanumDrive extends LinearOpMode { // Changed this
         incredibot.launchSubsystem.setTurretPosition(CrossOpModeStorage.turretPosition);
 
         //relocalize based on april tags - this only schedules it once
-        relocalizeCommand.schedule();
+        relocalizeWithLimelightCommand.schedule();
 
         // 2. THE INIT-LOOP (Runs after you hit INIT, but before you hit START)
         while (opModeInInit()) {

@@ -14,6 +14,7 @@ import org.firstinspires.ftc.teamcode.commands.LaunchBallsCommand;
 import org.firstinspires.ftc.teamcode.commands.LaunchReadinessCommand;
 import org.firstinspires.ftc.teamcode.commands.DriveRobotCommand;
 import org.firstinspires.ftc.teamcode.commands.RelocalizeCommand;
+import org.firstinspires.ftc.teamcode.commands.RelocalizeWithLimelightCommand;
 import org.firstinspires.ftc.teamcode.commands.ResetKickCommand;
 import org.firstinspires.ftc.teamcode.commands.SmartIntakeCommand;
 import org.firstinspires.ftc.teamcode.commands.ReverseIntakeCommand;
@@ -103,13 +104,14 @@ public class Incredibot extends Robot {
         // 2. AUTO-FIRE TOGGLE (While held)
         operatorGamepad.getGamepadButton(GamepadKeys.Button.LEFT_BUMPER)
                 .whileHeld(new AutoFireCommand(launchSubsystem, launchGateSubsystem, odometrySubsystem));
+
+        operatorGamepad.getGamepadButton(GamepadKeys.Button.Y)
+                .whenPressed(new RelocalizeCommand(odometrySubsystem, telemetry));
     }
 
     public void initAuto() {
         // Clear out any lingering commands or bindings from previous runs
         CommandScheduler.getInstance().reset();
-
-
 
         initCommon();
 
@@ -135,6 +137,6 @@ public class Incredibot extends Robot {
         // The scheduler will now call execute() on this command every single frame.
         launchSubsystem.setDefaultCommand(new LaunchReadinessCommand(launchSubsystem, odometrySubsystem, limelightSubsystem, telemetry));
 
-        limelightSubsystem.setDefaultCommand(new RelocalizeCommand(limelightSubsystem, odometrySubsystem, launchSubsystem, driveSubsystem));
+        limelightSubsystem.setDefaultCommand(new RelocalizeWithLimelightCommand(limelightSubsystem, odometrySubsystem, launchSubsystem, driveSubsystem));
     }
 }

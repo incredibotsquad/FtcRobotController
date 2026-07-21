@@ -49,7 +49,7 @@ public class Paths {
                 .build();
 
         NEAR_SCORE_SPIKE_2 = follower.pathBuilder()
-                .addPath(new BezierLine(poses.SECOND_SPIKE, poses.NEAR_LAUNCH))
+                .addPath(new BezierCurve(poses.SECOND_SPIKE, poses.NEAR_SPIKE_2_TO_LAUNCH_CONTROL, poses.NEAR_LAUNCH))
                 .setLinearHeadingInterpolation(poses.SECOND_SPIKE.getHeading(), poses.NEAR_LAUNCH.getHeading())
                 .build();
 
@@ -59,12 +59,12 @@ public class Paths {
                 .build();
 
         NEAR_SCORE_GATE = follower.pathBuilder()
-                .addPath(new BezierLine(poses.ONE_PATH_GATE_INTAKE, poses.NEAR_LAUNCH))
+                .addPath(new BezierCurve(poses.ONE_PATH_GATE_INTAKE, poses.NEAR_1_PATH_GATE_TO_LAUNCH_CONTROL, poses.NEAR_LAUNCH))
                 .setLinearHeadingInterpolation(poses.ONE_PATH_GATE_INTAKE.getHeading(), poses.NEAR_LAUNCH.getHeading())
                 .build();
 
         NEAR_SCORE_LAST_GATE = follower.pathBuilder()
-                .addPath(new BezierLine(poses.ONE_PATH_GATE_INTAKE, poses.NEAR_FINAL_LAUNCH))
+                .addPath(new BezierCurve(poses.ONE_PATH_GATE_INTAKE, poses.NEAR_SPIKE_2_TO_LAUNCH_CONTROL, poses.NEAR_FINAL_LAUNCH))
                 .setLinearHeadingInterpolation(poses.ONE_PATH_GATE_INTAKE.getHeading(), poses.NEAR_FINAL_LAUNCH.getHeading())
                 .build();
 

@@ -48,7 +48,7 @@ public class DynamicAuto extends CommandOpMode {
     private final ElapsedTime timer = new ElapsedTime(ElapsedTime.Resolution.MILLISECONDS);
 
     private enum AutoPathPositions {
-        LAUNCH, SPIKE_1, SPIKE_2, SPIKE_3, GATE_OPEN_ONLY, GATE_OPEN_INTAKE, HUMAN_PLAYER, PARK, WAIT_1_SEC;
+        LAUNCH, SPIKE_1, SPIKE_2, NEAR_LAUNCH_FROM_SPIKE_2, SPIKE_3, GATE_OPEN_ONLY, GATE_OPEN_INTAKE, NEAR_LAUNCH_FROM_GATE, HUMAN_PLAYER, PARK, WAIT_1_SEC;
 
         public AutoPathPositions next() {
             return values()[(this.ordinal() + 1) % values().length];
@@ -195,6 +195,13 @@ public class DynamicAuto extends CommandOpMode {
                     );
                     break;
 
+                case NEAR_LAUNCH_FROM_SPIKE_2:
+                    if (robotPosition == RobotPosition.NEAR) {
+                        mainRoutine.addCommands(
+                                curveTo(poses.NEAR_LAUNCH, poses.NEAR_SPIKE_2_TO_LAUNCH_CONTROL)
+                        );
+                    }
+                    break;
                 case SPIKE_3:
 
                     Pose spike3Control = robotPosition == RobotPosition.NEAR ? poses.NEAR_SPIKE_3_CONTROL : poses.FAR_SPIKE_3_CONTROL;
@@ -233,6 +240,14 @@ public class DynamicAuto extends CommandOpMode {
                         )
                     );
 
+                    break;
+
+                case NEAR_LAUNCH_FROM_GATE:
+                    if (robotPosition == RobotPosition.NEAR) {
+                        mainRoutine.addCommands(
+                                curveTo(poses.NEAR_LAUNCH, poses.NEAR_1_PATH_GATE_TO_LAUNCH_CONTROL)
+                        );
+                    }
                     break;
 
                 case HUMAN_PLAYER:
