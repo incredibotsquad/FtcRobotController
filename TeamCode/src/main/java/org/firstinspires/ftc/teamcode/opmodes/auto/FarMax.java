@@ -69,6 +69,7 @@ public class FarMax extends CommandOpMode {
         // 3. Pose and Path Setup
         poses = new Poses(alliance == AllianceColors.RED);
         follower.setStartingPose(poses.FAR_INIT);
+        follower.update();
 
         paths = new Paths(follower, poses);
         paths.buildFarPaths(); // Only build near paths

@@ -70,6 +70,7 @@ public class NearMax extends CommandOpMode {
         // 3. Pose and Path Setup
         poses = new Poses(alliance == AllianceColors.RED);
         follower.setStartingPose(poses.NEAR_INIT);
+        follower.update();
 
         paths = new Paths(follower, poses);
         paths.buildNearPaths(); // Only build near paths

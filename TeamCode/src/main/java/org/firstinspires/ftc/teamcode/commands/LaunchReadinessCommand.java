@@ -40,7 +40,7 @@ public class LaunchReadinessCommand extends CommandBase {
     public static double VISION_STABILITY_THRESHOLD_IPS = 3.0; // Max speed allowed for vision lock
     public static double VISION_CORRECTION_GAIN = 0.05; // Sensitivity of the vision fine-tuning
 
-    public static double TURRET_SCALING_FACTOR = 1.08;
+    public static double TURRET_SCALING_FACTOR = 1.1;
 
     // ... existing fields ...
     public static int VISION_SAMPLE_SIZE = 5;

@@ -133,6 +133,7 @@ public class DynamicAuto extends CommandOpMode {
 
         }
 
+        CrossOpModeStorage.allianceColor = alliance;
         poses = new Poses(alliance == AllianceColors.RED); // Red Alliance default
 
         if (robotPosition == RobotPosition.NEAR)
@@ -141,6 +142,7 @@ public class DynamicAuto extends CommandOpMode {
             lastPathEndPose = poses.FAR_INIT;
 
         follower.setStartingPose(lastPathEndPose);
+        follower.update();
 
         schedule(buildDynamicRoutine());
     }
