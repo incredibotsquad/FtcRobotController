@@ -20,7 +20,7 @@ public class FollowPathCommand extends CommandBase {
     private ElapsedTime stallTimer = new ElapsedTime();
     private final ElapsedTime initializationTimer = new ElapsedTime();
     private static final double STALL_VELOCITY_THRESHOLD = 0.5; // inches per second
-    private static final double STALL_TIMEOUT = 750; // milliseconds before giving up
+    private static final double STALL_TIMEOUT = 500; // milliseconds before giving up
     private static final double END_TOLERANCE = 3.0; // Finish when 1 inch away
     private static final double MINIMUM_RUN_TIME = 500.0; // Ensure at least 50ms of run time
 
