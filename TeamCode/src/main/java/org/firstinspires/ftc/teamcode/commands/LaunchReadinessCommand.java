@@ -31,9 +31,10 @@ public class LaunchReadinessCommand extends CommandBase {
     public static boolean ENABLE_MOVING_SHOT_COMPENSATION = false;
     public static double SHOT_FLIGHT_BASE_SECONDS = 0.25;
     public static double SHOT_FLIGHT_SECONDS_PER_INCH = 0.0035;
-    public static double BURST_MIDPOINT_SECONDS = 0.175;
-    public static double MAX_COMPENSATED_SPEED_IPS = 24.0;
-    public static double MAX_TARGET_LEAD_INCHES = 18.0;
+    public static double BURST_MIDPOINT_SECONDS = 0.22;
+    public static double MAX_COMPENSATED_SPEED_IPS = 48.0;
+    public static double MAX_TARGET_LEAD_INCHES = 36.0;
+    public static boolean ENABLE_ACCELERATION_COMPENSATION = true;
 
     // Feature Flags and Tuning
     public static boolean ENABLE_TURRET_VISION_CORRECTION = false;
@@ -123,17 +124,21 @@ public class LaunchReadinessCommand extends CommandBase {
         // 1. Get current robot posture from odometry
         Pose2d currentPose = odometry.getPose();
 
-        ShotSolution staticSolution = new ShotSolution();
-        ShotSolution movingSolution = new ShotSolution();
-        ShotSolution activeSolution = new ShotSolution();
+        ShotSolution staticSolution;
+        ShotSolution movingSolution;
+        ShotSolution activeSolution;
 
         if (launchSubsystem.isLaunchReadinessLocked()){
+            activeSolution = new ShotSolution();
             activeSolution.turretServoPosition = LaunchSubsystem.TURRET_MID;
             activeSolution.visorPosition = LaunchSubsystem.LAUNCH_VISOR_LOW;
             activeSolution.distanceToTarget = DISTANCE_FROM_APEX;
             activeSolution.flywheelConstants = getFlywheelConstantsBasedOnDistance(activeSolution.distanceToTarget);
 
             activeSolution.shotSolutionReady = true;
+
+            staticSolution = activeSolution;
+            movingSolution = activeSolution;
 
         } else {
             staticSolution = calculateStaticShot(currentPose);
@@ -163,17 +168,55 @@ public class LaunchReadinessCommand extends CommandBase {
 
     private ShotSolution calculateVelocityCompensatedShot(Pose2d currentPose, double staticDistanceToTarget) {
         Translation2d velocity = odometry.getFieldVelocity();
-        double compensationTimeSeconds = estimateFlightTimeSeconds(staticDistanceToTarget) + BURST_MIDPOINT_SECONDS;
+        Translation2d acceleration = odometry.getFieldAcceleration();
 
-        Translation2d compensatedTarget = new Translation2d(
-                TARGET_X - velocity.getX() * compensationTimeSeconds,
-                TARGET_Y - velocity.getY() * compensationTimeSeconds
+        // Initial guess for flight time (time from trigger to target impact)
+        double flightTime = estimateFlightTimeSeconds(staticDistanceToTarget) + BURST_MIDPOINT_SECONDS;
+
+        // Iterative prediction for better accuracy at high speeds and varying distances.
+        // As the robot moves, the distance (and thus flight time) changes.
+        for (int i = 0; i < 3; i++) {
+            double accelX = ENABLE_ACCELERATION_COMPENSATION ? acceleration.getX() : 0;
+            double accelY = ENABLE_ACCELERATION_COMPENSATION ? acceleration.getY() : 0;
+
+            // Predicted displacement of the robot during flight + launch delay
+            // pos = v*t + 0.5*a*t^2
+            double displacementX = velocity.getX() * flightTime + 0.5 * accelX * flightTime * flightTime;
+            double displacementY = velocity.getY() * flightTime + 0.5 * accelY * flightTime * flightTime;
+
+            // We "move" the target in the opposite direction to compensate for robot movement.
+            // This calculates where the target appears relative to the robot's current position
+            // such that the shot lands on the actual target.
+            Translation2d compensatedTarget = new Translation2d(
+                    TARGET_X - displacementX,
+                    TARGET_Y - displacementY
+            );
+
+            // Recalculate flight time based on the new distance to the compensated target
+            double newDistance = currentPose.getTranslation().getDistance(compensatedTarget);
+            flightTime = estimateFlightTimeSeconds(newDistance) + BURST_MIDPOINT_SECONDS;
+        }
+
+        // Final prediction using the refined flight time
+        double finalAccelX = ENABLE_ACCELERATION_COMPENSATION ? acceleration.getX() : 0;
+        double finalAccelY = ENABLE_ACCELERATION_COMPENSATION ? acceleration.getY() : 0;
+
+        Translation2d finalDisplacement = new Translation2d(
+                velocity.getX() * flightTime + 0.5 * finalAccelX * flightTime * flightTime,
+                velocity.getY() * flightTime + 0.5 * finalAccelY * flightTime * flightTime
         );
 
-        ShotSolution solution = calculateShotForTarget(currentPose, compensatedTarget);
-        solution.compensationTimeSeconds = compensationTimeSeconds;
+        Translation2d finalCompensatedTarget = new Translation2d(
+                TARGET_X - finalDisplacement.getX(),
+                TARGET_Y - finalDisplacement.getY()
+        );
+
+        ShotSolution solution = calculateShotForTarget(currentPose, finalCompensatedTarget);
+        solution.compensationTimeSeconds = flightTime;
         solution.robotSpeedIps = odometry.getFieldSpeedInchesPerSecond();
-        solution.leadDistanceInches = new Translation2d(TARGET_X, TARGET_Y).getDistance(compensatedTarget);
+        solution.leadDistanceInches = new Translation2d(TARGET_X, TARGET_Y).getDistance(finalCompensatedTarget);
+        
+        // Validation with wider limits
         solution.shotSolutionReady =
                 solution.robotSpeedIps <= MAX_COMPENSATED_SPEED_IPS &&
                 solution.leadDistanceInches <= MAX_TARGET_LEAD_INCHES &&
