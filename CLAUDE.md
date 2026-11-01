@@ -1,0 +1,30 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Overview
+
+FTC (FIRST Tech Challenge) robot controller app for the BIOBUZZ 2026-2027 season, built on the official FTC SDK 12.0. It's an Android app. All team code lives in the `TeamCode` module. `FtcRobotController` is the SDK module and should be left alone except for pulling in upstream SDK updates. Its `external/samples` folder holds reference OpModes you can copy into TeamCode.
+
+## Build
+
+- `./gradlew :TeamCode:assembleDebug` builds the APK. Use this to check that changes compile.
+- `./gradlew installDebug` installs to a connected Robot Controller (Control Hub over adb/Wi-Fi).
+- There are no unit tests and no lint setup. You can only verify behavior on the physical robot.
+- Don't edit `build.common.gradle` or the top-level `build.gradle`; the SDK owns them. Add team dependencies to `TeamCode/build.gradle` or `build.dependencies.gradle`. The latter already has the extra Maven repos (bylazar, dairy.foundation).
+
+## Libraries
+
+- **FTCLib** (`org.ftclib.ftclib:core`): command-based framework. Subsystems extend `SubsystemBase`, and `periodic()` runs each loop through the `CommandScheduler`. Uses FTCLib hardware wrappers (`MotorEx`, `SimpleServo`) and geometry (`Pose2d`, `Rotation2d`, `Translation2d`).
+- **Pedro Pathing 3.0** (`com.pedropathing:revhub`, `com.pedropathing:tuning`): path following. Uses its own `com.pedropathing.math.Pose`, which is a different type from FTCLib's `Pose2d`.
+- **Panels** (`com.bylazar:fullpanels`): dashboard. `@Configurable` exposes a class's `public static` (non-final) fields for live tuning. Subsystems take a Panels `TelemetryManager` (not the SDK `Telemetry`).
+
+## Architecture
+
+- `subsystems/`: one FTCLib subsystem per mechanism (Drive, Intake, LaunchGate, Launch, Odometry). Each constructor takes `(HardwareMap, TelemetryManager)`. Hardware device names are string literals in the constructors and must match the Robot Controller configuration on the robot.
+  - `OdometrySubsystem` wraps the goBILDA Pinpoint. Its `periodic()` must run every loop; it updates the pose, estimates velocity and acceleration, and writes the pose to `CrossOpModeStorage`. `updatePoseFromLimelight` handles vision relocalization. `DriveSubsystem.isEffectivelyStationary()` gates when that relocalization runs.
+  - `LaunchSubsystem` runs a dual flywheel (PID + `SimpleMotorFeedforward`, RPM converted to ticks/sec using GoBILDA BARE CPR), a turret servo (5-turn, 112:29 gear ratio), and a visor/hood servo. `isReadyToLaunch()` checks all three plus `shotSolutionReady`, and `periodic()` sets the alignment indicator light from the result.
+  - Indicator "lights" are servo-PWM driven. Servo positions map to colors through the constants in each subsystem.
+- `common/CrossOpModeStorage`: static fields that keep pose, alliance color, and turret position across OpModes (e.g. auto → teleop). Also holds the red and blue target coordinates. Field coordinates are in inches on a 144×144 field.
+- `pedro/`: Pedro Pathing setup. `Constants.create()` is meant to build the `Follower` (drivetrain + localizer + Foresight) but is currently a stub that returns `null`. `pedro/procedures/` holds Pedro's autotune `Procedure` classes (localizer tuners for Pinpoint/OTOS/OctoQuad/two-/three-wheel, mecanum, Foresight, plus `Tests`).
+- No TeleOp or Autonomous OpModes exist yet. New ones go under TeamCode with `@TeleOp`/`@Autonomous`; see `TeamCode/.../teamcode/readme.md` for SDK naming conventions.

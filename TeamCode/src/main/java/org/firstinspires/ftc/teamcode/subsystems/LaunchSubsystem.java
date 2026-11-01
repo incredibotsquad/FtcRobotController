@@ -1,0 +1,245 @@
+package org.firstinspires.ftc.teamcode.subsystems;
+
+import com.arcrobotics.ftclib.command.SubsystemBase;
+import com.arcrobotics.ftclib.controller.PIDController;
+import com.arcrobotics.ftclib.controller.wpilibcontroller.SimpleMotorFeedforward;
+import com.arcrobotics.ftclib.hardware.SimpleServo;
+import com.arcrobotics.ftclib.hardware.motors.Motor;
+import com.arcrobotics.ftclib.hardware.motors.MotorEx;
+import com.bylazar.configurables.annotations.Configurable;
+import com.bylazar.telemetry.TelemetryManager;
+import com.qualcomm.robotcore.hardware.HardwareMap;
+
+import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
+
+@Configurable
+public class LaunchSubsystem extends SubsystemBase {
+//
+    private final MotorEx leftLaunchMotor;
+    private final MotorEx rightLaunchMotor;
+
+    private final SimpleServo turretServo;
+    private final SimpleServo visorServo;
+    private final SimpleServo alignmentIndicatorLight;
+
+    private static final double TARGET_RPM = 250.0;
+    private static final double TARGET_RPM_TOLERANCE = 50;
+    private static final double TURRET_POSITION_TOLERANCE = 0.05;
+    private static final double VISOR_POSITION_TOLERANCE = 0.05;
+
+    private volatile double targetRPM;
+    private volatile double targetTurretPos;
+    private volatile double targetVisorPos;
+    private volatile boolean shotSolutionReady = true;
+
+    public static double ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT = 0.3;    //RED
+    public static double ROBOT_ALIGNED_TO_SHOOT_LIGHT = 0.5;    //GREEN
+    public static double ROBOT_ALIGNMENT_NOT_POSSIBLE_LIGHT = 0;
+
+    public static double LAUNCH_VISOR_LOW = 0.26;
+    public static double LAUNCH_VISOR_HIGH = 0.7;
+
+    public static double TURRET_MIN = 0.0;
+    public static double TURRET_MID = 0.5;
+    public static double TURRET_MAX = 0.87;
+
+    /*
+     * MECHANICAL CALCULATION:
+     * Ratio: 112 teeth (Turret) / 29 teeth (Servo) = 3.862
+     * Servo: GoBILDA 5-Turn = 1800 degrees of total travel (0.0 to 1.0)
+     *
+     * Formula:
+     * (TargetDegrees * Ratio) / TotalServoRange
+     */
+    public static double GEAR_RATIO = 112.0 / 29.0;
+    public static double TOTAL_SERVO_RANGE = 1800; // servo range is 1800 but we are only going up to 0.87
+
+    // Inside LaunchSubsystem
+    private PIDController flywheelPID = new PIDController(0.000, 0, 0);
+    // ks = static friction, kv = velocity gain (How much power to hold a speed)
+    private SimpleMotorFeedforward flywheelFF = new SimpleMotorFeedforward(0.1, 0.00058); //45
+
+    // Inside LaunchSubsystem.java
+    private boolean isLaunchReadinessLocked = false;
+
+    public static boolean SKIP_FLYWHEEL = false;
+
+    private TelemetryManager telemetry;
+
+    public LaunchSubsystem(HardwareMap hardwareMap, TelemetryManager telemetry) {
+        this.telemetry = telemetry;
+
+        leftLaunchMotor = new MotorEx(hardwareMap, "leftLaunchMotor", Motor.GoBILDA.BARE);
+        leftLaunchMotor.setRunMode(Motor.RunMode.RawPower);
+
+        rightLaunchMotor = new MotorEx(hardwareMap, "rightLaunchMotor", Motor.GoBILDA.BARE);
+        rightLaunchMotor.setRunMode(Motor.RunMode.RawPower);
+        rightLaunchMotor.setInverted(true);
+
+        turretServo = new SimpleServo(hardwareMap, "turretServo", 0, 1800);
+        turretServo.setInverted(true);
+        visorServo = new SimpleServo(hardwareMap, "launchVisorServo", 0, 270);
+        alignmentIndicatorLight = new SimpleServo(hardwareMap, "alignmentIndicatorLight", 0, 270);
+    }
+
+    public void setLaunchReadinessLock(boolean locked) {
+        this.isLaunchReadinessLocked = locked;
+    }
+
+    public boolean isLaunchReadinessLocked() {
+        return isLaunchReadinessLocked;
+    }
+
+    public void updateFlywheel(double targetRPM) {
+        this.targetRPM = targetRPM;
+
+        // Convert RPM to Ticks Per Second
+        double targetTPS = (targetRPM * Motor.GoBILDA.BARE.getCPR()) / 60.0;
+
+        // Get current velocity from encoders
+        double currentTPS = getFlywheelVelocityTPS();
+
+        // 1. Calculate PID (Correction)
+        double pidOutput = flywheelPID.calculate(currentTPS, targetTPS);
+
+        // 2. Calculate Feedforward (The "Predicted" power needed for this speed)
+        double ffOutput = flywheelFF.calculate(targetTPS);
+
+        // 3. Combine and set power (Manual mode)
+        double totalPower = pidOutput + ffOutput;
+
+//        Log.i("Launch Subsystem", "Setting flywheel power to " + totalPower);
+
+        if (!SKIP_FLYWHEEL) {
+            leftLaunchMotor.set(totalPower);
+            rightLaunchMotor.set(totalPower);
+        }
+    }
+
+
+    public void setAlignmentLightColor(double color) {
+        alignmentIndicatorLight.setPosition(color);
+    }
+
+    public void setTurretPosition(double position) {
+        this.targetTurretPos = position;
+        turretServo.setPosition(position);
+        CrossOpModeStorage.turretPosition = position;
+    }
+
+    public double getTurretPosition() {
+        return turretServo.getPosition();
+    }
+
+    public void setVisorPosition(double position) {
+
+        if (position < LAUNCH_VISOR_LOW) {
+            position = LAUNCH_VISOR_LOW;
+        } else if (position > LAUNCH_VISOR_HIGH) {
+            position = LAUNCH_VISOR_HIGH;
+        }
+
+        this.targetVisorPos = position;
+        visorServo.setPosition(position);
+    }
+
+    public double getHoodPosition() {
+        return visorServo.getPosition();
+    }
+
+    /**
+     * Allows live tuning of the PID coefficients from an OpMode.
+     */
+    public void setFlywheelPID(double p, double i, double d) {
+        flywheelPID.setPID(p, i, d);
+    }
+
+    /**
+     * Allows live tuning of the Feedforward coefficients.
+     * Note: SimpleMotorFeedforward is immutable, so we create a new instance.
+     *
+     * @param ks Static friction (voltage to overcome friction)
+     * @param kv Velocity gain (voltage per tick/second)
+     */
+    public void updateFeedforward(double ks, double kv) {
+        flywheelFF = new SimpleMotorFeedforward(ks, kv);
+    }
+
+    /*
+    * Spins up the flywheel to the specified RPM. Converts to TPS internally
+    * */
+    public void spinUpFlywheelToRPM(double targetRPM) {
+        this.targetRPM = targetRPM;
+        double ticksPerSecond = (targetRPM * Motor.GoBILDA.BARE.getCPR()) / 60.0;
+        leftLaunchMotor.setVelocity(ticksPerSecond);
+        rightLaunchMotor.setVelocity(ticksPerSecond);
+    }
+
+    public double getFlywheelVelocityTPS() {
+        return (leftLaunchMotor.getVelocity() + rightLaunchMotor.getVelocity()) / 2.0;
+    }
+    public double getCurrentFlywheelRPM() {
+        return (getFlywheelVelocityTPS() * 60.0) / Motor.GoBILDA.BARE.getCPR();
+    }
+
+    public void setShotSolutionReady(boolean shotSolutionReady) {
+        this.shotSolutionReady = shotSolutionReady;
+    }
+
+    public boolean isShotSolutionReady() {
+        return shotSolutionReady;
+    }
+
+    public void stop() {
+        this.targetRPM = 0;
+
+        leftLaunchMotor.set(0);
+        rightLaunchMotor.set(0);
+    }
+
+    /**
+     * Checks if the flywheel, turret, and hood are all within acceptable tolerances
+     * to ensure a successful shot.
+     *
+     * @return true if all systems are ready
+     */
+    public boolean isReadyToLaunch() {
+        // 1. Check Flywheel RPM
+        boolean flywheelReady = Math.abs(getCurrentFlywheelRPM() - targetRPM) < TARGET_RPM_TOLERANCE;
+
+        // 2. Check Turret Alignment
+        // Servos move fast, but we check if it has reached the target
+        // A small tolerance is used for servo positioning
+        boolean turretReady = Math.abs(getTurretPosition() - targetTurretPos) < TURRET_POSITION_TOLERANCE;
+
+        // 3. Check Hood Alignment
+        boolean visorReady = Math.abs(getHoodPosition() - targetVisorPos) < VISOR_POSITION_TOLERANCE;
+
+        return flywheelReady && turretReady && visorReady && shotSolutionReady;
+    }
+
+    /*
+     * This method is called periodically by the CommandScheduler. Useful for updating subsystem-specific state that you don't want to offload to a Command.
+     * Teams should try to be consistent within their own codebases about which responsibilities will be handled by Commands, and which will be handled here.
+     * Excellent for sending telemetry or updating dashboards, but optional!
+     * */
+    @Override
+    public void periodic() {
+//        if (targetRPM > 0) {
+//            updateFlywheel(targetRPM);
+//        } else {
+//            stop();
+//        }
+
+        //handle the alignment indicator light
+        if (isReadyToLaunch())
+            setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
+        else
+            setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);
+
+        // (You would pass a telemetry object into the subsystem constructor to use this)
+        // telemetry.addData("Launcher Ready", isReady);
+        // telemetry.addData("Current Speed", getCurrentVelocity());
+        telemetry.addData("Flywheel Target RPM: ", targetRPM);
+    }
+}
