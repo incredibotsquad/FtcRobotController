@@ -10,7 +10,7 @@ import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.LimelightSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.HiveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
 
 import java.util.ArrayList;
@@ -18,7 +18,7 @@ import java.util.List;
 
 @Configurable
 public class RelocalizeCommand extends CommandBase {
-    private final LimelightSubsystem limelight;
+    private final HiveSubsystem limelight;
     private final OdometrySubsystem odometry;
     private final DriveSubsystem drive;
     private final LaunchSubsystem launchSubsystem;
@@ -34,7 +34,7 @@ public class RelocalizeCommand extends CommandBase {
 
     public static boolean ENABLE_RELOCALIZATION = false;
 
-    public RelocalizeCommand(LimelightSubsystem limelight,
+    public RelocalizeCommand(HiveSubsystem limelight,
                              OdometrySubsystem odometry,
                              LaunchSubsystem launchSubsystem,
                              DriveSubsystem drive) {

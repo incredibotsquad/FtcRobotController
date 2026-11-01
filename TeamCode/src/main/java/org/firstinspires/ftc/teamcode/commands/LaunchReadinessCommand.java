@@ -11,7 +11,7 @@ import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
-import org.firstinspires.ftc.teamcode.subsystems.LimelightSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.HiveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 
@@ -24,7 +24,7 @@ import java.util.TreeMap;
 public class LaunchReadinessCommand extends CommandBase {
     private final LaunchSubsystem launchSubsystem;
     private final OdometrySubsystem odometry;
-    private final LimelightSubsystem limelightSubsystem;
+    private final HiveSubsystem limelightSubsystem;
 
     // Define the fixed field coordinate you want to point at (e.g., center of the backdrop or goal)
     public static boolean ENABLE_MOVING_SHOT_COMPENSATION = false;
@@ -95,7 +95,7 @@ public class LaunchReadinessCommand extends CommandBase {
         FAR_LOOKUP_TABLE.put(144.0, new FlywheelConstants(0.01, 0, 0, 0.05, 0.00034, 4400));
     }
 
-    public LaunchReadinessCommand(LaunchSubsystem launchSubsystem, OdometrySubsystem odometry, LimelightSubsystem limelight, TelemetryManager telemetry) {
+    public LaunchReadinessCommand(LaunchSubsystem launchSubsystem, OdometrySubsystem odometry, HiveSubsystem limelight, TelemetryManager telemetry) {
         this.launchSubsystem = launchSubsystem;
         this.odometry = odometry;
         this.limelightSubsystem = limelight;

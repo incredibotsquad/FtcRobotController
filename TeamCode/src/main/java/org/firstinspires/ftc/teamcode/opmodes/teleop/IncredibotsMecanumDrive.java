@@ -30,7 +30,7 @@ public class IncredibotsMecanumDrive extends LinearOpMode { // Changed this
         // Schedule the RelocalizeCommand
         // In LinearOpMode, we schedule it once here
         RelocalizeCommand relocalizeCommand = new RelocalizeCommand(
-                incredibot.limelightSubsystem,
+                incredibot.hiveSubsystem,
                 incredibot.odometrySubsystem,
                 incredibot.launchSubsystem,
                 incredibot.driveSubsystem

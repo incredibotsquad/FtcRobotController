@@ -23,7 +23,7 @@ import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchKickSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.LimelightSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.HiveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 
@@ -41,7 +41,7 @@ public class Incredibot extends Robot {
     public final LaunchGateSubsystem launchGateSubsystem;
     public final LaunchKickSubsystem launchKickSubsystem;
     public final OdometrySubsystem odometrySubsystem;
-    public final LimelightSubsystem limelightSubsystem;
+    public final HiveSubsystem hiveSubsystem;
     // Hardware
     private final HardwareMap hwMap;
     private TelemetryManager telemetry;
@@ -57,9 +57,8 @@ public class Incredibot extends Robot {
         odometrySubsystem = new OdometrySubsystem(hwMap, telemetry);
         launchSubsystem = new LaunchSubsystem(hwMap, telemetry);
         launchKickSubsystem = new LaunchKickSubsystem(hardwareMap, telemetry);
-        limelightSubsystem = new LimelightSubsystem(hwMap, telemetry);
-
-        limelightSubsystem.setAlliance(CrossOpModeStorage.allianceColor == AllianceColors.RED);
+        hiveSubsystem = new HiveSubsystem(hwMap, telemetry, 0);
+        hiveSubsystem.start(CrossOpModeStorage.allianceColor);
     }
 
     public void initialize(OpModeType opModeType, GamepadEx driverGamepad, GamepadEx operatorGamepad) {
@@ -113,7 +112,7 @@ public class Incredibot extends Robot {
     }
 
     private void initCommon() {
-        register(driveSubsystem, intakeSubsystem, launchGateSubsystem, launchSubsystem, odometrySubsystem, launchKickSubsystem);
+        register(driveSubsystem, intakeSubsystem, launchGateSubsystem, launchSubsystem, odometrySubsystem, launchKickSubsystem, hiveSubsystem);
 
         // 1. SET THE DEFAULT COMMAND FOR THE GATE
         // This will run at match start and any time the gate isn't being used by a launcher command.
@@ -128,8 +127,8 @@ public class Incredibot extends Robot {
 
         // Assign the background tracking loop here!
         // The scheduler will now call execute() on this command every single frame.
-        launchSubsystem.setDefaultCommand(new LaunchReadinessCommand(launchSubsystem, odometrySubsystem, limelightSubsystem, telemetry));
+        launchSubsystem.setDefaultCommand(new LaunchReadinessCommand(launchSubsystem, odometrySubsystem, hiveSubsystem, telemetry));
 
-        limelightSubsystem.setDefaultCommand(new RelocalizeCommand(limelightSubsystem, odometrySubsystem, launchSubsystem, driveSubsystem));
+        hiveSubsystem.setDefaultCommand(new RelocalizeCommand(hiveSubsystem, odometrySubsystem, launchSubsystem, driveSubsystem));
     }
 }
