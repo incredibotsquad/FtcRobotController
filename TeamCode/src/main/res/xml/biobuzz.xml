@@ -7,12 +7,10 @@
             <goBILDA5202SeriesMotor name="intakeMotor" port="2" />
             <goBILDA5202SeriesMotor name="transferMotor" port="3" />
 
-            <Servo name="intakeServo1" port="1" />
-            <Servo name="intakeServo2" port="2" />
-            <Servo name="launchGateServo" port="3" />
-            <Servo name="turretServoLeft" port="4" />
-            <Servo name="turretServoRight" port="5" />
-
+            <Servo name="launchGateServo" port="0" />
+            <ContinuousRotationServo name="intakeServo1" port="1" />
+            <ContinuousRotationServo name="intakeServo2" port="2" />
+            <Servo name="turretServo" port="4" />
 
             <DigitalDevice name="ballSensor1" port="0" />
             <DigitalDevice name="ballSensor2" port="2" />
@@ -30,6 +28,10 @@
             <goBILDAPinpoint name="pinpoint" port="0" bus="0"/>
 
 <!--            <ControlHubImuBHI260AP name="imu" port="0" bus="0" />-->
+
+            <Servo name="alignmentIndicatorLight" port="0" />
+            <Servo name="artifactCountLight" port="1" />
+
 
         </LynxModule>
     </LynxUsbDevice>

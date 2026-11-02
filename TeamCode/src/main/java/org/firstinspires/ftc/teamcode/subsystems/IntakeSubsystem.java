@@ -49,13 +49,13 @@ public class IntakeSubsystem extends SubsystemBase {
 
     /** Side sweeper servos (CR mode). Flip an INVERT flag if that servo spins outward. */
     public static double SWEEPER_POWER = 1.0;
-    public static boolean INVERT_INTAKE_SERVO_1 = false;
-    public static boolean INVERT_INTAKE_SERVO_2 = true;
+    public static boolean INVERT_INTAKE_SERVO_1 = true;
+    public static boolean INVERT_INTAKE_SERVO_2 = false;
 
     public static double ZERO_BALL_COLOR = 0;
     public static double ONE_BALL_COLOR = 0.29;   // RED
     public static double TWO_BALL_COLOR = 0.388;  // YELLOW
-    public static double THREE_BALL_COLOR = 0.444; // tune: between yellow and green
+    public static double THREE_BALL_COLOR = 0.622; // BLUE
     public static double FOUR_BALL_COLOR = 0.5;   // GREEN
 
     private final MotorEx intakeMotor;
@@ -80,6 +80,7 @@ public class IntakeSubsystem extends SubsystemBase {
         intakeMotor.setRunMode(Motor.RunMode.RawPower);
 
         transferMotor = new MotorEx(hardwareMap, "transferMotor", Motor.GoBILDA.RPM_435);
+        transferMotor.setInverted(true);
         transferMotor.setRunMode(Motor.RunMode.RawPower);
 
         intakeServo1 = new CRServo(hardwareMap, "intakeServo1");
