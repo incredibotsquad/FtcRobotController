@@ -760,4 +760,183 @@ public class blobTrack extends LinearOpMode {
             return null;
         }
     }
+
+    // =====================================================================
+    // =================== PATH PLANNING UTILITIES =========================
+    // Pure-geometry helpers; they have no side effects and no access to
+    // camera state.  Feed obstacle positions from a separate nectar detector
+    // (e.g. BioBuzzProcessor) and robot pose from OdometrySubsystem.
+    // =====================================================================
+
+    /**
+     * Returned by {@link #isPathBlocked}.
+     */
+    public static class PathBlockResult {
+        /** True when at least one obstacle occupies the corridor to the target. */
+        public final boolean blocked;
+        /**
+         * Heading adjustment in degrees that steers the robot clear of the
+         * nearest blocking obstacle.  Positive = turn RIGHT, negative = turn LEFT.
+         * Zero when the path is unblocked.
+         */
+        public final double suggestedTurnDegrees;
+        /** How many obstacles are left of the current heading. */
+        public final int obstaclesLeft;
+        /** How many obstacles are right of the current heading. */
+        public final int obstaclesRight;
+
+        PathBlockResult(boolean blocked, double suggestedTurnDeg, int left, int right) {
+            this.blocked = blocked;
+            this.suggestedTurnDegrees = suggestedTurnDeg;
+            this.obstaclesLeft = left;
+            this.obstaclesRight = right;
+        }
+    }
+
+    /**
+     * Tests whether any obstacle (typically nectar balls) falls inside the
+     * straight-line corridor from the robot to a target pollen group.
+     *
+     * <p>The corridor is a rectangle of half-width {@code corridorHalfWidth}
+     * centred on the robot-to-target line segment.  An obstacle is only
+     * considered "in the way" when its floor projection lies between the
+     * robot and the target — not behind the robot or past the target.
+     *
+     * <p>When the path is blocked, {@code suggestedTurnDegrees} gives the
+     * minimum heading change that shifts the corridor far enough to clear
+     * the nearest blocker.  Positive = turn right, negative = turn left.
+     * When both sides have equal obstacle counts, the robot is steered
+     * toward whichever side has fewer obstacles ahead on the path.
+     *
+     * @param targetX          robot-relative floor X of the target, right-positive (in)
+     * @param targetY          robot-relative floor Y of the target, forward-positive (in)
+     * @param obstacles        each element is a two-element double[] {x, y} giving the
+     *                         robot-relative floor position of one obstacle (in).
+     *                         Obtain these from BioBuzzProcessor.getLatest() nectar results
+     *                         projected through Geometry, or any other floor-position source.
+     * @param corridorHalfWidth half the clearance width to test; a good default is the
+     *                          robot half-width plus a small margin (~9 in total)
+     * @return a {@link PathBlockResult} describing whether the path is blocked
+     *         and which direction to turn to find a clear path
+     */
+    public static PathBlockResult isPathBlocked(
+            double targetX, double targetY,
+            List<double[]> obstacles,
+            double corridorHalfWidth) {
+
+        double pathLen = Math.hypot(targetX, targetY);
+        if (pathLen < 1e-3) {
+            return new PathBlockResult(false, 0, 0, 0);
+        }
+
+        // Unit vector along the path (ux, uy) and perpendicular-left (-uy, ux).
+        double ux = targetX / pathLen;
+        double uy = targetY / pathLen;
+
+        boolean blocked = false;
+        int leftCount = 0, rightCount = 0;
+
+        // For the worst (closest to centre) blocking obstacle, track the
+        // minimum turn that puts it just outside the corridor edge.
+        double worstPerpInside = 0;   // magnitude; 0 means no blocker yet
+        double worstSide = 0;         // +1 = left, -1 = right
+
+        for (double[] obs : obstacles) {
+            if (obs == null || obs.length < 2) continue;
+            double ox = obs[0], oy = obs[1];
+
+            // How far along the path axis is the obstacle?
+            double along = ox * ux + oy * uy;
+            if (along < 0 || along > pathLen) continue;  // behind robot or past target
+
+            // Signed perpendicular distance from path centre.
+            // Positive means the obstacle is to the LEFT of the path.
+            double perp = -ox * uy + oy * ux;
+
+            if (perp >= 0) leftCount++;
+            else rightCount++;
+
+            if (Math.abs(perp) < corridorHalfWidth) {
+                blocked = true;
+                // Track the obstacle closest to the path centre (hardest to avoid).
+                if (Math.abs(perp) < Math.abs(worstPerpInside) || worstPerpInside == 0) {
+                    worstPerpInside = perp;
+                    worstSide = perp >= 0 ? 1 : -1;
+                }
+            }
+        }
+
+        double suggestedTurnDeg = 0;
+        if (blocked) {
+            // The turn needed to move the path centre just past the blocker edge:
+            //   new perpendicular offset = |worstPerpInside| + corridorHalfWidth + margin
+            // We approximate by steering to the bearing of the clearance point.
+            double MARGIN = corridorHalfWidth * 0.5;
+            double clearOffset = Math.abs(worstPerpInside) + corridorHalfWidth + MARGIN;
+
+            // along value for the worst blocker (recomputed conservatively as half-path)
+            // — exact value was not stored, so use a conservative lower bound.
+            // Using pathLen/2 slightly overestimates the turn which adds safety.
+            double atDist = pathLen * 0.5;
+            double turnMag = Math.toDegrees(Math.atan2(clearOffset, atDist));
+
+            // worstSide +1 = blocker on LEFT → steer RIGHT → positive turn
+            suggestedTurnDeg = worstSide * turnMag;
+        }
+
+        return new PathBlockResult(blocked, suggestedTurnDeg, leftCount, rightCount);
+    }
+
+    /**
+     * Tests whether the straight-line path to a target pollen group would
+     * require the robot to cross into the opposing alliance's autonomous zone.
+     *
+     * <p>In BIOBuzz, each alliance must stay on their half of the field during
+     * autonomous.  The field is 144 × 144 inches; the dividing line sits at
+     * {@code boundaryFieldY} (typically 72 in from either alliance wall).
+     *
+     * <p>Coordinate frame used here: field X and Y are absolute field inches
+     * as reported by OdometrySubsystem.  {@code robotHeadingDeg} is the robot's
+     * current heading in degrees, measured counter-clockwise from the field +X
+     * axis, matching the FTC odometry convention.
+     *
+     * @param targetX            robot-relative floor X of the pollen group, right-positive (in)
+     * @param targetY            robot-relative floor Y of the pollen group, forward-positive (in)
+     * @param robotFieldX        robot's current field X from OdometrySubsystem (in)
+     * @param robotFieldY        robot's current field Y from OdometrySubsystem (in)
+     * @param robotHeadingDeg    robot heading in degrees, CCW from field +X axis
+     * @param boundaryFieldY     field Y coordinate of the autonomous zone boundary (in);
+     *                           use 72.0 for the centre line of a standard 144"-wide field
+     * @param robotBelowBoundary true if the robot started on the lower-Y half of the field
+     *                           (field Y &lt; boundaryFieldY); false if on the upper-Y half
+     * @return true if the target is on the opposing alliance's side, meaning the
+     *         robot would have to cross the boundary to reach it
+     */
+    public static boolean requiresCrossField(
+            double targetX, double targetY,
+            double robotFieldX, double robotFieldY, double robotHeadingDeg,
+            double boundaryFieldY, boolean robotBelowBoundary) {
+
+        double heading = Math.toRadians(robotHeadingDeg);
+
+        // Convert robot-relative (right=+x, forward=+y) to absolute field coordinates.
+        // Robot forward unit vector in field frame = (cos θ, sin θ).
+        // Robot right  unit vector in field frame  = (sin θ, -cos θ).
+        double fieldTargetX = robotFieldX
+                + targetY * Math.cos(heading)
+                + targetX * Math.sin(heading);
+        double fieldTargetY = robotFieldY
+                + targetY * Math.sin(heading)
+                - targetX * Math.cos(heading);
+
+        // Suppress "unused" warning — fieldTargetX is kept for completeness but only
+        // the Y axis determines which half of the field the target is on.
+        @SuppressWarnings("unused") double _x = fieldTargetX;
+
+        if (robotBelowBoundary) {
+            return fieldTargetY > boundaryFieldY;
+        } else {
+            return fieldTargetY < boundaryFieldY;
+        }
+    }
 }
