@@ -69,6 +69,13 @@ public class blobTrack extends LinearOpMode {
     public static double CAM_FORWARD_OFFSET = 0;     // lens forward of robot center (in), negative = behind
     public static double CAM_RIGHT_OFFSET = 2.25;    // lens right of robot center (in)
 
+    // ---- Robot physical width (used by isPathBlocked) ----
+    // Measure from the robot's center line to each outer edge.
+    // CAM_RIGHT_OFFSET is already applied by Geometry.project(), so these are
+    // independent of camera position — just the physical robot half-widths.
+    public static double ROBOT_HALF_WIDTH_LEFT  = 9.0;  // center to left  edge (in) <- MEASURE
+    public static double ROBOT_HALF_WIDTH_RIGHT = 9.0;  // center to right edge (in) <- MEASURE
+
     // ---- From calibration (press A, then copy the printed values here) ----
     public static double TILT_DEG = -25.59;          // negative = tilted down
     public static double FOCAL_PX = 427.2;
@@ -797,91 +804,99 @@ public class blobTrack extends LinearOpMode {
      * Tests whether any obstacle (typically nectar balls) falls inside the
      * straight-line corridor from the robot to a target pollen group.
      *
-     * <p>The corridor is a rectangle of half-width {@code corridorHalfWidth}
-     * centred on the robot-to-target line segment.  An obstacle is only
-     * considered "in the way" when its floor projection lies between the
-     * robot and the target — not behind the robot or past the target.
+     * <p>The corridor width is the robot's actual physical footprint, defined by
+     * {@link #ROBOT_HALF_WIDTH_LEFT} and {@link #ROBOT_HALF_WIDTH_RIGHT} — the
+     * distance from the robot centre line to each outer edge (measure with a tape
+     * measure and set those constants).  The camera offset is already baked into
+     * obstacle coordinates by {@code Geometry.project()}, so no further adjustment
+     * is needed here.
      *
-     * <p>When the path is blocked, {@code suggestedTurnDegrees} gives the
-     * minimum heading change that shifts the corridor far enough to clear
-     * the nearest blocker.  Positive = turn right, negative = turn left.
-     * When both sides have equal obstacle counts, the robot is steered
-     * toward whichever side has fewer obstacles ahead on the path.
+     * <p>An obstacle is only considered "in the way" when its floor projection lies
+     * between the robot and the target — not behind the robot or past the target.
      *
-     * @param targetX          robot-relative floor X of the target, right-positive (in)
-     * @param targetY          robot-relative floor Y of the target, forward-positive (in)
-     * @param obstacles        each element is a two-element double[] {x, y} giving the
-     *                         robot-relative floor position of one obstacle (in).
-     *                         Obtain these from BioBuzzProcessor.getLatest() nectar results
-     *                         projected through Geometry, or any other floor-position source.
-     * @param corridorHalfWidth half the clearance width to test; a good default is the
-     *                          robot half-width plus a small margin (~9 in total)
-     * @return a {@link PathBlockResult} describing whether the path is blocked
-     *         and which direction to turn to find a clear path
+     * <p>When blocked, {@code suggestedTurnDegrees} gives the minimum heading change
+     * that shifts the robot's path clear of the nearest blocker:
+     * positive = turn right, negative = turn left.
+     *
+     * @param targetX   robot-relative floor X of the target, right-positive (in)
+     * @param targetY   robot-relative floor Y of the target, forward-positive (in)
+     * @param obstacles each element is {@code double[] {x, y}} — robot-relative floor
+     *                  position of one obstacle (in), as returned by
+     *                  {@code Geometry.project()} on nectar detections
+     * @return a {@link PathBlockResult} with blocked flag and suggested turn direction
      */
     public static PathBlockResult isPathBlocked(
             double targetX, double targetY,
-            List<double[]> obstacles,
-            double corridorHalfWidth) {
+            List<double[]> obstacles) {
 
         double pathLen = Math.hypot(targetX, targetY);
         if (pathLen < 1e-3) {
             return new PathBlockResult(false, 0, 0, 0);
         }
 
-        // Unit vector along the path (ux, uy) and perpendicular-left (-uy, ux).
+        // Unit vector along the path (ux, uy).
+        // Signed perpendicular distance convention: positive = obstacle is LEFT of path.
         double ux = targetX / pathLen;
         double uy = targetY / pathLen;
 
         boolean blocked = false;
         int leftCount = 0, rightCount = 0;
 
-        // For the worst (closest to centre) blocking obstacle, track the
-        // minimum turn that puts it just outside the corridor edge.
-        double worstPerpInside = 0;   // magnitude; 0 means no blocker yet
-        double worstSide = 0;         // +1 = left, -1 = right
+        // Track the blocking obstacle deepest inside the robot footprint so we
+        // can compute the minimum turn needed to clear it.
+        double worstPerp = 0;      // signed; 0 = no blocker found yet
+        double worstAlong = pathLen * 0.5; // distance along path to worst blocker
+        boolean foundBlocker = false;
 
         for (double[] obs : obstacles) {
             if (obs == null || obs.length < 2) continue;
             double ox = obs[0], oy = obs[1];
 
-            // How far along the path axis is the obstacle?
+            // Scalar projection onto path — obstacle must be between robot and target.
             double along = ox * ux + oy * uy;
-            if (along < 0 || along > pathLen) continue;  // behind robot or past target
+            if (along < 0 || along > pathLen) continue;
 
-            // Signed perpendicular distance from path centre.
-            // Positive means the obstacle is to the LEFT of the path.
+            // Signed perpendicular offset from the robot's centre-line path.
+            // Positive = obstacle is to the LEFT.
             double perp = -ox * uy + oy * ux;
 
             if (perp >= 0) leftCount++;
             else rightCount++;
 
-            if (Math.abs(perp) < corridorHalfWidth) {
+            // Check against the robot's actual physical half-widths.
+            // perp > 0 (left side): blocking if perp < ROBOT_HALF_WIDTH_LEFT
+            // perp < 0 (right side): blocking if |perp| < ROBOT_HALF_WIDTH_RIGHT
+            boolean inFootprint = (perp >= 0)
+                    ? (perp < ROBOT_HALF_WIDTH_LEFT)
+                    : (-perp < ROBOT_HALF_WIDTH_RIGHT);
+
+            if (inFootprint) {
                 blocked = true;
-                // Track the obstacle closest to the path centre (hardest to avoid).
-                if (Math.abs(perp) < Math.abs(worstPerpInside) || worstPerpInside == 0) {
-                    worstPerpInside = perp;
-                    worstSide = perp >= 0 ? 1 : -1;
+                // Keep the obstacle that penetrates deepest (closest to centre line)
+                // as the worst case — it needs the biggest turn to clear.
+                if (!foundBlocker || Math.abs(perp) < Math.abs(worstPerp)) {
+                    worstPerp = perp;
+                    worstAlong = along;
+                    foundBlocker = true;
                 }
             }
         }
 
         double suggestedTurnDeg = 0;
         if (blocked) {
-            // The turn needed to move the path centre just past the blocker edge:
-            //   new perpendicular offset = |worstPerpInside| + corridorHalfWidth + margin
-            // We approximate by steering to the bearing of the clearance point.
-            double MARGIN = corridorHalfWidth * 0.5;
-            double clearOffset = Math.abs(worstPerpInside) + corridorHalfWidth + MARGIN;
+            // Minimum turn to put the robot edge just clear of the worst blocker.
+            // The edge that matters is whichever side the blocker is on.
+            double edgeOffset = (worstPerp >= 0)
+                    ? ROBOT_HALF_WIDTH_LEFT    // blocker on left  → clear left edge
+                    : ROBOT_HALF_WIDTH_RIGHT;  // blocker on right → clear right edge
 
-            // along value for the worst blocker (recomputed conservatively as half-path)
-            // — exact value was not stored, so use a conservative lower bound.
-            // Using pathLen/2 slightly overestimates the turn which adds safety.
-            double atDist = pathLen * 0.5;
-            double turnMag = Math.toDegrees(Math.atan2(clearOffset, atDist));
+            // New path centre must be offset by (edgeOffset - |worstPerp|) + 20% margin
+            // away from the blocker. atan2 gives the heading change needed at distance worstAlong.
+            double clearance = (edgeOffset - Math.abs(worstPerp)) + edgeOffset * 0.2;
+            double turnMag = Math.toDegrees(Math.atan2(clearance, worstAlong));
 
-            // worstSide +1 = blocker on LEFT → steer RIGHT → positive turn
-            suggestedTurnDeg = worstSide * turnMag;
+            // worstPerp > 0 → blocker is LEFT → steer RIGHT → positive degrees
+            suggestedTurnDeg = (worstPerp >= 0) ? turnMag : -turnMag;
         }
 
         return new PathBlockResult(blocked, suggestedTurnDeg, leftCount, rightCount);
