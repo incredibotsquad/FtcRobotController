@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Find positions for any positional servo on the robot (gate open/closed, visor limits,
+ * Find positions for any positional servo on the robot (gate open/closed,
  * turret limits, indicator light colors, ...).
  *
  * Servos are not moved until you touch them, so nothing jumps on start.

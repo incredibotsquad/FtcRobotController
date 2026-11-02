@@ -19,25 +19,19 @@ public class LaunchSubsystem extends SubsystemBase {
     private final MotorEx rightLaunchMotor;
 
     private final SimpleServo turretServo;
-    private final SimpleServo visorServo;
     private final SimpleServo alignmentIndicatorLight;
 
     private static final double TARGET_RPM = 250.0;
     private static final double TARGET_RPM_TOLERANCE = 50;
     private static final double TURRET_POSITION_TOLERANCE = 0.05;
-    private static final double VISOR_POSITION_TOLERANCE = 0.05;
 
     private volatile double targetRPM;
     private volatile double targetTurretPos;
-    private volatile double targetVisorPos;
     private volatile boolean shotSolutionReady = true;
 
     public static double ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT = 0.3;    //RED
     public static double ROBOT_ALIGNED_TO_SHOOT_LIGHT = 0.5;    //GREEN
     public static double ROBOT_ALIGNMENT_NOT_POSSIBLE_LIGHT = 0;
-
-    public static double LAUNCH_VISOR_LOW = 0.26;
-    public static double LAUNCH_VISOR_HIGH = 0.7;
 
     public static double TURRET_MIN = 0.0;
     public static double TURRET_MID = 0.5;
@@ -78,7 +72,6 @@ public class LaunchSubsystem extends SubsystemBase {
 
         turretServo = new SimpleServo(hardwareMap, "turretServo", 0, 1800);
         turretServo.setInverted(true);
-        visorServo = new SimpleServo(hardwareMap, "launchVisorServo", 0, 270);
         alignmentIndicatorLight = new SimpleServo(hardwareMap, "alignmentIndicatorLight", 0, 270);
     }
 
@@ -129,22 +122,6 @@ public class LaunchSubsystem extends SubsystemBase {
 
     public double getTurretPosition() {
         return turretServo.getPosition();
-    }
-
-    public void setVisorPosition(double position) {
-
-        if (position < LAUNCH_VISOR_LOW) {
-            position = LAUNCH_VISOR_LOW;
-        } else if (position > LAUNCH_VISOR_HIGH) {
-            position = LAUNCH_VISOR_HIGH;
-        }
-
-        this.targetVisorPos = position;
-        visorServo.setPosition(position);
-    }
-
-    public double getHoodPosition() {
-        return visorServo.getPosition();
     }
 
     /**
@@ -198,7 +175,7 @@ public class LaunchSubsystem extends SubsystemBase {
     }
 
     /**
-     * Checks if the flywheel, turret, and hood are all within acceptable tolerances
+     * Checks if the flywheel and turret are both within acceptable tolerances
      * to ensure a successful shot.
      *
      * @return true if all systems are ready
@@ -212,10 +189,7 @@ public class LaunchSubsystem extends SubsystemBase {
         // A small tolerance is used for servo positioning
         boolean turretReady = Math.abs(getTurretPosition() - targetTurretPos) < TURRET_POSITION_TOLERANCE;
 
-        // 3. Check Hood Alignment
-        boolean visorReady = Math.abs(getHoodPosition() - targetVisorPos) < VISOR_POSITION_TOLERANCE;
-
-        return flywheelReady && turretReady && visorReady && shotSolutionReady;
+        return flywheelReady && turretReady && shotSolutionReady;
     }
 
     /*
