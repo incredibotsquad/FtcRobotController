@@ -9,6 +9,7 @@ import com.arcrobotics.ftclib.hardware.motors.MotorEx;
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.VoltageSensor;
 
 import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 
@@ -21,9 +22,31 @@ public class LaunchSubsystem extends SubsystemBase {
     private final SimpleServo turretServo;
     private final SimpleServo alignmentIndicatorLight;
 
-    private static final double TARGET_RPM = 250.0;
-    private static final double TARGET_RPM_TOLERANCE = 50;
+    /** Flywheel counts as "at speed" within this many RPM of the target. */
+    public static double TARGET_RPM_TOLERANCE = 50;
     private static final double TURRET_POSITION_TOLERANCE = 0.05;
+
+    // ------------------------------------------------------------------ flywheel control
+    // Found with FlywheelTuner; paste the tuned values here so they are the defaults.
+    // Gains act on ticks/sec error (GoBILDA BARE, 28 CPR). Power is in [0, 1].
+    public static double FLYWHEEL_P = 0.0;
+    public static double FLYWHEEL_I = 0.0;
+    public static double FLYWHEEL_D = 0.0;
+    /** Static friction: power needed to just start turning. */
+    public static double FLYWHEEL_KS = 0.1;
+    /** Power per tick/sec needed to hold a speed, measured at NOMINAL_VOLTAGE. */
+    public static double FLYWHEEL_KV = 0.00058;
+
+    /** Run full power while more than this far below target (fast spin-up and shot recovery). */
+    public static boolean FLYWHEEL_BANG_BANG_ENABLED = true;
+    public static double FLYWHEEL_BANG_BANG_THRESHOLD_RPM = 150;
+
+    /** Scale feedforward by NOMINAL_VOLTAGE / battery voltage so kV holds as the battery sags. */
+    public static boolean FLYWHEEL_VOLTAGE_COMPENSATION = true;
+    /** Battery voltage kS/kV were tuned at. */
+    public static double NOMINAL_VOLTAGE = 12.0;
+    /** Voltage reads are slow hub calls (not bulk cached), so sample at this interval. */
+    public static long VOLTAGE_SAMPLE_MS = 250;
 
     private volatile double targetRPM;
     private volatile double targetTurretPos;
@@ -49,10 +72,17 @@ public class LaunchSubsystem extends SubsystemBase {
     public static double GEAR_RATIO = 112.0 / 29.0;
     public static double TOTAL_SERVO_RANGE = 1800; // servo range is 1800 but we are only going up to 0.87
 
-    // Inside LaunchSubsystem
-    private PIDController flywheelPID = new PIDController(0.000, 0, 0);
-    // ks = static friction, kv = velocity gain (How much power to hold a speed)
-    private SimpleMotorFeedforward flywheelFF = new SimpleMotorFeedforward(0.1, 0.00058); //45
+    private final PIDController flywheelPID = new PIDController(FLYWHEEL_P, FLYWHEEL_I, FLYWHEEL_D);
+    private SimpleMotorFeedforward flywheelFF = new SimpleMotorFeedforward(FLYWHEEL_KS, FLYWHEEL_KV);
+    private double ffKs = FLYWHEEL_KS;
+    private double ffKv = FLYWHEEL_KV;
+
+    private final VoltageSensor batteryVoltageSensor;
+    private double batteryVoltage = NOMINAL_VOLTAGE;
+    private long lastVoltageSampleMs = 0;
+
+    private double lastFlywheelPower = 0;
+    private boolean inBangBang = false;
 
     // Inside LaunchSubsystem.java
     private boolean isLaunchReadinessLocked = false;
@@ -66,14 +96,18 @@ public class LaunchSubsystem extends SubsystemBase {
 
         leftLaunchMotor = new MotorEx(hardwareMap, "leftLaunchMotor", Motor.GoBILDA.BARE);
         leftLaunchMotor.setRunMode(Motor.RunMode.RawPower);
+        leftLaunchMotor.setInverted(true);
 
         rightLaunchMotor = new MotorEx(hardwareMap, "rightLaunchMotor", Motor.GoBILDA.BARE);
         rightLaunchMotor.setRunMode(Motor.RunMode.RawPower);
-        rightLaunchMotor.setInverted(true);
 
         turretServo = new SimpleServo(hardwareMap, "turretServo", 0, 1800);
         turretServo.setInverted(true);
         alignmentIndicatorLight = new SimpleServo(hardwareMap, "alignmentIndicatorLight", 0, 270);
+
+        batteryVoltageSensor = hardwareMap.voltageSensor.iterator().hasNext()
+                ? hardwareMap.voltageSensor.iterator().next()
+                : null;
     }
 
     public void setLaunchReadinessLock(boolean locked) {
@@ -84,30 +118,96 @@ public class LaunchSubsystem extends SubsystemBase {
         return isLaunchReadinessLocked;
     }
 
+    /**
+     * Runs one step of flywheel control. Call EVERY loop; the flywheel only reacts when this runs.
+     *  - Far below target (more than FLYWHEEL_BANG_BANG_THRESHOLD_RPM): full power. This is what
+     *    makes spin-up and recovery after a shot fast.
+     *  - Near target: feedforward (voltage compensated) + PID holds the speed.
+     *  - Power is limited to [0, 1]: the flywheel coasts down instead of being braked in reverse.
+     */
     public void updateFlywheel(double targetRPM) {
         this.targetRPM = targetRPM;
+        applyTunedGains();
 
-        // Convert RPM to Ticks Per Second
-        double targetTPS = (targetRPM * Motor.GoBILDA.BARE.getCPR()) / 60.0;
-
-        // Get current velocity from encoders
-        double currentTPS = getFlywheelVelocityTPS();
-
-        // 1. Calculate PID (Correction)
-        double pidOutput = flywheelPID.calculate(currentTPS, targetTPS);
-
-        // 2. Calculate Feedforward (The "Predicted" power needed for this speed)
-        double ffOutput = flywheelFF.calculate(targetTPS);
-
-        // 3. Combine and set power (Manual mode)
-        double totalPower = pidOutput + ffOutput;
-
-//        Log.i("Launch Subsystem", "Setting flywheel power to " + totalPower);
-
-        if (!SKIP_FLYWHEEL) {
-            leftLaunchMotor.set(totalPower);
-            rightLaunchMotor.set(totalPower);
+        if (targetRPM <= 0) {
+            flywheelPID.reset();
+            inBangBang = false;
+            setFlywheelPower(0);
+            return;
         }
+
+        double targetTPS = rpmToTps(targetRPM);
+        double currentTPS = getFlywheelVelocityTPS();
+        double errorRPM = targetRPM - tpsToRpm(currentTPS);
+
+        double power;
+        if (FLYWHEEL_BANG_BANG_ENABLED && errorRPM > FLYWHEEL_BANG_BANG_THRESHOLD_RPM) {
+            inBangBang = true;
+            flywheelPID.reset(); // don't let I wind up while saturated
+            power = 1.0;
+        } else {
+            inBangBang = false;
+            double ff = flywheelFF.calculate(targetTPS);
+            if (FLYWHEEL_VOLTAGE_COMPENSATION) {
+                ff *= NOMINAL_VOLTAGE / getBatteryVoltage();
+            }
+            power = ff + flywheelPID.calculate(currentTPS, targetTPS);
+        }
+
+        setFlywheelPower(Math.max(0.0, Math.min(1.0, power)));
+    }
+
+    private void setFlywheelPower(double power) {
+        lastFlywheelPower = power;
+        if (!SKIP_FLYWHEEL) {
+            leftLaunchMotor.set(power);
+            rightLaunchMotor.set(power);
+        }
+    }
+
+    /** Picks up live edits of the FLYWHEEL_* gains (Panels or FlywheelTuner). */
+    private void applyTunedGains() {
+        flywheelPID.setPID(FLYWHEEL_P, FLYWHEEL_I, FLYWHEEL_D);
+        if (ffKs != FLYWHEEL_KS || ffKv != FLYWHEEL_KV) {
+            ffKs = FLYWHEEL_KS;
+            ffKv = FLYWHEEL_KV;
+            flywheelFF = new SimpleMotorFeedforward(ffKs, ffKv);
+        }
+    }
+
+    /** Battery voltage, sampled every VOLTAGE_SAMPLE_MS. Falls back to NOMINAL_VOLTAGE if unavailable. */
+    public double getBatteryVoltage() {
+        long now = System.nanoTime() / 1_000_000L;
+        if (batteryVoltageSensor != null && now - lastVoltageSampleMs >= VOLTAGE_SAMPLE_MS) {
+            double v = batteryVoltageSensor.getVoltage();
+            if (v > 6.0) batteryVoltage = v; // ignore bogus 0 readings
+            lastVoltageSampleMs = now;
+        }
+        return batteryVoltage;
+    }
+
+    public double getLastFlywheelPower() {
+        return lastFlywheelPower;
+    }
+
+    public boolean isFlywheelInBangBang() {
+        return inBangBang;
+    }
+
+    public double getTargetRPM() {
+        return targetRPM;
+    }
+
+    public boolean isFlywheelAtSpeed() {
+        return targetRPM > 0 && Math.abs(getCurrentFlywheelRPM() - targetRPM) < TARGET_RPM_TOLERANCE;
+    }
+
+    public static double rpmToTps(double rpm) {
+        return rpm * Motor.GoBILDA.BARE.getCPR() / 60.0;
+    }
+
+    public static double tpsToRpm(double tps) {
+        return tps * 60.0 / Motor.GoBILDA.BARE.getCPR();
     }
 
 
@@ -125,22 +225,17 @@ public class LaunchSubsystem extends SubsystemBase {
         return turretServo.getPosition();
     }
 
-    /**
-     * Allows live tuning of the PID coefficients from an OpMode.
-     */
+    /** Sets the flywheel PID gains (same as editing FLYWHEEL_P/I/D). */
     public void setFlywheelPID(double p, double i, double d) {
-        flywheelPID.setPID(p, i, d);
+        FLYWHEEL_P = p;
+        FLYWHEEL_I = i;
+        FLYWHEEL_D = d;
     }
 
-    /**
-     * Allows live tuning of the Feedforward coefficients.
-     * Note: SimpleMotorFeedforward is immutable, so we create a new instance.
-     *
-     * @param ks Static friction (voltage to overcome friction)
-     * @param kv Velocity gain (voltage per tick/second)
-     */
+    /** Sets the flywheel feedforward gains (same as editing FLYWHEEL_KS/KV). */
     public void updateFeedforward(double ks, double kv) {
-        flywheelFF = new SimpleMotorFeedforward(ks, kv);
+        FLYWHEEL_KS = ks;
+        FLYWHEEL_KV = kv;
     }
 
     /*
@@ -157,7 +252,16 @@ public class LaunchSubsystem extends SubsystemBase {
         return (leftLaunchMotor.getVelocity() + rightLaunchMotor.getVelocity()) / 2.0;
     }
     public double getCurrentFlywheelRPM() {
-        return (getFlywheelVelocityTPS() * 60.0) / Motor.GoBILDA.BARE.getCPR();
+        return tpsToRpm(getFlywheelVelocityTPS());
+    }
+
+    /** Per-motor RPM: if one reads ~0 while the other is at speed, check that encoder cable. */
+    public double getLeftFlywheelRPM() {
+        return tpsToRpm(leftLaunchMotor.getVelocity());
+    }
+
+    public double getRightFlywheelRPM() {
+        return tpsToRpm(rightLaunchMotor.getVelocity());
     }
 
     public void setShotSolutionReady(boolean shotSolutionReady) {
@@ -179,9 +283,9 @@ public class LaunchSubsystem extends SubsystemBase {
 
     public void stop() {
         this.targetRPM = 0;
-
-        leftLaunchMotor.set(0);
-        rightLaunchMotor.set(0);
+        flywheelPID.reset();
+        inBangBang = false;
+        setFlywheelPower(0);
     }
 
     /**
@@ -192,7 +296,7 @@ public class LaunchSubsystem extends SubsystemBase {
      */
     public boolean isReadyToLaunch() {
         // 1. Check Flywheel RPM
-        boolean flywheelReady = Math.abs(getCurrentFlywheelRPM() - targetRPM) < TARGET_RPM_TOLERANCE;
+        boolean flywheelReady = isFlywheelAtSpeed();
 
         // 2. Check Turret Alignment
         // Servos move fast, but we check if it has reached the target
