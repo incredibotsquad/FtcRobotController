@@ -100,7 +100,7 @@ public class IntakeCountTest extends LinearOpMode {
             // ---------------------------------------------------- motors
             String action;
             if (gamepad1.left_trigger > TRIGGER_THRESHOLD) {
-                intake.reverseIntake();
+                intake.reverseIntakeAndTransfer();
                 action = "EJECTING";
             } else if (launchMode && gamepad1.right_bumper) {
                 intake.stopIntakeMotorOnly();
