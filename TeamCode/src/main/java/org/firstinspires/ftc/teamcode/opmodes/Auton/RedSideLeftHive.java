@@ -1,11 +1,8 @@
 package org.firstinspires.ftc.teamcode.opmodes.Auton;
 
-import static org.firstinspires.ftc.teamcode.opmodes.Auton.PathConstants.intakeFlower1;
-import static org.firstinspires.ftc.teamcode.opmodes.Auton.PathConstants.intakeFlower2;
-import static org.firstinspires.ftc.teamcode.opmodes.Auton.PathConstants.intakeGarden;
-import static org.firstinspires.ftc.teamcode.opmodes.Auton.PathConstants.moveToHive1;
-import static org.firstinspires.ftc.teamcode.opmodes.Auton.PathConstants.moveToHive2;
-import static org.firstinspires.ftc.teamcode.opmodes.Auton.PathConstants.startingPose;
+import static org.firstinspires.ftc.teamcode.opmodes.Auton.PathConstants.intakeFarFlowerLeftSide;
+import static org.firstinspires.ftc.teamcode.opmodes.Auton.PathConstants.parkLeftSide;
+import static org.firstinspires.ftc.teamcode.opmodes.Auton.PathConstants.startingPoseLeftHive;
 
 import com.arcrobotics.ftclib.command.Command;
 import com.arcrobotics.ftclib.command.CommandOpMode;
@@ -18,13 +15,13 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
 @Autonomous
-public class RedHive1 extends CommandOpMode {
+public class RedSideLeftHive extends CommandOpMode {
     private Follower follower;
     private boolean isScheduled = false;
     @Override
     public void initialize() {
         follower = Constants.create(this.hardwareMap);
-        follower.setPose(startingPose);
+        follower.setPose(startingPoseLeftHive);
 
     }
     @Override
@@ -42,15 +39,8 @@ public class RedHive1 extends CommandOpMode {
                 new SequentialCommandGroup(
 
                         // 1. Run Near Preloads
-                        new FollowPathCommand(follower, intakeGarden(), true),
-
-                        // 2. Run First Spike
-                        new FollowPathCommand(follower, moveToHive2(), true),
-                        new FollowPathCommand(follower, intakeFlower1(), true),
-                        new FollowPathCommand(follower, intakeFlower2(), true),
-
-                        // 3. Run Second Spike
-                        new FollowPathCommand(follower, moveToHive1(), true)
+                        new FollowPathCommand(follower, intakeFarFlowerLeftSide(), true),
+                        new FollowPathCommand(follower,parkLeftSide(), true)
                 )
         );
     }
