@@ -58,7 +58,7 @@ public class Incredibot extends Robot {
         driveSubsystem = new DriveSubsystem(hwMap, telemetry);
         intakeSubsystem = new IntakeSubsystem(hwMap, telemetry);
         launchGateSubsystem = new LaunchGateSubsystem(hwMap, telemetry);
-        odometrySubsystem = new OdometrySubsystem(hwMap, telemetry);
+        odometrySubsystem = new OdometrySubsystem(driveSubsystem, telemetry); // reads the Pinpoint via Pedro's Follower
         launchSubsystem = new LaunchSubsystem(hwMap, telemetry);
         limelightSubsystem = new LimelightSubsystem(hwMap, telemetry);
     }
@@ -99,7 +99,7 @@ public class Incredibot extends Robot {
                 .whileHeld(new ReverseIntakeCommand(intakeSubsystem));
 
         operatorGamepad.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER)
-                .whenPressed(new LaunchBallsCommand(launchSubsystem, launchGateSubsystem, intakeSubsystem));
+                .whenPressed(new LaunchBallsCommand(launchSubsystem, launchGateSubsystem, intakeSubsystem, driveSubsystem));
 
         operatorGamepad.getGamepadButton(GamepadKeys.Button.Y)
                 .whenPressed(new RelocalizeCommand(odometrySubsystem, telemetry));

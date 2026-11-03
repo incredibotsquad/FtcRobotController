@@ -5,6 +5,7 @@ import android.util.Log;
 import com.arcrobotics.ftclib.command.CommandBase;
 import com.bylazar.configurables.annotations.Configurable;
 
+import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
@@ -22,6 +23,11 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
  * Requires only the gate. LaunchReadinessCommand (launcher) keeps aiming and spinning the
  * flywheel during the burst, and SmartIntakeCommand (intake) keeps running the transfer.
  * The intake is only read. When this ends, CloseGateCommand (gate default) takes over.
+ *
+ * Launch hold: for the whole command (WAITING and FIRING) it asks DriveSubsystem to hold the
+ * robot's pose against defense. DriveRobotCommand does the holding and lets the driver break out
+ * with the sticks; a breakout does NOT stop the launch. Turned off by DriveSubsystem.LAUNCH_HOLD_ENABLED.
+ * The drive is not a requirement, so DriveRobotCommand keeps running.
  */
 @Configurable
 public class LaunchBallsCommand extends CommandBase {
@@ -38,15 +44,18 @@ public class LaunchBallsCommand extends CommandBase {
     private final LaunchSubsystem launcher;
     private final LaunchGateSubsystem gate;
     private final IntakeSubsystem intake;
+    private final DriveSubsystem drive;
 
     private State state;
     private long stateStartMs;
     private long emptySinceMs;
 
-    public LaunchBallsCommand(LaunchSubsystem launcher, LaunchGateSubsystem gate, IntakeSubsystem intake) {
+    public LaunchBallsCommand(LaunchSubsystem launcher, LaunchGateSubsystem gate, IntakeSubsystem intake,
+                              DriveSubsystem drive) {
         this.launcher = launcher;
         this.gate = gate;
         this.intake = intake;
+        this.drive = drive;
         addRequirements(gate);
     }
 
@@ -59,6 +68,7 @@ public class LaunchBallsCommand extends CommandBase {
             return;
         }
         gate.closeGate();
+        drive.requestLaunchHold();
         enter(State.WAITING);
     }
 
@@ -97,6 +107,7 @@ public class LaunchBallsCommand extends CommandBase {
     @Override
     public void end(boolean interrupted) {
         gate.closeGate();
+        drive.releaseLaunchHold();
     }
 
     @Override
