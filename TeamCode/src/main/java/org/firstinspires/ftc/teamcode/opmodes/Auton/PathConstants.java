@@ -15,33 +15,47 @@ public class PathConstants {
     public static final PoseFactory poseFactory = PoseFactory.degrees();
 
     private static double maxSpeed = 0.6;
-    public static final Pose startingPose = poseFactory.of(56, 10, 180);
+    public static final Pose startingPoseRightHive = poseFactory.of(56, 10, 180);
+    public static final Pose startingPoseLeftHive = poseFactory.of(65,133, 180);
     //    public static final Pose startingPose = poseFactory.of(72 - (multiplier * 16), 72 - (multiplier * 64), 180 - (multiplier * 90));
     public static final Pose intakeGarden = poseFactory.of(12, 10, 180);
-    public static final Pose shotOnHive2 = poseFactory.of(39.5176, 118.4389, 90);
-    public static final Pose intakeFlower1 = poseFactory.of(50, 130, 90);
-    public static final Pose intakeFlower2 = poseFactory.of(16, 48, 180);
-    public static final Pose intakeFlower2Control1 = poseFactory.of(13.46, 93.43, 0);
-    public static final Pose intakeFlower2Control2 = poseFactory.of(32.58, 51.36, 0);
-    public static final Pose shotOnHive1 = poseFactory.of(56, 22, 180);
+    public static final Pose shotOnLeftHive = poseFactory.of(39.5176, 118.4389, 90);
+    public static final Pose intakeFarFlower = poseFactory.of(50, 127, 90);
+    public static final Pose farFlowerControlPoint = poseFactory.of(54.85, 109.79, 0);
+    public static final Pose intakeCloseFlower = poseFactory.of(16, 48, 180);
+    public static final Pose intakeCloseFlowerControl1 = poseFactory.of(13.46, 93.43, 0);
+    public static final Pose intakeCloseFlowerControl2 = poseFactory.of(32.58, 51.36, 0);
+    public static final Pose shotOnRightHive = poseFactory.of(56, 10, 180);
+    public static final Pose parkPoseLeftSide = poseFactory.of(8,115,270);
+    public static final Pose parkPoseRightSide = poseFactory.of(8,100, 90);
 
     public static Path intakeGarden() {
-        return Paths.line(startingPose, intakeGarden).constant(intakeGarden).with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
+        return Paths.line(startingPoseRightHive, intakeGarden).constant(intakeGarden).with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
     }
 
-    public static Path moveToHive2() {
-        return Paths.line(intakeGarden, shotOnHive2).linear(intakeGarden, shotOnHive2).with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
+    public static Path moveToLeftHive() {
+        return Paths.line(intakeGarden, shotOnLeftHive).linear(intakeGarden, shotOnLeftHive).with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
     }
 
-    public static Path intakeFlower1() {
-        return Paths.line(shotOnHive2, intakeFlower1).constant(intakeFlower1).with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
+    public static Path intakeFarFlower() {
+        return Paths.line(shotOnLeftHive, intakeFarFlower).constant(intakeFarFlower).with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
     }
 
-    public static Path intakeFlower2() {
-        return Paths.curve(intakeFlower1, intakeFlower2Control1, intakeFlower2Control2, intakeFlower2).linear(intakeFlower1, intakeFlower2).with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
+    public static Path intakeCloseFlower() {
+        return Paths.curve(intakeFarFlower, intakeCloseFlowerControl1, intakeCloseFlowerControl2, intakeCloseFlower).linear(intakeCloseFlower, intakeCloseFlower).with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
     }
 
-    public static Path moveToHive1() {
-        return Paths.line(intakeFlower2, shotOnHive1).constant(shotOnHive1).with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
+    public static Path moveToShootRightHive() {
+        return Paths.line(intakeCloseFlower, shotOnRightHive).constant(shotOnRightHive).with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
+    }
+    //move from hive without nectar to flower 1 to intake
+    public static Path intakeFarFlowerLeftSide(){
+        return Paths.curve(startingPoseLeftHive, farFlowerControlPoint, intakeFarFlower).tangent().with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
+    }
+    public static Path parkLeftSide(){
+        return Paths.line(intakeFarFlower, parkPoseLeftSide).constant(parkPoseLeftSide).with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
+    }
+    public static Path parkRightSide(){
+        return Paths.line(shotOnRightHive, parkPoseRightSide).constant(parkPoseRightSide).with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
     }
 }
