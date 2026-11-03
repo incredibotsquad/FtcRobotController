@@ -9,7 +9,6 @@ import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
-import org.firstinspires.ftc.teamcode.commands.AutoFireCommand;
 import org.firstinspires.ftc.teamcode.commands.CloseGateCommand;
 import org.firstinspires.ftc.teamcode.commands.LaunchBallsCommand;
 import org.firstinspires.ftc.teamcode.commands.LaunchReadinessCommand;
@@ -20,6 +19,7 @@ import org.firstinspires.ftc.teamcode.commands.SmartIntakeCommand;
 import org.firstinspires.ftc.teamcode.commands.ReverseIntakeCommand;
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
+import org.firstinspires.ftc.teamcode.common.HiveState;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
@@ -40,7 +40,7 @@ public class Incredibot extends Robot {
     public final LaunchSubsystem launchSubsystem;
     public final LaunchGateSubsystem launchGateSubsystem;
     public final OdometrySubsystem odometrySubsystem;
-    public final LimelightSubsystem limelightSubsystem; // STUB for now
+    public final LimelightSubsystem limelightSubsystem;
     // Hardware
     private final HardwareMap hwMap;
     private TelemetryManager telemetry;
@@ -101,10 +101,6 @@ public class Incredibot extends Robot {
         operatorGamepad.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER)
                 .whenPressed(new LaunchBallsCommand(launchSubsystem, launchGateSubsystem, intakeSubsystem));
 
-        // 2. AUTO-FIRE TOGGLE (While held)
-        operatorGamepad.getGamepadButton(GamepadKeys.Button.LEFT_BUMPER)
-                .whileHeld(new AutoFireCommand(launchSubsystem, launchGateSubsystem, odometrySubsystem));
-
         operatorGamepad.getGamepadButton(GamepadKeys.Button.Y)
                 .whenPressed(new RelocalizeCommand(odometrySubsystem, telemetry));
     }
@@ -115,12 +111,19 @@ public class Incredibot extends Robot {
 
         initCommon();
 
+        // G304.G: every robot starts the match with exactly 4 POLLEN pre-loads. Without this the
+        // count starts at 0 and SmartIntakeCommand runs the intake until the jam check marks it full.
+        intakeSubsystem.setArtifactCount(IntakeSubsystem.MAX_ARTIFACTS);
+
+        // Both HIVES start in their match-start state; the Limelight tracks TIPS from here.
+        HiveState.resetToMatchStart();
+
         // Notice: We don't bind ANY gamepads here.
         // The robot will rely purely on scripted sequential commands.
     }
 
     private void initCommon() {
-        register(driveSubsystem, intakeSubsystem, launchGateSubsystem, launchSubsystem, odometrySubsystem);
+        register(driveSubsystem, intakeSubsystem, launchGateSubsystem, launchSubsystem, odometrySubsystem, limelightSubsystem);
 
         // 1. SET THE DEFAULT COMMAND FOR THE GATE
         // This will run at match start and any time the gate isn't being used by a launcher command.

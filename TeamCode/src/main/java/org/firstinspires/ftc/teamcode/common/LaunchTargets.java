@@ -11,11 +11,16 @@ import com.bylazar.configurables.annotations.Configurable;
  *   Pedro Pathing coordinates: red is on the low-X side, blue on the high-X side.
  *   Y is assumed to run from the audience wall (0) to the far wall (144).
  * Each HIVE sits near field center with one CELL on the audience side and one on the far
- * side, about 18.8" apart, so each CELL is CELL_Y_OFFSET either side of center.
+ * side. The manual's "18.8 in apart" is the GAP between the CELLS, not center to center.
+ * The up-facing CELL's opening faces outward (away from y=72) and 30 deg up, with its
+ * center about CELL_Y_OFFSET from field center at roughly 58 in high (manual Fig 9-9 to 9-11).
  *
- * Which CELL to aim at is decided by a {@link Selector}. The default aims at the nearest
- * of the alliance's two CELLS. A Limelight-based selector can be swapped in later with
- * {@link #setSelector(Selector)} without changing any callers.
+ * Which CELL to aim at is decided by a {@link Selector}, picked by USE_VISION_SELECTOR:
+ *  - false: {@link NearestCellSelector}, the nearest of the alliance's two CELLS (odometry only).
+ *  - true:  {@link HiveStateSelector}, the CELL HiveState says is up. LimelightSubsystem keeps
+ *           HiveState current from the AprilTags; until a HIVE is seen it holds the match-start state.
+ * Both selectors always exist and keep their own state, so flipping the flag (also live in
+ * Panels) switches cleanly with no other changes.
  */
 @Configurable
 public class LaunchTargets {
@@ -26,8 +31,12 @@ public class LaunchTargets {
     public static double RED_HIVE_X = 60.0;
     public static double BLUE_HIVE_X = 84.0;
 
-    /** Half the 18.8" CELL spacing. */
-    public static double CELL_Y_OFFSET = 9.4;
+    /**
+     * Y distance from field center to the center of the up-facing CELL's opening.
+     * DERIVED from the manual drawings (~+/-2 in): the opening spans about 12.3-19.3 in from
+     * y=72 (center 16.5 in), and the CELL box center is about 11.3 in. Verify against the field CAD.
+     */
+    public static double CELL_Y_OFFSET = 16.5;
 
     /**
      * The other CELL must be at least this much closer before the target switches.
@@ -35,23 +44,27 @@ public class LaunchTargets {
      */
     public static double SWITCH_HYSTERESIS_IN = 6.0;
 
+    /** true = aim at the up CELL from HiveState (vision); false = nearest CELL (odometry). */
+    public static boolean USE_VISION_SELECTOR = false;
+
     /** Decides which of an alliance's two CELLS to aim at. */
     public interface Selector {
         HiveCell select(Pose2d robotPose, AllianceColors alliance);
     }
 
-    private static Selector selector = new NearestCellSelector();
+    private static final Selector nearestSelector = new NearestCellSelector();
+    private static final Selector visionSelector = new HiveStateSelector();
     private static HiveCell lastSelectedCell = HiveCell.FAR;
 
     private LaunchTargets() {}
 
-    public static void setSelector(Selector newSelector) {
-        selector = newSelector;
+    private static Selector activeSelector() {
+        return USE_VISION_SELECTOR ? visionSelector : nearestSelector;
     }
 
     /** Target point for the given robot pose. Call every loop from the aiming code. */
     public static Translation2d getTarget(Pose2d robotPose, AllianceColors alliance) {
-        lastSelectedCell = selector.select(robotPose, alliance);
+        lastSelectedCell = activeSelector().select(robotPose, alliance);
         return getCellPosition(alliance, lastSelectedCell);
     }
 
@@ -66,6 +79,14 @@ public class LaunchTargets {
                 ? FIELD_CENTER_Y + CELL_Y_OFFSET
                 : FIELD_CENTER_Y - CELL_Y_OFFSET;
         return new Translation2d(x, y);
+    }
+
+    /** Aims at the alliance's up-facing CELL as tracked by HiveState (Limelight). */
+    public static class HiveStateSelector implements Selector {
+        @Override
+        public HiveCell select(Pose2d robotPose, AllianceColors alliance) {
+            return HiveState.getUpCell(alliance);
+        }
     }
 
     /** Aims at whichever of the alliance's CELLS is closer, with hysteresis. */

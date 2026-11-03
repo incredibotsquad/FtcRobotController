@@ -126,6 +126,12 @@ public class OdometrySubsystem extends SubsystemBase {
         pinpoint.setHeading(correctedPose.getHeading(), AngleUnit.RADIANS);
 
         pinpoint.update();
+
+        // Treat the correction as a reset, not motion: otherwise the next periodic() sees the jump
+        // as a one-loop velocity spike (which feeds moving-shot lead and the speed gate).
+        currentPose = correctedPose;
+        previousPose = correctedPose;
+        previousUpdateNanos = System.nanoTime();
     }
 
     private void updateVelocityEstimate(Pose2d newPose) {
