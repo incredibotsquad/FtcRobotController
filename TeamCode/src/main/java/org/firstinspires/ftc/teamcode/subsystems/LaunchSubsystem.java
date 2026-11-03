@@ -28,6 +28,7 @@ public class LaunchSubsystem extends SubsystemBase {
     private volatile double targetRPM;
     private volatile double targetTurretPos;
     private volatile boolean shotSolutionReady = true;
+    private volatile boolean shotPossible = true;
 
     public static double ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT = 0.3;    //RED
     public static double ROBOT_ALIGNED_TO_SHOOT_LIGHT = 0.5;    //GREEN
@@ -167,6 +168,15 @@ public class LaunchSubsystem extends SubsystemBase {
         return shotSolutionReady;
     }
 
+    /** False when no shot is possible from the current position (out of range / turret can't reach). */
+    public void setShotPossible(boolean shotPossible) {
+        this.shotPossible = shotPossible;
+    }
+
+    public boolean isShotPossible() {
+        return shotPossible;
+    }
+
     public void stop() {
         this.targetRPM = 0;
 
@@ -206,7 +216,9 @@ public class LaunchSubsystem extends SubsystemBase {
 //        }
 
         //handle the alignment indicator light
-        if (isReadyToLaunch())
+        if (!shotPossible)
+            setAlignmentLightColor(ROBOT_ALIGNMENT_NOT_POSSIBLE_LIGHT); // reposition, waiting won't help
+        else if (isReadyToLaunch())
             setAlignmentLightColor(ROBOT_ALIGNED_TO_SHOOT_LIGHT);
         else
             setAlignmentLightColor(ROBOT_NOT_ALIGNED_TO_SHOOT_LIGHT);

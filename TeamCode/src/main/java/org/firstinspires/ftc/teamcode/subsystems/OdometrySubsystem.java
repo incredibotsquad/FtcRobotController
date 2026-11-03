@@ -72,7 +72,7 @@ public class OdometrySubsystem extends SubsystemBase {
 
     public Pose2d getPose() {
 
-        Log.i("Odometry subsystem", "Get pose: will return: " + currentPose.toString());
+//        Log.i("Odometry subsystem", "Get pose: will return: " + currentPose.toString());
         return currentPose;
     }
 
@@ -168,7 +168,7 @@ public class OdometrySubsystem extends SubsystemBase {
         currentPose = newPose;
         CrossOpModeStorage.currentPose = currentPose;
 
-        Log.i("Odometry Periodic", "Current pose: " + currentPose.toString());
+//        Log.i("Odometry Periodic", "Current pose: " + currentPose.toString());
 
         telemetry.addData("Odometry: X Position", xInches);
         telemetry.addData("Odometry: Y Position", yInches);
