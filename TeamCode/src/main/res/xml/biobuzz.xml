@@ -20,8 +20,8 @@
         </LynxModule>
 
         <LynxModule name="Expansion Hub 2" port="2">
-            <goBILDA5202SeriesMotor name="launchMotor1" port="0" />
-            <goBILDA5202SeriesMotor name="launchMotor2" port="1" />
+            <goBILDA5202SeriesMotor name="leftLaunchMotor" port="0" />
+            <goBILDA5202SeriesMotor name="rightLaunchMotor" port="1" />
             <goBILDA5202SeriesMotor name="frontLeftMotor" port="2" />
             <goBILDA5202SeriesMotor name="backLeftMotor" port="3" />
 

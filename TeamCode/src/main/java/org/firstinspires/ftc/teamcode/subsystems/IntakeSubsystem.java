@@ -118,7 +118,7 @@ public class IntakeSubsystem extends SubsystemBase {
     }
 
     /** Runs intake, transfer and sweepers in reverse to eject artifacts. */
-    public void reverseIntake() {
+    public void reverseIntakeAndTransfer() {
         intakeMotor.set(-1);
         transferMotor.set(-1);
         reverseSweepers();
