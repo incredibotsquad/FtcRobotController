@@ -1,27 +1,25 @@
 package org.firstinspires.ftc.teamcode.opmodes.Auton;
 
-import static org.firstinspires.ftc.teamcode.opmodes.Auton.PathConstants.intakeFarFlowerLeftSide;
-import static org.firstinspires.ftc.teamcode.opmodes.Auton.PathConstants.parkLeftSide;
-import static org.firstinspires.ftc.teamcode.opmodes.Auton.PathConstants.startingPoseLeftHive;
-
 import com.arcrobotics.ftclib.command.Command;
 import com.arcrobotics.ftclib.command.CommandOpMode;
 import com.arcrobotics.ftclib.command.SequentialCommandGroup;
 import com.pedropathing.follower.Follower;
 
 import org.firstinspires.ftc.teamcode.commands.FollowPathCommand;
+import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
 @Autonomous
 public class RedSideLeftHive extends CommandOpMode {
+    private final PathConstants paths = new PathConstants(AllianceColors.RED);
     private Follower follower;
     private boolean isScheduled = false;
     @Override
     public void initialize() {
         follower = Constants.create(this.hardwareMap);
-        follower.setPose(startingPoseLeftHive);
+        follower.setPose(paths.startingPoseLeftHive);
 
     }
     @Override
@@ -39,8 +37,8 @@ public class RedSideLeftHive extends CommandOpMode {
                 new SequentialCommandGroup(
 
                         // 1. Run Near Preloads
-                        new FollowPathCommand(follower, intakeFarFlowerLeftSide(), true),
-                        new FollowPathCommand(follower,parkLeftSide(), true)
+                        new FollowPathCommand(follower, paths.intakeFarFlowerLeftSide(), true),
+                        new FollowPathCommand(follower, paths.parkLeftSide(), true)
                 )
         );
     }
