@@ -19,11 +19,15 @@ import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
  *  4. runs the flywheel at the RPM for that distance (always, so shots are never waiting on spin-up),
  *  5. reports whether a valid shot exists via LaunchSubsystem.setShotSolutionReady().
  *
- * Firing is NOT done here: LaunchBallsCommand / AutoFireCommand open the gate once
- * LaunchSubsystem.isReadyToLaunch() is true.
+ * Firing is NOT done here: LaunchBallsCommand opens the gate on the operator's press and trusts
+ * this command to have the launcher ready. isReadyToLaunch() drives the alignment light, so the
+ * operator should fire on green.
  *
- * When LaunchSubsystem.isLaunchReadinessLocked() is set, the last turret position and RPM
- * are held (flywheel control keeps running).
+ * When LaunchSubsystem.isLaunchReadinessLocked() is set, the only change is that the turret is
+ * driven to LaunchSubsystem.TURRET_MID and kept there instead of tracking: a fully manual turret
+ * mode where the driver aims by turning the robot. The target, flywheel RPM and shot validity are
+ * still computed live every loop, but readiness ignores turret aim (no on-target or reachability
+ * check). It only waits TURRET_SETTLE_MS after the move to TURRET_MID.
  *
  * You need to tune these (all live in Panels):
  * - SHOT_DISTANCES_IN / SHOT_RPMS: placeholder values. Fill them in from test shots.
@@ -68,9 +72,6 @@ public class LaunchReadinessCommand extends CommandBase {
     private final TelemetryManager telemetry;
 
     private double lastTurretPosition = Double.NaN;
-    private double lastRpm = 0;
-    private boolean lastSolutionValid = false;
-    private boolean lastShotPossible = true;
     private long turretMovedAtMs = 0;
     private String notReadyReason = "";
 
@@ -90,14 +91,7 @@ public class LaunchReadinessCommand extends CommandBase {
 
     @Override
     public void execute() {
-        if (launcher.isLaunchReadinessLocked()) {
-            // Hold the last solution; the flywheel controller still needs updating every loop.
-            launcher.updateFlywheel(lastRpm);
-            launcher.setShotSolutionReady(lastSolutionValid);
-            launcher.setShotPossible(lastShotPossible);
-            telemetry.addData("Launch: ", "LOCKED (rpm " + Math.round(lastRpm) + ")");
-            return;
-        }
+        boolean turretLocked = launcher.isLaunchReadinessLocked();
 
         Pose2d pose = odometry.getPose();
         Translation2d robot = pose.getTranslation();
@@ -122,10 +116,21 @@ public class LaunchReadinessCommand extends CommandBase {
         // ---------------------------------------------------- turret
         double bearingDeg = Math.toDegrees(Math.atan2(dy, dx));
         double relativeDeg = normalizeDeg(bearingDeg - Math.toDegrees(pose.getHeading()));
+        if (turretLocked) {
+            // Locked: park the turret at TURRET_MID. Done before choosing the aim position so the
+            // wrap (the turret can reach some angles two ways) is chosen relative to TURRET_MID.
+            double mid = LaunchSubsystem.TURRET_MID;
+            if (Double.isNaN(lastTurretPosition) || Math.abs(mid - lastTurretPosition) > TURRET_SETTLE_THRESHOLD) {
+                turretMovedAtMs = nowMs();
+            }
+            launcher.setTurretPosition(mid);
+            lastTurretPosition = mid;
+        }
+
         double turretPosition = chooseTurretPosition(relativeDeg);
         boolean turretReachable = !Double.isNaN(turretPosition);
 
-        if (turretReachable) {
+        if (!turretLocked && turretReachable) {
             if (Double.isNaN(lastTurretPosition)
                     || Math.abs(turretPosition - lastTurretPosition) > TURRET_SETTLE_THRESHOLD) {
                 turretMovedAtMs = nowMs();
@@ -138,31 +143,32 @@ public class LaunchReadinessCommand extends CommandBase {
         // ---------------------------------------------------- flywheel (always running)
         double rpm = rpmForDistance(distance);
         launcher.updateFlywheel(rpm);
-        lastRpm = rpm;
 
         // ---------------------------------------------------- shot validity
         boolean inRange = distance >= SHOT_DISTANCES_IN[0]
                 && distance <= SHOT_DISTANCES_IN[SHOT_DISTANCES_IN.length - 1];
         boolean slowEnough = ENABLE_MOVING_SHOT_COMPENSATION || speed <= MAX_STATIONARY_SHOT_SPEED_IN_PER_SEC;
 
-        if (!turretReachable) notReadyReason = "turret can't reach";
+        // Locked = manual turret: where the turret points is the driver's job, so aim isn't checked.
+        boolean turretAimOk = turretLocked || turretReachable;
+
+        if (!turretAimOk) notReadyReason = "turret can't reach";
         else if (!inRange) notReadyReason = "out of range";
         else if (!slowEnough) notReadyReason = "moving too fast";
         else if (!turretSettled) notReadyReason = "turret settling";
         else notReadyReason = "";
 
-        lastSolutionValid = notReadyReason.isEmpty();
-        lastShotPossible = turretReachable && inRange;
-        launcher.setShotSolutionReady(lastSolutionValid);
-        launcher.setShotPossible(lastShotPossible);
+        boolean solutionValid = notReadyReason.isEmpty();
+        launcher.setShotSolutionReady(solutionValid);
+        launcher.setShotPossible(turretAimOk && inRange);
 
         // ---------------------------------------------------- telemetry
         telemetry.addData("Launch: Target cell", CrossOpModeStorage.allianceColor + " " + LaunchTargets.getLastSelectedCell());
         telemetry.addData("Launch: Distance (in)", Math.round(distance * 10) / 10.0);
         telemetry.addData("Launch: Turret angle (deg)", Math.round(relativeDeg));
-        telemetry.addData("Launch: Turret position", turretReachable ? turretPosition : -1);
+        telemetry.addData("Launch: Turret position", turretLocked ? LaunchSubsystem.TURRET_MID + " (LOCKED)" : String.valueOf(turretReachable ? turretPosition : -1));
         telemetry.addData("Launch: RPM target / actual", Math.round(rpm) + " / " + Math.round(launcher.getCurrentFlywheelRPM()));
-        telemetry.addData("Launch: Solution", lastSolutionValid ? "READY" : notReadyReason);
+        telemetry.addData("Launch: Solution", solutionValid ? "READY" : notReadyReason);
     }
 
     @Override

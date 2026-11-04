@@ -8,15 +8,13 @@ import com.bylazar.configurables.annotations.Configurable;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 
 /**
  * One-press "empty the robot" shot. Schedule with whenPressed().
  *
- *  WAITING: gate closed until LaunchSubsystem.isReadyToLaunch() (flywheel at speed, turret
- *      on target, valid shot solution). Gives up after READY_TIMEOUT_MS so a bad press
- *      doesn't leave a command hanging.
- *  FIRING:  gate open. SmartIntakeCommand sees the open gate and runs the transfer, feeding
+ * Presumes the launcher is already ready: LaunchReadinessCommand keeps the flywheel at speed and
+ * the turret on target, so there is no readiness wait. The gate opens immediately on the press.
+ *  FIRING: gate open. SmartIntakeCommand sees the open gate and runs the transfer, feeding
  *      every artifact into the flywheel. Ends once IntakeSubsystem counts 0 artifacts
  *      (plus CLEAR_MS so the last one gets through), or after MAX_FIRE_MS as a backstop.
  *
@@ -24,7 +22,7 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
  * flywheel during the burst, and SmartIntakeCommand (intake) keeps running the transfer.
  * The intake is only read. When this ends, CloseGateCommand (gate default) takes over.
  *
- * Launch hold: for the whole command (WAITING and FIRING) it asks DriveSubsystem to hold the
+ * Launch hold: for the whole command it asks DriveSubsystem to hold the
  * robot's pose against defense. DriveRobotCommand does the holding and lets the driver break out
  * with the sticks; a breakout does NOT stop the launch. Turned off by DriveSubsystem.LAUNCH_HOLD_ENABLED.
  * The drive is not a requirement, so DriveRobotCommand keeps running.
@@ -32,16 +30,13 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 @Configurable
 public class LaunchBallsCommand extends CommandBase {
 
-    /** Give up if the launcher isn't ready within this long after the press. */
-    public static long READY_TIMEOUT_MS = 500;
     /** Keep the gate open this long after the count reaches 0 so the last artifact clears the flywheel. */
     public static long CLEAR_MS = 250;
     /** Hard cap on how long the gate stays open, in case the artifact count misses an exit. */
     public static long MAX_FIRE_MS = 2500;
 
-    private enum State { WAITING, FIRING, DONE }
+    private enum State { FIRING, DONE }
 
-    private final LaunchSubsystem launcher;
     private final LaunchGateSubsystem gate;
     private final IntakeSubsystem intake;
     private final DriveSubsystem drive;
@@ -50,9 +45,7 @@ public class LaunchBallsCommand extends CommandBase {
     private long stateStartMs;
     private long emptySinceMs;
 
-    public LaunchBallsCommand(LaunchSubsystem launcher, LaunchGateSubsystem gate, IntakeSubsystem intake,
-                              DriveSubsystem drive) {
-        this.launcher = launcher;
+    public LaunchBallsCommand(LaunchGateSubsystem gate, IntakeSubsystem intake, DriveSubsystem drive) {
         this.gate = gate;
         this.intake = intake;
         this.drive = drive;
@@ -67,25 +60,15 @@ public class LaunchBallsCommand extends CommandBase {
             enter(State.DONE);
             return;
         }
-        gate.closeGate();
         drive.requestLaunchHold();
-        enter(State.WAITING);
+        gate.openGate();
+        enter(State.FIRING);
     }
 
     @Override
     public void execute() {
         long now = nowMs();
         switch (state) {
-            case WAITING:
-                if (launcher.isReadyToLaunch()) {
-                    gate.openGate();
-                    enter(State.FIRING);
-                } else if (now - stateStartMs >= READY_TIMEOUT_MS) {
-                    Log.w("LaunchBallsCommand", "Launcher not ready after " + READY_TIMEOUT_MS + " ms, cancelling");
-                    enter(State.DONE);
-                }
-                break;
-
             case FIRING:
                 if (intake.getArtifactCount() == 0) {
                     if (emptySinceMs < 0) emptySinceMs = now;

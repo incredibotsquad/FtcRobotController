@@ -33,9 +33,9 @@ public class LaunchSubsystem extends SubsystemBase {
     public static double FLYWHEEL_I = 0.0;
     public static double FLYWHEEL_D = 0.0;
     /** Static friction: power needed to just start turning. */
-    public static double FLYWHEEL_KS = 0.1;
+    public static double FLYWHEEL_KS = 0.16;
     /** Power per tick/sec needed to hold a speed, measured at NOMINAL_VOLTAGE. */
-    public static double FLYWHEEL_KV = 0.00058;
+    public static double FLYWHEEL_KV = 0.0001;
 
     /** Run full power while more than this far below target (fast spin-up and shot recovery). */
     public static boolean FLYWHEEL_BANG_BANG_ENABLED = true;
@@ -57,9 +57,9 @@ public class LaunchSubsystem extends SubsystemBase {
     public static double ROBOT_ALIGNED_TO_SHOOT_LIGHT = 0.5;    //GREEN
     public static double ROBOT_ALIGNMENT_NOT_POSSIBLE_LIGHT = 0;
 
-    public static double TURRET_MIN = 0.0;
+    public static double TURRET_MIN = 0.2;
     public static double TURRET_MID = 0.5;
-    public static double TURRET_MAX = 0.87;
+    public static double TURRET_MAX = 1.0;
 
     /*
      * MECHANICAL CALCULATION:
@@ -84,7 +84,7 @@ public class LaunchSubsystem extends SubsystemBase {
     private double lastFlywheelPower = 0;
     private boolean inBangBang = false;
 
-    // Inside LaunchSubsystem.java
+    /** Turret lock: see setLaunchReadinessLock(). */
     private boolean isLaunchReadinessLocked = false;
 
     public static boolean SKIP_FLYWHEEL = false;
@@ -110,6 +110,12 @@ public class LaunchSubsystem extends SubsystemBase {
                 : null;
     }
 
+    /**
+     * Turret lock. When locked, LaunchReadinessCommand moves the turret to TURRET_MID and keeps it
+     * there instead of tracking. Everything else keeps running live: target selection, flywheel RPM
+     * for the current distance, and shot validity. Readiness ignores turret aim while locked
+     * (fully manual turret: aim by turning the robot).
+     */
     public void setLaunchReadinessLock(boolean locked) {
         this.isLaunchReadinessLocked = locked;
     }

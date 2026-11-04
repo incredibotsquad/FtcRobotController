@@ -14,7 +14,7 @@ public class CrossOpModeStorage {
 
     // Launch target coordinates live in LaunchTargets (HIVE CELLS, nearest-CELL selection).
 
-    public static Pose2d currentPose = new Pose2d(72, 72, new Rotation2d(Math.toRadians(0)));
+    public static Pose2d currentPose = new Pose2d(60, 12, new Rotation2d(Math.toRadians(90)));
 
     public static AllianceColors allianceColor = AllianceColors.RED;
 
