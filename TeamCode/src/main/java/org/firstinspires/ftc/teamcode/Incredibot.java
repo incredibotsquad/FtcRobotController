@@ -21,7 +21,6 @@ import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 import org.firstinspires.ftc.teamcode.common.HiveState;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.HiveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LimelightSubsystem;
@@ -42,8 +41,6 @@ public class Incredibot extends Robot {
     public final LaunchGateSubsystem launchGateSubsystem;
     public final OdometrySubsystem odometrySubsystem;
     public final LimelightSubsystem limelightSubsystem;
-    // Pipeline 0 = the AprilTag HIVE pipeline configured in Limelight Manager (see docs/HiveSubsystem.md)
-    public final HiveSubsystem hiveSubsystem;
     // Hardware
     private final HardwareMap hwMap;
     private TelemetryManager telemetry;
@@ -64,8 +61,6 @@ public class Incredibot extends Robot {
         odometrySubsystem = new OdometrySubsystem(driveSubsystem, telemetry); // reads the Pinpoint via Pedro's Follower
         launchSubsystem = new LaunchSubsystem(hwMap, telemetry);
         limelightSubsystem = new LimelightSubsystem(hwMap, telemetry);
-        hiveSubsystem = new HiveSubsystem(hwMap, telemetry, 0);
-        hiveSubsystem.start(CrossOpModeStorage.allianceColor);
     }
 
     public void initialize(OpModeType opModeType, GamepadEx driverGamepad, GamepadEx operatorGamepad) {
@@ -128,7 +123,7 @@ public class Incredibot extends Robot {
     }
 
     private void initCommon() {
-        register(driveSubsystem, intakeSubsystem, launchGateSubsystem, launchSubsystem, odometrySubsystem, limelightSubsystem, hiveSubsystem);
+        register(driveSubsystem, intakeSubsystem, launchGateSubsystem, launchSubsystem, odometrySubsystem, limelightSubsystem);
 
         // 1. SET THE DEFAULT COMMAND FOR THE GATE
         // This will run at match start and any time the gate isn't being used by a launcher command.

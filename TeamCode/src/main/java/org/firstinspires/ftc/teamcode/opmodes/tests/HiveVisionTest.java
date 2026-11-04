@@ -4,98 +4,104 @@ import com.arcrobotics.ftclib.command.CommandScheduler;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.hardware.limelightvision.LLResult;
-import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.LLStatus;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
-import org.firstinspires.ftc.robotcore.external.navigation.Position;
-import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
-import org.firstinspires.ftc.teamcode.subsystems.HiveSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.HiveSubsystem.CellState;
-import org.firstinspires.ftc.teamcode.subsystems.HiveSubsystem.HiveCell;
+import org.firstinspires.ftc.teamcode.common.HiveCell;
+import org.firstinspires.ftc.teamcode.common.HiveState;
+import org.firstinspires.ftc.teamcode.common.HiveTags;
+import org.firstinspires.ftc.teamcode.common.LaunchTargets;
+import org.firstinspires.ftc.teamcode.subsystems.LimelightSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LimelightSubsystem.TagObservation;
 
 import java.util.List;
 import java.util.Locale;
 
 /**
- * Bench / field test for HiveSubsystem (BIOBuzz HIVE vision).
+ * Bench / field test for LimelightSubsystem's two HIVE up/down methods: tag HEIGHT vs tag ROLL.
  *
- * Runs on Limelight pipeline 0 and shows, live in both INIT and RUN:
- *   - Verdict per alliance: SCORABLE / TIPPED / NOT VISIBLE
- *   - Per-cell state, tag count, average |roll| and margin to the 90 deg threshold
- *   - Active scoring cell, target bearing, target distance, full 3D tag pose
- *   - Tip events: subsystem justTipped() count AND a robust count that survives dropped frames
- *   - Limelight health: connected, pipeline, FPS, temp, staleness, why a frame was rejected
- *   - Distance cross-check: subsystem math vs robot-space X/Y vs camera-space X/Z
+ * The roll method only runs while LaunchTargets.SELECTOR is VISION_ROLL, so this OpMode sets it
+ * to VISION_ROLL at start (both methods run) and restores the previous selector when it ends.
+ *
+ * Shows, live in both INIT and RUN:
+ *   - Up CELL per HIVE from each method (after the confirm-frames filter) and whether they agree
+ *   - Tip counts per method (changes of the confirmed up CELL)
+ *   - Per-tag agreement between the methods on raw single frames
+ *   - Per-CELL tag count, average height and |roll| this frame
+ *   - Limelight health: connected, pipeline, FPS, temp, staleness
  *   - Raw per-tag readout (toggle)
  *
  * Controls (gamepad1):
- *   DPAD LEFT  = target RED alliance
- *   DPAD RIGHT = target BLUE alliance
- *   A          = reset tip counters
+ *   DPAD LEFT  = focus RED HIVE
+ *   DPAD RIGHT = focus BLUE HIVE
+ *   B          = roll method on/off (switches SELECTOR between VISION_ROLL and VISION_HEIGHT)
+ *   A          = reset counters
  *   Y          = toggle raw tag list
  */
 @TeleOp(name = "Test: Hive Vision", group = "Test")
 public class HiveVisionTest extends LinearOpMode {
 
-    private static final int    HIVE_PIPELINE            = 1;
-    private static final double ROLL_THRESHOLD_DEG       = 90.0;   // must match HiveSubsystem
-    private static final double MAX_STALENESS_MS         = 250.0;  // must match HiveSubsystem
+    private static final AllianceColors[] ALLIANCES = {AllianceColors.RED, AllianceColors.BLUE};
 
-    private HiveSubsystem    hive;
-    private Limelight3A      limelight;   // second handle to the same device, read-only diagnostics
-    private TelemetryManager telemetryM;
+    private LimelightSubsystem limelightSubsystem;
+    private Limelight3A        limelight;   // second handle to the same device, read-only diagnostics
+    private TelemetryManager   telemetryM;
 
-    private AllianceColors alliance    = AllianceColors.RED;
+    private LaunchTargets.SelectorMode previousSelector;
+    private AllianceColors focus       = AllianceColors.RED;
     private boolean        showRawTags = true;
 
-    // Tip tracking
-    private int subsystemTipsRed  = 0;
-    private int subsystemTipsBlue = 0;
-    private final CellState[] lastKnownState = new CellState[HiveCell.values().length];
-    private final int[]       robustTips     = new int[HiveCell.values().length];
-    private String            lastTipEvent   = "none";
+    // Tip tracking, index 0 = RED, 1 = BLUE
+    private final HiveCell[] lastHeightUp = new HiveCell[2];
+    private final HiveCell[] lastRollUp   = new HiveCell[2];
+    private final int[]      heightTips   = new int[2];
+    private final int[]      rollTips     = new int[2];
+    private String           lastTipEvent = "none";
+
+    // Raw single-frame comparison of the two methods
+    private long lastFrameMs = 0;
+    private int  framesCompared, tagsCompared, tagsAgree, tagsDisagree, heightAmbiguous, rollAmbiguous;
 
     private final ElapsedTime runtime   = new ElapsedTime();
     private final ElapsedTime loopTimer = new ElapsedTime();
 
     // Gamepad edge detection
-    private boolean prevLeft, prevRight, prevA, prevY;
+    private boolean prevLeft, prevRight, prevA, prevB, prevY;
 
     @Override
     public void runOpMode() {
         CommandScheduler.getInstance().reset();
-
         telemetryM = PanelsTelemetry.INSTANCE.getTelemetry();
-        limelight  = hardwareMap.get(Limelight3A.class, "limelight");
-        limelight.setPollRateHz(100);
 
-        hive = new HiveSubsystem(hardwareMap, telemetryM, HIVE_PIPELINE);
-        CommandScheduler.getInstance().registerSubsystem(hive); // idempotent; ensures periodic() runs
-        hive.start(alliance, HIVE_PIPELINE);
+        previousSelector = LaunchTargets.SELECTOR;
+        LaunchTargets.SELECTOR = LaunchTargets.SelectorMode.VISION_ROLL; // run both methods
+        HiveState.resetToMatchStart();
 
-        resetTipTracking();
+        limelightSubsystem = new LimelightSubsystem(hardwareMap, telemetryM);
+        CommandScheduler.getInstance().registerSubsystem(limelightSubsystem);
+        limelight = hardwareMap.get(Limelight3A.class, LimelightSubsystem.LIMELIGHT_NAME);
+
+        resetCounters();
         runtime.reset();
         loopTimer.reset();
 
-        // Vision runs during INIT too so you can check the hive before pressing play
-        while (opModeInInit()) {
-            loopBody("INIT");
+        try {
+            // Vision runs during INIT too so you can check the HIVE before pressing play
+            while (opModeInInit()) {
+                loopBody("INIT");
+            }
+            while (opModeIsActive()) {
+                loopBody("RUNNING");
+            }
+        } finally {
+            LaunchTargets.SELECTOR = previousSelector; // don't leak the test's selector into the next OpMode
+            limelight.stop();
+            CommandScheduler.getInstance().reset();
         }
-
-        while (opModeIsActive()) {
-            loopBody("RUNNING");
-        }
-
-        limelight.stop();
-        CommandScheduler.getInstance().reset();
     }
 
     // -------------------------------------------------------------------------
@@ -105,71 +111,63 @@ public class HiveVisionTest extends LinearOpMode {
     private void loopBody(String phase) {
         handleGamepad();
 
-        // Runs HiveSubsystem.periodic() exactly like the real robot does
+        // Runs LimelightSubsystem.periodic() exactly like the real robot does
         CommandScheduler.getInstance().run();
 
         trackTips();
+        compareMethodsOnNewFrame();
 
-        LLResult result = limelight.getLatestResult();
         double loopMs = loopTimer.milliseconds();
         loopTimer.reset();
+        boolean rollOn = LaunchTargets.isRollSelectorActive();
+        List<TagObservation> obs = limelightSubsystem.getObservations();
 
         telemetryM.addLine("===== HIVE VISION TEST (" + phase + ") =====");
-        telemetryM.addData("Target alliance", alliance + "   (DPAD L=RED  R=BLUE)");
+        telemetryM.addData("Roll method", rollOn ? "ON  (B = off)" : "OFF (B = on)");
+        telemetryM.addData("Focus HIVE", focus + "   (DPAD L=RED  R=BLUE)");
         telemetryM.addData("Loop", fmt("%.1f ms", loopMs));
 
-        // ---- Verdicts ----
+        // ---- Confirmed up CELL per method ----
         telemetryM.addLine("");
-        telemetryM.addLine("----- VERDICT -----");
-        telemetryM.addData(">> " + alliance + " HIVE", verdict(alliance));
-        AllianceColors other = (alliance == AllianceColors.RED) ? AllianceColors.BLUE : AllianceColors.RED;
-        telemetryM.addData("   " + other + " HIVE", verdict(other));
-        telemetryM.addData("Tipped since start (" + alliance + ")", tippedSinceStart(alliance));
-
-        // ---- Targeting (configured alliance) ----
-        telemetryM.addLine("");
-        telemetryM.addLine("----- TARGET (" + alliance + ") -----");
-        HiveCell scoring = hive.getActiveScoringCell(alliance);
-        telemetryM.addData("Active scoring cell", scoring != null ? scoring.name() : "none");
-        Double bearing  = hive.getTargetBearingDegrees();
-        Double distance = hive.getTargetDistanceInches();
-        telemetryM.addData("Bearing",  bearing  != null ? fmt("%.1f deg (%s)", bearing, bearing < 0 ? "LEFT" : "RIGHT") : "N/A");
-        telemetryM.addData("Distance", distance != null ? fmt("%.1f in  (%.2f ft)", distance, distance / 12.0) : "N/A");
-        Pose3D pose = hive.getActiveCellTagPose();
-        if (pose != null) {
-            Position p = pose.getPosition().toUnit(DistanceUnit.INCH);
-            YawPitchRollAngles o = pose.getOrientation();
-            telemetryM.addData("Tag pose XYZ (in)", fmt("%.1f, %.1f, %.1f", p.x, p.y, p.z));
-            telemetryM.addData("Tag pose R/P/Y (deg)", fmt("%.1f, %.1f, %.1f",
-                    o.getRoll(AngleUnit.DEGREES), o.getPitch(AngleUnit.DEGREES), o.getYaw(AngleUnit.DEGREES)));
-        } else {
-            telemetryM.addData("Tag pose", "N/A");
+        telemetryM.addLine("----- UP CELL (confirmed) -----");
+        for (AllianceColors a : ALLIANCES) {
+            HiveCell height = HiveState.getUpCell(a);
+            String line = "height " + height + age(HiveState.getLastUpdateMs(a));
+            if (rollOn) {
+                HiveCell roll = HiveState.getRollUpCell(a);
+                line += "  | roll " + roll + age(HiveState.getRollLastUpdateMs(a))
+                        + (height == roll ? "  AGREE" : "  DISAGREE");
+            }
+            telemetryM.addData((a == focus ? ">> " : "   ") + a + " HIVE", line);
         }
 
-        // ---- Per-cell detail ----
+        // ---- Tips ----
         telemetryM.addLine("");
-        telemetryM.addLine("----- CELLS -----");
-        hive.addTelemetry(); // the subsystem's own telemetry, so that method gets tested too
-        List<LLResultTypes.FiducialResult> fiducials = usableFiducials(result);
-        for (HiveCell cell : HiveCell.values()) {
-            Double avgRoll = averageRoll(fiducials, cell);
-            String rollText = (avgRoll == null) ? "--"
-                    : fmt("|roll| %.1f deg, margin %.1f", avgRoll, Math.abs(ROLL_THRESHOLD_DEG - avgRoll));
-            CellState known = lastKnownState[cell.ordinal()];
-            telemetryM.addData("  " + cell.name(), rollText
-                    + "  | last known " + (known != null ? shortState(known) : "--")
-                    + "  | tips " + robustTips[cell.ordinal()]);
+        telemetryM.addLine("----- TIPS (A = reset) -----");
+        telemetryM.addData("Height RED / BLUE", heightTips[0] + " / " + heightTips[1]);
+        if (rollOn) {
+            telemetryM.addData("Roll RED / BLUE", rollTips[0] + " / " + rollTips[1]);
         }
-
-        // ---- Tip events ----
-        telemetryM.addLine("");
-        telemetryM.addLine("----- TIP EVENTS (A = reset) -----");
-        telemetryM.addData("justTipped() RED / BLUE", subsystemTipsRed + " / " + subsystemTipsBlue);
-        telemetryM.addData("Robust tips RED / BLUE", robustTipsFor(AllianceColors.RED) + " / " + robustTipsFor(AllianceColors.BLUE));
         telemetryM.addData("Last tip", lastTipEvent);
 
-        // ---- Distance cross-check ----
-        addDistanceCrossCheck(fiducials);
+        // ---- Raw single-frame agreement ----
+        if (rollOn) {
+            telemetryM.addLine("");
+            telemetryM.addLine("----- PER-TAG, SINGLE FRAMES (A = reset) -----");
+            telemetryM.addData("Frames / tags compared", framesCompared + " / " + tagsCompared);
+            telemetryM.addData("Agree / disagree", tagsAgree + " / " + tagsDisagree
+                    + (tagsCompared > 0 ? fmt("  (%.1f%% agree)", 100.0 * tagsAgree / tagsCompared) : ""));
+            telemetryM.addData("Ambiguous height / roll", heightAmbiguous + " / " + rollAmbiguous);
+        }
+
+        // ---- Per-CELL this frame ----
+        telemetryM.addLine("");
+        telemetryM.addLine("----- CELLS (this frame) -----");
+        for (AllianceColors a : ALLIANCES) {
+            for (HiveCell c : HiveCell.values()) {
+                telemetryM.addData("  " + a + " " + c, cellSummary(obs, a, c, rollOn));
+            }
+        }
 
         // ---- Limelight health ----
         telemetryM.addLine("");
@@ -177,38 +175,33 @@ public class HiveVisionTest extends LinearOpMode {
         telemetryM.addData("Connected / running", limelight.isConnected() + " / " + limelight.isRunning());
         LLStatus status = limelight.getStatus();
         if (status != null) {
-            telemetryM.addData("Pipeline (status)", status.getPipelineIndex() + "  (expected " + HIVE_PIPELINE + ")");
+            telemetryM.addData("Pipeline (status)", status.getPipelineIndex()
+                    + "  (expected " + LimelightSubsystem.LL_PIPELINE + ")");
             telemetryM.addData("FPS / Temp / CPU", status.getFps() + " / " + status.getTemp() + " C / " + status.getCpu());
         }
-        telemetryM.addData("Frame", frameReason(result));
+        LLResult result = limelight.getLatestResult();
         if (result != null) {
-            telemetryM.addData("Staleness", result.getStaleness() + " ms");
-            List<LLResultTypes.FiducialResult> all = result.getFiducialResults();
-            telemetryM.addData("Tags in frame", all != null ? all.size() : 0);
+            telemetryM.addData("Staleness", result.getStaleness() + " ms (max " + LimelightSubsystem.MAX_RESULT_AGE_MS + ")");
+            telemetryM.addData("Tags in frame (all IDs)",
+                    result.getFiducialResults() != null ? result.getFiducialResults().size() : 0);
         }
+        telemetryM.addData("Usable HIVE tags", obs.size());
 
         // ---- Raw tags ----
         if (showRawTags) {
             telemetryM.addLine("");
             telemetryM.addLine("----- RAW TAGS (Y = hide) -----");
-            if (fiducials.isEmpty()) {
+            if (obs.isEmpty()) {
                 telemetryM.addLine("  none");
             } else {
-                for (LLResultTypes.FiducialResult f : fiducials) {
-                    HiveCell cell = HiveCell.fromTagId(f.getFiducialId());
-                    Pose3D rs = f.getTargetPoseRobotSpace();
-                    String rollText = "--";
-                    String posText  = "--";
-                    if (rs != null) {
-                        rollText = fmt("%.1f", rs.getOrientation().getRoll(AngleUnit.DEGREES));
-                        Position p = rs.getPosition().toUnit(DistanceUnit.INCH);
-                        posText = fmt("%.1f,%.1f,%.1f", p.x, p.y, p.z);
+                for (TagObservation o : obs) {
+                    String line = HiveTags.allianceOf(o.id) + " " + HiveTags.cellOf(o.id)
+                            + fmt("  fwd %.1f left %.1f up %.1f", o.forward, o.left, o.up)
+                            + "  H:" + verdict(o.heightSaysUp);
+                    if (rollOn) {
+                        line += fmt("  |roll| %.1f", Math.abs(o.rollDeg)) + " R:" + verdict(o.rollSaysUp);
                     }
-                    telemetryM.addData("  #" + f.getFiducialId(),
-                            (cell != null ? cell.name() : "NOT HIVE")
-                                    + " roll " + rollText
-                                    + " rs(in) " + posText
-                                    + fmt(" tx %.1f ty %.1f", f.getTargetXDegrees(), f.getTargetYDegrees()));
+                    telemetryM.addData("  #" + o.id, line);
                 }
             }
         } else {
@@ -227,183 +220,112 @@ public class HiveVisionTest extends LinearOpMode {
         boolean left  = gamepad1.dpad_left;
         boolean right = gamepad1.dpad_right;
         boolean a     = gamepad1.a;
+        boolean b     = gamepad1.b;
         boolean y     = gamepad1.y;
 
-        if (left && !prevLeft && alliance != AllianceColors.RED) {
-            alliance = AllianceColors.RED;
-            hive.start(alliance, HIVE_PIPELINE);
+        if (left && !prevLeft)   focus = AllianceColors.RED;
+        if (right && !prevRight) focus = AllianceColors.BLUE;
+        if (a && !prevA) resetCounters();
+        if (b && !prevB) {
+            LaunchTargets.SELECTOR = LaunchTargets.isRollSelectorActive()
+                    ? LaunchTargets.SelectorMode.VISION_HEIGHT
+                    : LaunchTargets.SelectorMode.VISION_ROLL;
         }
-        if (right && !prevRight && alliance != AllianceColors.BLUE) {
-            alliance = AllianceColors.BLUE;
-            hive.start(alliance, HIVE_PIPELINE);
-        }
-        if (a && !prevA) resetTipTracking();
         if (y && !prevY) showRawTags = !showRawTags;
 
         prevLeft  = left;
         prevRight = right;
         prevA     = a;
+        prevB     = b;
         prevY     = y;
     }
 
     // -------------------------------------------------------------------------
-    // Tip tracking
+    // Tracking
     // -------------------------------------------------------------------------
 
-    private void resetTipTracking() {
-        subsystemTipsRed  = 0;
-        subsystemTipsBlue = 0;
-        for (int i = 0; i < lastKnownState.length; i++) {
-            lastKnownState[i] = null;
-            robustTips[i]     = 0;
+    private void resetCounters() {
+        for (int i = 0; i < 2; i++) {
+            lastHeightUp[i] = HiveState.getUpCell(ALLIANCES[i]);
+            lastRollUp[i]   = HiveState.getRollUpCell(ALLIANCES[i]);
+            heightTips[i]   = 0;
+            rollTips[i]     = 0;
         }
         lastTipEvent = "none";
+        framesCompared = tagsCompared = tagsAgree = tagsDisagree = heightAmbiguous = rollAmbiguous = 0;
     }
 
-    /**
-     * Two tip counters:
-     *  - justTipped(): the subsystem's edge trigger. It needs two consecutive frames with
-     *    known states, so a single dropped frame mid-tip makes it miss.
-     *  - robust: remembers the last KNOWN state per cell through UNKNOWN gaps and counts
-     *    any change. If robust > justTipped, the subsystem is missing tips.
-     */
+    /** Counts changes of each method's confirmed up CELL. */
     private void trackTips() {
-        if (hive.justTipped(AllianceColors.RED)) {
-            subsystemTipsRed++;
-            lastTipEvent = fmt("RED via justTipped() @ %.1fs", runtime.seconds());
-        }
-        if (hive.justTipped(AllianceColors.BLUE)) {
-            subsystemTipsBlue++;
-            lastTipEvent = fmt("BLUE via justTipped() @ %.1fs", runtime.seconds());
-        }
-
-        for (HiveCell cell : HiveCell.values()) {
-            int idx = cell.ordinal();
-            CellState now = hive.getCellState(cell);
-            if (now == CellState.UNKNOWN) continue;
-            CellState prev = lastKnownState[idx];
-            if (prev != null && prev != now) {
-                robustTips[idx]++;
-                lastTipEvent = fmt("%s %s -> %s @ %.1fs", cell.name(), shortState(prev), shortState(now), runtime.seconds());
+        for (int i = 0; i < 2; i++) {
+            AllianceColors a = ALLIANCES[i];
+            HiveCell height = HiveState.getUpCell(a);
+            if (height != lastHeightUp[i]) {
+                heightTips[i]++;
+                lastHeightUp[i] = height;
+                lastTipEvent = fmt("%s height: %s up @ %.1fs", a, height, runtime.seconds());
             }
-            lastKnownState[idx] = now;
-        }
-    }
-
-    private int robustTipsFor(AllianceColors a) {
-        int total = 0;
-        for (HiveCell cell : HiveCell.values()) {
-            if (cell.alliance == a) total += robustTips[cell.ordinal()];
-        }
-        return total;
-    }
-
-    private String tippedSinceStart(AllianceColors a) {
-        int n = Math.max(robustTipsFor(a), a == AllianceColors.RED ? subsystemTipsRed : subsystemTipsBlue);
-        return n > 0 ? "YES (" + n + ")" : "NO";
-    }
-
-    // -------------------------------------------------------------------------
-    // Verdict / state helpers
-    // -------------------------------------------------------------------------
-
-    private String verdict(AllianceColors a) {
-        if (!hive.hasCellVisible(a)) return "NOT VISIBLE";
-        HiveCell scoring = hive.getActiveScoringCell(a);
-        if (scoring != null) {
-            return "SCORABLE  -> " + scoring.name() + " [" + hive.getVisibleTagCount(scoring) + " tags]";
-        }
-        return "TIPPED / NOT SCORABLE";
-    }
-
-    private static String shortState(CellState s) {
-        switch (s) {
-            case UPRIGHT_SCORABLE:    return "UP";
-            case TIPPED_NOT_SCORABLE: return "TIPPED";
-            default:                  return "?";
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Raw Limelight helpers (mirror HiveSubsystem's filtering)
-    // -------------------------------------------------------------------------
-
-    private String frameReason(LLResult r) {
-        if (r == null)                                return "NULL (no data yet)";
-        if (!r.isValid())                             return "INVALID (no targets)";
-        if (r.getPipelineIndex() != HIVE_PIPELINE)    return "WRONG PIPELINE (" + r.getPipelineIndex() + ")";
-        if (r.getStaleness() > MAX_STALENESS_MS)      return "STALE (" + r.getStaleness() + " ms)";
-        return "OK";
-    }
-
-    private List<LLResultTypes.FiducialResult> usableFiducials(LLResult r) {
-        if (!"OK".equals(frameReason(r))) return java.util.Collections.emptyList();
-        List<LLResultTypes.FiducialResult> f = r.getFiducialResults();
-        return f != null ? f : java.util.Collections.<LLResultTypes.FiducialResult>emptyList();
-    }
-
-    private Double averageRoll(List<LLResultTypes.FiducialResult> fiducials, HiveCell cell) {
-        double sum = 0;
-        int count = 0;
-        for (LLResultTypes.FiducialResult f : fiducials) {
-            if (HiveCell.fromTagId(f.getFiducialId()) != cell) continue;
-            Pose3D pose = f.getTargetPoseRobotSpace();
-            if (pose == null) continue;
-            sum += Math.abs(pose.getOrientation().getRoll(AngleUnit.DEGREES));
-            count++;
-        }
-        return count > 0 ? sum / count : null;
-    }
-
-    /** Most-centered tag of the target alliance's visible cell (same pick rule as the subsystem). */
-    private LLResultTypes.FiducialResult bestTagFor(List<LLResultTypes.FiducialResult> fiducials, AllianceColors a) {
-        LLResultTypes.FiducialResult best = null;
-        double bestScore = Double.MAX_VALUE;
-        for (LLResultTypes.FiducialResult f : fiducials) {
-            HiveCell cell = HiveCell.fromTagId(f.getFiducialId());
-            if (cell == null || cell.alliance != a) continue;
-            double score = f.getTargetXDegrees() * f.getTargetXDegrees()
-                    + f.getTargetYDegrees() * f.getTargetYDegrees();
-            if (score < bestScore) {
-                bestScore = score;
-                best = f;
+            HiveCell roll = HiveState.getRollUpCell(a);
+            if (roll != lastRollUp[i]) {
+                rollTips[i]++;
+                lastRollUp[i] = roll;
+                lastTipEvent = fmt("%s roll: %s up @ %.1fs", a, roll, runtime.seconds());
             }
         }
-        return best;
     }
 
-    /**
-     * Shows three ways of computing bearing/distance so you can check against a tape measure.
-     * Works even when the cell is tipped (the subsystem only reports distance for scorable cells).
-     *   1) Subsystem math: robot-space X and Z (what HiveSubsystem does today)
-     *   2) Robot-space X (forward) and Y (left): Limelight's documented robot-space axes
-     *   3) Camera-space X (right) and Z (forward): no robot mounting offset
-     */
-    private void addDistanceCrossCheck(List<LLResultTypes.FiducialResult> fiducials) {
-        telemetryM.addLine("");
-        telemetryM.addLine("----- DISTANCE CROSS-CHECK (" + alliance + ") -----");
-        LLResultTypes.FiducialResult best = bestTagFor(fiducials, alliance);
-        if (best == null) {
-            telemetryM.addLine("  no " + alliance + " tag visible");
-            return;
-        }
-        telemetryM.addData("  Using tag", "#" + best.getFiducialId());
+    /** Once per new camera frame: does each tag's height verdict match its roll verdict? */
+    private void compareMethodsOnNewFrame() {
+        long frameMs = limelightSubsystem.getFrameTimestampMs();
+        if (frameMs == lastFrameMs) return;
+        lastFrameMs = frameMs;
+        if (!LaunchTargets.isRollSelectorActive()) return;
 
-        Pose3D rs = best.getTargetPoseRobotSpace();
-        if (rs != null) {
-            Position p = rs.getPosition().toUnit(DistanceUnit.INCH);
-            telemetryM.addData("  1) Subsystem (RS x,z)", fmt("%.1f in @ %.1f deg",
-                    Math.hypot(p.x, p.z), Math.toDegrees(Math.atan2(p.x, p.z))));
-            telemetryM.addData("  2) Robot space (x,y)", fmt("%.1f in @ %.1f deg",
-                    Math.hypot(p.x, p.y), Math.toDegrees(Math.atan2(-p.y, p.x))));
+        List<TagObservation> obs = limelightSubsystem.getObservations();
+        if (obs.isEmpty()) return;
+        framesCompared++;
+        for (TagObservation o : obs) {
+            if (o.heightSaysUp == null) heightAmbiguous++;
+            if (o.rollSaysUp == null)   rollAmbiguous++;
+            if (o.heightSaysUp == null || o.rollSaysUp == null) continue;
+            tagsCompared++;
+            if (o.heightSaysUp.equals(o.rollSaysUp)) tagsAgree++;
+            else tagsDisagree++;
         }
+    }
 
-        Pose3D cs = best.getTargetPoseCameraSpace();
-        if (cs != null) {
-            Position p = cs.getPosition().toUnit(DistanceUnit.INCH);
-            telemetryM.addData("  3) Camera space (x,z)", fmt("%.1f in @ %.1f deg",
-                    Math.hypot(p.x, p.z), Math.toDegrees(Math.atan2(p.x, p.z))));
+    // -------------------------------------------------------------------------
+    // Formatting helpers
+    // -------------------------------------------------------------------------
+
+    private static String cellSummary(List<TagObservation> obs, AllianceColors a, HiveCell c, boolean rollOn) {
+        int n = 0, heightUp = 0, heightDown = 0, rollUp = 0, rollDown = 0;
+        double sumUp = 0, sumRoll = 0;
+        for (TagObservation o : obs) {
+            if (HiveTags.allianceOf(o.id) != a || HiveTags.cellOf(o.id) != c) continue;
+            n++;
+            sumUp += o.up;
+            if (o.heightSaysUp != null) { if (o.heightSaysUp) heightUp++; else heightDown++; }
+            if (rollOn) {
+                sumRoll += Math.abs(o.rollDeg);
+                if (o.rollSaysUp != null) { if (o.rollSaysUp) rollUp++; else rollDown++; }
+            }
         }
+        if (n == 0) return "--";
+        String s = fmt("%d tags | height %.1f in, up/down %d/%d", n, sumUp / n, heightUp, heightDown);
+        if (rollOn) s += fmt(" | |roll| %.1f, up/down %d/%d", sumRoll / n, rollUp, rollDown);
+        return s;
+    }
+
+    private static String verdict(Boolean up) {
+        if (up == null) return "?";
+        return up ? "UP" : "DOWN";
+    }
+
+    /** HiveState timestamps use System.nanoTime() in ms. */
+    private static String age(long updatedAtMs) {
+        if (updatedAtMs == 0) return " (not seen)";
+        return fmt(" (%.1fs ago)", (System.nanoTime() / 1_000_000L - updatedAtMs) / 1000.0);
     }
 
     private static String fmt(String format, Object... args) {
