@@ -4,6 +4,7 @@ import android.util.Log;
 
 import com.arcrobotics.ftclib.command.SubsystemBase;
 import com.bylazar.telemetry.TelemetryManager;
+import com.pedropathing.math.Pose;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
@@ -350,7 +351,7 @@ public class HiveSubsystem extends SubsystemBase {
      * is not available. Always returns null.
      * Kept so RelocalizeCommand and LaunchReadinessCommand compile without changes.
      */
-    public com.pedropathing.geometry.Pose getLatestFieldPose() {
+    public Pose getLatestFieldPose() {
         return null;
     }
 
