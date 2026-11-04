@@ -140,6 +140,10 @@ public class DriveSubsystem extends SubsystemBase {
     public void periodic() {
         follower.update();
 
+        if (org.firstinspires.ftc.teamcode.Incredibot.DRIVE_ONLY_MODE) {
+            telemetry.addData("MODE", "DRIVE ONLY (turret locked at mid; intake, launcher, gate, Limelight off)");
+        }
+
         telemetry.addData("Drive: mode", follower.mode()
                 + (shouldHoldForLaunch() ? " (launch hold)" : launchHoldBrokenOut ? " (broke out)" : ""));
     }

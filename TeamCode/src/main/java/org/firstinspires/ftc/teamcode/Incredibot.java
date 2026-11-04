@@ -5,6 +5,7 @@ import com.arcrobotics.ftclib.command.InstantCommand;
 import com.arcrobotics.ftclib.command.Robot;
 import com.arcrobotics.ftclib.gamepad.GamepadEx;
 import com.arcrobotics.ftclib.gamepad.GamepadKeys;
+import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -27,7 +28,17 @@ import org.firstinspires.ftc.teamcode.subsystems.LimelightSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 
+@Configurable
 public class Incredibot extends Robot {
+    /**
+     * Drive-only mode: just the drivetrain (and odometry, for the pose), with the turret locked at
+     * TURRET_MID. Intake, transfer, gate, flywheel, Limelight relocalization and all operator
+     * buttons are off; their hardware is never commanded, so motors stay at 0 and those servos
+     * unpowered. Read when the OpMode starts
+     * (INIT/START), so set it in Panels before pressing INIT.
+     */
+    public static boolean DRIVE_ONLY_MODE = true;
+
     // enum to specify opmode type
     public enum OpModeType {
         TELEOP,
@@ -74,6 +85,12 @@ public class Incredibot extends Robot {
     public void initTeleop(GamepadEx driverGamepad, GamepadEx operatorGamepad) {
         CommandScheduler.getInstance().reset();
 
+        if (DRIVE_ONLY_MODE) {
+            initDriveOnly();
+            driveSubsystem.setDefaultCommand(new DriveRobotCommand(driveSubsystem, driverGamepad));
+            return;
+        }
+
         initCommon();
 
         // 3. Assign default commands or button bindings
@@ -109,6 +126,11 @@ public class Incredibot extends Robot {
         // Clear out any lingering commands or bindings from previous runs
         CommandScheduler.getInstance().reset();
 
+        if (DRIVE_ONLY_MODE) {
+            initDriveOnly();
+            return;
+        }
+
         initCommon();
 
         // G304.G: every robot starts the match with exactly 4 POLLEN pre-loads. Without this the
@@ -120,6 +142,15 @@ public class Incredibot extends Robot {
 
         // Notice: We don't bind ANY gamepads here.
         // The robot will rely purely on scripted sequential commands.
+    }
+
+    /**
+     * Only the drivetrain and odometry run. The turret is parked at TURRET_MID once (the servo
+     * holds it there); no other subsystem is registered or commanded. Called at START.
+     */
+    private void initDriveOnly() {
+        register(driveSubsystem, odometrySubsystem);
+        launchSubsystem.setTurretPosition(LaunchSubsystem.TURRET_MID);
     }
 
     private void initCommon() {

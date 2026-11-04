@@ -44,8 +44,10 @@ public class IncredibotsMecanumDrive extends LinearOpMode { // Changed this
         //odometry subsystem periodically updates this in cross oomode storage.
         incredibot.odometrySubsystem.resetPose(CrossOpModeStorage.currentPose.getX(), CrossOpModeStorage.currentPose.getY(), Math.toDegrees(CrossOpModeStorage.currentPose.getHeading()));
 
-        //relocalize based on april tags - this only schedules it once
-        relocalizeWithLimelightCommand.schedule();
+        //relocalize based on april tags - this only schedules it once (skipped in drive-only mode)
+        if (!Incredibot.DRIVE_ONLY_MODE) {
+            relocalizeWithLimelightCommand.schedule();
+        }
 
         // 2. THE INIT-LOOP (Runs after you hit INIT, but before you hit START)
         while (opModeInInit()) {
@@ -64,7 +66,9 @@ public class IncredibotsMecanumDrive extends LinearOpMode { // Changed this
 
         // Restore the turret only after START: commanding the servo during INIT can move it
         // (G304.H / G403), e.g. if it hadn't reached its last commanded position when AUTO ended.
-        incredibot.launchSubsystem.setTurretPosition(CrossOpModeStorage.turretPosition);
+        if (!Incredibot.DRIVE_ONLY_MODE) {
+            incredibot.launchSubsystem.setTurretPosition(CrossOpModeStorage.turretPosition);
+        }
 
         //this is done later to avoid all the other commands from running.
         incredibot.initialize(Incredibot.OpModeType.TELEOP, driverGamepad, operatorGamepad);
