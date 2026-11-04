@@ -6,6 +6,11 @@ package org.firstinspires.ftc.teamcode.common;
  * Starts at the match-start state from the manual (Fig 9-17 / 10-2): red AUDIENCE CELL up,
  * blue FAR CELL up. Every TIP swaps the up CELL. LimelightSubsystem updates this when it sees a
  * CELL's AprilTags. Static, so it carries over from AUTO to TELEOP like CrossOpModeStorage.
+ *
+ * Two independent copies are kept so the two detection methods can be compared:
+ *  - getUpCell / setUpCell:         from the tag HEIGHTS (always running).
+ *  - getRollUpCell / setRollUpCell: from the tag ROLL angles (only while LaunchTargets.SELECTOR
+ *                                   is VISION_ROLL; otherwise it holds its last value).
  */
 public final class HiveState {
 
@@ -17,14 +22,23 @@ public final class HiveState {
     private static long redUpdatedAtMs = 0;
     private static long blueUpdatedAtMs = 0;
 
+    private static HiveCell redRollUpCell = RED_START_UP_CELL;
+    private static HiveCell blueRollUpCell = BLUE_START_UP_CELL;
+    private static long redRollUpdatedAtMs = 0;
+    private static long blueRollUpdatedAtMs = 0;
+
     private HiveState() {}
 
-    /** Call at the start of AUTO: both HIVES are in their match-start state. */
+    /** Call at the start of AUTO: both HIVES are in their match-start state (height and roll). */
     public static synchronized void resetToMatchStart() {
         redUpCell = RED_START_UP_CELL;
         blueUpCell = BLUE_START_UP_CELL;
         redUpdatedAtMs = 0;
         blueUpdatedAtMs = 0;
+        redRollUpCell = RED_START_UP_CELL;
+        blueRollUpCell = BLUE_START_UP_CELL;
+        redRollUpdatedAtMs = 0;
+        blueRollUpdatedAtMs = 0;
     }
 
     public static synchronized HiveCell getUpCell(AllianceColors alliance) {
@@ -43,6 +57,26 @@ public final class HiveState {
         } else {
             blueUpCell = upCell;
             blueUpdatedAtMs = nowMs;
+        }
+    }
+
+    /** Up CELL according to the roll method. */
+    public static synchronized HiveCell getRollUpCell(AllianceColors alliance) {
+        return alliance == AllianceColors.RED ? redRollUpCell : blueRollUpCell;
+    }
+
+    /** System time (ms) of the last roll-method update for this HIVE, or 0 if never seen. */
+    public static synchronized long getRollLastUpdateMs(AllianceColors alliance) {
+        return alliance == AllianceColors.RED ? redRollUpdatedAtMs : blueRollUpdatedAtMs;
+    }
+
+    public static synchronized void setRollUpCell(AllianceColors alliance, HiveCell upCell, long nowMs) {
+        if (alliance == AllianceColors.RED) {
+            redRollUpCell = upCell;
+            redRollUpdatedAtMs = nowMs;
+        } else {
+            blueRollUpCell = upCell;
+            blueRollUpdatedAtMs = nowMs;
         }
     }
 

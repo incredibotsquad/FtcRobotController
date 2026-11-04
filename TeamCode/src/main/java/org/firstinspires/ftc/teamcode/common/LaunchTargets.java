@@ -15,11 +15,14 @@ import com.bylazar.configurables.annotations.Configurable;
  * The up-facing CELL's opening faces outward (away from y=72) and 30 deg up, with its
  * center about CELL_Y_OFFSET from field center at roughly 58 in high (manual Fig 9-9 to 9-11).
  *
- * Which CELL to aim at is decided by a {@link Selector}, picked by USE_VISION_SELECTOR:
- *  - false: {@link NearestCellSelector}, the nearest of the alliance's two CELLS (odometry only).
- *  - true:  {@link HiveStateSelector}, the CELL HiveState says is up. LimelightSubsystem keeps
- *           HiveState current from the AprilTags; until a HIVE is seen it holds the match-start state.
- * Both selectors always exist and keep their own state, so flipping the flag (also live in
+ * Which CELL to aim at is decided by a {@link Selector}, picked by SELECTOR:
+ *  - NEAREST:       {@link NearestCellSelector}, the nearest of the alliance's two CELLS (odometry only).
+ *  - VISION_HEIGHT: {@link HiveStateSelector}, the CELL HiveState says is up. LimelightSubsystem keeps
+ *                   HiveState current from the AprilTag heights; until a HIVE is seen it holds the
+ *                   match-start state.
+ *  - VISION_ROLL:   {@link RollStateSelector}, the CELL HiveState's roll-based state says is up.
+ *                   LimelightSubsystem only runs the roll method while this selector is active.
+ * All selectors always exist and keep their own state, so changing SELECTOR (also live in
  * Panels) switches cleanly with no other changes.
  */
 @Configurable
@@ -44,8 +47,17 @@ public class LaunchTargets {
      */
     public static double SWITCH_HYSTERESIS_IN = 6.0;
 
-    /** true = aim at the up CELL from HiveState (vision); false = nearest CELL (odometry). */
-    public static boolean USE_VISION_SELECTOR = false;
+    /** How the target CELL is picked. */
+    public enum SelectorMode {
+        /** Nearest CELL (odometry only). */
+        NEAREST,
+        /** Up CELL from the AprilTag heights (HiveState.getUpCell). */
+        VISION_HEIGHT,
+        /** Up CELL from the AprilTag roll angles (HiveState.getRollUpCell). */
+        VISION_ROLL
+    }
+
+    public static SelectorMode SELECTOR = SelectorMode.NEAREST;
 
     /** Decides which of an alliance's two CELLS to aim at. */
     public interface Selector {
@@ -54,12 +66,22 @@ public class LaunchTargets {
 
     private static final Selector nearestSelector = new NearestCellSelector();
     private static final Selector visionSelector = new HiveStateSelector();
+    private static final Selector rollSelector = new RollStateSelector();
     private static HiveCell lastSelectedCell = HiveCell.FAR;
 
     private LaunchTargets() {}
 
     private static Selector activeSelector() {
-        return USE_VISION_SELECTOR ? visionSelector : nearestSelector;
+        switch (SELECTOR) {
+            case VISION_HEIGHT: return visionSelector;
+            case VISION_ROLL:   return rollSelector;
+            default:            return nearestSelector;
+        }
+    }
+
+    /** True while the roll selector is active; LimelightSubsystem only runs the roll method then. */
+    public static boolean isRollSelectorActive() {
+        return SELECTOR == SelectorMode.VISION_ROLL;
     }
 
     /** Target point for the given robot pose. Call every loop from the aiming code. */
@@ -86,6 +108,14 @@ public class LaunchTargets {
         @Override
         public HiveCell select(Pose2d robotPose, AllianceColors alliance) {
             return HiveState.getUpCell(alliance);
+        }
+    }
+
+    /** Aims at the alliance's up-facing CELL as tracked by the roll method (HiveState roll state). */
+    public static class RollStateSelector implements Selector {
+        @Override
+        public HiveCell select(Pose2d robotPose, AllianceColors alliance) {
+            return HiveState.getRollUpCell(alliance);
         }
     }
 

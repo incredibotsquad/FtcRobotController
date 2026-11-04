@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "width": 640,
+  "height": 480,
+  "hsv": {
+    "POLLEN": [[18, 90, 65, 40, 255, 255]],
+    "RED_NECTAR": [[0, 100, 60, 10, 255, 255], [170, 100, 60, 179, 255, 255]],
+    "BLUE_NECTAR": [[90, 90, 50, 135, 255, 255]]
+  },
+  "roi": [0.0, 0.0, 1.0, 1.0],
+  "min_area_fraction": 0.00025,
+  "max_area_fraction": 0.15,
+  "min_fill": 0.3,
+  "max_aspect": 4.0,
+  "morph_kernel": 3,
+  "max_blobs_per_color": 60,
+  "cluster_radius_inches": 14.0,
+  "pollen_weight": 1.0,
+  "nectar_weight": 1.0,
+  "opponent_penalty": 0.0,
+  "distance_penalty_per_inch": 0.015,
+  "max_range_inches": 100.0,
+  "max_age_ms": 250,
+  "settle_ms": 400,
+  "calibration": null
+}
