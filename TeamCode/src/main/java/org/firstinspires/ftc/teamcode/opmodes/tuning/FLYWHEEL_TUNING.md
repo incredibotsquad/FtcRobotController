@@ -6,7 +6,7 @@ This walks you through tuning the launcher flywheel with the **FlywheelTuner** O
 2. hold it steadily, and
 3. recover as fast as possible after each shot.
 
-All gains live in `LaunchSubsystem` as `FLYWHEEL_*` fields. The tuner edits those same fields, so match OpModes use whatever you tune until the app restarts. **Step 9 (saving values) is the step people forget.**
+The tuner edits the single gain set in `LaunchSubsystem` (`FLYWHEEL_*` fields). Match code (`LaunchReadinessCommand`) instead uses the **gain table** (`GAIN_TABLE_*` arrays): one row of P/I/D/kS/kV per launch distance, interpolated between rows. So tune once per distance (at that distance's RPM) and copy the result into that row. **Step 9 (saving values) is the step people forget.**
 
 ---
 
@@ -198,6 +198,19 @@ public static double FLYWHEEL_BANG_BANG_THRESHOLD_RPM = ...;
 public static double NOMINAL_VOLTAGE = ...;   // the voltage you tuned at
 public static double TARGET_RPM_TOLERANCE = ...;
 ```
+
+Then copy P / I / D / kS / kV into the **gain table row** for the distance whose RPM you tuned at (same index in every array):
+
+```java
+public static double[] GAIN_TABLE_DISTANCES_IN = {24, 48, 72, 96, 120};
+public static double[] GAIN_TABLE_P  = {...};
+public static double[] GAIN_TABLE_I  = {...};
+public static double[] GAIN_TABLE_D  = {...};
+public static double[] GAIN_TABLE_KS = {...};
+public static double[] GAIN_TABLE_KV = {...};
+```
+
+Repeat steps 4–8 at each row's RPM (set `highVelocityRPM` in the tuner to the RPM from `LaunchReadinessCommand.SHOT_RPMS` for that distance). Keep all arrays the same length; telemetry warns if they differ. `USE_GAIN_TABLE = false` makes match code use the single `FLYWHEEL_*` set instead.
 
 Commit them, with a note of the date and battery voltage.
 

@@ -21,14 +21,15 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
  * Controls (gamepad 1):
  *   Y            - toggle between high and low target RPM
  *   A            - toggle gate (open = shoot)
- *   X            - toggle feed (intake + transfer)
+ *   X            - toggle transfer
+ *   Start        - toggle intake
  *   B            - cycle step size
  *   Dpad up/down - P +/- step
  *   Dpad L/R     - kS -/+ step
  *   LB / RB      - kV -/+ step
  *   Back         - auto-adjust kV from the current speed (use with P = 0, bang-bang off,
  *                  flywheel settled; repeat until actual RPM matches target)
- *   Start        - reset shot statistics
+ *   Left stick   - (press) reset shot statistics
  *
  * Suggested order:
  *   1. Bang-bang OFF (Panels: LaunchSubsystem.FLYWHEEL_BANG_BANG_ENABLED), P = 0.
@@ -42,7 +43,7 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 @TeleOp(name = "FlywheelTuner", group = "Tests")
 public class FlywheelTuner extends LinearOpMode {
 
-    public static double highVelocityRPM = 1100;
+    public static double highVelocityRPM = 1600;
     public static double lowVelocityRPM = 900;
 
     public static double transferMotorPower = 1;
@@ -80,7 +81,8 @@ public class FlywheelTuner extends LinearOpMode {
         GamepadEx gp1 = new GamepadEx(gamepad1);
 
         boolean useHigh = true;
-        boolean feeding = false;
+        boolean transferOn = false;
+        boolean intakeOn = false;
         long lastTelemetryMs = 0;
         long lastLoopNs = System.nanoTime();
         double loopMs = 0;
@@ -105,8 +107,9 @@ public class FlywheelTuner extends LinearOpMode {
             if (gp1.wasJustPressed(GamepadKeys.Button.A)) {
                 if (gate.isGateOpen()) gate.closeGate(); else gate.openGate();
             }
-            if (gp1.wasJustPressed(GamepadKeys.Button.X)) feeding = !feeding;
-            if (gp1.wasJustPressed(GamepadKeys.Button.START)) resetStats();
+            if (gp1.wasJustPressed(GamepadKeys.Button.X)) transferOn = !transferOn;
+            if (gp1.wasJustPressed(GamepadKeys.Button.START)) intakeOn = !intakeOn;
+            if (gp1.wasJustPressed(GamepadKeys.Button.LEFT_STICK_BUTTON)) resetStats();
 
             if (gp1.wasJustPressed(GamepadKeys.Button.DPAD_UP)) LaunchSubsystem.FLYWHEEL_P += step;
             if (gp1.wasJustPressed(GamepadKeys.Button.DPAD_DOWN)) LaunchSubsystem.FLYWHEEL_P = Math.max(0, LaunchSubsystem.FLYWHEEL_P - step);
@@ -129,8 +132,8 @@ public class FlywheelTuner extends LinearOpMode {
 
             // ---------------------------------------------------- outputs
             launcher.updateFlywheel(targetRPM);
-            intake.setTransferMotorPower(feeding ? transferMotorPower : 0);
-            intake.setIntakeMotorPower(feeding ? intakeMotorPower : 0);
+            intake.setTransferMotorPower(transferOn ? transferMotorPower : 0);
+            intake.setIntakeMotorPower(intakeOn ? intakeMotorPower : 0);
 
             // ---------------------------------------------------- measurements
             double rpm = launcher.getCurrentFlywheelRPM();
@@ -158,7 +161,8 @@ public class FlywheelTuner extends LinearOpMode {
                 panels.addData("At speed", launcher.isFlywheelAtSpeed());
                 panels.addData("Battery V", String.format("%.2f", launcher.getBatteryVoltage()));
                 panels.addData("Loop ms", String.format("%.1f", loopMs));
-                panels.addData("Gate / Feed", (gate.isGateOpen() ? "OPEN" : "closed") + " / " + (feeding ? "ON" : "off"));
+                panels.addData("Gate (A) / Transfer (X) / Intake (Start)", (gate.isGateOpen() ? "OPEN" : "closed")
+                        + " / " + (transferOn ? "ON" : "off") + " / " + (intakeOn ? "ON" : "off"));
 
                 panels.addLine("--- Shots ---");
                 panels.addData("Spin-up ms (last)", lastSpinUpMs);

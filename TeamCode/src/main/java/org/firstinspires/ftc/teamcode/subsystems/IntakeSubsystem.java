@@ -72,6 +72,8 @@ public class IntakeSubsystem extends SubsystemBase {
 
     private int artifactCount = 0;
     private boolean launching = false;
+    /** Transfer power to use while launching instead of the default; NaN = no override. */
+    private double launchTransferOverride = Double.NaN;
 
     public IntakeSubsystem(HardwareMap hardwareMap, TelemetryManager telemetry) {
         this.telemetry = telemetry;
@@ -176,6 +178,26 @@ public class IntakeSubsystem extends SubsystemBase {
      */
     public void setLaunching(boolean launching) {
         this.launching = launching;
+    }
+
+    /**
+     * Lets a launch command take over the transfer power while launching (e.g. a brief reverse to
+     * give a lone ball a run-up). SmartIntakeCommand applies it in its LAUNCHING state.
+     */
+    public void setLaunchTransferOverride(double power) {
+        launchTransferOverride = power;
+    }
+
+    public void clearLaunchTransferOverride() {
+        launchTransferOverride = Double.NaN;
+    }
+
+    public boolean hasLaunchTransferOverride() {
+        return !Double.isNaN(launchTransferOverride);
+    }
+
+    public double getLaunchTransferOverride() {
+        return launchTransferOverride;
     }
 
     public int getArtifactCount() {

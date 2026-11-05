@@ -37,7 +37,7 @@ public class Incredibot extends Robot {
      * unpowered. Read when the OpMode starts
      * (INIT/START), so set it in Panels before pressing INIT.
      */
-    public static boolean DRIVE_ONLY_MODE = true;
+    public static boolean DRIVE_ONLY_MODE = false;
 
     // enum to specify opmode type
     public enum OpModeType {

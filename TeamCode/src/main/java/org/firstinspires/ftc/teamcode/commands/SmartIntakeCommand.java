@@ -67,7 +67,10 @@ public class SmartIntakeCommand extends CommandBase {
             case LAUNCHING:
                 intake.stopIntakeMotorOnly();
                 intake.stopSweepers();
-                intake.setTransferMotorPower(LAUNCH_TRANSFER_POWER);
+                // A launch command may override the transfer (e.g. LaunchBallsCommand's single-ball kick).
+                intake.setTransferMotorPower(intake.hasLaunchTransferOverride()
+                        ? intake.getLaunchTransferOverride()
+                        : LAUNCH_TRANSFER_POWER);
                 break;
             case INTAKING:
                 intake.startIntakeAndTransfer();

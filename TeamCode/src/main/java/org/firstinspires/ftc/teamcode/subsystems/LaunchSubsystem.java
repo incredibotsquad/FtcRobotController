@@ -27,15 +27,37 @@ public class LaunchSubsystem extends SubsystemBase {
     private static final double TURRET_POSITION_TOLERANCE = 0.05;
 
     // ------------------------------------------------------------------ flywheel control
-    // Found with FlywheelTuner; paste the tuned values here so they are the defaults.
     // Gains act on ticks/sec error (GoBILDA BARE, 28 CPR). Power is in [0, 1].
-    public static double FLYWHEEL_P = 0.0;
+    //
+    // Two sources of gains:
+    //  - FLYWHEEL_* below: the single set used by updateFlywheel(rpm) (no distance), i.e. what
+    //    FlywheelTuner edits live.
+    //  - The GAIN_TABLE_* arrays: one row per launch distance, used by updateFlywheel(rpm, distance)
+    //    from LaunchReadinessCommand. Tune each row with FlywheelTuner at that distance's RPM, then
+    //    copy the FLYWHEEL_* values it shows into that row.
+    public static double FLYWHEEL_P = 0.08;
     public static double FLYWHEEL_I = 0.0;
     public static double FLYWHEEL_D = 0.0;
     /** Static friction: power needed to just start turning. */
     public static double FLYWHEEL_KS = 0.16;
     /** Power per tick/sec needed to hold a speed, measured at NOMINAL_VOLTAGE. */
-    public static double FLYWHEEL_KV = 0.0001;
+    public static double FLYWHEEL_KV = 0.0005;
+
+    /**
+     * Gain table, indexed by distance (inches, robot center to CELL). All arrays are rows of the
+     * same table: same length, GAIN_TABLE_DISTANCES_IN sorted ascending. Between rows each gain is
+     * linearly interpolated; outside the table the nearest end row is used. Suggest keeping the
+     * distances the same as LaunchReadinessCommand.SHOT_DISTANCES_IN so each RPM has its own row.
+     * PLACEHOLDERS: every row starts as a copy of the single FLYWHEEL_* set.
+     */
+    public static boolean USE_GAIN_TABLE = true;
+    //match these values to LaunchReadinessCommand.SHOT_DISTANCES_IN
+    public static double[] GAIN_TABLE_DISTANCES_IN = {34, 46, 52, 66, 88};
+    public static double[] GAIN_TABLE_P  = {0.5, 0.5, 0.5, 0.7, 0.8};
+    public static double[] GAIN_TABLE_I  = {0.0, 0.0, 0.0, 0.0, 0.0};
+    public static double[] GAIN_TABLE_D  = {0.0, 0.0, 0.0, 0.0, 0.0};
+    public static double[] GAIN_TABLE_KS = {0.16, 0.16, 0.16, 0.16, 0.16};
+    public static double[] GAIN_TABLE_KV = {0.0005, 0.0005, 0.0005, 0.0005, 0.0006};
 
     /** Run full power while more than this far below target (fast spin-up and shot recovery). */
     public static boolean FLYWHEEL_BANG_BANG_ENABLED = true;
@@ -69,13 +91,14 @@ public class LaunchSubsystem extends SubsystemBase {
      * Formula:
      * (TargetDegrees * Ratio) / TotalServoRange
      */
-    public static double GEAR_RATIO = 112.0 / 29.0;
+    public static double GEAR_RATIO = 82.0 / 24.0;
     public static double TOTAL_SERVO_RANGE = 1800; // servo range is 1800 but we are only going up to 0.87
 
     private final PIDController flywheelPID = new PIDController(FLYWHEEL_P, FLYWHEEL_I, FLYWHEEL_D);
     private SimpleMotorFeedforward flywheelFF = new SimpleMotorFeedforward(FLYWHEEL_KS, FLYWHEEL_KV);
     private double ffKs = FLYWHEEL_KS;
     private double ffKv = FLYWHEEL_KV;
+    private double activeP = FLYWHEEL_P, activeI = FLYWHEEL_I, activeD = FLYWHEEL_D;
 
     private final VoltageSensor batteryVoltageSensor;
     private double batteryVoltage = NOMINAL_VOLTAGE;
@@ -102,7 +125,6 @@ public class LaunchSubsystem extends SubsystemBase {
         rightLaunchMotor.setRunMode(Motor.RunMode.RawPower);
 
         turretServo = new SimpleServo(hardwareMap, "turretServo", 0, 1800);
-        turretServo.setInverted(true);
         alignmentIndicatorLight = new SimpleServo(hardwareMap, "alignmentIndicatorLight", 0, 270);
 
         batteryVoltageSensor = hardwareMap.voltageSensor.iterator().hasNext()
@@ -130,10 +152,55 @@ public class LaunchSubsystem extends SubsystemBase {
      *    makes spin-up and recovery after a shot fast.
      *  - Near target: feedforward (voltage compensated) + PID holds the speed.
      *  - Power is limited to [0, 1]: the flywheel coasts down instead of being braked in reverse.
+     * Uses the single FLYWHEEL_* gain set (FlywheelTuner).
      */
     public void updateFlywheel(double targetRPM) {
+        applyGains(FLYWHEEL_P, FLYWHEEL_I, FLYWHEEL_D, FLYWHEEL_KS, FLYWHEEL_KV);
+        runFlywheel(targetRPM);
+    }
+
+    /**
+     * Same as updateFlywheel(rpm), but gains come from the GAIN_TABLE_* row(s) for this distance to
+     * the goal. Falls back to the FLYWHEEL_* set when USE_GAIN_TABLE is off or the table is empty.
+     */
+    public void updateFlywheel(double targetRPM, double distanceIn) {
+        int n = gainTableRows();
+        if (!USE_GAIN_TABLE || n == 0) {
+            updateFlywheel(targetRPM);
+            return;
+        }
+        applyGains(
+                interpolate(GAIN_TABLE_P, distanceIn, n),
+                interpolate(GAIN_TABLE_I, distanceIn, n),
+                interpolate(GAIN_TABLE_D, distanceIn, n),
+                interpolate(GAIN_TABLE_KS, distanceIn, n),
+                interpolate(GAIN_TABLE_KV, distanceIn, n));
+        runFlywheel(targetRPM);
+    }
+
+    /** Usable rows: the shortest of the GAIN_TABLE_* arrays (a mismatch shows up in telemetry). */
+    private static int gainTableRows() {
+        return Math.min(GAIN_TABLE_DISTANCES_IN.length,
+                Math.min(Math.min(GAIN_TABLE_P.length, GAIN_TABLE_I.length),
+                        Math.min(GAIN_TABLE_D.length, Math.min(GAIN_TABLE_KS.length, GAIN_TABLE_KV.length))));
+    }
+
+    /** Linear interpolation of one gain column over distance, clamped to the end rows. */
+    private static double interpolate(double[] values, double distanceIn, int n) {
+        double[] d = GAIN_TABLE_DISTANCES_IN;
+        if (n == 1 || distanceIn <= d[0]) return values[0];
+        for (int i = 1; i < n; i++) {
+            if (distanceIn <= d[i]) {
+                double span = d[i] - d[i - 1];
+                double t = span > 0 ? (distanceIn - d[i - 1]) / span : 1.0;
+                return values[i - 1] + t * (values[i] - values[i - 1]);
+            }
+        }
+        return values[n - 1];
+    }
+
+    private void runFlywheel(double targetRPM) {
         this.targetRPM = targetRPM;
-        applyTunedGains();
 
         if (targetRPM <= 0) {
             flywheelPID.reset();
@@ -171,14 +238,32 @@ public class LaunchSubsystem extends SubsystemBase {
         }
     }
 
-    /** Picks up live edits of the FLYWHEEL_* gains (Panels or FlywheelTuner). */
-    private void applyTunedGains() {
-        flywheelPID.setPID(FLYWHEEL_P, FLYWHEEL_I, FLYWHEEL_D);
-        if (ffKs != FLYWHEEL_KS || ffKv != FLYWHEEL_KV) {
-            ffKs = FLYWHEEL_KS;
-            ffKv = FLYWHEEL_KV;
+    /**
+     * TEST ONLY (FlywheelEncoderTest): raw power to each flywheel motor separately, bypassing the
+     * controller. Never use in match code: the two motors drive one flywheel and must match.
+     */
+    public void setFlywheelPowersForTest(double leftPower, double rightPower) {
+        lastFlywheelPower = Math.max(leftPower, rightPower);
+        leftLaunchMotor.set(leftPower);
+        rightLaunchMotor.set(rightPower);
+    }
+
+    /** Loads the gains for this loop (picks up live Panels / FlywheelTuner edits too). */
+    private void applyGains(double p, double i, double d, double ks, double kv) {
+        activeP = p;
+        activeI = i;
+        activeD = d;
+        flywheelPID.setPID(p, i, d);
+        if (ffKs != ks || ffKv != kv) {
+            ffKs = ks;
+            ffKv = kv;
             flywheelFF = new SimpleMotorFeedforward(ffKs, ffKv);
         }
+    }
+
+    /** Gains used on the last flywheel update, as {P, I, D, kS, kV}. */
+    public double[] getActiveFlywheelGains() {
+        return new double[]{activeP, activeI, activeD, ffKs, ffKv};
     }
 
     /** Battery voltage, sampled every VOLTAGE_SAMPLE_MS. Falls back to NOMINAL_VOLTAGE if unavailable. */
@@ -337,5 +422,10 @@ public class LaunchSubsystem extends SubsystemBase {
         // telemetry.addData("Launcher Ready", isReady);
         // telemetry.addData("Current Speed", getCurrentVelocity());
         telemetry.addData("Flywheel Target RPM: ", targetRPM);
+        telemetry.addData("Flywheel gains P/I/D/kS/kV", String.format("%.4f / %.4f / %.4f / %.3f / %.6f",
+                activeP, activeI, activeD, ffKs, ffKv));
+        if (USE_GAIN_TABLE && gainTableRows() < GAIN_TABLE_DISTANCES_IN.length) {
+            telemetry.addData("Flywheel gain table", "WARNING: GAIN_TABLE_* arrays differ in length; extra rows ignored");
+        }
     }
 }
