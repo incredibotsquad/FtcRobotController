@@ -11,9 +11,9 @@ import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
  * Default command for the intake. Runs forever and picks a state every loop:
  *
  *  LAUNCHING (gate open): only the transfer runs, feeding artifacts up past sensor 4 into
- *      the launcher. Intake motor and sweepers stay off so nothing new is pulled in mid-shot.
+ *      the launcher. The intake motor stays off so nothing new is pulled in mid-shot.
  *      IntakeSubsystem is told it is launching, so artifacts leaving the top are subtracted.
- *  INTAKING (gate closed, not full): intake, transfer and sweepers run.
+ *  INTAKING (gate closed, not full): intake and transfer run.
  *  FULL (gate closed, count at MAX_ARTIFACTS): everything stops (G407: control at most 4).
  *
  * The artifact count itself comes from IntakeSubsystem.periodic(), which the scheduler runs
@@ -66,7 +66,6 @@ public class SmartIntakeCommand extends CommandBase {
         switch (next) {
             case LAUNCHING:
                 intake.stopIntakeMotorOnly();
-                intake.stopSweepers();
                 // A launch command may override the transfer (e.g. LaunchBallsCommand's single-ball kick).
                 intake.setTransferMotorPower(intake.hasLaunchTransferOverride()
                         ? intake.getLaunchTransferOverride()

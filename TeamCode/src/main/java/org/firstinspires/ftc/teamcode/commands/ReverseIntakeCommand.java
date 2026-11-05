@@ -5,7 +5,7 @@ import com.arcrobotics.ftclib.command.CommandBase;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 
 /**
- * Runs the intake, transfer and sweepers in reverse to eject artifacts.
+ * Runs the intake and transfer in reverse to eject artifacts.
  * Bind with whileHeld(): it runs until the button is released, then stops the intake.
  * Requiring the intake interrupts the default intake command while held; the scheduler
  * restarts the default command on release.

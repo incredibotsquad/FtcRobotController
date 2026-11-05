@@ -104,7 +104,6 @@ public class IntakeCountTest extends LinearOpMode {
                 action = "EJECTING";
             } else if (launchMode && gamepad1.right_bumper) {
                 intake.stopIntakeMotorOnly();
-                intake.stopSweepers();
                 intake.setTransferMotorPower(1);
                 action = "FEEDING (launch)";
             } else if (gamepad1.right_trigger > TRIGGER_THRESHOLD) {

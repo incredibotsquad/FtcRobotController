@@ -85,7 +85,7 @@ public class LaunchSubsystem extends SubsystemBase {
 
     /*
      * MECHANICAL CALCULATION:
-     * Ratio: 112 teeth (Turret) / 29 teeth (Servo) = 3.862
+     * Ratio: 82 teeth (Turret) / 24 teeth (Servo) = 3.417
      * Servo: GoBILDA 5-Turn = 1800 degrees of total travel (0.0 to 1.0)
      *
      * Formula:

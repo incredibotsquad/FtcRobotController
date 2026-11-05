@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.arcrobotics.ftclib.command.SubsystemBase;
 import com.arcrobotics.ftclib.hardware.SimpleServo;
-import com.arcrobotics.ftclib.hardware.motors.CRServo;
 import com.arcrobotics.ftclib.hardware.motors.Motor;
 import com.arcrobotics.ftclib.hardware.motors.MotorEx;
 import com.bylazar.configurables.annotations.Configurable;
@@ -47,11 +46,6 @@ public class IntakeSubsystem extends SubsystemBase {
     /** Use sensors 2-4 as a lower bound when settled. Disable if one large artifact can block two sensors. */
     public static boolean USE_SLOT_SENSORS_AS_LOWER_BOUND = true;
 
-    /** Side sweeper servos (CR mode). Flip an INVERT flag if that servo spins outward. */
-    public static double SWEEPER_POWER = 1.0;
-    public static boolean INVERT_INTAKE_SERVO_1 = true;
-    public static boolean INVERT_INTAKE_SERVO_2 = false;
-
     public static double ZERO_BALL_COLOR = 0;
     public static double ONE_BALL_COLOR = 0.29;   // RED
     public static double TWO_BALL_COLOR = 0.388;  // YELLOW
@@ -60,8 +54,6 @@ public class IntakeSubsystem extends SubsystemBase {
 
     private final MotorEx intakeMotor;
     private final MotorEx transferMotor;
-    private final CRServo intakeServo1;
-    private final CRServo intakeServo2;
     private final SimpleServo artifactCountLight;
     private final BeamBreak beamBreak1;
     private final BeamBreak beamBreak2;
@@ -85,12 +77,6 @@ public class IntakeSubsystem extends SubsystemBase {
         transferMotor.setInverted(true);
         transferMotor.setRunMode(Motor.RunMode.RawPower);
 
-        intakeServo1 = new CRServo(hardwareMap, "intakeServo1");
-        intakeServo1.setInverted(INVERT_INTAKE_SERVO_1);
-
-        intakeServo2 = new CRServo(hardwareMap, "intakeServo2");
-        intakeServo2.setInverted(INVERT_INTAKE_SERVO_2);
-
         beamBreak1 = new BeamBreak(hardwareMap, "ballSensor1");
         beamBreak2 = new BeamBreak(hardwareMap, "ballSensor2");
         beamBreak3 = new BeamBreak(hardwareMap, "ballSensor3");
@@ -101,7 +87,7 @@ public class IntakeSubsystem extends SubsystemBase {
 
     // ---------------------------------------------------------------- motor control
 
-    /** Starts intake, transfer and sweepers, unless already full. */
+    /** Starts intake and transfer, unless already full. */
     public void startIntakeAndTransfer() {
         if (isFull()) {
             stopIntakeAndTransfer();
@@ -109,25 +95,22 @@ public class IntakeSubsystem extends SubsystemBase {
         }
         intakeMotor.set(1);
         transferMotor.set(1);
-        startSweepers();
     }
 
-    /** Stops intake, transfer and sweepers. */
+    /** Stops intake and transfer. */
     public void stopIntakeAndTransfer() {
         intakeMotor.set(0);
         transferMotor.set(0);
-        stopSweepers();
     }
 
-    /** Runs intake, transfer and sweepers in reverse to eject artifacts. */
+    /** Runs intake and transfer in reverse to eject artifacts. */
     public void reverseIntakeAndTransfer() {
         intakeMotor.set(-1);
         transferMotor.set(-1);
-        reverseSweepers();
     }
 
     public boolean isOn() {
-        return (intakeMotor.get() > 0 || transferMotor.get() > 0 || areSweepersOn());
+        return intakeMotor.get() > 0 || transferMotor.get() > 0;
     }
 
     public void setIntakeMotorPower(double power) {
@@ -144,30 +127,6 @@ public class IntakeSubsystem extends SubsystemBase {
 
     public void stopTransferMotorOnly() {
         transferMotor.set(0);
-    }
-
-    // ---------------------------------------------------------------- sweepers
-
-    public void startSweepers() {
-        setSweeperPower(SWEEPER_POWER);
-    }
-
-    public void reverseSweepers() {
-        setSweeperPower(-SWEEPER_POWER);
-    }
-
-    public void stopSweepers() {
-        setSweeperPower(0);
-    }
-
-    /** Positive = sweep in, negative = sweep out. Both servos always run together. */
-    public void setSweeperPower(double power) {
-        intakeServo1.set(power);
-        intakeServo2.set(power);
-    }
-
-    public boolean areSweepersOn() {
-        return intakeServo1.get() > 0 || intakeServo2.get() > 0;
     }
 
     // ---------------------------------------------------------------- counting
@@ -323,7 +282,7 @@ public class IntakeSubsystem extends SubsystemBase {
         updateArtifactCount();
 
         // Auto-stop when full (only while intaking, not while feeding the launcher)
-        if (isFull() && !launching && (intakeMotor.get() > 0 || areSweepersOn())) {
+        if (isFull() && !launching && intakeMotor.get() > 0) {
             stopIntakeAndTransfer();
         }
 
@@ -336,7 +295,6 @@ public class IntakeSubsystem extends SubsystemBase {
                         + (beamBreak3.isBlocked() ? "X" : "-")
                         + (beamBreak4.isBlocked() ? "X" : "-"));
         telemetry.addData("Transfer Power: ", transferMotor.get());
-        telemetry.addData("Sweeper Power: ", intakeServo1.get());
     }
 
     // ---------------------------------------------------------------- debounced sensor

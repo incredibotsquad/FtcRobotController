@@ -1,51 +1,49 @@
 package org.firstinspires.ftc.teamcode.opmodes.tuning;
 
+import com.bylazar.telemetry.PanelsTelemetry;
+import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
-import com.bylazar.telemetry.PanelsTelemetry;
 
-@TeleOp(name = "Test: Beam Break Sensors", group = "Testing")
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+
+/**
+ * Shows the four intake beam breaks (debounced, as IntakeSubsystem sees them) and the artifact count.
+ * Motors are never commanded. intake.periodic() runs every loop, since that is what reads the sensors.
+ * For testing the counting logic with the intake running, use IntakeCountTest.
+ */
+@TeleOp(name = "Test: Beam Break Sensors", group = "Test")
 public class SensorTestOpMode extends LinearOpMode {
 
     @Override
     public void runOpMode() throws InterruptedException {
-        // Initialize the subsystem
-        // We pass null for telemetry if your constructor allows, 
-        // or just use the standard PanelsTelemetry instance
-        IntakeSubsystem intake = new IntakeSubsystem(hardwareMap, null);
+        TelemetryManager panels = PanelsTelemetry.INSTANCE.getTelemetry();
+        IntakeSubsystem intake = new IntakeSubsystem(hardwareMap, panels);
 
-        telemetry.addLine(">> Sensors Initialized");
-        telemetry.addLine(">> Place a ball in front of each sensor to test");
-        telemetry.update();
+        panels.addLine(">> Sensors initialized");
+        panels.addLine(">> Place a ball in front of each sensor to test");
+        panels.update(telemetry);
 
         waitForStart();
 
         while (opModeIsActive()) {
-            // Read raw states from the subsystem methods
-            boolean one = intake.isSensor1Blocked();
-            boolean two = intake.isSensor2Blocked();
-            boolean three = intake.isSensor3Blocked();
-            boolean four = intake.isSensor4Blocked();
-            int count = intake.getArtifactCount();
+            // Reads and debounces the sensors, updates the count and status light.
+            intake.periodic();
 
-            // Display results
-            telemetry.addData("--- SENSOR STATES ---", "");
-            telemetry.addData("Sensor 1", one ? "BLOCKED (TRUE)" : "CLEAN (FALSE)");
-            telemetry.addData("Sensor 2", two  ? "BLOCKED (TRUE)" : "CLEAN (FALSE)");
-            telemetry.addData("Sensor 3", three  ? "BLOCKED (TRUE)" : "CLEAN (FALSE)");
-            telemetry.addData("Sensor 4", four  ? "BLOCKED (TRUE)" : "CLEAN (FALSE)");
-            telemetry.addLine("-----------------------");
-            telemetry.addData("Calculated Ball Count", count);
-            
-            // Helper for physical debugging
+            panels.addLine("--- SENSOR STATES ---");
+            panels.addData("Sensor 1", intake.isSensor1Blocked() ? "BLOCKED" : "CLEAR");
+            panels.addData("Sensor 2", intake.isSensor2Blocked() ? "BLOCKED" : "CLEAR");
+            panels.addData("Sensor 3", intake.isSensor3Blocked() ? "BLOCKED" : "CLEAR");
+            panels.addData("Sensor 4", intake.isSensor4Blocked() ? "BLOCKED" : "CLEAR");
+            panels.addLine("-----------------------");
+
             if (intake.isFull()) {
-                telemetry.addLine("STATUS: FULL (3 BALLS)");
+                panels.addLine("STATUS: FULL (" + IntakeSubsystem.MAX_ARTIFACTS + " BALLS)");
             } else if (intake.getArtifactCount() == 0) {
-                telemetry.addLine("STATUS: EMPTY");
+                panels.addLine("STATUS: EMPTY");
             }
 
-            telemetry.update();
+            panels.update(telemetry);
         }
     }
 }
