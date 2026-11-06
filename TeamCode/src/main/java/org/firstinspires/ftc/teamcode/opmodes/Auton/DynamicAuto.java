@@ -47,6 +47,8 @@ public class DynamicAuto extends CommandOpMode {
     public static long INTAKE_DURATION_MS = 1500;
     /** Longest time a launch step waits for the flywheel and turret before firing anyway. */
     public static long LAUNCH_READY_TIMEOUT_MS = 1500;
+    /** Wait after lowering the intake bar, before the final push into the FLOWER. */
+    public static long INTAKE_BAR_LOWER_MS = 300;
 
     /** A move shorter than this is skipped: a zero-length path has no direction to follow. */
     private static final double MIN_PATH_LENGTH_IN = 1.0;
@@ -85,8 +87,8 @@ public class DynamicAuto extends CommandOpMode {
 
     // Alliance-adjusted copies of the PathConstants poses, filled in once the alliance is chosen.
     private Pose startRightHive, startLeftHive;
-    private Pose intakeGarden, intakeFarFlower, farFlowerControl;
-    private Pose intakeCloseFlower, closeFlowerControl1, closeFlowerControl2;
+    private Pose intakeGarden, intakeFarFlowerEarly, intakeFarFlower, farFlowerControl;
+    private Pose intakeCloseFlowerEarly, intakeCloseFlower, closeFlowerControl1, closeFlowerControl2;
     private Pose launchLeftHive, launchRightHive;
     private Pose parkLeftSide, parkRightSide;
 
@@ -207,23 +209,24 @@ public class DynamicAuto extends CommandOpMode {
                     break;
 
                 case INTAKE_FAR_FLOWER:
-                    // From the left-hive start, curve around like PathConstants.intakeFarFlowerLeftSide()
+                    // Early pose first. From the left-hive start, curve around like
+                    // PathConstants.intakeFarFlowerEarlyLeftSide()
                     if (lastPathEndPose == startLeftHive) {
-                        mainRoutine.addCommands(curveTo(intakeFarFlower, farFlowerControl));
+                        mainRoutine.addCommands(curveTo(intakeFarFlowerEarly, farFlowerControl));
                     } else {
-                        mainRoutine.addCommands(moveTo(intakeFarFlower));
+                        mainRoutine.addCommands(moveTo(intakeFarFlowerEarly));
                     }
-                    mainRoutine.addCommands(waitForIntake());
+                    mainRoutine.addCommands(intakeFlower(intakeFarFlower));
                     break;
 
                 case INTAKE_CLOSE_FLOWER:
-                    // From the far flower, curve like PathConstants.intakeCloseFlower()
+                    // Early pose first. From the far flower, curve like PathConstants.intakeCloseFlowerEarly()
                     if (lastPathEndPose == intakeFarFlower) {
-                        mainRoutine.addCommands(curveTo(intakeCloseFlower, closeFlowerControl1, closeFlowerControl2));
+                        mainRoutine.addCommands(curveTo(intakeCloseFlowerEarly, closeFlowerControl1, closeFlowerControl2));
                     } else {
-                        mainRoutine.addCommands(moveTo(intakeCloseFlower));
+                        mainRoutine.addCommands(moveTo(intakeCloseFlowerEarly));
                     }
-                    mainRoutine.addCommands(waitForIntake());
+                    mainRoutine.addCommands(intakeFlower(intakeCloseFlower));
                     break;
 
                 case LAUNCH_RIGHT_HIVE:
@@ -271,6 +274,30 @@ public class DynamicAuto extends CommandOpMode {
         );
     }
 
+    /**
+     * At a FLOWER's early pose: lower the bar, give it INTAKE_BAR_LOWER_MS to get down, drive the
+     * final short path to the flower pose, wait for the intake, then raise the bar.
+     */
+    private Command intakeFlower(Pose flowerPose) {
+        return new SequentialCommandGroup(
+                lowerIntakeBar(),
+                new WaitCommand(INTAKE_BAR_LOWER_MS),
+                moveTo(flowerPose),
+                waitForIntake(),
+                raiseIntakeBar()
+        );
+    }
+
+    /** Drops the intake bar in front of the robot to pull POLLEN out of a FLOWER. */
+    private Command lowerIntakeBar() {
+        return new InstantCommand(robot.intakeBarSubsystem::lower, robot.intakeBarSubsystem);
+    }
+
+    /** Raises the intake bar back up out of the way. */
+    private Command raiseIntakeBar() {
+        return new InstantCommand(robot.intakeBarSubsystem::raise, robot.intakeBarSubsystem);
+    }
+
     // --- DYNAMIC PATH BUILDERS ---
 
     private Command moveTo(Pose targetPose) {
@@ -313,8 +340,10 @@ public class DynamicAuto extends CommandOpMode {
         startLeftHive = paths.startingPoseLeftHive;
 
         intakeGarden = paths.intakeGarden;
+        intakeFarFlowerEarly = paths.intakeFarFlowerEarly;
         intakeFarFlower = paths.intakeFarFlower;
         farFlowerControl = paths.farFlowerControlPoint;
+        intakeCloseFlowerEarly = paths.intakeCloseFlowerEarly;
         intakeCloseFlower = paths.intakeCloseFlower;
         closeFlowerControl1 = paths.intakeCloseFlowerControl1;
         closeFlowerControl2 = paths.intakeCloseFlowerControl2;

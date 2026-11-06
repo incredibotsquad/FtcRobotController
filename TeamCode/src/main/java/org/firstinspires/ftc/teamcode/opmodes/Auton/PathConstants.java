@@ -23,8 +23,10 @@ public class PathConstants {
     //    public static final Pose startingPose = poseFactory.of(72 - (multiplier * 16), 72 - (multiplier * 64), 180 - (multiplier * 90));
     public final Pose intakeGarden;
     public final Pose shotOnLeftHive;
+    public final Pose intakeFarFlowerEarly;
     public final Pose intakeFarFlower;
     public final Pose farFlowerControlPoint;
+    public final Pose intakeCloseFlowerEarly;
     public final Pose intakeCloseFlower;
     public final Pose intakeCloseFlowerControl1;
     public final Pose intakeCloseFlowerControl2;
@@ -43,8 +45,12 @@ public class PathConstants {
         startingPoseLeftHive = poseFactory.of(65,133, 180);
         intakeGarden = poseFactory.of(12, 10, 180);
         shotOnLeftHive = poseFactory.of(39.5176, 118.4389, 90);
-        intakeFarFlower = poseFactory.of(50, 127, 90);
+        //old pose before intake drop down (50,127)
+        intakeFarFlowerEarly = poseFactory.of(50, 124, 90);
+        intakeFarFlower = poseFactory.of(50,127, 90);
         farFlowerControlPoint = poseFactory.of(54.85, 109.79, 0);
+        //old pose before intake drop down (16, 48)
+        intakeCloseFlowerEarly = poseFactory.of(19, 48, 180);
         intakeCloseFlower = poseFactory.of(16, 48, 180);
         intakeCloseFlowerControl1 = poseFactory.of(13.46, 93.43, 0);
         intakeCloseFlowerControl2 = poseFactory.of(32.58, 51.36, 0);
@@ -61,20 +67,26 @@ public class PathConstants {
         return Paths.line(intakeGarden, shotOnLeftHive).linear(intakeGarden, shotOnLeftHive).with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
     }
 
-    public Path intakeFarFlower() {
-        return Paths.line(shotOnLeftHive, intakeFarFlower).constant(intakeFarFlower).with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
+    public Path intakeFarFlowerEarly() {
+        return Paths.line(shotOnLeftHive, intakeFarFlowerEarly).constant(intakeFarFlowerEarly).with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
+    }
+    public Path intakeFarFlower(){
+        return Paths.line(intakeFarFlowerEarly, intakeFarFlower).constant(intakeFarFlower).with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
     }
 
-    public Path intakeCloseFlower() {
-        return Paths.curve(intakeFarFlower, intakeCloseFlowerControl1, intakeCloseFlowerControl2, intakeCloseFlower).linear(intakeCloseFlower, intakeCloseFlower).with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
+    public Path intakeCloseFlowerEarly() {
+        return Paths.curve(intakeFarFlower, intakeCloseFlowerControl1, intakeCloseFlowerControl2, intakeCloseFlowerEarly).linear(intakeCloseFlower, intakeCloseFlower).with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
+    }
+    public Path intakeCloseFlower(){
+        return Paths.line(intakeCloseFlowerEarly, intakeCloseFlower).constant(intakeCloseFlower).with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
     }
 
     public Path moveToShootRightHive() {
         return Paths.line(intakeCloseFlower, shotOnRightHive).constant(shotOnRightHive).with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
     }
     //move from hive without nectar to flower 1 to intake
-    public Path intakeFarFlowerLeftSide(){
-        return Paths.curve(startingPoseLeftHive, farFlowerControlPoint, intakeFarFlower).tangent().with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
+    public Path intakeFarFlowerEarlyLeftSide(){
+        return Paths.curve(startingPoseLeftHive, farFlowerControlPoint, intakeFarFlowerEarly).tangent().with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
     }
     public Path parkLeftSide(){
         return Paths.line(intakeFarFlower, parkPoseLeftSide).constant(parkPoseLeftSide).with(Constants.foresightConfig.maxPathSpeed.at(maxSpeed));
