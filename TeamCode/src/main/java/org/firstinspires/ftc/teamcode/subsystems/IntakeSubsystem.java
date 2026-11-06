@@ -24,7 +24,10 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
  *  2. Correction, once nothing is moving through the entrance (sensor 1 clear for SETTLE_MS):
  *       - sensor 4 clear                 -> count = 0 (first artifact always reaches the top)
  *       - sensors 4/3/2 blocked from top -> count is at least that many
- *       - sensor 1 clear                 -> count is at most MAX - 1 (4th artifact rests on sensor 1)
+ *       - upper bound (USE_SLOT_BASED_UPPER_BOUND):
+ *           true:  count is at most (blocked slots from the top) + 1, i.e. one artifact the
+ *                  sensors can't see (e.g. a 4th resting between sensors 1 and 2)
+ *           false: count is at most MAX - 1 (old rule: assumes a 4th artifact rests on sensor 1)
  *  3. If sensor 1 stays blocked for JAM_MS while intaking, the artifact can't move up -> full.
  *
  * When the count reaches MAX_ARTIFACTS while intaking, the intake stops automatically.
@@ -45,6 +48,12 @@ public class IntakeSubsystem extends SubsystemBase {
     public static long JAM_MS = 400;
     /** Use sensors 2-4 as a lower bound when settled. Disable if one large artifact can block two sensors. */
     public static boolean USE_SLOT_SENSORS_AS_LOWER_BOUND = true;
+    /**
+     * Settled upper bound on the count. true = (blocked slots from the top) + 1, which keeps a full
+     * stack at 4 when the 4th artifact doesn't reach sensor 1. false = the old MAX_ARTIFACTS - 1
+     * cap, which drops a full stack to 3 in that case. Experimental: flip live in Panels to compare.
+     */
+    public static boolean USE_SLOT_BASED_UPPER_BOUND = true;
 
     public static double ZERO_BALL_COLOR = 0;
     public static double ONE_BALL_COLOR = 0.29;   // RED
@@ -248,8 +257,13 @@ public class IntakeSubsystem extends SubsystemBase {
                 if (USE_SLOT_SENSORS_AS_LOWER_BOUND) {
                     artifactCount = Math.max(artifactCount, contiguousSlotsFromTop());
                 }
-                // 4th artifact would be resting on sensor 1, which is clear
-                artifactCount = Math.min(artifactCount, MAX_ARTIFACTS - 1);
+                if (USE_SLOT_BASED_UPPER_BOUND) {
+                    // At most one artifact the slot sensors can't see (below the lowest blocked one).
+                    artifactCount = Math.min(artifactCount, contiguousSlotsFromTop() + 1);
+                } else {
+                    // Old rule: a 4th artifact would be resting on sensor 1, which is clear
+                    artifactCount = Math.min(artifactCount, MAX_ARTIFACTS - 1);
+                }
             }
         }
 
