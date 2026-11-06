@@ -47,7 +47,7 @@ public class LaunchReadinessCommand extends CommandBase {
      * Distance (inches, robot center to CELL) -> flywheel RPM. PLACEHOLDERS: fill from test shots.
      * Must be the same length, sorted by distance. Values in between are linearly interpolated.
      */
-    public static double[] SHOT_DISTANCES_IN = {34, 46, 52, 66, 88};
+    public static double[] SHOT_DISTANCES_IN = {46, 47, 52, 66, 88};
     public static double[] SHOT_RPMS = {1575, 1600, 1650, 1650, 1850};
 
     // ------------------------------------------------------------------ turret geometry
@@ -99,6 +99,9 @@ public class LaunchReadinessCommand extends CommandBase {
     /** When the estimate last arrived at the commanded position. */
     private long turretArrivedAtMs = 0;
     private String notReadyReason = "";
+    /** Distance (in) and RPM target from the last execute(), for FlywheelTuner. NaN before the first. */
+    private double lastDistanceIn = Double.NaN;
+    private double lastRpmTarget = Double.NaN;
     /** Turret debug: log the first aim decision of each run (logcat tag TurretDebug). */
     private boolean loggedFirstAim = false;
 
@@ -143,6 +146,7 @@ public class LaunchReadinessCommand extends CommandBase {
         double dx = aimPoint.getX() - robot.getX();
         double dy = aimPoint.getY() - robot.getY();
         double distance = Math.hypot(dx, dy);
+        lastDistanceIn = distance;
 
         // ---------------------------------------------------- turret
         double relativeDeg = relativeTurretDeg(pose, aimPoint);
@@ -174,6 +178,7 @@ public class LaunchReadinessCommand extends CommandBase {
 
         // ---------------------------------------------------- flywheel (always running)
         double rpm = rpmForDistance(distance);
+        lastRpmTarget = rpm;
         launcher.updateFlywheel(rpm, distance);
 
         // ---------------------------------------------------- shot validity
@@ -206,6 +211,16 @@ public class LaunchReadinessCommand extends CommandBase {
     @Override
     public boolean isFinished() {
         return false;
+    }
+
+    /** Robot-to-aim-point distance (in) used for the last RPM / gain lookup. NaN before the first loop. */
+    public double getLastDistanceIn() {
+        return lastDistanceIn;
+    }
+
+    /** RPM target from the shot table on the last loop. NaN before the first loop. */
+    public double getLastRpmTarget() {
+        return lastRpmTarget;
     }
 
     public String getNotReadyReason() {

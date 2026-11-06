@@ -54,6 +54,8 @@ public class Incredibot extends Robot {
     public final LaunchGateSubsystem launchGateSubsystem;
     public final OdometrySubsystem odometrySubsystem;
     public final LimelightSubsystem limelightSubsystem;
+    /** The launcher's default command, set by initTeleop()/initAuto() (null in drive-only mode). Read by FlywheelTuner. */
+    public LaunchReadinessCommand launchReadinessCommand;
     // Hardware
     private final HardwareMap hwMap;
     private TelemetryManager telemetry;
@@ -173,6 +175,7 @@ public class Incredibot extends Robot {
 
         // Assign the background tracking loop here!
         // The scheduler will now call execute() on this command every single frame.
-        launchSubsystem.setDefaultCommand(new LaunchReadinessCommand(launchSubsystem, odometrySubsystem, telemetry));
+        launchReadinessCommand = new LaunchReadinessCommand(launchSubsystem, odometrySubsystem, telemetry);
+        launchSubsystem.setDefaultCommand(launchReadinessCommand);
     }
 }

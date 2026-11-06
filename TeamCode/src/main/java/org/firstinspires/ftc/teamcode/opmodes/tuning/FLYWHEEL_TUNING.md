@@ -1,6 +1,6 @@
 # Flywheel Tuning Guide
 
-This walks you through tuning the launcher flywheel with the **FlywheelTuner** OpMode (group "Tests"). The goals are to:
+This walks you through tuning the launcher flywheel with the **FlywheelBenchTuner** OpMode (group "Tests"). The goals are to:
 
 1. reach target RPM quickly,
 2. hold it steadily, and
@@ -37,8 +37,8 @@ Rough sense of scale:
 2. **Robot:** on the floor or a cart with the launcher pointing somewhere safe. **The flywheel spins up as soon as you press START.**
 3. **Panels:** open it in a browser on the Driver Hub network. You'll use:
    - **Graphs** tab: plot `targetRPM`, `actualRPM`, `leftRPM`, `rightRPM`, `power`.
-   - **Configurables** tab: `LaunchSubsystem` (gains and switches) and `FlywheelTuner` (targets, feed power).
-4. On the Driver Hub, pick **FlywheelTuner**, then INIT and START.
+   - **Configurables** tab: `LaunchSubsystem` (gains and switches) and `FlywheelBenchTuner` (targets, feed power).
+4. On the Driver Hub, pick **FlywheelBenchTuner**, then INIT and START.
 
 **Controls (gamepad 1):**
 
@@ -77,7 +77,7 @@ In Panels → Configurables → `LaunchSubsystem`:
 - `FLYWHEEL_BANG_BANG_ENABLED` = **false**
 - `FLYWHEEL_P` = `FLYWHEEL_I` = `FLYWHEEL_D` = **0**
 
-In `FlywheelTuner`:
+In `FlywheelBenchTuner`:
 
 - `highVelocityRPM` = your fastest expected shot (e.g. 1400)
 - `lowVelocityRPM` = your slowest expected shot (e.g. 900)
@@ -178,7 +178,7 @@ Only try a tiny I (e.g. 0.00001) if you still see a steady offset after step 5.
   - Looser (e.g. 75) fires faster but with more spread.
   - Pick it by shooting at a real CELL and watching the spread.
 - **Shot spacing:** a ball should only reach the flywheel *after* the previous dip has recovered. If `Recovery ms` is longer than the time between balls, the speed drops further with every ball in a volley. You'll see `Dip RPM` grow from shot to shot and the last shots fall short. To fix it:
-  - lower `FlywheelTuner.transferMotorPower` to see what spacing works, then
+  - lower `FlywheelBenchTuner.transferMotorPower` to see what spacing works, then
   - set `SmartIntakeCommand.LAUNCH_TRANSFER_POWER` to match for matches.
 
 ---
@@ -221,11 +221,29 @@ Commit them, with a note of the date and battery voltage.
 Flywheel tuning makes the flywheel *hold* any RPM. Which RPM to use at each distance goes in `LaunchReadinessCommand.SHOT_DISTANCES_IN` / `SHOT_RPMS`:
 
 1. Place the robot at a measured distance from your CELL (e.g. 24″, 48″, 72″, 96″, 120″, center of robot to center of CELL).
-2. Aim the turret at the CELL. FlywheelTuner doesn't move the turret, so use **ServoPositionTuner** or set it by hand.
-3. Adjust `FlywheelTuner.highVelocityRPM` until shots land in the center of the CELL opening, and record it.
+2. Aim the turret at the CELL. FlywheelBenchTuner doesn't move the turret, so use **ServoPositionTuner** or set it by hand.
+3. Adjust `FlywheelBenchTuner.highVelocityRPM` until shots land in the center of the CELL opening, and record it.
 4. Repeat for each distance and fill in both arrays (same length, sorted by distance).
 
 ---
+
+## 11. Per-position tuning with the real TeleOp (FlywheelTuner)
+
+Sections 1-10 use **FlywheelBenchTuner** (fixed RPMs, manual feed). Once the feedforward is in the
+right range, switch to **FlywheelTuner**: it runs the actual TeleOp (same Incredibot, default commands
+and operator bindings), so aiming, the distance -> RPM table, the gain table, the launch kick and the
+last-ball kick all behave exactly as in a match.
+
+1. Start from a known pose (or press operator Y to relocalize at the corner stance). The distance comes
+   from odometry, so a wrong pose means a wrong row.
+2. Drive (gamepad 1 sticks) until telemetry shows a **Shot row** and **Gain row** (within `ROW_SNAP_IN`
+   of a table distance). Away from a row, edits are ignored.
+3. Fire with operator RB (or gamepad 1 Start). For each launch, **Last launch** lists the RPM each
+   artifact left at and whether the flywheel recovered before the next one.
+4. **A / X** move this row's shot RPM until the shots land. Dpad / bumpers edit this row's P, kS, kV
+   (B = step size; Back = auto kV). Aim for shots 2-4 leaving close to shot 1's RPM.
+5. Repeat for every row, then press **Y** and copy the logged arrays (logcat tag `FlywheelTuner`) into
+   `LaunchReadinessCommand` and `LaunchSubsystem`.
 
 ## Troubleshooting
 

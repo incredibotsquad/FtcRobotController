@@ -1,243 +1,351 @@
 package org.firstinspires.ftc.teamcode.opmodes.tuning;
 
+import android.util.Log;
+
+import com.arcrobotics.ftclib.command.CommandScheduler;
 import com.arcrobotics.ftclib.gamepad.GamepadEx;
 import com.arcrobotics.ftclib.gamepad.GamepadKeys;
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
-import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
+import org.firstinspires.ftc.teamcode.Incredibot;
+import org.firstinspires.ftc.teamcode.commands.LaunchBallsCommand;
+import org.firstinspires.ftc.teamcode.commands.LaunchReadinessCommand;
+import org.firstinspires.ftc.teamcode.commands.RelocalizeWithLimelightCommand;
+import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 /**
- * Tunes the flywheel using real shots. The gains being tuned are LaunchSubsystem's own
- * FLYWHEEL_* fields, so match OpModes use whatever you tune here (until the app restarts).
- * When happy, copy the values shown into the defaults in LaunchSubsystem.
+ * Flywheel tuner that runs the real TeleOp: same Incredibot, same INIT/START sequence, same default
+ * commands (LaunchReadinessCommand aims and picks RPM + gains from the distance tables,
+ * SmartIntakeCommand, CloseGateCommand, DriveRobotCommand) and the same operator bindings on
+ * gamepad 2, including RB = LaunchBallsCommand. What you tune here is what TeleOp does.
+ * (For the first kS/kV tune at fixed RPMs, use FlywheelBenchTuner.)
  *
- * Controls (gamepad 1):
- *   Y            - toggle between high and low target RPM
- *   A            - toggle gate (open = shoot)
- *   X            - toggle transfer
- *   Start        - toggle intake
- *   B            - cycle step size
- *   Dpad up/down - P +/- step
- *   Dpad L/R     - kS -/+ step
- *   LB / RB      - kV -/+ step
- *   Back         - auto-adjust kV from the current speed (use with P = 0, bang-bang off,
- *                  flywheel settled; repeat until actual RPM matches target)
- *   Left stick   - (press) reset shot statistics
+ * Tuning is per POSITION: drive (gamepad 1 sticks) so the robot is within ROW_SNAP_IN of one of
+ * the table distances (LaunchReadinessCommand.SHOT_DISTANCES_IN / LaunchSubsystem.GAIN_TABLE_DISTANCES_IN),
+ * then edit that row. Edits are ignored away from a row, since in between the values are
+ * interpolated. The odometry pose must be right for the distance to be: start from a known pose, or
+ * relocalize (operator Y, corner stance) before tuning.
  *
- * Suggested order:
- *   1. Bang-bang OFF (Panels: LaunchSubsystem.FLYWHEEL_BANG_BANG_ENABLED), P = 0.
- *      Tune kS, then kV (or Back) until actual RPM settles on target at both targets.
- *   2. Feed and shoot. Raise P until "recovery ms" stops improving or RPM oscillates, then back off.
- *   3. Bang-bang ON. Adjust FLYWHEEL_BANG_BANG_THRESHOLD_RPM for the lowest spin-up and
- *      recovery times without overshoot.
- *   Tune with a charged battery at about NOMINAL_VOLTAGE.
+ * Controls, gamepad 1 (gamepad 2 is the normal operator):
+ *   Sticks        - drive (as TeleOp)
+ *   Start         - fire: LaunchBallsCommand, same as operator RB (for tuning alone)
+ *   A / X         - shot RPM for this row +/- RPM_STEP (does it hit the CELL?)
+ *   Dpad up/down  - P +/- step        (gain row for this distance, or FLYWHEEL_* if
+ *   Dpad R/L      - kS +/- step        LaunchSubsystem.USE_GAIN_TABLE is off)
+ *   RB / LB       - kV +/- step
+ *   B             - cycle gain step size
+ *   Back          - auto-adjust kV from the current speed (P = 0, bang-bang off, flywheel settled)
+ *   Y             - log all tables to logcat (tag FlywheelTuner) to copy into the code
+ *   Left stick    - (press) reset statistics
+ *
+ * Shots are detected from the RPM while the gate is open: a drop of SHOT_DETECT_DROP_RPM below the
+ * recent peak is a shot.
+ * For each launch (gate open to closed) it lists the RPM each artifact left at and whether the
+ * flywheel recovered before the next one. Spread in those numbers = inconsistent shots.
+ *
+ * Edits change the live static values, so TeleOp uses them until the app restarts. Copy them into
+ * the code (Y logs them) to keep them. Panels is not legal in matches (R704).
  */
 @Configurable
 @TeleOp(name = "FlywheelTuner", group = "Tests")
 public class FlywheelTuner extends LinearOpMode {
 
-    public static double highVelocityRPM = 1600;
-    public static double lowVelocityRPM = 900;
-
-    public static double transferMotorPower = 1;
-    public static double intakeMotorPower = 1;
-
-    /** A drop of more than this below target, while at speed, counts as a shot. */
+    /** Edits only apply within this many inches of a table distance. */
+    public static double ROW_SNAP_IN = 3.0;
+    public static double RPM_STEP = 25;
+    /** A drop of more than this below the recent peak counts as a shot. */
     public static double SHOT_DETECT_DROP_RPM = 75;
-    /** Telemetry rate. Control runs every loop; telemetry is the slow part. */
-    public static long TELEMETRY_INTERVAL_MS = 50;
+    /** After a shot, RPM must rise this much above the dip's low point before the next shot can be detected. */
+    public static double SHOT_REARM_RPM = 30;
 
-    private final double[] stepSizes = {10.0, 1.0, 0.1, 0.01, 0.001, 0.0001, 0.00001};
-    private int stepIndex = 3;
+    private static final String TAG = "FlywheelTuner";
 
-    // shot / spin-up measurement
-    private enum ShotState { SPINNING_UP, AT_SPEED, RECOVERING }
-    private ShotState shotState = ShotState.SPINNING_UP;
-    private long phaseStartMs;
-    private double minRpmThisShot;
-    private int shotCount = 0;
-    private double lastDipRpm = 0, worstDipRpm = 0;
-    private long lastRecoveryMs = 0, totalRecoveryMs = 0;
-    private long lastSpinUpMs = 0;
+    private final double[] stepSizes = {0.1, 0.01, 0.001, 0.0001, 0.00001};
+    private int stepIndex = 2;
+
+    // ---- shot detection
+    private boolean inDip = false;
+    private double peakRpm = 0, dipMinRpm = 0;
+    private long lastShotMs = -1;
+    private boolean recoveredSinceShot = true;
+    private long lastRecoveryMs = -1;
+
+    // ---- current launch (gate open -> closed)
+    private boolean gateWasOpen = false;
+    private final List<String> burstShots = new ArrayList<>();
+    private String burstHeader = "no launch yet";
+    private int totalShots = 0;
+    private double worstDipRpm = 0;
+
+    private LaunchSubsystem launcher;
 
     @Override
     public void runOpMode() {
-        // Fast loops matter for recovery: read all hub data in one bulk call per loop.
-        for (LynxModule hub : hardwareMap.getAll(LynxModule.class)) {
-            hub.setBulkCachingMode(LynxModule.BulkCachingMode.AUTO);
-        }
-
         TelemetryManager panels = PanelsTelemetry.INSTANCE.getTelemetry();
-        LaunchSubsystem launcher = new LaunchSubsystem(hardwareMap, panels);
-        IntakeSubsystem intake = new IntakeSubsystem(hardwareMap, panels);
-        LaunchGateSubsystem gate = new LaunchGateSubsystem(hardwareMap, panels);
-        GamepadEx gp1 = new GamepadEx(gamepad1);
+        GamepadEx driverGamepad = new GamepadEx(gamepad1);
+        GamepadEx operatorGamepad = new GamepadEx(gamepad2);
+        GamepadEx tuningPad = new GamepadEx(gamepad1); // separate instance: edge detection for tuning buttons
 
-        boolean useHigh = true;
-        boolean transferOn = false;
-        boolean intakeOn = false;
-        long lastTelemetryMs = 0;
+        // ---------------------------------------------------- INIT: same as IncredibotsMecanumDrive
+        Incredibot incredibot = new Incredibot(hardwareMap, panels);
+        launcher = incredibot.launchSubsystem;
+        RelocalizeWithLimelightCommand relocalize = new RelocalizeWithLimelightCommand(
+                incredibot.limelightSubsystem, incredibot.odometrySubsystem, incredibot.driveSubsystem);
+
+        incredibot.intakeBarSubsystem.raise();
+        incredibot.odometrySubsystem.resetPose(CrossOpModeStorage.currentPose.getX(), CrossOpModeStorage.currentPose.getY(),
+                Math.toDegrees(CrossOpModeStorage.currentPose.getHeading()));
+        if (!Incredibot.DRIVE_ONLY_MODE) relocalize.schedule();
+
+        while (opModeInInit()) {
+            CommandScheduler.getInstance().run();
+            panels.addLine("FlywheelTuner: runs the real TeleOp. Flywheel spins up on START.");
+            if (Incredibot.DRIVE_ONLY_MODE) panels.addLine("WARNING: DRIVE_ONLY_MODE is on, the launcher won't run.");
+            panels.addData("Start pose", CrossOpModeStorage.currentPose);
+            panels.update(telemetry);
+        }
+        waitForStart();
+
+        if (!Incredibot.DRIVE_ONLY_MODE) {
+            incredibot.launchSubsystem.setTurretPosition(CrossOpModeStorage.turretPosition);
+        }
+        incredibot.initialize(Incredibot.OpModeType.TELEOP, driverGamepad, operatorGamepad);
+
         long lastLoopNs = System.nanoTime();
         double loopMs = 0;
 
-        panels.addLine("Flywheel tuner ready. Flywheel spins up on START.");
-        panels.update(telemetry);
-        waitForStart();
+        // ---------------------------------------------------- main loop: TeleOp + tuning
+        while (opModeIsActive() && !isStopRequested()) {
+            CommandScheduler.getInstance().run();
 
-        gate.closeGate();
-        startSpinUp();
+            LaunchReadinessCommand readiness = incredibot.launchReadinessCommand;
+            double distance = readiness == null ? Double.NaN : readiness.getLastDistanceIn();
+            int shotRow = nearestRow(LaunchReadinessCommand.SHOT_DISTANCES_IN, distance);
+            int gainRow = LaunchSubsystem.USE_GAIN_TABLE ? nearestRow(LaunchSubsystem.GAIN_TABLE_DISTANCES_IN, distance) : -1;
+            boolean useTable = LaunchSubsystem.USE_GAIN_TABLE;
+            boolean canEditGains = !useTable || gainRow >= 0;
 
-        while (opModeIsActive()) {
-            gp1.readButtons();
+            // ------------------------------------------------ tuning buttons
+            tuningPad.readButtons();
             double step = stepSizes[stepIndex];
 
-            // ---------------------------------------------------- buttons
-            if (gp1.wasJustPressed(GamepadKeys.Button.Y)) {
-                useHigh = !useHigh;
-                startSpinUp();
+            if (tuningPad.wasJustPressed(GamepadKeys.Button.START)) {
+                new LaunchBallsCommand(incredibot.launchGateSubsystem, incredibot.intakeSubsystem, incredibot.driveSubsystem).schedule();
             }
-            if (gp1.wasJustPressed(GamepadKeys.Button.B)) stepIndex = (stepIndex + 1) % stepSizes.length;
-            if (gp1.wasJustPressed(GamepadKeys.Button.A)) {
-                if (gate.isGateOpen()) gate.closeGate(); else gate.openGate();
+            if (tuningPad.wasJustPressed(GamepadKeys.Button.B)) stepIndex = (stepIndex + 1) % stepSizes.length;
+            if (tuningPad.wasJustPressed(GamepadKeys.Button.LEFT_STICK_BUTTON)) resetStats();
+            if (tuningPad.wasJustPressed(GamepadKeys.Button.Y)) logTables();
+
+            if (shotRow >= 0) {
+                if (tuningPad.wasJustPressed(GamepadKeys.Button.A)) LaunchReadinessCommand.SHOT_RPMS[shotRow] += RPM_STEP;
+                if (tuningPad.wasJustPressed(GamepadKeys.Button.X)) {
+                    LaunchReadinessCommand.SHOT_RPMS[shotRow] = Math.max(0, LaunchReadinessCommand.SHOT_RPMS[shotRow] - RPM_STEP);
+                }
             }
-            if (gp1.wasJustPressed(GamepadKeys.Button.X)) transferOn = !transferOn;
-            if (gp1.wasJustPressed(GamepadKeys.Button.START)) intakeOn = !intakeOn;
-            if (gp1.wasJustPressed(GamepadKeys.Button.LEFT_STICK_BUTTON)) resetStats();
+            if (canEditGains) {
+                if (tuningPad.wasJustPressed(GamepadKeys.Button.DPAD_UP)) addGain(GainColumn.P, gainRow, step);
+                if (tuningPad.wasJustPressed(GamepadKeys.Button.DPAD_DOWN)) addGain(GainColumn.P, gainRow, -step);
+                if (tuningPad.wasJustPressed(GamepadKeys.Button.DPAD_RIGHT)) addGain(GainColumn.KS, gainRow, step);
+                if (tuningPad.wasJustPressed(GamepadKeys.Button.DPAD_LEFT)) addGain(GainColumn.KS, gainRow, -step);
+                if (tuningPad.wasJustPressed(GamepadKeys.Button.RIGHT_BUMPER)) addGain(GainColumn.KV, gainRow, step);
+                if (tuningPad.wasJustPressed(GamepadKeys.Button.LEFT_BUMPER)) addGain(GainColumn.KV, gainRow, -step);
 
-            if (gp1.wasJustPressed(GamepadKeys.Button.DPAD_UP)) LaunchSubsystem.FLYWHEEL_P += step;
-            if (gp1.wasJustPressed(GamepadKeys.Button.DPAD_DOWN)) LaunchSubsystem.FLYWHEEL_P = Math.max(0, LaunchSubsystem.FLYWHEEL_P - step);
-            if (gp1.wasJustPressed(GamepadKeys.Button.DPAD_RIGHT)) LaunchSubsystem.FLYWHEEL_KS += step;
-            if (gp1.wasJustPressed(GamepadKeys.Button.DPAD_LEFT)) LaunchSubsystem.FLYWHEEL_KS = Math.max(0, LaunchSubsystem.FLYWHEEL_KS - step);
-            if (gp1.wasJustPressed(GamepadKeys.Button.RIGHT_BUMPER)) LaunchSubsystem.FLYWHEEL_KV += step;
-            if (gp1.wasJustPressed(GamepadKeys.Button.LEFT_BUMPER)) LaunchSubsystem.FLYWHEEL_KV = Math.max(0, LaunchSubsystem.FLYWHEEL_KV - step);
-
-            double targetRPM = useHigh ? highVelocityRPM : lowVelocityRPM;
-
-            // Back: rescale kV so feedforward alone would produce the current speed at the target.
-            // Steady state with P = 0: power = kS + kV_true * actualTPS, and power = kS + kV * targetTPS.
-            if (gp1.wasJustPressed(GamepadKeys.Button.BACK)) {
-                double actualTPS = launcher.getFlywheelVelocityTPS();
-                double targetTPS = LaunchSubsystem.rpmToTps(targetRPM);
-                if (actualTPS > 100 && targetTPS > 0) {
-                    LaunchSubsystem.FLYWHEEL_KV = LaunchSubsystem.FLYWHEEL_KV * targetTPS / actualTPS;
+                // Back: rescale kV so feedforward alone gives the current speed (see FlywheelBenchTuner).
+                if (tuningPad.wasJustPressed(GamepadKeys.Button.BACK)) {
+                    double actualTPS = launcher.getFlywheelVelocityTPS();
+                    double targetTPS = LaunchSubsystem.rpmToTps(launcher.getTargetRPM());
+                    if (actualTPS > 100 && targetTPS > 0) {
+                        double kv = getGain(GainColumn.KV, gainRow);
+                        addGain(GainColumn.KV, gainRow, kv * targetTPS / actualTPS - kv);
+                    }
                 }
             }
 
-            // ---------------------------------------------------- outputs
-            launcher.updateFlywheel(targetRPM);
-            intake.setTransferMotorPower(transferOn ? transferMotorPower : 0);
-            intake.setIntakeMotorPower(intakeOn ? intakeMotorPower : 0);
-
-            // ---------------------------------------------------- measurements
+            // ------------------------------------------------ measurements
             double rpm = launcher.getCurrentFlywheelRPM();
-            updateShotStats(rpm, targetRPM);
+            double target = launcher.getTargetRPM();
+            updateShots(rpm, target, incredibot.launchGateSubsystem.isGateOpen(), distance);
 
             long nowNs = System.nanoTime();
             loopMs = 0.9 * loopMs + 0.1 * ((nowNs - lastLoopNs) / 1e6);
             lastLoopNs = nowNs;
 
-            // ---------------------------------------------------- telemetry (rate limited)
-            long nowMs = nowMs();
-            if (nowMs - lastTelemetryMs >= TELEMETRY_INTERVAL_MS) {
-                lastTelemetryMs = nowMs;
+            // ------------------------------------------------ telemetry (every loop, like TeleOp)
+            panels.addData("targetRPM", target);
+            panels.addData("actualRPM", rpm);
+            panels.addData("power", launcher.getLastFlywheelPower());
 
-                // Graph keys (Panels "Graphs" tab)
-                panels.addData("targetRPM", targetRPM);
-                panels.addData("actualRPM", rpm);
-                panels.addData("leftRPM", launcher.getLeftFlywheelRPM());
-                panels.addData("rightRPM", launcher.getRightFlywheelRPM());
-                panels.addData("error", targetRPM - rpm);
-                panels.addData("power", launcher.getLastFlywheelPower());
+            panels.addLine("--- FlywheelTuner ---");
+            panels.addData("Distance (in)", Double.isNaN(distance) ? "-" : String.format("%.1f", distance));
+            panels.addData("Shot row", shotRow >= 0
+                    ? String.format("%d (%.0f in): RPM %.0f  [A +%.0f / X -%.0f]", shotRow,
+                            LaunchReadinessCommand.SHOT_DISTANCES_IN[shotRow], LaunchReadinessCommand.SHOT_RPMS[shotRow], RPM_STEP, RPM_STEP)
+                    : "none: drive within " + ROW_SNAP_IN + " in of " + Arrays.toString(LaunchReadinessCommand.SHOT_DISTANCES_IN));
+            panels.addData("Gain row", !useTable ? "USE_GAIN_TABLE off: editing FLYWHEEL_*"
+                    : gainRow >= 0 ? String.format("%d (%.0f in)", gainRow, LaunchSubsystem.GAIN_TABLE_DISTANCES_IN[gainRow])
+                    : "none: drive within " + ROW_SNAP_IN + " in of " + Arrays.toString(LaunchSubsystem.GAIN_TABLE_DISTANCES_IN));
+            if (canEditGains) {
+                panels.addData("P (dpad U/D) / kS (dpad R/L) / kV (RB/LB)", String.format("%.5f / %.4f / %.6f",
+                        getGain(GainColumn.P, gainRow), getGain(GainColumn.KS, gainRow), getGain(GainColumn.KV, gainRow)));
+            }
+            panels.addData("Step (B)", step);
+            panels.addData("Mode / at speed", (launcher.isFlywheelInBangBang() ? "BANG-BANG" : "PIDF")
+                    + " / " + launcher.isFlywheelAtSpeed());
+            panels.addData("Battery V / loop ms", String.format("%.2f / %.1f", launcher.getBatteryVoltage(), loopMs));
+            panels.addData("Last launch", burstHeader);
+            for (String shot : burstShots) panels.addLine("  " + shot);
+            panels.addData("Shots total / worst dip", totalShots + " / " + Math.round(worstDipRpm));
+            panels.addData("Recovery ms (last)", lastRecoveryMs >= 0 ? String.valueOf(lastRecoveryMs) : "-");
 
-                panels.addLine("--- Status ---");
-                panels.addData("Mode", launcher.isFlywheelInBangBang() ? "BANG-BANG (full power)" : "PIDF");
-                panels.addData("At speed", launcher.isFlywheelAtSpeed());
-                panels.addData("Battery V", String.format("%.2f", launcher.getBatteryVoltage()));
-                panels.addData("Loop ms", String.format("%.1f", loopMs));
-                panels.addData("Gate (A) / Transfer (X) / Intake (Start)", (gate.isGateOpen() ? "OPEN" : "closed")
-                        + " / " + (transferOn ? "ON" : "off") + " / " + (intakeOn ? "ON" : "off"));
+            panels.update(telemetry);
+        }
 
-                panels.addLine("--- Shots ---");
-                panels.addData("Spin-up ms (last)", lastSpinUpMs);
-                panels.addData("Shots", shotCount);
-                panels.addData("Dip RPM last / worst", Math.round(lastDipRpm) + " / " + Math.round(worstDipRpm));
-                panels.addData("Recovery ms last / avg", lastRecoveryMs + " / "
-                        + (shotCount > 0 ? totalRecoveryMs / shotCount : 0));
+        CommandScheduler.getInstance().reset();
+    }
 
-                panels.addLine("--- Gains (LaunchSubsystem.FLYWHEEL_*) ---");
-                panels.addData("Step (B)", stepSizes[stepIndex]);
-                panels.addData("P (dpad U/D)", LaunchSubsystem.FLYWHEEL_P);
-                panels.addData("kS (dpad L/R)", LaunchSubsystem.FLYWHEEL_KS);
-                panels.addData("kV (LB/RB, Back=auto)", LaunchSubsystem.FLYWHEEL_KV);
-                panels.addData("I / D (Panels)", LaunchSubsystem.FLYWHEEL_I + " / " + LaunchSubsystem.FLYWHEEL_D);
-                panels.addData("Bang-bang", LaunchSubsystem.FLYWHEEL_BANG_BANG_ENABLED
-                        ? "on, " + LaunchSubsystem.FLYWHEEL_BANG_BANG_THRESHOLD_RPM + " rpm" : "off");
+    // ------------------------------------------------------------------ shots
 
-                panels.update(telemetry);
+    /**
+     * Peak/dip shot detection that works within a burst (shots can come before the flywheel has
+     * recovered). Each shot records the RPM the artifact left at (the peak before the drop).
+     */
+    private void updateShots(double rpm, double target, boolean gateOpen, double distance) {
+        long now = System.nanoTime() / 1_000_000L;
+
+        if (gateOpen && !gateWasOpen) { // new launch
+            burstShots.clear();
+            burstHeader = String.format("target %.0f rpm at %.1f in, %.2f V", target, distance, launcher.getBatteryVoltage());
+            peakRpm = rpm;
+            inDip = false;
+        }
+        gateWasOpen = gateOpen;
+
+        if (!gateOpen) {
+            // Only count shots while the gate is open: with it closed, a drop is the target changing
+            // (e.g. driving to a nearer row), not an artifact.
+            peakRpm = rpm;
+            inDip = false;
+        } else if (!inDip) {
+            peakRpm = Math.max(peakRpm, rpm);
+            if (peakRpm - rpm > SHOT_DETECT_DROP_RPM) {
+                if (lastShotMs >= 0 && !recoveredSinceShot && !burstShots.isEmpty()) {
+                    int last = burstShots.size() - 1;
+                    burstShots.set(last, burstShots.get(last) + ", next shot before recovery");
+                }
+                inDip = true;
+                dipMinRpm = rpm;
+                lastShotMs = now;
+                recoveredSinceShot = false;
+                totalShots++;
+                burstShots.add(String.format("shot %d: left at %.0f rpm (%+.0f vs target)",
+                        burstShots.size() + 1, peakRpm, peakRpm - target));
+            }
+        } else {
+            dipMinRpm = Math.min(dipMinRpm, rpm);
+            if (rpm - dipMinRpm > SHOT_REARM_RPM) {
+                worstDipRpm = Math.max(worstDipRpm, peakRpm - dipMinRpm);
+                inDip = false;
+                peakRpm = rpm;
             }
         }
 
-        launcher.stop();
-        intake.stopIntakeAndTransfer();
-        gate.closeGate();
-    }
-
-    /**
-     * SPINNING_UP: measures time from a target change until first at speed.
-     * AT_SPEED:    a drop of SHOT_DETECT_DROP_RPM below target starts a shot.
-     * RECOVERING:  tracks the lowest RPM (dip) and time until back within tolerance.
-     */
-    private void updateShotStats(double rpm, double targetRPM) {
-        long now = nowMs();
-        boolean atSpeed = Math.abs(targetRPM - rpm) < LaunchSubsystem.TARGET_RPM_TOLERANCE;
-
-        switch (shotState) {
-            case SPINNING_UP:
-                if (atSpeed) {
-                    lastSpinUpMs = now - phaseStartMs;
-                    shotState = ShotState.AT_SPEED;
-                }
-                break;
-            case AT_SPEED:
-                if (targetRPM - rpm > SHOT_DETECT_DROP_RPM) {
-                    shotState = ShotState.RECOVERING;
-                    phaseStartMs = now;
-                    minRpmThisShot = rpm;
-                }
-                break;
-            case RECOVERING:
-                minRpmThisShot = Math.min(minRpmThisShot, rpm);
-                if (atSpeed) {
-                    lastRecoveryMs = now - phaseStartMs;
-                    lastDipRpm = targetRPM - minRpmThisShot;
-                    worstDipRpm = Math.max(worstDipRpm, lastDipRpm);
-                    totalRecoveryMs += lastRecoveryMs;
-                    shotCount++;
-                    shotState = ShotState.AT_SPEED;
-                }
-                break;
+        if (!recoveredSinceShot && lastShotMs >= 0 && Math.abs(target - rpm) < LaunchSubsystem.TARGET_RPM_TOLERANCE) {
+            recoveredSinceShot = true;
+            lastRecoveryMs = now - lastShotMs;
         }
     }
 
-    private void startSpinUp() {
-        shotState = ShotState.SPINNING_UP;
-        phaseStartMs = nowMs();
-    }
-
     private void resetStats() {
-        shotCount = 0;
-        lastDipRpm = worstDipRpm = 0;
-        lastRecoveryMs = totalRecoveryMs = 0;
+        burstShots.clear();
+        burstHeader = "no launch yet";
+        totalShots = 0;
+        worstDipRpm = 0;
+        lastRecoveryMs = -1;
+        lastShotMs = -1;
+        recoveredSinceShot = true;
     }
 
-    private static long nowMs() {
-        return System.nanoTime() / 1_000_000L;
+    // ------------------------------------------------------------------ table editing
+
+    private enum GainColumn { P, KS, KV }
+
+    /** Index of the table distance within ROW_SNAP_IN of {@code distance}, or -1. */
+    private static int nearestRow(double[] distances, double distance) {
+        if (Double.isNaN(distance)) return -1;
+        int best = -1;
+        for (int i = 0; i < distances.length; i++) {
+            if (Math.abs(distances[i] - distance) <= ROW_SNAP_IN
+                    && (best < 0 || Math.abs(distances[i] - distance) < Math.abs(distances[best] - distance))) {
+                best = i;
+            }
+        }
+        return best;
+    }
+
+    /** Gain row {@code row} of the table, or the FLYWHEEL_* single set when the table is off (row ignored). */
+    private static double getGain(GainColumn c, int row) {
+        if (!LaunchSubsystem.USE_GAIN_TABLE) {
+            switch (c) {
+                case P: return LaunchSubsystem.FLYWHEEL_P;
+                case KS: return LaunchSubsystem.FLYWHEEL_KS;
+                default: return LaunchSubsystem.FLYWHEEL_KV;
+            }
+        }
+        double[] col = column(c);
+        return row >= 0 && row < col.length ? col[row] : Double.NaN;
+    }
+
+    private static void addGain(GainColumn c, int row, double delta) {
+        if (!LaunchSubsystem.USE_GAIN_TABLE) {
+            switch (c) {
+                case P: LaunchSubsystem.FLYWHEEL_P = Math.max(0, LaunchSubsystem.FLYWHEEL_P + delta); break;
+                case KS: LaunchSubsystem.FLYWHEEL_KS = Math.max(0, LaunchSubsystem.FLYWHEEL_KS + delta); break;
+                default: LaunchSubsystem.FLYWHEEL_KV = Math.max(0, LaunchSubsystem.FLYWHEEL_KV + delta); break;
+            }
+            return;
+        }
+        double[] col = column(c);
+        if (row >= 0 && row < col.length) col[row] = Math.max(0, col[row] + delta);
+    }
+
+    private static double[] column(GainColumn c) {
+        switch (c) {
+            case P: return LaunchSubsystem.GAIN_TABLE_P;
+            case KS: return LaunchSubsystem.GAIN_TABLE_KS;
+            default: return LaunchSubsystem.GAIN_TABLE_KV;
+        }
+    }
+
+    /** Logs every table as Java initializers, ready to paste into the code. */
+    private void logTables() {
+        Log.i(TAG, "LaunchReadinessCommand.SHOT_DISTANCES_IN = " + javaArray(LaunchReadinessCommand.SHOT_DISTANCES_IN));
+        Log.i(TAG, "LaunchReadinessCommand.SHOT_RPMS = " + javaArray(LaunchReadinessCommand.SHOT_RPMS));
+        Log.i(TAG, "LaunchSubsystem.GAIN_TABLE_DISTANCES_IN = " + javaArray(LaunchSubsystem.GAIN_TABLE_DISTANCES_IN));
+        Log.i(TAG, "LaunchSubsystem.GAIN_TABLE_P  = " + javaArray(LaunchSubsystem.GAIN_TABLE_P));
+        Log.i(TAG, "LaunchSubsystem.GAIN_TABLE_I  = " + javaArray(LaunchSubsystem.GAIN_TABLE_I));
+        Log.i(TAG, "LaunchSubsystem.GAIN_TABLE_D  = " + javaArray(LaunchSubsystem.GAIN_TABLE_D));
+        Log.i(TAG, "LaunchSubsystem.GAIN_TABLE_KS = " + javaArray(LaunchSubsystem.GAIN_TABLE_KS));
+        Log.i(TAG, "LaunchSubsystem.GAIN_TABLE_KV = " + javaArray(LaunchSubsystem.GAIN_TABLE_KV));
+        Log.i(TAG, String.format("LaunchSubsystem.FLYWHEEL_P/I/D/KS/KV = %s / %s / %s / %s / %s",
+                LaunchSubsystem.FLYWHEEL_P, LaunchSubsystem.FLYWHEEL_I, LaunchSubsystem.FLYWHEEL_D,
+                LaunchSubsystem.FLYWHEEL_KS, LaunchSubsystem.FLYWHEEL_KV));
+    }
+
+    private static String javaArray(double[] values) {
+        StringBuilder sb = new StringBuilder("{");
+        for (int i = 0; i < values.length; i++) {
+            if (i > 0) sb.append(", ");
+            sb.append(values[i]);
+        }
+        return sb.append("};").toString();
     }
 }
