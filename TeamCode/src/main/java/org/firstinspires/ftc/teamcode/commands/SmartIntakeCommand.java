@@ -56,7 +56,7 @@ public class SmartIntakeCommand extends CommandBase {
         State next;
         if (gate.isGateOpen()) {
             next = State.LAUNCHING;
-        } else if (intake.isFull()) {
+        } else if (intake.isFullAndDoneIntaking()) { // full, after the run-on that pulls the last one in
             next = State.FULL;
         } else {
             next = State.INTAKING;

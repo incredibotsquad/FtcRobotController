@@ -54,6 +54,13 @@ public class IntakeSubsystem extends SubsystemBase {
      * cap, which drops a full stack to 3 in that case. Experimental: flip live in Panels to compare.
      */
     public static boolean USE_SLOT_BASED_UPPER_BOUND = true;
+    /**
+     * When intaking fills the robot, keep the intake and transfer running this much longer so the
+     * last artifact is pulled all the way in (the count hits MAX as it reaches sensor 1, before it is
+     * fully inside). 0 = stop immediately (old behavior). Keep short: running on while full could
+     * pick up a 5th artifact (G407).
+     */
+    public static long FULL_RUN_ON_MS = 250;
 
     public static double ZERO_BALL_COLOR = 0;
     public static double ONE_BALL_COLOR = 0.29;   // RED
@@ -72,6 +79,8 @@ public class IntakeSubsystem extends SubsystemBase {
     private final TelemetryManager telemetry;
 
     private int artifactCount = 0;
+    /** Intake keeps running until this time after intaking filled the robot (see FULL_RUN_ON_MS). */
+    private long fullRunOnUntilMs = 0;
     private boolean launching = false;
     /** Transfer power to use while launching instead of the default; NaN = no override. */
     private double launchTransferOverride = Double.NaN;
@@ -100,7 +109,7 @@ public class IntakeSubsystem extends SubsystemBase {
 
     /** Starts intake and transfer, unless already full. */
     public void startIntakeAndTransfer() {
-        if (isFull()) {
+        if (isFullAndDoneIntaking()) {
             stopIntakeAndTransfer();
             return;
         }
@@ -199,6 +208,14 @@ public class IntakeSubsystem extends SubsystemBase {
         return artifactCount >= MAX_ARTIFACTS;
     }
 
+    /**
+     * Full, and past the FULL_RUN_ON_MS run-on that pulls the last artifact fully in. This is what
+     * stops the intake; isFull() turns true as soon as the last artifact reaches sensor 1.
+     */
+    public boolean isFullAndDoneIntaking() {
+        return isFull() && nowMs() >= fullRunOnUntilMs;
+    }
+
     /** Manually override the count, e.g. preloads at the start of auto. */
     public void setArtifactCount(int count) {
         artifactCount = clamp(count);
@@ -222,6 +239,7 @@ public class IntakeSubsystem extends SubsystemBase {
 
     private void updateArtifactCount() {
         long now = nowMs();
+        boolean wasFull = isFull();
 
         boolean s1Changed = beamBreak1.update(now);
         beamBreak2.update(now);
@@ -274,6 +292,12 @@ public class IntakeSubsystem extends SubsystemBase {
         }
 
         artifactCount = clamp(artifactCount);
+
+        // Intaking just filled the robot: run on briefly so the last artifact gets fully inside.
+        // (Not for setArtifactCount(), e.g. AUTO preloads, or while launching.)
+        if (!wasFull && isFull() && intakePower > 0 && !launching) {
+            fullRunOnUntilMs = now + Math.max(0, FULL_RUN_ON_MS);
+        }
     }
 
     /** Number of blocked slot sensors counting down from the top (4, then 3, then 2). */
@@ -321,7 +345,7 @@ public class IntakeSubsystem extends SubsystemBase {
         updateArtifactCount();
 
         // Auto-stop when full (only while intaking, not while feeding the launcher)
-        if (isFull() && !launching && intakeMotor.get() > 0) {
+        if (isFullAndDoneIntaking() && !launching && intakeMotor.get() > 0) {
             stopIntakeAndTransfer();
         }
 
