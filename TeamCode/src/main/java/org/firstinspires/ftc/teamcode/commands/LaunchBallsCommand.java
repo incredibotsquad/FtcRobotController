@@ -76,6 +76,18 @@ public class LaunchBallsCommand extends CommandBase {
     /** 1 artifact only: maximum kicks per launch (the first one included). */
     public static int MAX_KICKS = 2;
 
+    // LAST-BALL KICK (experimental; LAST_BALL_KICK_ENABLED = false turns it off live in Panels)
+    /**
+     * In a 2+ artifact launch, the last one has nothing behind it to push it through the dead zone.
+     * When the count drops to 1 mid-launch, give it its own kick: reverse LAST_BALL_REVERSE_MS
+     * (intake running), then forward, with the same sensor-4 completion and retries as a lone ball.
+     */
+    public static boolean LAST_BALL_KICK_ENABLED = true;
+    /** Reverse time for the last artifact's kick. Longer than a full-stack reverse: it has room. */
+    public static long LAST_BALL_REVERSE_MS = 500;
+    /** Wait this long after the count drops to 1 before reversing (lets the previous one clear the flywheel). */
+    public static long LAST_BALL_KICK_DELAY_MS = 0;
+
     private enum State { FIRING, DONE }
 
     private final LaunchGateSubsystem gate;
@@ -88,6 +100,10 @@ public class LaunchBallsCommand extends CommandBase {
 
     private int countAtStart;
     private boolean singleBall;
+    /** LAST-BALL KICK: when the count first hit 1 mid-launch, or -1. */
+    private long lastBallSinceMs;
+    /** LAST-BALL KICK: the kick has been started (only once per launch). */
+    private boolean lastBallKickStarted;
 
     // Kick
     private boolean reversing;
@@ -125,6 +141,8 @@ public class LaunchBallsCommand extends CommandBase {
         sensor4BlockedSinceMs = -1;
         sensor4ClearSinceMs = -1;
         ballReturned = true; // without a kick the ball never goes below sensor 4
+        lastBallSinceMs = -1;
+        lastBallKickStarted = false;
 
         drive.requestLaunchHold();
         gate.openGate();
@@ -141,6 +159,8 @@ public class LaunchBallsCommand extends CommandBase {
             // Still reversing: no completion checks yet, only the backstop below.
         } else if (singleBall) {
             executeSingleBall(now);
+        } else if (startLastBallKickIfNeeded(now)) {
+            // LAST-BALL KICK: now handled as a lone ball (singleBall = true) from the next loop.
         } else if (intake.getArtifactCount() == 0) {
             if (emptySinceMs < 0) emptySinceMs = now;
             if (now - emptySinceMs >= CLEAR_MS) enter(State.DONE);
@@ -171,6 +191,28 @@ public class LaunchBallsCommand extends CommandBase {
         return true;
     }
 
+    /**
+     * LAST-BALL KICK: in a 2+ artifact launch, once the count has been 1 for LAST_BALL_KICK_DELAY_MS,
+     * switch to lone-ball handling and kick it. Returns true if the kick started this loop.
+     */
+    private boolean startLastBallKickIfNeeded(long now) {
+        if (!LAST_BALL_KICK_ENABLED || !KICK_ENABLED || lastBallKickStarted || countAtStart < 2) return false;
+        if (intake.getArtifactCount() != 1) {
+            lastBallSinceMs = -1;
+            return false;
+        }
+        if (lastBallSinceMs < 0) lastBallSinceMs = now;
+        if (now - lastBallSinceMs < LAST_BALL_KICK_DELAY_MS) return false;
+
+        lastBallKickStarted = true;
+        singleBall = true;
+        kicks = 0;              // the last ball gets its own MAX_KICKS
+        enter(State.FIRING);    // and its own MAX_FIRE_MS backstop
+        Log.i("LaunchBallsCommand", "Last ball: extra kick");
+        startKick(now, 1, LAST_BALL_REVERSE_MS);
+        return true;
+    }
+
     /** Lone ball: sensor-based completion with retries (see class comment). */
     private void executeSingleBall(long now) {
         boolean s4Blocked = intake.isSensor4Blocked();
@@ -183,7 +225,7 @@ public class LaunchBallsCommand extends CommandBase {
             } else {
                 if (now - kickPhaseStartMs >= KICK_RETURN_TIMEOUT_MS && kicks < MAX_KICKS) {
                     Log.i("LaunchBallsCommand", "Ball didn't come back up, kick " + (kicks + 1) + "/" + MAX_KICKS);
-                    startKick(now, 1);
+                    startKick(now, 1, lastBallKickStarted ? LAST_BALL_REVERSE_MS : reverseMsFor(1)); // LAST-BALL KICK retries use its reverse time
                 }
                 return;
             }
@@ -195,7 +237,7 @@ public class LaunchBallsCommand extends CommandBase {
             if (now - sensor4BlockedSinceMs >= KICK_RETRY_MS) {
                 if (kicks < MAX_KICKS) {
                     Log.i("LaunchBallsCommand", "Ball didn't clear, kick " + (kicks + 1) + "/" + MAX_KICKS);
-                    startKick(now, 1);
+                    startKick(now, 1, lastBallKickStarted ? LAST_BALL_REVERSE_MS : reverseMsFor(1)); // LAST-BALL KICK retries use its reverse time
                 } // else: out of kicks, keep pushing forward until MAX_FIRE_MS
             }
         } else {
@@ -207,9 +249,13 @@ public class LaunchBallsCommand extends CommandBase {
 
     /** Starts a reverse-then-forward run-up sized for {@code artifacts} loaded; intake runs to hold them in. */
     private void startKick(long now, int artifacts) {
+        startKick(now, artifacts, reverseMsFor(artifacts));
+    }
+
+    private void startKick(long now, int artifacts, long reverseTimeMs) {
         kicks++;
         reversing = true;
-        reverseMs = reverseMsFor(artifacts);
+        reverseMs = Math.max(0, reverseTimeMs);
         kickPhaseStartMs = now;
         sensor4BlockedSinceMs = -1;
         sensor4ClearSinceMs = -1;
