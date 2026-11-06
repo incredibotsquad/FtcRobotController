@@ -6,6 +6,7 @@ import com.arcrobotics.ftclib.command.CommandBase;
 import com.bylazar.configurables.annotations.Configurable;
 
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.IntakeBarSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
 
@@ -40,6 +41,11 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
  * Requires only the gate. LaunchReadinessCommand (launcher) keeps aiming and spinning the
  * flywheel during the burst, and SmartIntakeCommand (intake) keeps running the transfer.
  * When this ends, CloseGateCommand (gate default) takes over.
+ *
+ * Intake bar: on the press the bar is commanded up and the launch starts right away (no wait for
+ * it to finish moving). It is kept raised for the whole launch, so an operator toggle mid-launch is
+ * undone; afterwards it stays up until the operator lowers it. The bar is not a requirement, so
+ * pressing the bar button never cancels a launch.
  *
  * Launch hold: for the whole command it asks DriveSubsystem to hold the
  * robot's pose against defense. DriveRobotCommand does the holding and lets the driver break out
@@ -93,6 +99,7 @@ public class LaunchBallsCommand extends CommandBase {
     private final LaunchGateSubsystem gate;
     private final IntakeSubsystem intake;
     private final DriveSubsystem drive;
+    private final IntakeBarSubsystem bar;
 
     private State state;
     private long stateStartMs;
@@ -117,10 +124,12 @@ public class LaunchBallsCommand extends CommandBase {
     /** The ball has been back at sensor 4 since the last kick's reverse (so a clear sensor means it left). */
     private boolean ballReturned;
 
-    public LaunchBallsCommand(LaunchGateSubsystem gate, IntakeSubsystem intake, DriveSubsystem drive) {
+    public LaunchBallsCommand(LaunchGateSubsystem gate, IntakeSubsystem intake, DriveSubsystem drive,
+                              IntakeBarSubsystem bar) {
         this.gate = gate;
         this.intake = intake;
         this.drive = drive;
+        this.bar = bar;
         addRequirements(gate);
     }
 
@@ -145,6 +154,9 @@ public class LaunchBallsCommand extends CommandBase {
         lastBallKickStarted = false;
 
         drive.requestLaunchHold();
+
+        if (!bar.isRaised()) bar.raise(); // command the bar up; the launch doesn't wait for it
+
         gate.openGate();
         enter(State.FIRING);
         if (KICK_ENABLED) startKick(nowMs(), singleBall ? 1 : countAtStart);
@@ -153,7 +165,11 @@ public class LaunchBallsCommand extends CommandBase {
     @Override
     public void execute() {
         long now = nowMs();
-        if (state != State.FIRING) return;
+        if (state == State.DONE) return;
+
+        // Keep the bar up for the whole launch (undoes an operator toggle mid-launch).
+        if (!bar.isRaised()) bar.raise();
+
 
         if (!updateKick(now)) {
             // Still reversing: no completion checks yet, only the backstop below.

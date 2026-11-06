@@ -121,7 +121,7 @@ public class Incredibot extends Robot {
                 .whileHeld(new ReverseIntakeCommand(intakeSubsystem));
 
         operatorGamepad.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER)
-                .whenPressed(new LaunchBallsCommand(launchGateSubsystem, intakeSubsystem, driveSubsystem));
+                .whenPressed(new LaunchBallsCommand(launchGateSubsystem, intakeSubsystem, driveSubsystem, intakeBarSubsystem));
 
         operatorGamepad.getGamepadButton(GamepadKeys.Button.Y)
                 .whenPressed(new RelocalizeCommand(odometrySubsystem, telemetry));

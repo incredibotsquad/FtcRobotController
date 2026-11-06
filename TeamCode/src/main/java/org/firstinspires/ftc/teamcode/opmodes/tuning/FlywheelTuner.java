@@ -139,7 +139,8 @@ public class FlywheelTuner extends LinearOpMode {
             double step = stepSizes[stepIndex];
 
             if (tuningPad.wasJustPressed(GamepadKeys.Button.START)) {
-                new LaunchBallsCommand(incredibot.launchGateSubsystem, incredibot.intakeSubsystem, incredibot.driveSubsystem).schedule();
+                new LaunchBallsCommand(incredibot.launchGateSubsystem, incredibot.intakeSubsystem, incredibot.driveSubsystem,
+                        incredibot.intakeBarSubsystem).schedule();
             }
             if (tuningPad.wasJustPressed(GamepadKeys.Button.B)) stepIndex = (stepIndex + 1) % stepSizes.length;
             if (tuningPad.wasJustPressed(GamepadKeys.Button.LEFT_STICK_BUTTON)) resetStats();
