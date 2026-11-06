@@ -10,10 +10,11 @@ import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
 /**
  * Default command for the intake. Runs forever and picks a state every loop:
  *
- *  LAUNCHING (gate open): only the transfer runs, feeding artifacts up past sensor 4 into
- *      the launcher. Intake motor and sweepers stay off so nothing new is pulled in mid-shot.
+ *  LAUNCHING (gate open): the transfer feeds artifacts up past sensor 4 into the launcher.
+ *      The intake motor stays off so nothing new is pulled in mid-shot, except while a launch
+ *      command overrides it (LaunchBallsCommand's kick).
  *      IntakeSubsystem is told it is launching, so artifacts leaving the top are subtracted.
- *  INTAKING (gate closed, not full): intake, transfer and sweepers run.
+ *  INTAKING (gate closed, not full): intake and transfer run.
  *  FULL (gate closed, count at MAX_ARTIFACTS): everything stops (G407: control at most 4).
  *
  * The artifact count itself comes from IntakeSubsystem.periodic(), which the scheduler runs
@@ -65,9 +66,17 @@ public class SmartIntakeCommand extends CommandBase {
 
         switch (next) {
             case LAUNCHING:
-                intake.stopIntakeMotorOnly();
-                intake.stopSweepers();
-                intake.setTransferMotorPower(LAUNCH_TRANSFER_POWER);
+                // Intake off unless a launch command asks for it (LaunchBallsCommand's kick runs it
+                // so artifacts pushed down by the reversed transfer aren't lost out the front).
+                if (intake.hasLaunchIntakeOverride()) {
+                    intake.setIntakeMotorPower(intake.getLaunchIntakeOverride());
+                } else {
+                    intake.stopIntakeMotorOnly();
+                }
+                // A launch command may override the transfer (e.g. LaunchBallsCommand's kick).
+                intake.setTransferMotorPower(intake.hasLaunchTransferOverride()
+                        ? intake.getLaunchTransferOverride()
+                        : LAUNCH_TRANSFER_POWER);
                 break;
             case INTAKING:
                 intake.startIntakeAndTransfer();

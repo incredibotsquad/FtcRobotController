@@ -36,7 +36,7 @@ public class LaunchTargets {
      * DERIVED from the manual drawings (~+/-2 in): the opening spans about 12.3-19.3 in from
      * y=72 (center 16.5 in), and the CELL box center is about 11.3 in. Verify against the field CAD.
      */
-    public static double CELL_Y_OFFSET = 16.5;
+    public static double CELL_Y_OFFSET = 18;
 
     /**
      * The other CELL must be at least this much closer before the target switches.

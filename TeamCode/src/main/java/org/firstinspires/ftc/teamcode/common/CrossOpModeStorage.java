@@ -18,5 +18,5 @@ public class CrossOpModeStorage {
 
     public static AllianceColors allianceColor = AllianceColors.RED;
 
-    public static double turretPosition = 0;
+    public static double turretPosition = 0.5; // center aligned
 }

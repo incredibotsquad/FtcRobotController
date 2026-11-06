@@ -107,6 +107,7 @@ public class LimelightSubsystem extends SubsystemBase {
 
     private List<TagObservation> observations = Collections.emptyList();
     private long frameTimestampMs = 0;
+    private LLResult latestResult = null;
 
     // Per-HIVE debounce: index 0 = RED, 1 = BLUE.
     private final HiveCell[] pendingUpCell = new HiveCell[2];
@@ -170,9 +171,15 @@ public class LimelightSubsystem extends SubsystemBase {
         return new PositionEstimate(new Translation2d(meanX, meanY), obs.size(), spread);
     }
 
+    /** The raw Limelight result read by the last periodic() (may be null, invalid or stale). For test OpModes. */
+    public LLResult getLatestResult() {
+        return latestResult;
+    }
+
     @Override
     public void periodic() {
         LLResult result = limelight.getLatestResult();
+        latestResult = result;
         if (result == null || !result.isValid() || result.getStaleness() > MAX_RESULT_AGE_MS) {
             observations = Collections.emptyList();
             telemetry.addData("Limelight: tags", isConnected() ? "none" : "NOT CONNECTED");
