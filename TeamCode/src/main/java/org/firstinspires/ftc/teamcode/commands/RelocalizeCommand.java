@@ -8,8 +8,7 @@ import com.pedropathing.math.Pose;
 
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
-import org.firstinspires.ftc.teamcode.common.Poses;
-import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem; // Adjust to your actual drive subsystem name
+import org.firstinspires.ftc.teamcode.opmodes.auto.Poses;
 import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
 
 public class RelocalizeCommand extends CommandBase {
