@@ -55,7 +55,7 @@ public class Poses {
     public Poses(boolean isRed) {
         this.isRed = isRed;
 
-        RELOCALIZE_STANCE = of(8, 7.5, 180);
+        RELOCALIZE_STANCE = of(8, 6.5, 180);
 
         STARTING_POSE_RIGHT_HIVE = of(56, 10, 180);
         STARTING_POSE_LEFT_HIVE = of(65, 133, 180);

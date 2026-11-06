@@ -76,9 +76,10 @@ public class LaunchReadinessCommand extends CommandBase {
     public static long TURRET_SETTLE_MS = 150;
     /**
      * Servo output shaft speed under load (RPM). The goBILDA 5-turn is ~230 RPM at 6 V unloaded;
-     * 200 assumes some loss under the turret's load. 200 RPM = 1200 deg/s = 0.667 servo position
-     * units/s on the 1800 deg servo, so a full TURRET_MIN -> TURRET_MAX move (0.8) is ~1.2 s and a
-     * 360 deg turret flip is ~1.0 s. Too high and the light goes green mid-swing.
+     * 200 assumes some loss under the turret's load. 200 RPM = 1200 deg/s = ~0.74 servo position
+     * units/s (1200 / 1800 x TURRET_SCALING_FACTOR, see turretSpeedPosPerSec()), so a full
+     * TURRET_MIN -> TURRET_MAX move (0.8) is ~1.1 s and a 360 deg turret flip is ~1.0 s.
+     * Too high and the light goes green mid-swing.
      * 0 or less = treat moves as instant (only TURRET_SETTLE_MS is waited).
      */
     public static double TURRET_SERVO_RPM = 200;

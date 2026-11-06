@@ -92,7 +92,9 @@ public class LaunchSubsystem extends SubsystemBase {
      * (TargetDegrees * Ratio) / TotalServoRange
      */
     public static double GEAR_RATIO = 82.0 / 24.0;
-    public static double TOTAL_SERVO_RANGE = 1800; // servo range is 1800 but we are only going up to 0.87
+    // Servo's rated travel. Usable travel is limited by TURRET_MIN..TURRET_MAX; the hub's default
+    // pulse range shortens it further (see LaunchReadinessCommand.TURRET_SCALING_FACTOR).
+    public static double TOTAL_SERVO_RANGE = 1800;
 
     private final PIDController flywheelPID = new PIDController(FLYWHEEL_P, FLYWHEEL_I, FLYWHEEL_D);
     private SimpleMotorFeedforward flywheelFF = new SimpleMotorFeedforward(FLYWHEEL_KS, FLYWHEEL_KV);
