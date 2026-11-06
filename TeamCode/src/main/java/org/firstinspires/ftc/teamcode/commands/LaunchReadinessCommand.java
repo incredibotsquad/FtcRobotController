@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.commands;
 
+import android.util.Log;
+
 import com.arcrobotics.ftclib.command.CommandBase;
 import com.arcrobotics.ftclib.geometry.Pose2d;
 import com.arcrobotics.ftclib.geometry.Translation2d;
@@ -97,6 +99,8 @@ public class LaunchReadinessCommand extends CommandBase {
     /** When the estimate last arrived at the commanded position. */
     private long turretArrivedAtMs = 0;
     private String notReadyReason = "";
+    /** Turret debug: log the first aim decision of each run (logcat tag TurretDebug). */
+    private boolean loggedFirstAim = false;
 
     public LaunchReadinessCommand(LaunchSubsystem launcher, OdometrySubsystem odometry, TelemetryManager telemetry) {
         this.launcher = launcher;
@@ -112,6 +116,8 @@ public class LaunchReadinessCommand extends CommandBase {
         estimatedTurretPosition = lastTurretPosition;
         lastEstimateMs = nowMs();
         turretArrivedAtMs = lastEstimateMs;
+        loggedFirstAim = false;
+        Log.i("TurretDebug", String.format("LaunchReadiness initialize: lastTurretPosition %.3f (from storage)", lastTurretPosition));
     }
 
     @Override
@@ -156,6 +162,15 @@ public class LaunchReadinessCommand extends CommandBase {
             lastTurretPosition = turretPosition;
         }
         boolean turretSettled = updateTurretSettled();
+
+        if (!loggedFirstAim) {
+            loggedFirstAim = true;
+            Log.i("TurretDebug", String.format(
+                    "LaunchReadiness first aim: pose %s | cell %s %s at %s | aimPoint %s | relDeg %.1f | chosen %.3f | locked %b | fwdPos %.3f dir %.0f ratio %.3f min %.2f max %.2f",
+                    pose, CrossOpModeStorage.allianceColor, LaunchTargets.getLastSelectedCell(), target, aimPoint,
+                    relativeDeg, turretPosition, turretLocked, TURRET_FORWARD_POSITION, TURRET_DIRECTION,
+                    LaunchSubsystem.GEAR_RATIO, LaunchSubsystem.TURRET_MIN, LaunchSubsystem.TURRET_MAX));
+        }
 
         // ---------------------------------------------------- flywheel (always running)
         double rpm = rpmForDistance(distance);

@@ -40,8 +40,14 @@ public class ServoPositionTuner extends LinearOpMode {
             "turretServo",
             "alignmentIndicatorLight",
             "artifactCountLight",
+            // Intake bar: tune one side at a time (the other stays unpowered). Don't press A (0.5)
+            // or sweep (X) on these until you know the safe range: the bar can hit the frame.
+            "intakeBarLeftServo",
+            "intakeBarRightServo",
     };
     private static final boolean[] SERVO_INVERTED = {
+            false,
+            false,
             false,
             false,
             false,

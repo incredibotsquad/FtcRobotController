@@ -66,6 +66,8 @@ public class IntakeSubsystem extends SubsystemBase {
     private boolean launching = false;
     /** Transfer power to use while launching instead of the default; NaN = no override. */
     private double launchTransferOverride = Double.NaN;
+    /** Intake motor power to use while launching instead of off; NaN = no override (intake off). */
+    private double launchIntakeOverride = Double.NaN;
 
     public IntakeSubsystem(HardwareMap hardwareMap, TelemetryManager telemetry) {
         this.telemetry = telemetry;
@@ -159,6 +161,27 @@ public class IntakeSubsystem extends SubsystemBase {
         return launchTransferOverride;
     }
 
+    /**
+     * Lets a launch command run the intake motor while launching (normally it is off so nothing new
+     * is pulled in mid-shot). Used during the launch kick so the intake holds the bottom artifact
+     * in while the transfer reverses. SmartIntakeCommand applies it in its LAUNCHING state.
+     */
+    public void setLaunchIntakeOverride(double power) {
+        launchIntakeOverride = power;
+    }
+
+    public void clearLaunchIntakeOverride() {
+        launchIntakeOverride = Double.NaN;
+    }
+
+    public boolean hasLaunchIntakeOverride() {
+        return !Double.isNaN(launchIntakeOverride);
+    }
+
+    public double getLaunchIntakeOverride() {
+        return launchIntakeOverride;
+    }
+
     public int getArtifactCount() {
         return artifactCount;
     }
@@ -198,8 +221,9 @@ public class IntakeSubsystem extends SubsystemBase {
 
         double intakePower = intakeMotor.get();
 
-        // 1. Event counting at the entrance
-        if (s1Changed) {
+        // 1. Event counting at the entrance. Not while launching: the launch kick runs the intake
+        // while the transfer shuffles the stack up and down past sensor 1, which isn't a new artifact.
+        if (s1Changed && !launching) {
             if (beamBreak1.isBlocked() && intakePower > 0) {
                 artifactCount++;
             } else if (!beamBreak1.isBlocked() && intakePower < 0) {
@@ -230,7 +254,8 @@ public class IntakeSubsystem extends SubsystemBase {
         }
 
         // 3. Entrance blocked and not moving while intaking -> nowhere left to go
-        if (intakePower > 0 && beamBreak1.isBlocked() && beamBreak1.msInState(now) >= JAM_MS) {
+        // (not while launching: during the kick the intake holds an artifact on sensor 1 on purpose)
+        if (!launching && intakePower > 0 && beamBreak1.isBlocked() && beamBreak1.msInState(now) >= JAM_MS) {
             artifactCount = MAX_ARTIFACTS;
         }
 

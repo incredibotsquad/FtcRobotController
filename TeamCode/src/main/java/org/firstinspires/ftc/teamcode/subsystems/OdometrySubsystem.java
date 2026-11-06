@@ -112,6 +112,10 @@ public class OdometrySubsystem extends SubsystemBase {
     @Override
     public void periodic() {
         Pose2d newPose = toPose2d(drive.getPose());
+
+        //sometimes the follower will return 0,0. don't use that for anything
+        if (newPose.getX() == 0 && newPose.getY() == 0) return;
+
         updateVelocityEstimate(newPose);
 
         currentPose = newPose;

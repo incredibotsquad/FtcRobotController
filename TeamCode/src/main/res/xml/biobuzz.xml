@@ -8,6 +8,8 @@
             <goBILDA5202SeriesMotor name="transferMotor" port="3" />
 
             <Servo name="launchGateServo" port="0" />
+            <Servo name="intakeBarLeftServo" port="1" />
+            <Servo name="intakeBarRightServo" port="2" />
             <Servo name="turretServo" port="4" />
 
             <DigitalDevice name="ballSensor1" port="0" />

@@ -22,6 +22,7 @@ import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 import org.firstinspires.ftc.teamcode.common.HiveState;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.IntakeBarSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LimelightSubsystem;
@@ -48,6 +49,7 @@ public class Incredibot extends Robot {
     // Subsystems
     public final DriveSubsystem driveSubsystem;
     public final IntakeSubsystem intakeSubsystem;
+    public final IntakeBarSubsystem intakeBarSubsystem;
     public final LaunchSubsystem launchSubsystem;
     public final LaunchGateSubsystem launchGateSubsystem;
     public final OdometrySubsystem odometrySubsystem;
@@ -68,6 +70,7 @@ public class Incredibot extends Robot {
         // Initialize subsystems - they initialize their own hardware
         driveSubsystem = new DriveSubsystem(hwMap, telemetry);
         intakeSubsystem = new IntakeSubsystem(hwMap, telemetry);
+        intakeBarSubsystem = new IntakeBarSubsystem(hwMap, telemetry); // does not move the servos
         launchGateSubsystem = new LaunchGateSubsystem(hwMap, telemetry);
         odometrySubsystem = new OdometrySubsystem(driveSubsystem, telemetry); // reads the Pinpoint via Pedro's Follower
         launchSubsystem = new LaunchSubsystem(hwMap, telemetry);
@@ -120,6 +123,11 @@ public class Incredibot extends Robot {
 
         operatorGamepad.getGamepadButton(GamepadKeys.Button.Y)
                 .whenPressed(new RelocalizeCommand(odometrySubsystem, telemetry));
+
+        // Intake bar: A lowers it in front of the robot (FLOWER POLLEN pickup) / raises it again.
+        // The TeleOp already holds it RAISED from INIT, so the first press lowers it.
+        operatorGamepad.getGamepadButton(GamepadKeys.Button.A)
+                .whenPressed(new InstantCommand(intakeBarSubsystem::toggle, intakeBarSubsystem));
     }
 
     public void initAuto() {
@@ -154,7 +162,7 @@ public class Incredibot extends Robot {
     }
 
     private void initCommon() {
-        register(driveSubsystem, intakeSubsystem, launchGateSubsystem, launchSubsystem, odometrySubsystem, limelightSubsystem);
+        register(driveSubsystem, intakeSubsystem, intakeBarSubsystem, launchGateSubsystem, launchSubsystem, odometrySubsystem, limelightSubsystem);
 
         // 1. SET THE DEFAULT COMMAND FOR THE GATE
         // This will run at match start and any time the gate isn't being used by a launcher command.
