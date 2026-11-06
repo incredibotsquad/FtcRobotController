@@ -48,7 +48,7 @@ public class LaunchReadinessCommand extends CommandBase {
      * Must be the same length, sorted by distance. Values in between are linearly interpolated.
      */
     public static double[] SHOT_DISTANCES_IN = {46, 47, 52, 66, 88};
-    public static double[] SHOT_RPMS = {1575, 1600, 1650, 1650, 1850};
+    public static double[] SHOT_RPMS = {2800, 2750, 2800, 2950, 3250};
 
     // ------------------------------------------------------------------ turret geometry
     /** Servo position at which the turret points straight out the front of the robot. */
