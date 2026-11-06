@@ -55,6 +55,15 @@ public class LaunchReadinessCommand extends CommandBase {
     public static double TURRET_FORWARD_POSITION = LaunchSubsystem.TURRET_MID;
     /** +1 if increasing servo position turns the turret counter-clockwise (seen from above), else -1. */
     public static double TURRET_DIRECTION = 1.0;
+    /**
+     * Turret travel correction: multiplies the servo position change per degree of aim.
+     * The goBILDA 5-turn servo covers its 1800 deg over a 500-2500 us pulse, but the hub's default
+     * servo pulse range is 600-2400 us, so positions 0..1 only reach 90% of that (~1620 deg) and every
+     * move falls 10% short without this. 1 / 0.9 = 1.111. Last season's tuned value was 1.1.
+     * Tune with TurretAimTest: the error should no longer grow with the turret angle.
+     * 1.0 = no correction (old behavior).
+     */
+    public static double TURRET_SCALING_FACTOR = 1.111;
 
     /**
      * Servos give no position feedback, so readiness estimates where the turret is: the estimate
@@ -74,9 +83,12 @@ public class LaunchReadinessCommand extends CommandBase {
      */
     public static double TURRET_SERVO_RPM = 200;
 
-    /** TURRET_SERVO_RPM converted to servo position units per second. */
+    /**
+     * TURRET_SERVO_RPM converted to servo position units per second. Scaled like the aim math: each
+     * position unit is only TOTAL_SERVO_RANGE / TURRET_SCALING_FACTOR degrees of servo travel.
+     */
     public static double turretSpeedPosPerSec() {
-        return TURRET_SERVO_RPM * 360.0 / 60.0 / LaunchSubsystem.TOTAL_SERVO_RANGE;
+        return TURRET_SERVO_RPM * 360.0 / 60.0 / LaunchSubsystem.TOTAL_SERVO_RANGE * TURRET_SCALING_FACTOR;
     }
 
     // ------------------------------------------------------------------ moving shots
@@ -240,7 +252,7 @@ public class LaunchReadinessCommand extends CommandBase {
 
     /** Servo position change per degree of turret rotation (CCW positive when TURRET_DIRECTION = +1). */
     public static double turretPositionPerDegree() {
-        return TURRET_DIRECTION * LaunchSubsystem.GEAR_RATIO / LaunchSubsystem.TOTAL_SERVO_RANGE;
+        return TURRET_DIRECTION * LaunchSubsystem.GEAR_RATIO / LaunchSubsystem.TOTAL_SERVO_RANGE * TURRET_SCALING_FACTOR;
     }
 
     /**

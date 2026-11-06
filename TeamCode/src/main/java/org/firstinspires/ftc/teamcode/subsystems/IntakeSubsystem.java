@@ -43,7 +43,7 @@ public class IntakeSubsystem extends SubsystemBase {
     /** A sensor must hold a new state this long before it counts (filters flicker). */
     public static long DEBOUNCE_MS = 15;
     /** Must be longer than the time for an artifact to travel from sensor 1 to the top. */
-    public static long SETTLE_MS = 750;
+    public static long SETTLE_MS = 500;
     /** Sensor 1 blocked this long while intaking means the artifact can't move up: full. */
     public static long JAM_MS = 400;
     /** Use sensors 2-4 as a lower bound when settled. Disable if one large artifact can block two sensors. */
