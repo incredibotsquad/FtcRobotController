@@ -82,13 +82,18 @@ public class Poses {
     public static double[] RED_CONTROL_SIDE_FLOWER = {54.85, 109.79, 0};
     /**
      * Moving between launch points on opposite sides of the HIVE (audience-side CELL <-> far-side
-     * CELL), from any spot to any spot: a spline shaped by these, picked in INIT. AROUND goes past
-     * the HIVE on the alliance-wall side (one control point); THROUGH goes under the HIVE's middle
-     * (two control points, used in travel order: the one nearer the start first).
+     * CELL), from any spot to any spot, picked in INIT. AROUND: a spline through this control
+     * point, past the HIVE on the alliance-wall side.
      */
     public static double[] RED_CONTROL_AROUND_HIVE = {24, 72, 0};
-    public static double[] RED_CONTROL_THROUGH_HIVE_1 = {80, 30, 0};
-    public static double[] RED_CONTROL_THROUGH_HIVE_2 = {65, 128, 0};
+    /**
+     * THROUGH: straight lines via these two waypoints {x, y} (the robot drives to each one), under
+     * the HIVE between them. Used in travel order, the one nearer the start first, so it works in
+     * both directions. Unlike every other pose, blue MIRRORS these across the field's center line
+     * x = 72 (x -> 144 - x, y unchanged) instead of rotating them.
+     */
+    public static double[] RED_THROUGH_HIVE_WAYPOINT_AUDIENCE = {60, 30};
+    public static double[] RED_THROUGH_HIVE_WAYPOINT_FAR = {60, 120};
     public static double[] RED_CONTROL_PARK_LEFT = {24, 114, 0};
     public static double[] RED_CONTROL_PARK_RIGHT = {24, 102, 0};
 
@@ -124,16 +129,24 @@ public class Poses {
         return of(p.spot == 1 ? RED_CONTROL_LAUNCH_FAR_CELL_1 : RED_CONTROL_LAUNCH_FAR_CELL_2);
     }
 
+    /** Spline control point for a move between launch points AROUND the HIVE. */
+    public Pose hiveAroundControl() {
+        return of(RED_CONTROL_AROUND_HIVE);
+    }
+
     /**
-     * Control points for a move from {@code start} to a launch point across the HIVE: around it
-     * (true, one point) or through it (false, two points ordered nearer-to-start first, so the
-     * spline works in either direction and for either alliance).
+     * Waypoints for a move from {@code start} THROUGH the HIVE, nearer-to-start first, each with
+     * heading {@code headingRad}. Blue mirrors them across x = 72 (see RED_THROUGH_HIVE_WAYPOINT_*).
      */
-    public Pose[] hiveRouteControls(boolean around, Pose start) {
-        if (around) return new Pose[] {of(RED_CONTROL_AROUND_HIVE)};
-        Pose a = of(RED_CONTROL_THROUGH_HIVE_1);
-        Pose b = of(RED_CONTROL_THROUGH_HIVE_2);
+    public Pose[] hiveThroughWaypoints(Pose start, double headingRad) {
+        Pose a = mirrored(RED_THROUGH_HIVE_WAYPOINT_AUDIENCE, headingRad);
+        Pose b = mirrored(RED_THROUGH_HIVE_WAYPOINT_FAR, headingRad);
         return start.distance(a) <= start.distance(b) ? new Pose[] {a, b} : new Pose[] {b, a};
+    }
+
+    /** {x, y} in the red frame; blue mirrors x across the field's center line (y unchanged). */
+    private Pose mirrored(double[] p, double headingRad) {
+        return new Pose(isRed ? p[0] : FIELD_SIZE - p[0], p[1], headingRad);
     }
 
     public Pose intakeApproach(IntakePoint p) {

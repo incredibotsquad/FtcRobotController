@@ -23,7 +23,10 @@ import org.firstinspires.ftc.teamcode.common.HiveState;
 import org.firstinspires.ftc.teamcode.common.LaunchTargets;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Deque;
 import java.util.List;
 
 /**
@@ -48,8 +51,9 @@ import java.util.List;
  * When a sequence runs out (no next launch or intake point), the robot parks.
  *
  * Park: the OpMode keeps its own AUTO_LENGTH_S clock from START. In the last PARK_WINDOW_S
- * seconds it drives to the LOADING ZONE, unless a launch is in progress, in which case it parks as
- * soon as the launch finishes.
+ * seconds it drives to the LOADING ZONE only if there is nothing left to launch (no artifacts or
+ * no launch point left); otherwise launching wins: it cuts any intake short and goes to launch,
+ * parking after the launch if time remains.
  *
  * INIT controls (gamepad 1 or 2); nothing is commanded until START (G304.H / G403). At START the
  * intake bar is commanded up and held there except at intake points that need it:
@@ -60,7 +64,8 @@ import java.util.List;
  *   Right stick up/down - delay after the LAST point of the sequence being edited, +/- 0.5 s
  *                         (launch point: waits after each launch there; intake point: after intaking)
  *   L / R trigger    - between launch points across the HIVE, go AROUND it / THROUGH it
- *                      (spline through Poses.RED_CONTROL_AROUND_HIVE / RED_CONTROL_THROUGH_HIVE_1 + _2;
+ *                      (spline through Poses.RED_CONTROL_AROUND_HIVE / straight lines via
+ *                      Poses.RED_THROUGH_HIVE_WAYPOINT_AUDIENCE and _FAR;
  *                      replaces the leg's own line/spline for that move only)
  *   Y                - switch between editing the LAUNCH and the INTAKE sequence
  *   Dpad left/right  - choose a point
@@ -184,6 +189,8 @@ public class DynamicAuto extends LinearOpMode {
     /** Where rocking starts and returns to (pose after backing out, heading snapped to 90 deg). */
     private Pose rockBase;
     private LaunchBallsCommand launchCommand;
+    /** DRIVE_TO_LAUNCH through the HIVE: waypoints still to visit, then the launch pose (last). */
+    private final Deque<Pose> launchRoute = new ArrayDeque<>();
     private boolean parkStarted = false;
     /** WAIT state: how long, and what to do after. */
     private long waitMs = 0;
@@ -361,18 +368,26 @@ public class DynamicAuto extends LinearOpMode {
         }
 
         if (!parkStarted && state != State.LAUNCHING && parkTime()) {
-            if (readyToFireHere()) {
-                // Ready with the CELL confirmed up: fire first (AT_LAUNCH launches this loop), park after.
-                log("park window reached but ready to launch at a confirmed-up CELL: launching first");
+            if (launchTakesPriority()) {
+                // Launching beats parking: carry artifacts on to the launch point, cutting any intake short.
+                if (hurryToLaunch()) return;
             } else {
                 startPark("park window: " + String.format("%.1f", AUTO_LENGTH_S - matchTimer.seconds())
-                        + " s left (PARK_WINDOW_S " + PARK_WINDOW_S + ")");
+                        + " s left (PARK_WINDOW_S " + PARK_WINDOW_S + "), nothing left to launch");
                 return;
             }
         }
 
         switch (state) {
             case DRIVE_TO_LAUNCH:
+                if (!launchRoute.isEmpty() && pathDone()) {
+                    // Through the HIVE: on to the next waypoint, or the launch pose.
+                    Pose next = launchRoute.poll();
+                    log("  waypoint reached, on to " + (launchRoute.isEmpty() ? "the launch pose" : "the next waypoint"));
+                    driveTo(next, null, false);
+                    stateTimer.reset(); // per-leg PATH_MIN_MS / PATH_TIMEOUT_MS
+                    break;
+                }
                 if (pathDone()) {
                     cellUpSinceMs = -1;
                     arrivedAtLaunchMs = nowMs();
@@ -445,6 +460,11 @@ public class DynamicAuto extends LinearOpMode {
             case BACK_OUT_OF_INTAKE:
                 if (pathDone()) {
                     rocksDone = 0;
+                    if (parkTime() && launchTakesPriority()) {
+                        log("park window: skipping the rocking to go launch");
+                        finishIntakePoint();
+                        break;
+                    }
                     if (isFlower(currentIntake().point)) {
                         finishIntakePoint(); // FLOWERS don't rock: bar up, on to the launch point
                         break;
@@ -576,13 +596,25 @@ public class DynamicAuto extends LinearOpMode {
             return;
         }
         LaunchTargets.setForcedCell(leg.point.cell);
-        driveThrough(poses.launch(leg.point), poses.hiveRouteControls(AutoPlan.hiveRouteAround, follower.pose()), true, 1.0);
+        Pose target = poses.launch(leg.point);
+        launchRoute.clear();
+        if (AutoPlan.hiveRouteAround) {
+            driveTo(target, poses.hiveAroundControl(), true);
+        } else {
+            // Straight lines: waypoint, waypoint, launch pose. Turns to the launch heading on the first leg.
+            Pose[] waypoints = poses.hiveThroughWaypoints(follower.pose(), target.heading());
+            launchRoute.addAll(Arrays.asList(waypoints).subList(1, waypoints.length));
+            launchRoute.add(target);
+            log("  THROUGH the HIVE via " + fmt(waypoints[0]) + " and " + fmt(waypoints[1]));
+            driveTo(waypoints[0], null, false);
+        }
         setState(State.DRIVE_TO_LAUNCH, "to launch point " + (launchIndex + 1) + "/" + launchLegs.size() + " "
                 + leg.point.label() + " from the " + fromCell + " CELL, " + AutoPlan.hiveRouteLabel());
     }
 
     private void driveToLaunchPoint() {
         AutoPlan.Leg<LaunchPoint> leg = currentLaunch();
+        launchRoute.clear();
         LaunchTargets.setForcedCell(leg.point.cell); // turret aims at it on the way
         driveTo(poses.launch(leg.point), poses.launchControl(leg.point), leg.spline);
         setState(State.DRIVE_TO_LAUNCH, "to launch point " + (launchIndex + 1) + "/" + launchLegs.size() + " "
@@ -661,6 +693,7 @@ public class DynamicAuto extends LinearOpMode {
 
     private void startPark(String reason) {
         parkStarted = true;
+        launchRoute.clear();
         raiseBar();
         driveTo(poses.park(AutoPlan.parkTowardAudience), poses.parkControl(AutoPlan.parkTowardAudience), PARK_WITH_SPLINE);
         setState(State.DRIVE_TO_PARK, "parking " + AutoPlan.parkLabel() + ": " + reason);
@@ -677,11 +710,49 @@ public class DynamicAuto extends LinearOpMode {
      * At the launch point, launcher ready, and our CELL confirmed up: on the first visit by
      * HiveState (known start state or Limelight), on a return visit by a fresh TIP-check reading.
      */
-    private boolean readyToFireHere() {
-        if (state != State.AT_LAUNCH) return false;
-        if (launchedHere && !tipConfirmed) return false;
-        return HiveState.getUpCell(AutoPlan.alliance) == currentLaunch().point.cell
-                && robot.launchSubsystem.isReadyToLaunch();
+    /**
+     * Launching beats parking: in the park window the robot keeps going while it holds artifacts
+     * and the plan still has a launch point. It parks only when there is nothing left to launch.
+     */
+    private boolean launchTakesPriority() {
+        return mechanisms && robot.intakeSubsystem.getArtifactCount() > 0 && launchIndex < launchLegs.size();
+    }
+
+    /**
+     * Park window with artifacts to launch: if the robot is intaking, stop and head for the launch
+     * point (backing out first if the bar is down). Driving to / at the launch point, backing out,
+     * and plan delays carry on as normal. Returns true if it changed state this loop.
+     */
+    private boolean hurryToLaunch() {
+        switch (state) {
+            case DRIVE_TO_INTAKE:
+                log("park window with " + robot.intakeSubsystem.getArtifactCount()
+                        + " artifacts: skipping this intake point to go launch");
+                finishIntakePoint();
+                return true;
+            case LOWER_BAR:
+            case DRIVE_INTO_INTAKE:
+            case INTAKING:
+                log("park window with " + robot.intakeSubsystem.getArtifactCount()
+                        + " artifacts: cutting the intake short to go launch");
+                if (barDown) {
+                    driveTo(poses.intakeApproach(currentIntake().point), null, false);
+                    setState(State.BACK_OUT_OF_INTAKE, "bar is down: backing out to the approach pose, then launch");
+                } else {
+                    finishIntakePoint();
+                }
+                return true;
+            case ROCK_FORWARD:
+            case ROCK_BACK:
+                log("park window with " + robot.intakeSubsystem.getArtifactCount()
+                        + " artifacts: stopping the rocking to go launch");
+                follower.hold(follower.pose());
+                followingPath = false;
+                finishIntakePoint();
+                return true;
+            default:
+                return false;
+        }
     }
 
     private boolean parkTime() {
