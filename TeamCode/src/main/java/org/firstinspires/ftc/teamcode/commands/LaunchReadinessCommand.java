@@ -46,9 +46,13 @@ public class LaunchReadinessCommand extends CommandBase {
     /**
      * Distance (inches, robot center to CELL) -> flywheel RPM. PLACEHOLDERS: fill from test shots.
      * Must be the same length, sorted by distance. Values in between are linearly interpolated.
+     * Outside the table the nearest end RPM is used, and the shot still counts as ready (no
+     * waiting for the robot to get into range).
      */
-    public static double[] SHOT_DISTANCES_IN = {46, 47, 52, 66, 88};
-    public static double[] SHOT_RPMS = {2800, 2750, 2800, 2950, 3250};
+    public static double[] SHOT_DISTANCES_IN = {44, 47, 52, 66, 88};
+    public static double[] SHOT_RPMS = {2800, 2800, 2800, 2950, 3250};
+    /** Out-of-table distance already logged (logs once each time the robot leaves the table range). */
+    private boolean loggedOutOfRange = false;
 
     // ------------------------------------------------------------------ turret geometry
     /** Servo position at which the turret points straight out the front of the robot. */
@@ -195,26 +199,32 @@ public class LaunchReadinessCommand extends CommandBase {
         launcher.updateFlywheel(rpm, distance);
 
         // ---------------------------------------------------- shot validity
+        // Outside the table: rpmForDistance() already snapped to the end RPM; shoot with it.
         boolean inRange = distance >= SHOT_DISTANCES_IN[0]
                 && distance <= SHOT_DISTANCES_IN[SHOT_DISTANCES_IN.length - 1];
+        if (!inRange && !loggedOutOfRange) {
+            Log.i("LaunchReadiness", String.format("distance %.1f in is outside the shot table (%.0f-%.0f): using %.0f RPM",
+                    distance, SHOT_DISTANCES_IN[0], SHOT_DISTANCES_IN[SHOT_DISTANCES_IN.length - 1], rpm));
+        }
+        loggedOutOfRange = !inRange;
         boolean slowEnough = ENABLE_MOVING_SHOT_COMPENSATION || speed <= MAX_STATIONARY_SHOT_SPEED_IN_PER_SEC;
 
         // Locked = manual turret: where the turret points is the driver's job, so aim isn't checked.
         boolean turretAimOk = turretLocked || turretReachable;
 
         if (!turretAimOk) notReadyReason = "turret can't reach";
-        else if (!inRange) notReadyReason = "out of range";
         else if (!slowEnough) notReadyReason = "moving too fast";
         else if (!turretSettled) notReadyReason = "turret settling";
         else notReadyReason = "";
 
         boolean solutionValid = notReadyReason.isEmpty();
         launcher.setShotSolutionReady(solutionValid);
-        launcher.setShotPossible(turretAimOk && inRange);
+        launcher.setShotPossible(turretAimOk);
 
         // ---------------------------------------------------- telemetry
         telemetry.addData("Launch: Target cell", CrossOpModeStorage.allianceColor + " " + LaunchTargets.getLastSelectedCell());
-        telemetry.addData("Launch: Distance (in)", Math.round(distance * 10) / 10.0);
+        telemetry.addData("Launch: Distance (in)", Math.round(distance * 10) / 10.0
+                + (inRange ? "" : " (outside table, end RPM)"));
         telemetry.addData("Launch: Turret angle (deg)", Math.round(relativeDeg));
         telemetry.addData("Launch: Turret position", turretLocked ? LaunchSubsystem.TURRET_MID + " (LOCKED)" : String.valueOf(turretReachable ? turretPosition : -1));
         telemetry.addData("Launch: RPM target / actual", Math.round(rpm) + " / " + Math.round(launcher.getCurrentFlywheelRPM()));

@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import android.util.Log;
+
 import com.arcrobotics.ftclib.command.SubsystemBase;
 import com.arcrobotics.ftclib.hardware.SimpleServo;
 import com.bylazar.configurables.annotations.Configurable;
@@ -97,6 +99,19 @@ public class IntakeBarSubsystem extends SubsystemBase {
         // Estimate travel time from how far the bar has to move (full travel if never commanded).
         double distance = Double.isNaN(fraction) ? 1.0 : Math.abs(f - fraction);
         moveDoneAtMs = nowMs() + Math.round(distance * FULL_TRAVEL_MS);
+
+        if (f != fraction) {
+            // Logs every bar move with the caller, to trace unexpected moves.
+            StackTraceElement[] st = Thread.currentThread().getStackTrace();
+            StringBuilder from = new StringBuilder();
+            for (int k = 3; k < Math.min(st.length, 6); k++) {
+                if (from.length() > 0) from.append(" <- ");
+                from.append(st[k].getClassName().replaceAll(".*\\.", "")).append('.').append(st[k].getMethodName())
+                        .append(':').append(st[k].getLineNumber());
+            }
+            Log.i("IntakeBar", String.format("bar -> %.2f (%s), from %s", f,
+                    f == 0.0 ? "RAISED" : f == 1.0 ? "LOWERED" : "partial", from));
+        }
 
         fraction = f;
         state = f == 0.0 ? State.RAISED : f == 1.0 ? State.LOWERED : State.PARTIAL;

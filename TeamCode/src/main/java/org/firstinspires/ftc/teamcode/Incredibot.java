@@ -21,6 +21,7 @@ import org.firstinspires.ftc.teamcode.commands.ReverseIntakeCommand;
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 import org.firstinspires.ftc.teamcode.common.HiveState;
+import org.firstinspires.ftc.teamcode.common.LaunchTargets;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeBarSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
@@ -89,6 +90,7 @@ public class Incredibot extends Robot {
 
     public void initTeleop(GamepadEx driverGamepad, GamepadEx operatorGamepad) {
         CommandScheduler.getInstance().reset();
+        LaunchTargets.clearForcedCell(); // an AUTO launch step may have left one set
 
         if (DRIVE_ONLY_MODE) {
             initDriveOnly();
@@ -135,6 +137,7 @@ public class Incredibot extends Robot {
     public void initAuto() {
         // Clear out any lingering commands or bindings from previous runs
         CommandScheduler.getInstance().reset();
+        LaunchTargets.clearForcedCell();
 
         if (DRIVE_ONLY_MODE) {
             initDriveOnly();

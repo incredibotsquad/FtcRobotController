@@ -52,7 +52,7 @@ public class LaunchSubsystem extends SubsystemBase {
      */
     public static boolean USE_GAIN_TABLE = true;
     //match these values to LaunchReadinessCommand.SHOT_DISTANCES_IN
-    public static double[] GAIN_TABLE_DISTANCES_IN = {46, 47, 52, 66, 88};
+    public static double[] GAIN_TABLE_DISTANCES_IN = {44, 47, 52, 66, 88};
     public static double[] GAIN_TABLE_P  = {0.025, 0.025, 0.025, 0.03, 0.035};
     public static double[] GAIN_TABLE_I  = {0.0, 0.0, 0.0, 0.0, 0.0};
     public static double[] GAIN_TABLE_D  = {0.0, 0.0, 0.0, 0.0, 0.0};
@@ -365,7 +365,7 @@ public class LaunchSubsystem extends SubsystemBase {
         return shotSolutionReady;
     }
 
-    /** False when no shot is possible from the current position (out of range / turret can't reach). */
+    /** False when no shot is possible from the current position (turret can't reach). */
     public void setShotPossible(boolean shotPossible) {
         this.shotPossible = shotPossible;
     }

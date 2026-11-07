@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import android.util.Log;
+
 import com.arcrobotics.ftclib.command.SubsystemBase;
 import com.arcrobotics.ftclib.hardware.SimpleServo;
 import com.arcrobotics.ftclib.hardware.motors.Motor;
@@ -31,6 +33,14 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
  *  3. If sensor 1 stays blocked for JAM_MS while intaking, the artifact can't move up -> full.
  *
  * When the count reaches MAX_ARTIFACTS while intaking, the intake stops automatically.
+ *
+ * G407 (control at most 4): an undercount makes the intake pull in a 5th artifact, an overcount
+ * only stops it early. So by default (ALLOW_SETTLED_DECREASE = false) the settle corrections in
+ * step 2 may only RAISE the count. It only goes down on real exit events: sensor 1 clearing with
+ * the intake reversed, or sensor 4 clearing while launching. A ball stuck low after a launch, which
+ * the slot sensors can't see, then still counts.
+ *
+ * Every count change is logged (tag "IntakeCount") with its reason.
  */
 @Configurable
 public class IntakeSubsystem extends SubsystemBase {
@@ -54,6 +64,12 @@ public class IntakeSubsystem extends SubsystemBase {
      * cap, which drops a full stack to 3 in that case. Experimental: flip live in Panels to compare.
      */
     public static boolean USE_SLOT_BASED_UPPER_BOUND = true;
+    /**
+     * Let the settle corrections LOWER the count (sensor 4 clear -> 0, and the upper bound above).
+     * false (default) = they can only raise it, so a hidden artifact can't make the intake take a
+     * 5th (G407). Cost: a double count stays until the next launch, and the robot stops one short.
+     */
+    public static boolean ALLOW_SETTLED_DECREASE = false;
     /**
      * When intaking fills the robot, keep the intake and transfer running this much longer so the
      * last artifact is pulled all the way in (the count hits MAX as it reaches sensor 1, before it is
@@ -79,6 +95,8 @@ public class IntakeSubsystem extends SubsystemBase {
     private final TelemetryManager telemetry;
 
     private int artifactCount = 0;
+    /** A skipped settle decrease was logged; reset whenever the count changes so it logs once per count. */
+    private boolean loggedSkippedDecrease = false;
     /** Intake keeps running until this time after intaking filled the robot (see FULL_RUN_ON_MS). */
     private long fullRunOnUntilMs = 0;
     private boolean launching = false;
@@ -218,7 +236,7 @@ public class IntakeSubsystem extends SubsystemBase {
 
     /** Manually override the count, e.g. preloads at the start of auto. */
     public void setArtifactCount(int count) {
-        artifactCount = clamp(count);
+        changeCount(count, "set by code (setArtifactCount)");
     }
 
     public boolean isSensor1Blocked() {
@@ -252,15 +270,15 @@ public class IntakeSubsystem extends SubsystemBase {
         // while the transfer shuffles the stack up and down past sensor 1, which isn't a new artifact.
         if (s1Changed && !launching) {
             if (beamBreak1.isBlocked() && intakePower > 0) {
-                artifactCount++;
+                changeCount(artifactCount + 1, "sensor 1 blocked, intake forward (entered)");
             } else if (!beamBreak1.isBlocked() && intakePower < 0) {
-                artifactCount--;
+                changeCount(artifactCount - 1, "sensor 1 cleared, intake reversed (ejected)");
             }
         }
 
         // Artifact leaving the top into the launcher
         if (s4Changed && !beamBreak4.isBlocked() && launching && transferMotor.get() > 0) {
-            artifactCount--;
+            changeCount(artifactCount - 1, "sensor 4 cleared while launching (launched)");
         }
 
         // 2. Correct drift once the entrance has been quiet for a while
@@ -270,17 +288,17 @@ public class IntakeSubsystem extends SubsystemBase {
 
         if (settled) {
             if (!beamBreak4.isBlocked() && beamBreak4.msInState(now) >= SETTLE_MS) {
-                artifactCount = 0;
+                settledDecrease(0, "settled: sensor 4 clear (empty)");
             } else {
-                if (USE_SLOT_SENSORS_AS_LOWER_BOUND) {
-                    artifactCount = Math.max(artifactCount, contiguousSlotsFromTop());
+                if (USE_SLOT_SENSORS_AS_LOWER_BOUND && contiguousSlotsFromTop() > artifactCount) {
+                    changeCount(contiguousSlotsFromTop(), "settled: " + contiguousSlotsFromTop() + " slot(s) blocked from the top");
                 }
                 if (USE_SLOT_BASED_UPPER_BOUND) {
                     // At most one artifact the slot sensors can't see (below the lowest blocked one).
-                    artifactCount = Math.min(artifactCount, contiguousSlotsFromTop() + 1);
+                    settledDecrease(contiguousSlotsFromTop() + 1, "settled: upper bound (slots from top + 1)");
                 } else {
                     // Old rule: a 4th artifact would be resting on sensor 1, which is clear
-                    artifactCount = Math.min(artifactCount, MAX_ARTIFACTS - 1);
+                    settledDecrease(MAX_ARTIFACTS - 1, "settled: upper bound MAX - 1");
                 }
             }
         }
@@ -288,16 +306,42 @@ public class IntakeSubsystem extends SubsystemBase {
         // 3. Entrance blocked and not moving while intaking -> nowhere left to go
         // (not while launching: during the kick the intake holds an artifact on sensor 1 on purpose)
         if (!launching && intakePower > 0 && beamBreak1.isBlocked() && beamBreak1.msInState(now) >= JAM_MS) {
-            artifactCount = MAX_ARTIFACTS;
+            changeCount(MAX_ARTIFACTS, "sensor 1 blocked " + JAM_MS + " ms while intaking (jam = full)");
         }
-
-        artifactCount = clamp(artifactCount);
 
         // Intaking just filled the robot: run on briefly so the last artifact gets fully inside.
         // (Not for setArtifactCount(), e.g. AUTO preloads, or while launching.)
         if (!wasFull && isFull() && intakePower > 0 && !launching) {
             fullRunOnUntilMs = now + Math.max(0, FULL_RUN_ON_MS);
         }
+    }
+
+    /** Sets the count (clamped to 0..MAX) and logs the change with its reason. */
+    private void changeCount(int newCount, String reason) {
+        newCount = clamp(newCount);
+        if (newCount == artifactCount) return;
+        Log.i("IntakeCount", String.format("%d -> %d: %s | sensors %s, intake %.1f, transfer %.1f%s",
+                artifactCount, newCount, reason, sensorString(), intakeMotor.get(), transferMotor.get(),
+                launching ? ", launching" : ""));
+        artifactCount = newCount;
+        loggedSkippedDecrease = false;
+    }
+
+    /** A settle correction that would lower the count: applied only if ALLOW_SETTLED_DECREASE. */
+    private void settledDecrease(int newCount, String reason) {
+        if (newCount >= artifactCount) return;
+        if (ALLOW_SETTLED_DECREASE) {
+            changeCount(newCount, reason);
+        } else if (!loggedSkippedDecrease) {
+            Log.i("IntakeCount", String.format("kept %d (would be %d: %s; ALLOW_SETTLED_DECREASE off) | sensors %s",
+                    artifactCount, Math.max(0, newCount), reason, sensorString()));
+            loggedSkippedDecrease = true;
+        }
+    }
+
+    private String sensorString() {
+        return (beamBreak1.isBlocked() ? "X" : "-") + (beamBreak2.isBlocked() ? "X" : "-")
+                + (beamBreak3.isBlocked() ? "X" : "-") + (beamBreak4.isBlocked() ? "X" : "-");
     }
 
     /** Number of blocked slot sensors counting down from the top (4, then 3, then 2). */

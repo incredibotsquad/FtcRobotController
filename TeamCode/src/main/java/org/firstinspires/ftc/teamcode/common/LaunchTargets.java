@@ -55,6 +55,8 @@ public class LaunchTargets {
     private static final Selector nearestSelector = new NearestCellSelector();
     private static final Selector visionSelector = new HiveStateSelector();
     private static HiveCell lastSelectedCell = HiveCell.FAR;
+    /** Set by autonomous launch steps: aim at this CELL regardless of the selector. null = selector decides. */
+    private static HiveCell forcedCell = null;
 
     private LaunchTargets() {}
 
@@ -62,9 +64,23 @@ public class LaunchTargets {
         return USE_VISION_SELECTOR ? visionSelector : nearestSelector;
     }
 
+    /** Aim at this CELL until {@link #clearForcedCell()} (autonomous launch steps). */
+    public static void setForcedCell(HiveCell cell) {
+        forcedCell = cell;
+    }
+
+    /** Back to the selector (USE_VISION_SELECTOR). Called by Incredibot when an OpMode starts. */
+    public static void clearForcedCell() {
+        forcedCell = null;
+    }
+
+    public static HiveCell getForcedCell() {
+        return forcedCell;
+    }
+
     /** Target point for the given robot pose. Call every loop from the aiming code. */
     public static Translation2d getTarget(Pose2d robotPose, AllianceColors alliance) {
-        lastSelectedCell = activeSelector().select(robotPose, alliance);
+        lastSelectedCell = forcedCell != null ? forcedCell : activeSelector().select(robotPose, alliance);
         return getCellPosition(alliance, lastSelectedCell);
     }
 

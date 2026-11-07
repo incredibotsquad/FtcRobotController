@@ -113,6 +113,12 @@ public class LimelightSubsystem extends SubsystemBase {
     private final HiveCell[] pendingUpCell = new HiveCell[2];
     private final int[] pendingCount = new int[2];
 
+    // Per-HIVE diagnostics (index 0 = RED, 1 = BLUE): every tag of that HIVE in the last frame
+    // that had any, including rejected ones, and when that frame was.
+    private final String[] lastHiveView = {"never seen", "never seen"};
+    private final long[] lastHiveSeenMs = new long[2];
+    private String frameStatus = "no frame yet";
+
     public LimelightSubsystem(HardwareMap hardwareMap, TelemetryManager telemetry) {
         this.telemetry = telemetry;
         limelight = hardwareMap.get(Limelight3A.class, LIMELIGHT_NAME);
@@ -133,6 +139,17 @@ public class LimelightSubsystem extends SubsystemBase {
 
     public boolean isConnected() {
         return limelight.isConnected();
+    }
+
+    /**
+     * What the camera last saw of this alliance's HIVE, for logs: each tag's height and verdict
+     * (UP / DOWN / ambiguous / too far), how long ago, and the current frame status.
+     */
+    public String describeHive(AllianceColors alliance) {
+        int i = alliance == AllianceColors.RED ? 0 : 1;
+        String age = lastHiveSeenMs[i] == 0 ? ""
+                : String.format(" (%d ms ago)", System.nanoTime() / 1_000_000L - lastHiveSeenMs[i]);
+        return "last seen: " + lastHiveView[i] + age + "; frame now: " + frameStatus;
     }
 
     /**
@@ -181,6 +198,8 @@ public class LimelightSubsystem extends SubsystemBase {
         LLResult result = limelight.getLatestResult();
         latestResult = result;
         if (result == null || !result.isValid() || result.getStaleness() > MAX_RESULT_AGE_MS) {
+            frameStatus = !isConnected() ? "NOT CONNECTED" : result == null ? "no result"
+                    : !result.isValid() ? "invalid (no targets)" : "stale " + result.getStaleness() + " ms";
             observations = Collections.emptyList();
             telemetry.addData("Limelight: tags", isConnected() ? "none" : "NOT CONNECTED");
             return;
@@ -190,17 +209,28 @@ public class LimelightSubsystem extends SubsystemBase {
         List<TagObservation> fresh = new ArrayList<>();
         // Up/down votes per HIVE this frame: [alliance][0 = AUDIENCE up, 1 = FAR up]
         int[][] votes = new int[2][2];
+        StringBuilder[] view = {new StringBuilder(), new StringBuilder()};
+        int hiveTags = 0;
 
         for (LLResultTypes.FiducialResult f : result.getFiducialResults()) {
             int id = f.getFiducialId();
             if (!HiveTags.isHiveTag(id)) continue;
+            hiveTags++;
 
             Position p = f.getTargetPoseRobotSpace().getPosition().toUnit(DistanceUnit.INCH);
             double forward = p.x;
             double left = ROBOT_SPACE_Y_IS_LEFT ? p.y : -p.y;
             double up = p.z;
+            double dist = Math.hypot(forward, left);
 
-            if (Math.hypot(forward, left) > MAX_TAG_DISTANCE_IN) continue;
+            String verdict = dist > MAX_TAG_DISTANCE_IN ? "too far"
+                    : Math.abs(up - threshold) < UP_DOWN_MARGIN_IN ? "ambiguous"
+                    : up > threshold ? "UP" : "DOWN";
+            StringBuilder v = view[HiveTags.allianceOf(id) == AllianceColors.RED ? 0 : 1];
+            if (v.length() > 0) v.append(", ");
+            v.append(String.format("%d %s z%.1f d%.0f %s", id, HiveTags.cellOf(id), up, dist, verdict));
+
+            if (dist > MAX_TAG_DISTANCE_IN) continue;
             if (Math.abs(up - threshold) < UP_DOWN_MARGIN_IN) continue; // ambiguous, e.g. mid-TIP
 
             boolean cellUp = up > threshold;
@@ -213,6 +243,14 @@ public class LimelightSubsystem extends SubsystemBase {
 
         observations = fresh;
         frameTimestampMs = result.getControlHubTimeStamp();
+        frameStatus = hiveTags + " HIVE tag(s), threshold z" + round1(threshold);
+        long now = System.nanoTime() / 1_000_000L;
+        for (int i = 0; i < 2; i++) {
+            if (view[i].length() > 0) {
+                lastHiveView[i] = view[i].toString();
+                lastHiveSeenMs[i] = now;
+            }
+        }
 
         updateHiveState(AllianceColors.RED, votes[0]);
         updateHiveState(AllianceColors.BLUE, votes[1]);
