@@ -5,6 +5,7 @@ import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
@@ -48,6 +49,7 @@ import java.util.List;
  * Nothing moves: no motors or servos are touched. Panels is not legal in matches (R704).
  */
 @Configurable
+@Disabled
 @TeleOp(name = "Test: HIVE State (Limelight)", group = "Test")
 public class HiveStateTest extends LinearOpMode {
 

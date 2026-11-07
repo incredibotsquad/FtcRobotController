@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.opmodes.tuning;
 
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -30,6 +31,7 @@ import java.util.Deque;
  * clear->blocked transition; one artifact passing a sensor should add exactly 1.
  * More than that means flicker: raise IntakeSubsystem.DEBOUNCE_MS.
  */
+@Disabled
 @TeleOp(name = "Test: Intake Count", group = "Test")
 public class IntakeCountTest extends LinearOpMode {
 

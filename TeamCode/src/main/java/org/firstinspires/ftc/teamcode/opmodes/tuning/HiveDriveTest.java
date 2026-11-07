@@ -9,6 +9,7 @@ import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.lynx.LynxModule;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -57,6 +58,7 @@ import java.util.List;
  * Nothing moves during INIT: only the Limelight is read. Panels is not legal in matches (R704).
  */
 @Configurable
+@Disabled
 @TeleOp(name = "Test: HIVE Drive (Limelight)", group = "Tests")
 public class HiveDriveTest extends LinearOpMode {
 

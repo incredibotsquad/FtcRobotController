@@ -5,6 +5,7 @@ import com.arcrobotics.ftclib.gamepad.GamepadKeys;
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -31,6 +32,7 @@ import java.util.List;
  *   X              - toggle sweep between SWEEP_MIN and SWEEP_MAX
  */
 @Configurable
+@Disabled
 @TeleOp(name = "ServoPositionTuner", group = "Tests")
 public class ServoPositionTuner extends LinearOpMode {
 

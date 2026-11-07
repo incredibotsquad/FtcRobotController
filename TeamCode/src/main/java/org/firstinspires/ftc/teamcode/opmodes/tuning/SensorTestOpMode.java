@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.opmodes.tuning;
 
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
@@ -12,6 +13,7 @@ import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
  * Motors are never commanded. intake.periodic() runs every loop, since that is what reads the sensors.
  * For testing the counting logic with the intake running, use IntakeCountTest.
  */
+@Disabled
 @TeleOp(name = "Test: Beam Break Sensors", group = "Test")
 public class SensorTestOpMode extends LinearOpMode {
 

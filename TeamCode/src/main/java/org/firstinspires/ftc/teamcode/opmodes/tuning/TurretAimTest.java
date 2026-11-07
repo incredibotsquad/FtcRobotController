@@ -12,6 +12,7 @@ import com.bylazar.field.PanelsField;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.hardware.lynx.LynxModule;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -57,6 +58,7 @@ import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
  * Alliance starts as CrossOpModeStorage.allianceColor. Does not spin the flywheel. Panels is not legal in matches (R704); this is a pit/bench tool.
  */
 @Configurable
+@Disabled
 @TeleOp(name = "TurretAimTest", group = "Tests")
 public class TurretAimTest extends LinearOpMode {
 
