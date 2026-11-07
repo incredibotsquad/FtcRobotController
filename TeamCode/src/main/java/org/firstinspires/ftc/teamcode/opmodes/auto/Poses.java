@@ -42,8 +42,8 @@ public class Poses {
     // Red AUDIENCE CELL is at (60, 54), red FAR CELL at (60, 90) (LaunchTargets).
     public static double[] RED_LAUNCH_AUDIENCE_CELL_1 = {42.5, 10, 90};   // ~44.6 in: BELOW the 46 in table minimum
     public static double[] RED_LAUNCH_AUDIENCE_CELL_2 = {30, 24, 90};   // ~53 in
-    public static double[] RED_LAUNCH_FAR_CELL_1 = {40, 134, 90};       // ~48 in
-    public static double[] RED_LAUNCH_FAR_CELL_2 = {30, 120, 90};       // ~53 in
+    public static double[] RED_LAUNCH_FAR_CELL_1 = {40, 134, 270};       // ~48 in
+    public static double[] RED_LAUNCH_FAR_CELL_2 = {30, 120, 270};       // ~53 in
 
     // ---- intake points: drive to the approach pose, then straight in to the intake pose
     /** GARDEN (red: tape along the audience wall, x 0-23, 4 POLLEN from the corner). */
@@ -64,8 +64,12 @@ public class Poses {
     public static boolean WALL_FLOWER_NEEDS_BAR = true;
     public static boolean SIDE_FLOWER_NEEDS_BAR = true;
 
-    // ---- park (red LOADING ZONE: x 0-11, y 96.5-119.5; partly inside is enough)
-    public static double[] RED_PARK = {10, 108, 90};
+    // ---- park (red LOADING ZONE: x 0-11, y 96.5-119.5; partly inside is enough, don't touch the
+    // wall or LEAVE may not count). Two spots, named by the wall they're toward:
+    /** LEFT: the end of the zone toward the wall opposite the audience (red: high y). */
+    public static double[] RED_PARK_LEFT = {10, 114, 90};
+    /** RIGHT: the end of the zone toward the audience wall (red: low y). */
+    public static double[] RED_PARK_RIGHT = {10, 96, 90};
 
     // ---- spline control points, one per destination (heading unused). A spline to a point bends
     // through its control point; the path starts wherever the robot is, so check each on the field.
@@ -76,7 +80,17 @@ public class Poses {
     public static double[] RED_CONTROL_GARDEN = {40, 24, 0};
     public static double[] RED_CONTROL_WALL_FLOWER = {32.58, 51.36, 0};
     public static double[] RED_CONTROL_SIDE_FLOWER = {54.85, 109.79, 0};
-    public static double[] RED_CONTROL_PARK = {24, 108, 0};
+    /**
+     * Moving between launch points on opposite sides of the HIVE (audience-side CELL <-> far-side
+     * CELL), from any spot to any spot: a spline shaped by these, picked in INIT. AROUND goes past
+     * the HIVE on the alliance-wall side (one control point); THROUGH goes under the HIVE's middle
+     * (two control points, used in travel order: the one nearer the start first).
+     */
+    public static double[] RED_CONTROL_AROUND_HIVE = {24, 72, 0};
+    public static double[] RED_CONTROL_THROUGH_HIVE_1 = {80, 30, 0};
+    public static double[] RED_CONTROL_THROUGH_HIVE_2 = {65, 128, 0};
+    public static double[] RED_CONTROL_PARK_LEFT = {24, 114, 0};
+    public static double[] RED_CONTROL_PARK_RIGHT = {24, 102, 0};
 
     // ================================================================ lookups for one alliance
 
@@ -110,6 +124,18 @@ public class Poses {
         return of(p.spot == 1 ? RED_CONTROL_LAUNCH_FAR_CELL_1 : RED_CONTROL_LAUNCH_FAR_CELL_2);
     }
 
+    /**
+     * Control points for a move from {@code start} to a launch point across the HIVE: around it
+     * (true, one point) or through it (false, two points ordered nearer-to-start first, so the
+     * spline works in either direction and for either alliance).
+     */
+    public Pose[] hiveRouteControls(boolean around, Pose start) {
+        if (around) return new Pose[] {of(RED_CONTROL_AROUND_HIVE)};
+        Pose a = of(RED_CONTROL_THROUGH_HIVE_1);
+        Pose b = of(RED_CONTROL_THROUGH_HIVE_2);
+        return start.distance(a) <= start.distance(b) ? new Pose[] {a, b} : new Pose[] {b, a};
+    }
+
     public Pose intakeApproach(IntakePoint p) {
         switch (p) {
             case GARDEN: return of(RED_GARDEN_APPROACH);
@@ -134,12 +160,16 @@ public class Poses {
         }
     }
 
-    public Pose park() {
-        return of(RED_PARK);
+    /**
+     * Park toward the audience wall (RIGHT, true) or the wall opposite it (LEFT, false). Rotated,
+     * red's LEFT (far) end of the zone is blue's audience end, like start().
+     */
+    public Pose park(boolean towardAudience) {
+        return of(towardAudience == isRed ? RED_PARK_RIGHT : RED_PARK_LEFT);
     }
 
-    public Pose parkControl() {
-        return of(RED_CONTROL_PARK);
+    public Pose parkControl(boolean towardAudience) {
+        return of(towardAudience == isRed ? RED_CONTROL_PARK_RIGHT : RED_CONTROL_PARK_LEFT);
     }
 
     // ================================================================ helpers

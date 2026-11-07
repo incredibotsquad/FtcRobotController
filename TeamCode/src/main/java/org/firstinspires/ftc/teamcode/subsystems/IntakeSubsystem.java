@@ -11,6 +11,8 @@ import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
+import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
+
 /**
  * Artifact counting
  * -----------------
@@ -39,8 +41,24 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
  * step 2 may only RAISE the count. It only goes down on real exit events: sensor 1 clearing with
  * the intake reversed, or sensor 4 clearing while launching. A ball stuck low after a launch, which
  * the slot sensors can't see, then still counts.
+ * One exception (confirmEmptyAfterLaunch, called by LaunchBallsCommand when it hits MAX_FIRE_MS):
+ * if the transfer has run forward with all four sensors clear for at least EMPTY_CONFIRM_MS, any
+ * artifact inside would have been carried past sensor 4 by then, so the robot is empty: count = 0.
  *
  * Every count change is logged (tag "IntakeCount") with its reason.
+ *
+ * Stall detection and unjamming
+ * -----------------------------
+ * Only the intake motor is watched (the transfer is not), while it is commanded forward and not
+ * launching (LaunchBallsCommand drives the motors then). A stall is high current (STALL_SIGNAL = CURRENT,
+ * works without encoders) or near-zero encoder speed (VELOCITY, needs the encoder cable) lasting
+ * STALL_TIME_MS, ignoring the first STALL_STARTUP_MS after the motor starts. Then the intake
+ * motor reverses at UNJAM_REVERSE_POWER for UNJAM_REVERSE_MS (backs the stuck artifact out of the
+ * rollers; the transfer keeps going), then goes forward again.
+ * More than UNJAM_MAX_TRIES unjams within UNJAM_WINDOW_MS: the intake motor gives up and stays stopped
+ * for UNJAM_GIVE_UP_MS (stops it burning out against a real jam), then tries again.
+ * Commands' motor requests are remembered and reapplied after an unjam; a stop or reverse request
+ * (e.g. full, ReverseIntakeCommand) cancels an unjam at once. Logged with tag "IntakeStall".
  */
 @Configurable
 public class IntakeSubsystem extends SubsystemBase {
@@ -71,12 +89,43 @@ public class IntakeSubsystem extends SubsystemBase {
      */
     public static boolean ALLOW_SETTLED_DECREASE = false;
     /**
+     * confirmEmptyAfterLaunch(): how long the transfer must have run forward, while launching, with
+     * all four sensors clear before the robot is taken as empty. Must be longer than an artifact
+     * takes to ride from the intake up past sensor 4.
+     */
+    public static long EMPTY_CONFIRM_MS = 1000;
+    /**
      * When intaking fills the robot, keep the intake and transfer running this much longer so the
      * last artifact is pulled all the way in (the count hits MAX as it reaches sensor 1, before it is
      * fully inside). 0 = stop immediately (old behavior). Keep short: running on while full could
      * pick up a 5th artifact (G407).
      */
     public static long FULL_RUN_ON_MS = 250;
+
+    // ---------------------------------------------------------------- stall detection (see class comment)
+    public enum StallSignal { CURRENT, VELOCITY }
+
+    public static boolean STALL_DETECTION_ENABLED = true;
+    /** CURRENT works on any wiring; VELOCITY needs the motor's encoder cable plugged in. */
+    public static StallSignal STALL_SIGNAL = StallSignal.CURRENT;
+    /** CURRENT: stalled at or above this draw (a goBILDA 5203 stalls around 9 A at 12 V; free-running about 0.5-2 A). */
+    public static double STALL_CURRENT_A = 6.0;
+    /** CURRENT: how often to read current (each read is a separate hub call, not bulk-cached). */
+    public static long CURRENT_READ_INTERVAL_MS = 40;
+    /** VELOCITY: stalled at or below this encoder speed (ticks/s; free speed is about 2800). */
+    public static double STALL_MAX_VELOCITY_TPS = 250;
+    /** Only watch a motor commanded at least this much forward. */
+    public static double STALL_MIN_POWER = 0.5;
+    /** Ignore this long after a motor starts (startup current spike, zero speed while spinning up). */
+    public static long STALL_STARTUP_MS = 300;
+    /** Stall condition must hold this long. */
+    public static long STALL_TIME_MS = 250;
+
+    public static double UNJAM_REVERSE_POWER = 0.8;
+    public static long UNJAM_REVERSE_MS = 250;
+    public static int UNJAM_MAX_TRIES = 3;
+    public static long UNJAM_WINDOW_MS = 4000;
+    public static long UNJAM_GIVE_UP_MS = 1500;
 
     public static double ZERO_BALL_COLOR = 0;
     public static double ONE_BALL_COLOR = 0.29;   // RED
@@ -94,9 +143,13 @@ public class IntakeSubsystem extends SubsystemBase {
 
     private final TelemetryManager telemetry;
 
+    private final StallGuard intakeGuard;
+
     private int artifactCount = 0;
     /** A skipped settle decrease was logged; reset whenever the count changes so it logs once per count. */
     private boolean loggedSkippedDecrease = false;
+    /** While launching: since when the transfer has run forward with all sensors clear; -1 = not now. */
+    private long feedClearSinceMs = -1;
     /** Intake keeps running until this time after intaking filled the robot (see FULL_RUN_ON_MS). */
     private long fullRunOnUntilMs = 0;
     private boolean launching = false;
@@ -121,6 +174,8 @@ public class IntakeSubsystem extends SubsystemBase {
         beamBreak4 = new BeamBreak(hardwareMap, "ballSensor4");
 
         artifactCountLight = new SimpleServo(hardwareMap, "artifactCountLight", 0, 270);
+
+        intakeGuard = new StallGuard("intake", intakeMotor);
     }
 
     // ---------------------------------------------------------------- motor control
@@ -131,19 +186,19 @@ public class IntakeSubsystem extends SubsystemBase {
             stopIntakeAndTransfer();
             return;
         }
-        intakeMotor.set(1);
+        intakeGuard.request(1);
         transferMotor.set(1);
     }
 
     /** Stops intake and transfer. */
     public void stopIntakeAndTransfer() {
-        intakeMotor.set(0);
+        intakeGuard.request(0);
         transferMotor.set(0);
     }
 
     /** Runs intake and transfer in reverse to eject artifacts. */
     public void reverseIntakeAndTransfer() {
-        intakeMotor.set(-1);
+        intakeGuard.request(-1);
         transferMotor.set(-1);
     }
 
@@ -152,7 +207,7 @@ public class IntakeSubsystem extends SubsystemBase {
     }
 
     public void setIntakeMotorPower(double power) {
-        intakeMotor.set(power);
+        intakeGuard.request(power);
     }
 
     public void setTransferMotorPower(double power) {
@@ -160,11 +215,16 @@ public class IntakeSubsystem extends SubsystemBase {
     }
 
     public void stopIntakeMotorOnly() {
-        intakeMotor.set(0);
+        intakeGuard.request(0);
     }
 
     public void stopTransferMotorOnly() {
         transferMotor.set(0);
+    }
+
+    /** The intake motor is currently reversing to clear a stall, or has given up after too many. */
+    public boolean isUnjamming() {
+        return intakeGuard.isOverriding();
     }
 
     // ---------------------------------------------------------------- counting
@@ -309,6 +369,13 @@ public class IntakeSubsystem extends SubsystemBase {
             changeCount(MAX_ARTIFACTS, "sensor 1 blocked " + JAM_MS + " ms while intaking (jam = full)");
         }
 
+        // Empty-confirmation timer for confirmEmptyAfterLaunch().
+        if (launching && transferMotor.get() > 0 && allSensorsClear()) {
+            if (feedClearSinceMs < 0) feedClearSinceMs = now;
+        } else {
+            feedClearSinceMs = -1;
+        }
+
         // Intaking just filled the robot: run on briefly so the last artifact gets fully inside.
         // (Not for setArtifactCount(), e.g. AUTO preloads, or while launching.)
         if (!wasFull && isFull() && intakePower > 0 && !launching) {
@@ -387,6 +454,7 @@ public class IntakeSubsystem extends SubsystemBase {
     @Override
     public void periodic() {
         updateArtifactCount();
+        updateStallGuards();
 
         // Auto-stop when full (only while intaking, not while feeding the launcher)
         if (isFullAndDoneIntaking() && !launching && intakeMotor.get() > 0) {
@@ -402,6 +470,164 @@ public class IntakeSubsystem extends SubsystemBase {
                         + (beamBreak3.isBlocked() ? "X" : "-")
                         + (beamBreak4.isBlocked() ? "X" : "-"));
         telemetry.addData("Transfer Power: ", transferMotor.get());
+        telemetry.addData("Intake stall", intakeGuard.status());
+    }
+
+    // ---------------------------------------------------------------- stall detection
+
+    private void updateStallGuards() {
+        long now = nowMs();
+        intakeGuard.update(now, STALL_DETECTION_ENABLED && !launching);
+    }
+
+    private boolean allSensorsClear() {
+        return !beamBreak1.isBlocked() && !beamBreak2.isBlocked() && !beamBreak3.isBlocked() && !beamBreak4.isBlocked();
+    }
+
+    /**
+     * End of a launch that timed out with artifacts still counted: if the transfer has fed forward
+     * with every sensor clear for EMPTY_CONFIRM_MS, the robot is really empty, so the count goes to 0
+     * (the count was high). Returns true if it reset the count.
+     */
+    public boolean confirmEmptyAfterLaunch() {
+        if (artifactCount == 0 || feedClearSinceMs < 0) {
+            if (artifactCount > 0) {
+                Log.i("IntakeCount", "kept " + artifactCount + " after launch: sensors " + sensorString()
+                        + (transferMotor.get() > 0 ? "" : ", transfer not feeding forward"));
+            }
+            return false;
+        }
+        long clearMs = nowMs() - feedClearSinceMs;
+        if (clearMs < EMPTY_CONFIRM_MS) {
+            Log.i("IntakeCount", String.format("kept %d after launch: sensors clear with transfer forward only %d ms (EMPTY_CONFIRM_MS %d)",
+                    artifactCount, clearMs, EMPTY_CONFIRM_MS));
+            return false;
+        }
+        changeCount(0, "launch timed out, transfer fed forward with all sensors clear for " + clearMs + " ms (empty)");
+        return true;
+    }
+
+    /** Watches the intake motor for a stall and runs the reverse-and-retry unjam. */
+    private static final class StallGuard {
+        private final String name;
+        private final MotorEx motor;
+
+        /** Last power a command asked for; reapplied after an unjam. */
+        private double requested = 0;
+        private long forwardSinceMs = -1;
+        private long stalledSinceMs = -1;
+        private long unjamUntilMs = 0;
+        private long giveUpUntilMs = 0;
+        private int tries = 0;
+        private long firstTryMs = 0;
+        private double currentA = Double.NaN;
+        private long currentReadAtMs = 0;
+
+        StallGuard(String name, MotorEx motor) {
+            this.name = name;
+            this.motor = motor;
+        }
+
+        /** A command's power request. Stop/reverse requests win over an unjam; forward ones wait for it. */
+        void request(double power) {
+            requested = power;
+            if (power <= 0 && isOverriding()) {
+                unjamUntilMs = 0;
+                giveUpUntilMs = 0;
+            }
+            if (!isOverriding()) motor.set(power);
+        }
+
+        boolean isOverriding() {
+            long now = nowMs();
+            return now < unjamUntilMs || now < giveUpUntilMs;
+        }
+
+        void update(long now, boolean watch) {
+            // Not watched (launching / detection off): drop any unjam so the launch gets its motors.
+            if (!watch && isOverriding()) {
+                unjamUntilMs = 0;
+                giveUpUntilMs = 0;
+                tries = 0;
+                motor.set(requested);
+                Log.i("IntakeStall", name + ": unjam cancelled (launching or detection off)");
+            }
+            // Finish an unjam / give-up period: back to what the command asked for.
+            if (unjamUntilMs != 0 && now >= unjamUntilMs) {
+                unjamUntilMs = 0;
+                forwardSinceMs = now; // startup grace again
+                stalledSinceMs = -1;
+                motor.set(requested);
+                Log.i("IntakeStall", name + ": unjam reverse done, back to " + requested);
+            }
+            if (giveUpUntilMs != 0 && now >= giveUpUntilMs) {
+                giveUpUntilMs = 0;
+                tries = 0;
+                forwardSinceMs = now;
+                stalledSinceMs = -1;
+                motor.set(requested);
+                Log.i("IntakeStall", name + ": give-up pause over, trying again");
+            }
+            if (isOverriding()) return;
+
+            if (!watch || requested < STALL_MIN_POWER) {
+                forwardSinceMs = -1;
+                stalledSinceMs = -1;
+                return;
+            }
+            if (forwardSinceMs < 0) forwardSinceMs = now;
+            if (now - forwardSinceMs < STALL_STARTUP_MS) return;
+
+            if (!isStalled(now)) {
+                stalledSinceMs = -1;
+                return;
+            }
+            if (stalledSinceMs < 0) stalledSinceMs = now;
+            if (now - stalledSinceMs < STALL_TIME_MS) return;
+
+            // Stalled: reverse briefly, or give up for a while after too many tries.
+            stalledSinceMs = -1;
+            if (tries == 0 || now - firstTryMs > UNJAM_WINDOW_MS) {
+                tries = 0;
+                firstTryMs = now;
+            }
+            tries++;
+            String signal = STALL_SIGNAL == StallSignal.CURRENT
+                    ? String.format("%.1f A", currentA)
+                    : String.format("%.0f ticks/s", Math.abs(motor.getVelocity()));
+            if (tries > UNJAM_MAX_TRIES) {
+                giveUpUntilMs = now + UNJAM_GIVE_UP_MS;
+                motor.set(0);
+                Log.w("IntakeStall", String.format("%s: STALLED (%s) %d times in %d ms, giving up: stopped for %d ms",
+                        name, signal, tries - 1, now - firstTryMs, UNJAM_GIVE_UP_MS));
+            } else {
+                unjamUntilMs = now + UNJAM_REVERSE_MS;
+                motor.set(-Math.abs(UNJAM_REVERSE_POWER));
+                Log.i("IntakeStall", String.format("%s: STALLED (%s for %d ms), unjam %d/%d: reversing %d ms at %.2f",
+                        name, signal, STALL_TIME_MS, tries, UNJAM_MAX_TRIES, UNJAM_REVERSE_MS, UNJAM_REVERSE_POWER));
+            }
+        }
+
+        private boolean isStalled(long now) {
+            if (STALL_SIGNAL == StallSignal.VELOCITY) {
+                return Math.abs(motor.getVelocity()) <= STALL_MAX_VELOCITY_TPS;
+            }
+            if (Double.isNaN(currentA) || now - currentReadAtMs >= CURRENT_READ_INTERVAL_MS) {
+                currentA = motor.motorEx.getCurrent(CurrentUnit.AMPS);
+                currentReadAtMs = now;
+            }
+            return currentA >= STALL_CURRENT_A;
+        }
+
+        String status() {
+            long now = nowMs();
+            if (now < unjamUntilMs) return "UNJAMMING";
+            if (now < giveUpUntilMs) return "GAVE UP";
+            String reading = STALL_SIGNAL == StallSignal.CURRENT
+                    ? (Double.isNaN(currentA) ? "-" : String.format("%.1f A", currentA))
+                    : String.format("%.0f t/s", Math.abs(motor.getVelocity()));
+            return "ok (" + reading + ")";
+        }
     }
 
     // ---------------------------------------------------------------- debounced sensor

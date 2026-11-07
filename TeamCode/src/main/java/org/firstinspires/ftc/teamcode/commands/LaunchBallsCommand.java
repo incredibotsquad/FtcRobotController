@@ -186,6 +186,7 @@ public class LaunchBallsCommand extends CommandBase {
 
         if (state == State.FIRING && now - stateStartMs >= MAX_FIRE_MS) {
             Log.w("LaunchBallsCommand", "Hit MAX_FIRE_MS with count " + intake.getArtifactCount());
+            intake.confirmEmptyAfterLaunch(); // count too high? sensors clear while feeding -> 0
             enter(State.DONE);
         }
     }

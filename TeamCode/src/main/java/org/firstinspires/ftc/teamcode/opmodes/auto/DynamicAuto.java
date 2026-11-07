@@ -55,6 +55,13 @@ import java.util.List;
  * intake bar is commanded up and held there except at intake points that need it:
  *   LB / RB          - alliance RED / BLUE
  *   Dpad up / down   - start touching the AUDIENCE wall / the wall opposite it
+ *   L / R stick press - park LEFT (toward the far wall) / RIGHT (toward the audience wall)
+ *   Left stick up/down  - delay after START, +/- 0.5 s
+ *   Right stick up/down - delay after the LAST point of the sequence being edited, +/- 0.5 s
+ *                         (launch point: waits after each launch there; intake point: after intaking)
+ *   L / R trigger    - between launch points across the HIVE, go AROUND it / THROUGH it
+ *                      (spline through Poses.RED_CONTROL_AROUND_HIVE / RED_CONTROL_THROUGH_HIVE_1 + _2;
+ *                      replaces the leg's own line/spline for that move only)
  *   Y                - switch between editing the LAUNCH and the INTAKE sequence
  *   Dpad left/right  - choose a point
  *   A / X            - append it, reached by a straight LINE / a SPLINE
@@ -80,7 +87,7 @@ public class DynamicAuto extends LinearOpMode {
      * of our HIVE taken after arriving (HiveState is only the last known state). Wait up to this
      * long for one.
      */
-    public static long TIP_CHECK_TIMEOUT_MS = 1500;
+    public static long TIP_CHECK_TIMEOUT_MS = 500;
     /**
      * No fresh reading by TIP_CHECK_TIMEOUT_MS: true = launch anyway (the CELL may have tipped),
      * false = treat the CELL as tipped and move on to the next launch point (or park if it was the
@@ -104,7 +111,7 @@ public class DynamicAuto extends LinearOpMode {
      * fraction of the drive's tuned top forward speed (Constants.foresightConfig
      * maxAchievableForwardVelocity). 1 = no limit.
      */
-    public static double INTAKE_DRIVE_IN_SPEED_FRACTION = 0.01;
+    public static double INTAKE_DRIVE_IN_SPEED_FRACTION = 0.4;
 
     /**
      * After backing out of an intake point with the bar down: rock forward (toward the intake pose)
@@ -128,13 +135,21 @@ public class DynamicAuto extends LinearOpMode {
     /** A rock leg counts as done this close to its end (smaller than PATH_END_TOLERANCE_IN; the legs are short). */
     public static double ROCK_END_TOLERANCE_IN = 0.75;
 
+    /**
+     * true = show informational telemetry: the subsystems' readouts (drive, odometry, intake,
+     * launcher, Limelight) in INIT and during the run, plus the run status (state, points, time
+     * left). false = INIT shows only the plan editor, and the run shows nothing. The log
+     * (tag DynamicAuto) is written either way.
+     */
+    public static boolean SHOW_TELEMETRY = false;
+
     private static final String TAG = "DynamicAuto";
 
     private enum State {
         DRIVE_TO_LAUNCH, AT_LAUNCH, LAUNCHING,
         DRIVE_TO_INTAKE, LOWER_BAR, DRIVE_INTO_INTAKE, INTAKING, BACK_OUT_OF_INTAKE,
         ROCK_FORWARD, ROCK_BACK,
-        DRIVE_TO_PARK, DONE
+        WAIT, DRIVE_TO_PARK, DONE
     }
 
     private enum Editing { LAUNCH, INTAKE }
@@ -170,6 +185,9 @@ public class DynamicAuto extends LinearOpMode {
     private Pose rockBase;
     private LaunchBallsCommand launchCommand;
     private boolean parkStarted = false;
+    /** WAIT state: how long, and what to do after. */
+    private long waitMs = 0;
+    private Runnable afterWait;
     private String status = "";
     /** Last status / up CELL written to the log, so waiting states log once, not every loop. */
     private String loggedStatus = "";
@@ -188,6 +206,7 @@ public class DynamicAuto extends LinearOpMode {
         beginMatch();
         while (opModeIsActive() && !isStopRequested()) {
             CommandScheduler.getInstance().run();
+            dropSubsystemTelemetry(panels);
             update();
             showStatus(panels);
         }
@@ -208,6 +227,12 @@ public class DynamicAuto extends LinearOpMode {
             if (pressed(Button.RB)) AutoPlan.alliance = AllianceColors.BLUE;
             if (pressed(Button.DPAD_UP)) AutoPlan.startAtAudienceWall = true;
             if (pressed(Button.DPAD_DOWN)) AutoPlan.startAtAudienceWall = false;
+            if (pressed(Button.LEFT_STICK)) AutoPlan.parkTowardAudience = false;
+            if (pressed(Button.RIGHT_STICK)) AutoPlan.parkTowardAudience = true;
+            AutoPlan.startDelayMs = AutoPlan.clampDelay(AutoPlan.startDelayMs + stickSteps(true) * AutoPlan.DELAY_STEP_MS);
+            int lastDelaySteps = stickSteps(false);
+            if (triggerPressed(true)) AutoPlan.hiveRouteAround = true;
+            if (triggerPressed(false)) AutoPlan.hiveRouteAround = false;
             if (pressed(Button.Y)) editing = editing == Editing.LAUNCH ? Editing.INTAKE : Editing.LAUNCH;
 
             int step = (pressed(Button.DPAD_RIGHT) ? 1 : 0) - (pressed(Button.DPAD_LEFT) ? 1 : 0);
@@ -220,15 +245,18 @@ public class DynamicAuto extends LinearOpMode {
                 launchChoice = Math.floorMod(launchChoice + step, launchOptions.length);
                 if (addLine || addSpline) AutoPlan.addLaunch(launchOptions[launchChoice], addSpline);
                 if (removeLast) AutoPlan.removeLast(AutoPlan.launchPoints);
+                AutoPlan.adjustLastDelay(AutoPlan.launchPoints, lastDelaySteps);
                 if (clear) AutoPlan.launchPoints.clear();
             } else {
                 intakeChoice = Math.floorMod(intakeChoice + step, intakeOptions.length);
                 if (addLine || addSpline) AutoPlan.addIntake(intakeOptions[intakeChoice], addSpline);
                 if (removeLast) AutoPlan.removeLast(AutoPlan.intakePoints);
+                AutoPlan.adjustLastDelay(AutoPlan.intakePoints, lastDelaySteps);
                 if (clear) AutoPlan.intakePoints.clear();
             }
 
             CommandScheduler.getInstance().run(); // subsystem periodic() only (lights, pose); nothing moves
+            dropSubsystemTelemetry(panels);
 
             boolean red = AutoPlan.isRed();
             String choice = editing == Editing.LAUNCH
@@ -238,11 +266,15 @@ public class DynamicAuto extends LinearOpMode {
             if (!mechanisms) panels.addLine("DRIVE_ONLY_MODE: paths only, no launching or bar");
             panels.addData("Alliance (LB red / RB blue)", AutoPlan.alliance);
             panels.addData("Start (dpad up/down)", AutoPlan.startAtAudienceWall ? "AUDIENCE wall" : "FAR wall");
+            panels.addData("Start delay (left stick up/down)", String.format("%.1f s", AutoPlan.startDelayMs / 1000.0));
+            panels.addData("Park (L/R stick press)", AutoPlan.parkLabel());
+            panels.addData("Launch-to-launch (L/R trigger)", AutoPlan.hiveRouteLabel());
             panels.addData("Up CELL at start", startUpCell());
             panels.addLine("-------------------------------");
             panels.addData("Editing (Y)", editing);
             panels.addData("Point (dpad L/R)", choice);
             panels.addLine("A = add (line), X = add (spline), Back = remove last, B = clear");
+            panels.addLine("Right stick up/down = delay after the last point");
             panels.addLine("------ LAUNCH points ------");
             listLaunch(panels);
             panels.addLine("------ INTAKE points ------");
@@ -307,13 +339,15 @@ public class DynamicAuto extends LinearOpMode {
         matchTimer.reset();
         log("START " + AutoPlan.alliance + ", " + (AutoPlan.startAtAudienceWall ? "AUDIENCE" : "FAR")
                 + " wall, start pose " + fmt(start) + ", up CELL " + HiveState.getUpCell(AutoPlan.alliance)
+                + String.format(", start delay %.1f s", AutoPlan.startDelayMs / 1000.0)
+                + ", park " + AutoPlan.parkLabel() + ", launch-to-launch " + AutoPlan.hiveRouteLabel()
                 + ", mechanisms " + (mechanisms ? "on" : "off (DRIVE_ONLY_MODE)"));
         log("PLAN launch: " + launchPlanText() + " | intake: " + intakePlanText(red));
         loggedUpCell = HiveState.getUpCell(AutoPlan.alliance);
         if (launchLegs.isEmpty()) {
             setState(State.DONE, "no launch points: waiting to park");
         } else {
-            driveToLaunchPoint();
+            waitThen(AutoPlan.startDelayMs, "after START", this::driveToLaunchPoint);
         }
     }
 
@@ -359,7 +393,8 @@ public class DynamicAuto extends LinearOpMode {
                     log("launch finished after " + ms(stateTimer) + ", " + robot.intakeSubsystem.getArtifactCount()
                             + " artifacts left");
                     if (parkTime()) startPark("park window reached during the launch");
-                    else driveToIntakePoint();
+                    else waitThen(currentLaunch().delayMs, "after launching at " + currentLaunch().point.label(),
+                            this::driveToIntakePoint);
                 }
                 break;
 
@@ -446,6 +481,15 @@ public class DynamicAuto extends LinearOpMode {
                 }
                 break;
 
+            case WAIT:
+                if (stateTimer.milliseconds() >= waitMs) {
+                    Runnable next = afterWait;
+                    afterWait = null;
+                    log("delay done after " + ms(stateTimer));
+                    next.run();
+                }
+                break;
+
             case DRIVE_TO_PARK:
                 if (pathDone()) setState(State.DONE, "parked at " + String.format("%.1f s", matchTimer.seconds()));
                 break;
@@ -502,7 +546,7 @@ public class DynamicAuto extends LinearOpMode {
             launchIndex++;
             launchedHere = false;
             if (launchIndex >= launchLegs.size()) startPark("no launch points left in the plan");
-            else driveToLaunchPoint();
+            else driveToNextLaunchPoint(cell);
         } else {
             cellUpSinceMs = -1;
             setStatus("first visit and " + cell + " CELL is down (up CELL " + HiveState.getUpCell(AutoPlan.alliance)
@@ -518,6 +562,23 @@ public class DynamicAuto extends LinearOpMode {
                 + (ready ? "ready" : "NOT ready after READY_TIMEOUT_MS " + READY_TIMEOUT_MS + ", firing anyway ("
                 + (robot.launchReadinessCommand == null ? "?" : robot.launchReadinessCommand.getNotReadyReason()) + ")");
         setState(State.LAUNCHING, "launching at " + currentLaunch().point.label() + ": " + why);
+    }
+
+    /**
+     * From the launch point just finished (its CELL {@code fromCell}) to the next one. Across the
+     * HIVE (other CELL), the spline goes through the AROUND / THROUGH control point picked in INIT;
+     * to the same CELL, the leg's own line/spline as usual.
+     */
+    private void driveToNextLaunchPoint(HiveCell fromCell) {
+        AutoPlan.Leg<LaunchPoint> leg = currentLaunch();
+        if (leg.point.cell == fromCell) {
+            driveToLaunchPoint();
+            return;
+        }
+        LaunchTargets.setForcedCell(leg.point.cell);
+        driveThrough(poses.launch(leg.point), poses.hiveRouteControls(AutoPlan.hiveRouteAround, follower.pose()), true, 1.0);
+        setState(State.DRIVE_TO_LAUNCH, "to launch point " + (launchIndex + 1) + "/" + launchLegs.size() + " "
+                + leg.point.label() + " from the " + fromCell + " CELL, " + AutoPlan.hiveRouteLabel());
     }
 
     private void driveToLaunchPoint() {
@@ -540,8 +601,7 @@ public class DynamicAuto extends LinearOpMode {
     }
 
     private void driveIntoIntakePoint() {
-        double topSpeed = Constants.foresightConfig.maxAchievableForwardVelocity.get();
-        driveTo(poses.intake(currentIntake().point), null, false, INTAKE_DRIVE_IN_SPEED_FRACTION * topSpeed);
+        driveTo(poses.intake(currentIntake().point), null, false, INTAKE_DRIVE_IN_SPEED_FRACTION);
         setState(State.DRIVE_INTO_INTAKE, "driving straight in at " + INTAKE_DRIVE_IN_SPEED_FRACTION + " speed");
     }
 
@@ -573,22 +633,37 @@ public class DynamicAuto extends LinearOpMode {
     }
 
     private static double rockSpeed() {
-        return ROCK_SPEED_FRACTION * Constants.foresightConfig.maxAchievableForwardVelocity.get();
+        return ROCK_SPEED_FRACTION;
     }
 
     /** Done at this intake point: bar up, then back to the same launch point to check for a TIP. */
     private void finishIntakePoint() {
         log("done with intake point " + (intakeIndex + 1) + "/" + intakeLegs.size() + (barDown ? ", raising bar" : ""));
         raiseBar();
+        long delay = currentIntake().delayMs;
+        String what = "after intake point " + (intakeIndex + 1);
         intakeIndex++;
-        driveToLaunchPoint();
+        waitThen(delay, what, this::driveToLaunchPoint);
+    }
+
+    /** Holds still for {@code ms} (a plan delay), then runs {@code next}. ms 0 runs it now. */
+    private void waitThen(long ms, String what, Runnable next) {
+        if (ms <= 0) {
+            next.run();
+            return;
+        }
+        follower.hold(follower.pose());
+        followingPath = false;
+        waitMs = ms;
+        afterWait = next;
+        setState(State.WAIT, String.format("waiting %.1f s (delay %s)", ms / 1000.0, what));
     }
 
     private void startPark(String reason) {
         parkStarted = true;
         raiseBar();
-        driveTo(poses.park(), poses.parkControl(), PARK_WITH_SPLINE);
-        setState(State.DRIVE_TO_PARK, "parking: " + reason);
+        driveTo(poses.park(AutoPlan.parkTowardAudience), poses.parkControl(AutoPlan.parkTowardAudience), PARK_WITH_SPLINE);
+        setState(State.DRIVE_TO_PARK, "parking " + AutoPlan.parkLabel() + ": " + reason);
     }
 
     private void raiseBar() {
@@ -682,11 +757,20 @@ public class DynamicAuto extends LinearOpMode {
      * through {@code control}. Heading turns linearly to the target heading. Pedro holds the end.
      */
     private void driveTo(Pose target, Pose control, boolean spline) {
-        driveTo(target, control, spline, Double.POSITIVE_INFINITY);
+        driveTo(target, control, spline, 1.0);
     }
 
-    /** Same, with the path's target speed capped at {@code maxSpeedInPerSec} (in/s) for this path only. */
-    private void driveTo(Pose target, Pose control, boolean spline, double maxSpeedInPerSec) {
+    /**
+     * Same, with the path's target speed capped at {@code speedFraction} of the drive's max
+     * achievable velocity for this path only. Pedro's maxPathSpeed is that fraction (Foresight uses
+     * min(v, maxPathSpeed * maxAchievableVelocity)), not in/s. 1 = no limit.
+     */
+    private void driveTo(Pose target, Pose control, boolean spline, double speedFraction) {
+        driveThrough(target, control == null ? new Pose[0] : new Pose[] {control}, spline, speedFraction);
+    }
+
+    /** Same, with any number of spline control points (in travel order). */
+    private void driveThrough(Pose target, Pose[] controls, boolean spline, double speedFraction) {
         Pose start = follower.pose();
         if (start.distance(target) < MIN_PATH_LENGTH_IN) {
             log("  already within " + MIN_PATH_LENGTH_IN + " in of " + fmt(target) + ": holding, no path");
@@ -694,19 +778,29 @@ public class DynamicAuto extends LinearOpMode {
             followingPath = false;
             return;
         }
-        Path path = (spline && control != null)
-                ? Paths.curve(start, control, target)
-                : Paths.line(start, target);
+        boolean curve = spline && controls.length > 0;
+        Path path;
+        if (curve) {
+            Pose[] pts = new Pose[controls.length + 2];
+            pts[0] = start;
+            System.arraycopy(controls, 0, pts, 1, controls.length);
+            pts[pts.length - 1] = target;
+            path = Paths.curve(pts);
+        } else {
+            path = Paths.line(start, target);
+        }
         path = path.linear(start, target);
-        if (maxSpeedInPerSec > 0 && !Double.isInfinite(maxSpeedInPerSec)) {
+        boolean limited = speedFraction > 0 && speedFraction < 1;
+        if (limited) {
             // Applied while this path runs, reverted afterwards.
-            path = path.with(Constants.foresightConfig.maxPathSpeed.at(maxSpeedInPerSec));
+            path = path.with(Constants.foresightConfig.maxPathSpeed.at(speedFraction));
         }
         follower.follow(path);
         followingPath = true;
-        log("  path " + ((spline && control != null) ? "spline" : "line") + " " + fmt(start) + " -> " + fmt(target)
+        log("  path " + (curve ? "spline" + (controls.length > 1 ? " (" + controls.length + " control points)" : "") : "line")
+                + " " + fmt(start) + " -> " + fmt(target)
                 + String.format(", %.1f in", start.distance(target))
-                + (Double.isInfinite(maxSpeedInPerSec) ? "" : String.format(", max %.0f in/s", maxSpeedInPerSec)));
+                + (limited ? String.format(", max %.2f of top speed", speedFraction) : ""));
     }
 
     private boolean pathDone() {
@@ -732,7 +826,16 @@ public class DynamicAuto extends LinearOpMode {
 
     // ================================================================ telemetry
 
+    /** Unless SHOW_TELEMETRY, discards the lines the subsystems' periodic() just added. */
+    private static void dropSubsystemTelemetry(TelemetryManager panels) {
+        if (!SHOW_TELEMETRY) panels.setLines(new ArrayList<>());
+    }
+
     private void showStatus(TelemetryManager panels) {
+        if (!SHOW_TELEMETRY) {
+            panels.update(telemetry); // clears the screen
+            return;
+        }
         boolean red = AutoPlan.isRed();
         panels.addData("Time left (s)", String.format("%.1f", Math.max(0, AUTO_LENGTH_S - matchTimer.seconds())));
         panels.addData("State", state + ": " + status);
@@ -753,7 +856,38 @@ public class DynamicAuto extends LinearOpMode {
 
     // ================================================================ input: either gamepad, edge-triggered
 
-    private enum Button { LB, RB, DPAD_UP, DPAD_DOWN, DPAD_LEFT, DPAD_RIGHT, A, B, X, Y, BACK }
+    private enum Button { LB, RB, DPAD_UP, DPAD_DOWN, DPAD_LEFT, DPAD_RIGHT, A, B, X, Y, BACK, LEFT_STICK, RIGHT_STICK }
+
+    private final boolean[] triggerWasDown = new boolean[2];
+    private final int[] stickWasDir = new int[2];
+
+    /**
+     * Edge-triggered flick of either gamepad's left (true) or right (false) stick: +1 when pushed
+     * up past half, -1 down, else 0.
+     */
+    private int stickSteps(boolean left) {
+        double y = left ? pickStronger(gamepad1.left_stick_y, gamepad2.left_stick_y)
+                : pickStronger(gamepad1.right_stick_y, gamepad2.right_stick_y);
+        int dir = y < -0.5 ? 1 : y > 0.5 ? -1 : 0; // stick y is negative when pushed up
+        int i = left ? 0 : 1;
+        int step = dir != stickWasDir[i] ? dir : 0;
+        stickWasDir[i] = dir;
+        return step;
+    }
+
+    private static double pickStronger(double a, double b) {
+        return Math.abs(a) >= Math.abs(b) ? a : b;
+    }
+
+    /** Edge-triggered press of either gamepad's left (true) or right (false) trigger. */
+    private boolean triggerPressed(boolean left) {
+        boolean down = (left ? Math.max(gamepad1.left_trigger, gamepad2.left_trigger)
+                : Math.max(gamepad1.right_trigger, gamepad2.right_trigger)) > 0.5;
+        int i = left ? 0 : 1;
+        boolean pressed = down && !triggerWasDown[i];
+        triggerWasDown[i] = down;
+        return pressed;
+    }
 
     private boolean pressed(Button b) {
         // Bitwise | so both gamepads' edge flags are consumed every loop.
@@ -768,6 +902,8 @@ public class DynamicAuto extends LinearOpMode {
             case B: return gamepad1.bWasPressed() | gamepad2.bWasPressed();
             case X: return gamepad1.xWasPressed() | gamepad2.xWasPressed();
             case Y: return gamepad1.yWasPressed() | gamepad2.yWasPressed();
+            case LEFT_STICK: return gamepad1.leftStickButtonWasPressed() | gamepad2.leftStickButtonWasPressed();
+            case RIGHT_STICK: return gamepad1.rightStickButtonWasPressed() | gamepad2.rightStickButtonWasPressed();
             default: return gamepad1.backWasPressed() | gamepad2.backWasPressed();
         }
     }
