@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import org.firstinspires.ftc.teamcode.common.DebugTelemetry;
+
 import com.arcrobotics.ftclib.command.SubsystemBase;
 import com.arcrobotics.ftclib.controller.PIDController;
 import com.arcrobotics.ftclib.controller.wpilibcontroller.SimpleMotorFeedforward;
@@ -423,11 +425,11 @@ public class LaunchSubsystem extends SubsystemBase {
         // (You would pass a telemetry object into the subsystem constructor to use this)
         // telemetry.addData("Launcher Ready", isReady);
         // telemetry.addData("Current Speed", getCurrentVelocity());
-        telemetry.addData("Flywheel Target RPM: ", targetRPM);
-        telemetry.addData("Flywheel gains P/I/D/kS/kV", String.format("%.4f / %.4f / %.4f / %.3f / %.6f",
+        if (DebugTelemetry.ENABLED) telemetry.addData("Flywheel Target RPM: ", targetRPM);
+        if (DebugTelemetry.ENABLED) telemetry.addData("Flywheel gains P/I/D/kS/kV", String.format("%.4f / %.4f / %.4f / %.3f / %.6f",
                 activeP, activeI, activeD, ffKs, ffKv));
         if (USE_GAIN_TABLE && gainTableRows() < GAIN_TABLE_DISTANCES_IN.length) {
-            telemetry.addData("Flywheel gain table", "WARNING: GAIN_TABLE_* arrays differ in length; extra rows ignored");
+            if (DebugTelemetry.ENABLED) telemetry.addData("Flywheel gain table", "WARNING: GAIN_TABLE_* arrays differ in length; extra rows ignored");
         }
     }
 }

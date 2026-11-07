@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import org.firstinspires.ftc.teamcode.common.DebugTelemetry;
+
 import android.util.Log;
 
 import com.arcrobotics.ftclib.command.SubsystemBase;
@@ -141,10 +143,10 @@ public class DriveSubsystem extends SubsystemBase {
         follower.update();
 
         if (org.firstinspires.ftc.teamcode.Incredibot.DRIVE_ONLY_MODE) {
-            telemetry.addData("MODE", "DRIVE ONLY (turret locked at mid; intake, launcher, gate, Limelight off)");
+            if (DebugTelemetry.ENABLED) telemetry.addData("MODE", "DRIVE ONLY (turret locked at mid; intake, launcher, gate, Limelight off)");
         }
 
-        telemetry.addData("Drive: mode", follower.mode()
+        if (DebugTelemetry.ENABLED) telemetry.addData("Drive: mode", follower.mode()
                 + (shouldHoldForLaunch() ? " (launch hold)" : launchHoldBrokenOut ? " (broke out)" : ""));
     }
 }

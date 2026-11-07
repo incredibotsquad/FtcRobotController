@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import org.firstinspires.ftc.teamcode.common.DebugTelemetry;
+
 import android.util.Log;
 
 import com.arcrobotics.ftclib.command.SubsystemBase;
@@ -121,8 +123,8 @@ public class OdometrySubsystem extends SubsystemBase {
         currentPose = newPose;
         CrossOpModeStorage.currentPose = currentPose;
 
-        telemetry.addData("Odometry: X Position", newPose.getX());
-        telemetry.addData("Odometry: Y Position", newPose.getY());
-        telemetry.addData("Odometry: Heading (Deg)", Math.toDegrees(newPose.getHeading()));
+        if (DebugTelemetry.ENABLED) telemetry.addData("Odometry: X Position", newPose.getX());
+        if (DebugTelemetry.ENABLED) telemetry.addData("Odometry: Y Position", newPose.getY());
+        if (DebugTelemetry.ENABLED) telemetry.addData("Odometry: Heading (Deg)", Math.toDegrees(newPose.getHeading()));
     }
 }

@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import org.firstinspires.ftc.teamcode.common.DebugTelemetry;
+
 import android.util.Log;
 
 import com.arcrobotics.ftclib.command.SubsystemBase;
@@ -101,16 +103,8 @@ public class IntakeBarSubsystem extends SubsystemBase {
         moveDoneAtMs = nowMs() + Math.round(distance * FULL_TRAVEL_MS);
 
         if (f != fraction) {
-            // Logs every bar move with the caller, to trace unexpected moves.
-            StackTraceElement[] st = Thread.currentThread().getStackTrace();
-            StringBuilder from = new StringBuilder();
-            for (int k = 3; k < Math.min(st.length, 6); k++) {
-                if (from.length() > 0) from.append(" <- ");
-                from.append(st[k].getClassName().replaceAll(".*\\.", "")).append('.').append(st[k].getMethodName())
-                        .append(':').append(st[k].getLineNumber());
-            }
-            Log.i("IntakeBar", String.format("bar -> %.2f (%s), from %s", f,
-                    f == 0.0 ? "RAISED" : f == 1.0 ? "LOWERED" : "partial", from));
+            Log.i("IntakeBar", String.format("bar -> %.2f (%s)", f,
+                    f == 0.0 ? "RAISED" : f == 1.0 ? "LOWERED" : "partial"));
         }
 
         fraction = f;
@@ -144,7 +138,7 @@ public class IntakeBarSubsystem extends SubsystemBase {
 
     @Override
     public void periodic() {
-        telemetry.addData("Intake bar", state
+        if (DebugTelemetry.ENABLED) telemetry.addData("Intake bar", state
                 + (state == State.UNKNOWN ? "" : String.format(" (%.2f)%s", fraction, isAtTarget() ? "" : " moving")));
     }
 

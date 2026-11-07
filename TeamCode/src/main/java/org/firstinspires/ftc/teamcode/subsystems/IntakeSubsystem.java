@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import org.firstinspires.ftc.teamcode.common.DebugTelemetry;
+
 import android.util.Log;
 
 import com.arcrobotics.ftclib.command.SubsystemBase;
@@ -477,14 +479,14 @@ public class IntakeSubsystem extends SubsystemBase {
 
         updateStatusLight(artifactCount);
 
-        telemetry.addData("Artifact Count: ", artifactCount);
-        telemetry.addData("Beam breaks 1/2/3/4: ",
+        if (DebugTelemetry.ENABLED) telemetry.addData("Artifact Count: ", artifactCount);
+        if (DebugTelemetry.ENABLED) telemetry.addData("Beam breaks 1/2/3/4: ",
                 (beamBreak1.isBlocked() ? "X" : "-")
                         + (beamBreak2.isBlocked() ? "X" : "-")
                         + (beamBreak3.isBlocked() ? "X" : "-")
                         + (beamBreak4.isBlocked() ? "X" : "-"));
-        telemetry.addData("Transfer Power: ", transferMotor.get());
-        telemetry.addData("Intake stall", intakeGuard.status());
+        if (DebugTelemetry.ENABLED) telemetry.addData("Transfer Power: ", transferMotor.get());
+        if (DebugTelemetry.ENABLED) telemetry.addData("Intake stall", intakeGuard.status());
     }
 
     // ---------------------------------------------------------------- stall detection

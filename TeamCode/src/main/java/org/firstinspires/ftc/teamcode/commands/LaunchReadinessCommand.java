@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.commands;
 
+import org.firstinspires.ftc.teamcode.common.DebugTelemetry;
+
 import android.util.Log;
 
 import com.arcrobotics.ftclib.command.CommandBase;
@@ -222,13 +224,13 @@ public class LaunchReadinessCommand extends CommandBase {
         launcher.setShotPossible(turretAimOk);
 
         // ---------------------------------------------------- telemetry
-        telemetry.addData("Launch: Target cell", CrossOpModeStorage.allianceColor + " " + LaunchTargets.getLastSelectedCell());
-        telemetry.addData("Launch: Distance (in)", Math.round(distance * 10) / 10.0
+        if (DebugTelemetry.ENABLED) telemetry.addData("Launch: Target cell", CrossOpModeStorage.allianceColor + " " + LaunchTargets.getLastSelectedCell());
+        if (DebugTelemetry.ENABLED) telemetry.addData("Launch: Distance (in)", Math.round(distance * 10) / 10.0
                 + (inRange ? "" : " (outside table, end RPM)"));
-        telemetry.addData("Launch: Turret angle (deg)", Math.round(relativeDeg));
-        telemetry.addData("Launch: Turret position", turretLocked ? LaunchSubsystem.TURRET_MID + " (LOCKED)" : String.valueOf(turretReachable ? turretPosition : -1));
-        telemetry.addData("Launch: RPM target / actual", Math.round(rpm) + " / " + Math.round(launcher.getCurrentFlywheelRPM()));
-        telemetry.addData("Launch: Solution", solutionValid ? "READY" : notReadyReason);
+        if (DebugTelemetry.ENABLED) telemetry.addData("Launch: Turret angle (deg)", Math.round(relativeDeg));
+        if (DebugTelemetry.ENABLED) telemetry.addData("Launch: Turret position", turretLocked ? LaunchSubsystem.TURRET_MID + " (LOCKED)" : String.valueOf(turretReachable ? turretPosition : -1));
+        if (DebugTelemetry.ENABLED) telemetry.addData("Launch: RPM target / actual", Math.round(rpm) + " / " + Math.round(launcher.getCurrentFlywheelRPM()));
+        if (DebugTelemetry.ENABLED) telemetry.addData("Launch: Solution", solutionValid ? "READY" : notReadyReason);
     }
 
     @Override

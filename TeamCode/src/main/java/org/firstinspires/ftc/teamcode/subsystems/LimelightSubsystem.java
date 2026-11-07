@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import org.firstinspires.ftc.teamcode.common.DebugTelemetry;
+
 import android.util.Log;
 
 import com.arcrobotics.ftclib.command.SubsystemBase;
@@ -201,7 +203,7 @@ public class LimelightSubsystem extends SubsystemBase {
             frameStatus = !isConnected() ? "NOT CONNECTED" : result == null ? "no result"
                     : !result.isValid() ? "invalid (no targets)" : "stale " + result.getStaleness() + " ms";
             observations = Collections.emptyList();
-            telemetry.addData("Limelight: tags", isConnected() ? "none" : "NOT CONNECTED");
+            if (DebugTelemetry.ENABLED) telemetry.addData("Limelight: tags", isConnected() ? "none" : "NOT CONNECTED");
             return;
         }
 
@@ -255,13 +257,13 @@ public class LimelightSubsystem extends SubsystemBase {
         updateHiveState(AllianceColors.RED, votes[0]);
         updateHiveState(AllianceColors.BLUE, votes[1]);
 
-        telemetry.addData("Limelight: tags", fresh.size());
+        if (DebugTelemetry.ENABLED) telemetry.addData("Limelight: tags", fresh.size());
         if (!fresh.isEmpty()) {
             TagObservation n = fresh.get(0);
-            telemetry.addData("Limelight: first tag (fwd, left, up)",
+            if (DebugTelemetry.ENABLED) telemetry.addData("Limelight: first tag (fwd, left, up)",
                     n.id + ": " + round1(n.forward) + ", " + round1(n.left) + ", " + round1(n.up));
         }
-        telemetry.addData("Limelight: up CELL red / blue",
+        if (DebugTelemetry.ENABLED) telemetry.addData("Limelight: up CELL red / blue",
                 HiveState.getUpCell(AllianceColors.RED) + " / " + HiveState.getUpCell(AllianceColors.BLUE));
     }
 
