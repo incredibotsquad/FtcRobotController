@@ -3,27 +3,32 @@ package org.firstinspires.ftc.teamcode.opmodes.auto;
 import org.firstinspires.ftc.teamcode.common.HiveCell;
 
 /**
- * Where the robot can stand to launch: two spots per CELL of our HIVE, so alliance partners can
- * shoot at the same CELL without colliding. CELLS are named by field side (AUDIENCE / FAR), as in
- * HiveState and LaunchTargets, so the names are right for both alliances. Positions: {@link Poses}.
+ * Where the robot can stand to launch: two spots on each side (driver's LEFT / RIGHT, see
+ * {@link Side}), each launching into that side's CELL of our HIVE, so alliance partners can shoot
+ * at the same CELL without colliding. Positions: {@link Poses} (red frame: RIGHT = the
+ * RED_LAUNCH_AUDIENCE_CELL_* values, LEFT = RED_LAUNCH_FAR_CELL_*).
  */
 public enum LaunchPoint {
-    AUDIENCE_CELL_SPOT_1(HiveCell.AUDIENCE, 1),
-    AUDIENCE_CELL_SPOT_2(HiveCell.AUDIENCE, 2),
-    FAR_CELL_SPOT_1(HiveCell.FAR, 1),
-    FAR_CELL_SPOT_2(HiveCell.FAR, 2);
+    LEFT_SPOT_1(Side.LEFT, 1),
+    LEFT_SPOT_2(Side.LEFT, 2),
+    RIGHT_SPOT_1(Side.RIGHT, 1),
+    RIGHT_SPOT_2(Side.RIGHT, 2);
 
-    /** The CELL launched into from this spot. */
-    public final HiveCell cell;
+    public final Side side;
     /** 1 or 2. */
     public final int spot;
 
-    LaunchPoint(HiveCell cell, int spot) {
-        this.cell = cell;
+    LaunchPoint(Side side, int spot) {
+        this.side = side;
         this.spot = spot;
     }
 
+    /** The CELL launched into from here, by physical field side (for HiveState / LaunchTargets). */
+    public HiveCell cell(boolean isRed) {
+        return side.cell(isRed);
+    }
+
     public String label() {
-        return cell + " CELL, spot " + spot;
+        return side + " spot " + spot;
     }
 }

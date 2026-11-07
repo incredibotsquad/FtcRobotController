@@ -38,10 +38,10 @@ public final class AutoPlan {
     public static AllianceColors alliance = AllianceColors.RED;
     /** Wait this long after START before the first move. */
     public static long startDelayMs = 0;
-    /** true = start touching the audience wall, false = the wall opposite it. */
-    public static boolean startAtAudienceWall = true;
-    /** Park spot in the LOADING ZONE: true = RIGHT (toward the audience wall), false = LEFT (toward the opposite wall). */
-    public static boolean parkTowardAudience = false;
+    /** Start on the driver's RIGHT (red: audience wall) or LEFT (red: far wall). See {@link Side}. */
+    public static Side startSide = Side.RIGHT;
+    /** Park at the driver's RIGHT or LEFT end of the LOADING ZONE. */
+    public static Side parkSide = Side.LEFT;
 
     /** Moving between launch points across the HIVE: true = AROUND it, false = THROUGH it. */
     public static boolean hiveRouteAround = true;
@@ -51,7 +51,7 @@ public final class AutoPlan {
     }
 
     public static String parkLabel() {
-        return parkTowardAudience ? "RIGHT (toward audience wall)" : "LEFT (toward far wall)";
+        return parkSide.toString();
     }
 
     public static final List<Leg<LaunchPoint>> launchPoints = new ArrayList<>();

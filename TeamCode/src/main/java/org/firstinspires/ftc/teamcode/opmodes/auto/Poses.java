@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode.opmodes.auto;
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.math.Pose;
 
-import org.firstinspires.ftc.teamcode.common.HiveCell;
 
 /**
  * Field poses for autonomous, in Pedro coordinates (inches, 144 x 144, origin at the red/audience
@@ -12,9 +11,10 @@ import org.firstinspires.ftc.teamcode.common.HiveCell;
  * Every value is written once for the RED alliance as {x, y, headingDeg}. The BIOBUZZ field has
  * 180 deg ROTATIONAL symmetry about the field center (not mirror symmetry), so blue poses are
  *     x -> 144 - x,   y -> 144 - y,   heading -> heading + 180.
- * The rotation moves things from one wall to the opposite one: red's AUDIENCE-wall start becomes a
- * blue FAR-wall pose, and red's AUDIENCE CELL spots land by blue's FAR CELL. The lookups below
- * ({@link #start}, {@link #launch}) take field-side names and handle that.
+ * The lookups below take the driver's LEFT / RIGHT ({@link Side}): the same side is the same place
+ * relative to your alliance, so one plan works for both. RIGHT = the red values named AUDIENCE
+ * (red's audience-wall side), LEFT = the ones named FAR. (Physically, blue's RIGHT is at the far
+ * wall: the rotation moves things to the opposite wall.)
  *
  * The red values are public static arrays so they can be tuned live in Panels (pit only, R704);
  * a new Poses object picks up the edits. Copy tuned values back into the code.
@@ -34,7 +34,7 @@ public class Poses {
 
     // ---- start: touching the audience wall, or the wall opposite it
     public static double[] RED_START_AUDIENCE_WALL = {41.5, 8, 90};
-    public static double[] RED_START_FAR_WALL = {65, 133, 180};
+    public static double[] RED_START_FAR_WALL = {30.5, 136, 270};
 
     // ---- launch spots, 2 per CELL. Each must be 46-88 in from its CELL (the
     // LaunchReadinessCommand.SHOT_DISTANCES_IN range) and on the CELL's outer side (an up CELL's
@@ -43,7 +43,7 @@ public class Poses {
     public static double[] RED_LAUNCH_AUDIENCE_CELL_1 = {42.5, 10, 90};   // ~44.6 in: BELOW the 46 in table minimum
     public static double[] RED_LAUNCH_AUDIENCE_CELL_2 = {30, 24, 90};   // ~53 in
     public static double[] RED_LAUNCH_FAR_CELL_1 = {40, 134, 270};       // ~48 in
-    public static double[] RED_LAUNCH_FAR_CELL_2 = {30, 120, 270};       // ~53 in
+    public static double[] RED_LAUNCH_FAR_CELL_2 = {30.5, 120, 270};       // ~53 in
 
     // ---- intake points: drive to the approach pose, then straight in to the intake pose
     /** GARDEN (red: tape along the audience wall, x 0-23, 4 POLLEN from the corner). */
@@ -69,7 +69,7 @@ public class Poses {
     /** LEFT: the end of the zone toward the wall opposite the audience (red: high y). */
     public static double[] RED_PARK_LEFT = {10, 114, 90};
     /** RIGHT: the end of the zone toward the audience wall (red: low y). */
-    public static double[] RED_PARK_RIGHT = {10, 96, 90};
+    public static double[] RED_PARK_RIGHT = {10, 96, 270};
 
     // ---- spline control points, one per destination (heading unused). A spline to a point bends
     // through its control point; the path starts wherever the robot is, so check each on the field.
@@ -109,21 +109,21 @@ public class Poses {
         return of(RED_RELOCALIZE_STANCE);
     }
 
-    /** Start touching the audience wall (true) or the wall opposite it (false). */
-    public Pose start(boolean audienceWall) {
-        // Rotated, red's FAR-wall start is on blue's audience wall.
-        return of(audienceWall == isRed ? RED_START_AUDIENCE_WALL : RED_START_FAR_WALL);
+    /** Start on the driver's RIGHT (red: RED_START_AUDIENCE_WALL) or LEFT (RED_START_FAR_WALL). */
+    public Pose start(Side side) {
+        return of(side == Side.RIGHT ? RED_START_AUDIENCE_WALL : RED_START_FAR_WALL);
     }
 
+    /** RIGHT spots are the RED_LAUNCH_AUDIENCE_CELL_* values, LEFT spots RED_LAUNCH_FAR_CELL_*. */
     public Pose launch(LaunchPoint p) {
-        if (isRedAudienceCell(p.cell)) {
+        if (p.side == Side.RIGHT) {
             return of(p.spot == 1 ? RED_LAUNCH_AUDIENCE_CELL_1 : RED_LAUNCH_AUDIENCE_CELL_2);
         }
         return of(p.spot == 1 ? RED_LAUNCH_FAR_CELL_1 : RED_LAUNCH_FAR_CELL_2);
     }
 
     public Pose launchControl(LaunchPoint p) {
-        if (isRedAudienceCell(p.cell)) {
+        if (p.side == Side.RIGHT) {
             return of(p.spot == 1 ? RED_CONTROL_LAUNCH_AUDIENCE_CELL_1 : RED_CONTROL_LAUNCH_AUDIENCE_CELL_2);
         }
         return of(p.spot == 1 ? RED_CONTROL_LAUNCH_FAR_CELL_1 : RED_CONTROL_LAUNCH_FAR_CELL_2);
@@ -173,24 +173,16 @@ public class Poses {
         }
     }
 
-    /**
-     * Park toward the audience wall (RIGHT, true) or the wall opposite it (LEFT, false). Rotated,
-     * red's LEFT (far) end of the zone is blue's audience end, like start().
-     */
-    public Pose park(boolean towardAudience) {
-        return of(towardAudience == isRed ? RED_PARK_RIGHT : RED_PARK_LEFT);
+    /** Park at the driver's RIGHT end of the LOADING ZONE (RED_PARK_RIGHT) or LEFT end (RED_PARK_LEFT). */
+    public Pose park(Side side) {
+        return of(side == Side.RIGHT ? RED_PARK_RIGHT : RED_PARK_LEFT);
     }
 
-    public Pose parkControl(boolean towardAudience) {
-        return of(towardAudience == isRed ? RED_CONTROL_PARK_RIGHT : RED_CONTROL_PARK_LEFT);
+    public Pose parkControl(Side side) {
+        return of(side == Side.RIGHT ? RED_CONTROL_PARK_RIGHT : RED_CONTROL_PARK_LEFT);
     }
 
     // ================================================================ helpers
-
-    /** The red-frame AUDIENCE CELL values are this alliance's AUDIENCE CELL for red, FAR CELL for blue. */
-    private boolean isRedAudienceCell(HiveCell cell) {
-        return (cell == HiveCell.AUDIENCE) == isRed;
-    }
 
     /** Red-alliance {x, y, headingDeg}; rotated 180 deg about the field center for blue. */
     private Pose of(double[] p) {

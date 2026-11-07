@@ -32,8 +32,13 @@ import java.util.List;
 /**
  * Cycle autonomous: launch, intake, come back, launch again, moving to the next launch point only
  * once the Limelight has seen the current CELL TIP. Configured on the Driver Station in INIT
- * ({@link AutoPlan}): alliance, start wall, a sequence of launch points and a sequence of intake
+ * ({@link AutoPlan}): alliance, start side, a sequence of launch points and a sequence of intake
  * points, each reached by a straight line or a spline.
+ *
+ * LEFT / RIGHT (start, launch points, CELLS, park) are as seen by the drivers from behind their
+ * alliance wall ({@link Side}), so the same plan means the same thing for red and blue: RIGHT is
+ * red's audience-wall side, and blue's matching side (physically the far wall). Only LB / RB
+ * changes between alliances. GARDEN and FLOWERS are named per alliance already.
  *
  * The cycle:
  *  1. Drive to the current launch point (the first one, with the 4 preloads).
@@ -58,8 +63,8 @@ import java.util.List;
  * INIT controls (gamepad 1 or 2); nothing is commanded until START (G304.H / G403). At START the
  * intake bar is commanded up and held there except at intake points that need it:
  *   LB / RB          - alliance RED / BLUE
- *   Dpad up / down   - start touching the AUDIENCE wall / the wall opposite it
- *   L / R stick press - park LEFT (toward the far wall) / RIGHT (toward the audience wall)
+ *   Dpad up / down   - start on the RIGHT (red: audience wall) / LEFT (red: far wall)
+ *   L / R stick press - park at the LEFT / RIGHT end of the LOADING ZONE
  *   Left stick up/down  - delay after START, +/- 0.5 s
  *   Right stick up/down - delay after the LAST point of the sequence being edited, +/- 0.5 s
  *                         (launch point: waits after each launch there; intake point: after intaking)
@@ -246,10 +251,10 @@ public class DynamicAuto extends LinearOpMode {
         while (opModeInInit()) {
             if (pressed(Button.LB)) AutoPlan.alliance = AllianceColors.RED;
             if (pressed(Button.RB)) AutoPlan.alliance = AllianceColors.BLUE;
-            if (pressed(Button.DPAD_UP)) AutoPlan.startAtAudienceWall = true;
-            if (pressed(Button.DPAD_DOWN)) AutoPlan.startAtAudienceWall = false;
-            if (pressed(Button.LEFT_STICK)) AutoPlan.parkTowardAudience = false;
-            if (pressed(Button.RIGHT_STICK)) AutoPlan.parkTowardAudience = true;
+            if (pressed(Button.DPAD_UP)) AutoPlan.startSide = Side.RIGHT;
+            if (pressed(Button.DPAD_DOWN)) AutoPlan.startSide = Side.LEFT;
+            if (pressed(Button.LEFT_STICK)) AutoPlan.parkSide = Side.LEFT;
+            if (pressed(Button.RIGHT_STICK)) AutoPlan.parkSide = Side.RIGHT;
             AutoPlan.startDelayMs = AutoPlan.clampDelay(AutoPlan.startDelayMs + stickSteps(true) * AutoPlan.DELAY_STEP_MS);
             int lastDelaySteps = stickSteps(false);
             if (triggerPressed(true)) AutoPlan.hiveRouteAround = true;
@@ -286,11 +291,12 @@ public class DynamicAuto extends LinearOpMode {
             panels.addLine("=== DYNAMIC AUTO (cycle) ===");
             if (!mechanisms) panels.addLine("DRIVE_ONLY_MODE: paths only, no launching or bar");
             panels.addData("Alliance (LB red / RB blue)", AutoPlan.alliance);
-            panels.addData("Start (dpad up/down)", AutoPlan.startAtAudienceWall ? "AUDIENCE wall" : "FAR wall");
+            panels.addData("Start (dpad up RIGHT / down LEFT)", AutoPlan.startSide);
             panels.addData("Start delay (left stick up/down)", String.format("%.1f s", AutoPlan.startDelayMs / 1000.0));
             panels.addData("Park (L/R stick press)", AutoPlan.parkLabel());
+            panels.addLine("LEFT / RIGHT: as seen by the drivers, from behind your alliance wall");
             panels.addData("Launch-to-launch (L/R trigger)", AutoPlan.hiveRouteLabel());
-            panels.addData("Up CELL at start", startUpCell());
+            panels.addData("Up CELL at start", sideName(startUpCell()));
             panels.addLine("-------------------------------");
             panels.addData("Editing (Y)", editing);
             panels.addData("Point (dpad L/R)", choice);
@@ -328,10 +334,20 @@ public class DynamicAuto extends LinearOpMode {
 
     private static String planWarning() {
         if (AutoPlan.launchPoints.isEmpty()) return "No launch points: the robot will only park.";
-        if (AutoPlan.launchPoints.get(0).point.cell != startUpCell()) {
+        if (AutoPlan.launchPoints.get(0).point.cell(AutoPlan.isRed()) != startUpCell()) {
             return "First launch CELL is down at the start: the robot waits there until it is up.";
         }
         return "";
+    }
+
+    /** A physical CELL (HiveState / LaunchTargets) as the driver's LEFT / RIGHT. */
+    private static String sideName(HiveCell cell) {
+        return Side.of(cell, AutoPlan.isRed()).toString();
+    }
+
+    /** The up CELL of our HIVE as LEFT / RIGHT. */
+    private static String upSide() {
+        return sideName(HiveState.getUpCell(AutoPlan.alliance));
     }
 
     private static HiveCell startUpCell() {
@@ -354,12 +370,12 @@ public class DynamicAuto extends LinearOpMode {
         // needs it. Not done in INIT: the bar servos stay unpowered until START.
         if (mechanisms) robot.intakeBarSubsystem.raise();
 
-        Pose start = poses.start(AutoPlan.startAtAudienceWall);
+        Pose start = poses.start(AutoPlan.startSide);
         robot.odometrySubsystem.resetPose(start.x(), start.y(), Math.toDegrees(start.heading()));
 
         matchTimer.reset();
-        log("START " + AutoPlan.alliance + ", " + (AutoPlan.startAtAudienceWall ? "AUDIENCE" : "FAR")
-                + " wall, start pose " + fmt(start) + ", up CELL " + HiveState.getUpCell(AutoPlan.alliance)
+        log("START " + AutoPlan.alliance + ", start " + AutoPlan.startSide + ", start pose " + fmt(start)
+                + ", up CELL " + upSide() + " (physical " + HiveState.getUpCell(AutoPlan.alliance) + ")"
                 + String.format(", start delay %.1f s", AutoPlan.startDelayMs / 1000.0)
                 + ", park " + AutoPlan.parkLabel() + ", launch-to-launch " + AutoPlan.hiveRouteLabel()
                 + ", mechanisms " + (mechanisms ? "on" : "off (DRIVE_ONLY_MODE)"));
@@ -377,7 +393,8 @@ public class DynamicAuto extends LinearOpMode {
     private void update() {
         HiveCell upCell = HiveState.getUpCell(AutoPlan.alliance);
         if (upCell != loggedUpCell) {
-            log("HIVE up CELL changed " + loggedUpCell + " -> " + upCell + " (Limelight)");
+            log("HIVE up CELL changed " + (loggedUpCell == null ? "?" : sideName(loggedUpCell)) + " -> "
+                    + sideName(upCell) + " (Limelight)");
             loggedUpCell = upCell;
         }
 
@@ -542,14 +559,14 @@ public class DynamicAuto extends LinearOpMode {
     }
 
     private void updateAtLaunchPoint() {
-        HiveCell cell = currentLaunch().point.cell;
+        HiveCell cell = currentLaunch().point.cell(AutoPlan.isRed());
 
         // Back after intaking: give the Limelight a moment on the HIVE before deciding.
         // HiveState only holds the last confirmed reading; require one taken since arriving here.
         boolean cellUp = HiveState.getUpCell(AutoPlan.alliance) == cell;
         if (launchedHere && !tipChecked) {
             if (stateTimer.milliseconds() < TIP_CHECK_MS) {
-                setStatus("checking " + cell + " CELL for a TIP (TIP_CHECK_MS " + TIP_CHECK_MS + ")");
+                setStatus("checking " + sideName(cell) + " CELL for a TIP (TIP_CHECK_MS " + TIP_CHECK_MS + ")");
                 return;
             }
             long lastReadingMs = HiveState.getLastUpdateMs(AutoPlan.alliance);
@@ -564,7 +581,7 @@ public class DynamicAuto extends LinearOpMode {
             String seen = robot.limelightSubsystem.describeHive(AutoPlan.alliance);
             if (fresh) {
                 long ageMs = nowMs() - lastReadingMs;
-                log("TIP check: Limelight confirms " + HiveState.getUpCell(AutoPlan.alliance) + " CELL up -> "
+                log("TIP check: Limelight confirms " + upSide() + " CELL up -> "
                         + (cellUp ? "not tipped" : "tipped") + " (reading " + ageMs + " ms old"
                         + (lastReadingMs < arrivedAtLaunchMs ? ", from before arriving" : "") + ") | " + seen);
             } else {
@@ -582,11 +599,11 @@ public class DynamicAuto extends LinearOpMode {
             if (ready || nowMs() - cellUpSinceMs >= READY_TIMEOUT_MS) {
                 startLaunch(ready);
             } else {
-                setStatus(cell + " CELL is up, waiting for launcher" + (robot.launchReadinessCommand == null ? ""
+                setStatus(sideName(cell) + " CELL is up, waiting for launcher" + (robot.launchReadinessCommand == null ? ""
                         : " (" + robot.launchReadinessCommand.getNotReadyReason() + ")"));
             }
         } else if (launchedHere) {
-            log(cell + " CELL is down after launching here: HIVE tipped, done with launch point "
+            log(sideName(cell) + " CELL is down after launching here: HIVE tipped, done with launch point "
                     + (launchIndex + 1) + "/" + launchLegs.size());
             launchIndex++;
             launchedHere = false;
@@ -594,7 +611,7 @@ public class DynamicAuto extends LinearOpMode {
             else driveToNextLaunchPoint(cell);
         } else {
             cellUpSinceMs = -1;
-            setStatus("first visit and " + cell + " CELL is down (up CELL " + HiveState.getUpCell(AutoPlan.alliance)
+            setStatus("first visit and " + sideName(cell) + " CELL is down (up CELL " + upSide()
                     + "): waiting for it to be up");
         }
     }
@@ -603,7 +620,7 @@ public class DynamicAuto extends LinearOpMode {
         launchCommand = new LaunchBallsCommand(robot.launchGateSubsystem, robot.intakeSubsystem,
                 robot.driveSubsystem, robot.intakeBarSubsystem);
         launchCommand.schedule();
-        String why = currentLaunch().point.cell + " CELL is up and launcher "
+        String why = currentLaunch().point.side + " CELL is up and launcher "
                 + (ready ? "ready" : "NOT ready after READY_TIMEOUT_MS " + READY_TIMEOUT_MS + ", firing anyway ("
                 + (robot.launchReadinessCommand == null ? "?" : robot.launchReadinessCommand.getNotReadyReason()) + ")");
         setState(State.LAUNCHING, "launching at " + currentLaunch().point.label() + ": " + why);
@@ -616,11 +633,11 @@ public class DynamicAuto extends LinearOpMode {
      */
     private void driveToNextLaunchPoint(HiveCell fromCell) {
         AutoPlan.Leg<LaunchPoint> leg = currentLaunch();
-        if (leg.point.cell == fromCell) {
+        if (leg.point.cell(AutoPlan.isRed()) == fromCell) {
             driveToLaunchPoint();
             return;
         }
-        LaunchTargets.setForcedCell(leg.point.cell);
+        LaunchTargets.setForcedCell(leg.point.cell(AutoPlan.isRed()));
         Pose target = poses.launch(leg.point);
         launchRoute.clear();
         if (AutoPlan.hiveRouteAround) {
@@ -634,13 +651,13 @@ public class DynamicAuto extends LinearOpMode {
             driveTo(waypoints[0], null, false);
         }
         setState(State.DRIVE_TO_LAUNCH, "to launch point " + (launchIndex + 1) + "/" + launchLegs.size() + " "
-                + leg.point.label() + " from the " + fromCell + " CELL, " + AutoPlan.hiveRouteLabel());
+                + leg.point.label() + " from the " + sideName(fromCell) + " CELL, " + AutoPlan.hiveRouteLabel());
     }
 
     private void driveToLaunchPoint() {
         AutoPlan.Leg<LaunchPoint> leg = currentLaunch();
         launchRoute.clear();
-        LaunchTargets.setForcedCell(leg.point.cell); // turret aims at it on the way
+        LaunchTargets.setForcedCell(leg.point.cell(AutoPlan.isRed())); // turret aims at it on the way
         driveTo(poses.launch(leg.point), poses.launchControl(leg.point), leg.spline);
         setState(State.DRIVE_TO_LAUNCH, "to launch point " + (launchIndex + 1) + "/" + launchLegs.size() + " "
                 + leg.point.label() + " [" + leg.moveLabel() + "]" + (launchedHere ? ", back after intaking" : ""));
@@ -720,7 +737,7 @@ public class DynamicAuto extends LinearOpMode {
         parkStarted = true;
         launchRoute.clear();
         raiseBar();
-        driveTo(poses.park(AutoPlan.parkTowardAudience), poses.parkControl(AutoPlan.parkTowardAudience), PARK_WITH_SPLINE);
+        driveTo(poses.park(AutoPlan.parkSide), poses.parkControl(AutoPlan.parkSide), PARK_WITH_SPLINE);
         setState(State.DRIVE_TO_PARK, "parking " + AutoPlan.parkLabel() + ": " + reason);
     }
 
@@ -763,11 +780,11 @@ public class DynamicAuto extends LinearOpMode {
         if (robot.intakeSubsystem.getArtifactCount() <= 0) return "no artifacts to launch";
         if (launchIndex >= launchLegs.size()) return "no launch points left";
         if (state == State.AT_LAUNCH) {
-            HiveCell cell = currentLaunch().point.cell;
+            HiveCell cell = currentLaunch().point.cell(AutoPlan.isRed());
             boolean tipCheckPending = launchedHere && !tipChecked;
             if (!tipCheckPending && HiveState.getUpCell(AutoPlan.alliance) != cell) {
                 return "at " + currentLaunch().point.label() + " but its CELL is down (up CELL "
-                        + HiveState.getUpCell(AutoPlan.alliance) + ")";
+                        + upSide() + ")";
             }
         }
         return null;
@@ -824,8 +841,7 @@ public class DynamicAuto extends LinearOpMode {
 
     private void setState(State next, String why) {
         log(state + " -> " + next + ": " + why + " | pose " + fmt(follower.pose()) + ", "
-                + robot.intakeSubsystem.getArtifactCount() + " artifacts, up CELL "
-                + HiveState.getUpCell(AutoPlan.alliance));
+                + robot.intakeSubsystem.getArtifactCount() + " artifacts, up CELL " + upSide());
         state = next;
         status = why;
         loggedStatus = why;
@@ -971,7 +987,7 @@ public class DynamicAuto extends LinearOpMode {
                 + (launchedHere ? " (launched here)" : ""));
         panels.addData("Intake point", intakeIndex >= intakeLegs.size() ? "done"
                 : (intakeIndex + 1) + "/" + intakeLegs.size() + " " + currentIntake().point.label(red));
-        panels.addData("Up CELL (Limelight)", HiveState.getUpCell(AutoPlan.alliance));
+        panels.addData("Up CELL (Limelight)", upSide());
         panels.addData("Artifacts", robot.intakeSubsystem.getArtifactCount());
         panels.update(telemetry);
     }
