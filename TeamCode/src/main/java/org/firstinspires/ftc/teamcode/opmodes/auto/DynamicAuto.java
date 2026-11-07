@@ -135,20 +135,6 @@ public class DynamicAuto extends LinearOpMode {
     /** A rock leg counts as done this close to its end (smaller than PATH_END_TOLERANCE_IN; the legs are short). */
     public static double ROCK_END_TOLERANCE_IN = 0.75;
 
-    // --- GARDEN bar-up push (experimental; GARDEN_PUSH_ENABLED = false restores the rocking) ---
-    /**
-     * GARDEN only, instead of rocking: after backing out to the approach pose, raise the bar, then
-     * drive straight back in past the intake pose by GARDEN_PUSH_PAST_IN, at
-     * INTAKE_DRIVE_IN_SPEED_FRACTION, to drive the intake onto the elements. false = rock (ROCK_COUNT).
-     */
-    public static boolean GARDEN_PUSH_ENABLED = true;
-    /** How far past the intake pose the push goes, along the approach -> intake direction. */
-    public static double GARDEN_PUSH_PAST_IN = 7.0;
-    /** Longest wait for the bar to come up before the push starts. */
-    public static long GARDEN_PUSH_BAR_RAISE_TIMEOUT_MS = 600;
-    /** Give up on the push after this long (it can end against a wall or the elements). */
-    public static long GARDEN_PUSH_TIMEOUT_MS = 2500;
-
     /**
      * true = show informational telemetry: the subsystems' readouts (drive, odometry, intake,
      * launcher, Limelight) in INIT and during the run, plus the run status (state, points, time
@@ -163,7 +149,6 @@ public class DynamicAuto extends LinearOpMode {
         DRIVE_TO_LAUNCH, AT_LAUNCH, LAUNCHING,
         DRIVE_TO_INTAKE, LOWER_BAR, DRIVE_INTO_INTAKE, INTAKING, BACK_OUT_OF_INTAKE,
         ROCK_FORWARD, ROCK_BACK,
-        GARDEN_PUSH_RAISE_BAR, GARDEN_PUSH,
         WAIT, DRIVE_TO_PARK, DONE
     }
 
@@ -464,10 +449,6 @@ public class DynamicAuto extends LinearOpMode {
                         finishIntakePoint(); // FLOWERS don't rock: bar up, on to the launch point
                         break;
                     }
-                    if (GARDEN_PUSH_ENABLED) {
-                        startGardenPush();
-                        break;
-                    }
                     if (ROCK_COUNT <= 0 || robot.intakeSubsystem.isFull()) {
                         if (ROCK_COUNT > 0) log("full (" + robot.intakeSubsystem.getArtifactCount() + "): skipping the rocking");
                         finishIntakePoint();
@@ -497,33 +478,6 @@ public class DynamicAuto extends LinearOpMode {
                         log("rocked " + rocksDone + " times, " + robot.intakeSubsystem.getArtifactCount() + " artifacts");
                         finishIntakePoint();
                     }
-                }
-                break;
-
-            case GARDEN_PUSH_RAISE_BAR:
-                if (robot.intakeSubsystem.isFull()) {
-                    log("full (" + robot.intakeSubsystem.getArtifactCount() + ") while raising the bar: skipping the push");
-                    finishIntakePoint();
-                    break;
-                }
-                if (robot.intakeBarSubsystem.isAtTarget() || stateTimer.milliseconds() >= GARDEN_PUSH_BAR_RAISE_TIMEOUT_MS) {
-                    log("bar " + (robot.intakeBarSubsystem.isAtTarget() ? "up" : "raise timed out (GARDEN_PUSH_BAR_RAISE_TIMEOUT_MS)")
-                            + " after " + ms(stateTimer));
-                    gardenPushForward();
-                }
-                break;
-
-            case GARDEN_PUSH:
-                if (robot.intakeSubsystem.isFull() || stateTimer.milliseconds() >= GARDEN_PUSH_TIMEOUT_MS) {
-                    log(robot.intakeSubsystem.isFull()
-                            ? "full (" + robot.intakeSubsystem.getArtifactCount() + ") during the push: stopping"
-                            : "push timed out (GARDEN_PUSH_TIMEOUT_MS " + GARDEN_PUSH_TIMEOUT_MS + "), pose " + fmt(follower.pose()));
-                    follower.hold(follower.pose());
-                    followingPath = false;
-                    finishIntakePoint();
-                } else if (pathDone()) {
-                    log("push done, " + robot.intakeSubsystem.getArtifactCount() + " artifacts");
-                    finishIntakePoint();
                 }
                 break;
 
@@ -661,34 +615,6 @@ public class DynamicAuto extends LinearOpMode {
         driveTo(target, null, false, rockSpeed());
         setState(State.ROCK_FORWARD, String.format("rock %d/%d forward %.1f in along %s, bar down",
                 rocksDone + 1, ROCK_COUNT, ROCK_DISTANCE_IN, ux != 0 ? "X" : "Y"));
-    }
-
-    /** GARDEN push, step 1: raise the bar at the approach pose (unless already full). */
-    private void startGardenPush() {
-        if (robot.intakeSubsystem.isFull()) {
-            log("full (" + robot.intakeSubsystem.getArtifactCount() + "): skipping the push");
-            finishIntakePoint();
-            return;
-        }
-        raiseBar();
-        follower.hold(follower.pose());
-        followingPath = false;
-        setState(State.GARDEN_PUSH_RAISE_BAR, "GARDEN push: raising the bar at the approach pose");
-    }
-
-    /** GARDEN push, step 2: straight in, GARDEN_PUSH_PAST_IN past the intake pose, at the drive-in speed. */
-    private void gardenPushForward() {
-        IntakePoint point = currentIntake().point;
-        Pose approach = poses.intakeApproach(point);
-        Pose intake = poses.intake(point);
-        double dx = intake.x() - approach.x();
-        double dy = intake.y() - approach.y();
-        double len = Math.hypot(dx, dy);
-        Pose target = len < 1e-6 ? intake : new Pose(intake.x() + dx / len * GARDEN_PUSH_PAST_IN,
-                intake.y() + dy / len * GARDEN_PUSH_PAST_IN, intake.heading());
-        driveTo(target, null, false, INTAKE_DRIVE_IN_SPEED_FRACTION);
-        setState(State.GARDEN_PUSH, String.format("GARDEN push: bar up, in to %.1f in past the intake pose at %s speed",
-                GARDEN_PUSH_PAST_IN, INTAKE_DRIVE_IN_SPEED_FRACTION));
     }
 
     /** Full mid-rock: stop rocking right where the robot is and finish the intake point. */
