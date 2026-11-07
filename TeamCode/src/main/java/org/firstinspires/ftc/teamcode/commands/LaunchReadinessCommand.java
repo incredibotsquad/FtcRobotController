@@ -49,8 +49,8 @@ public class LaunchReadinessCommand extends CommandBase {
      * Outside the table the nearest end RPM is used, and the shot still counts as ready (no
      * waiting for the robot to get into range).
      */
-    public static double[] SHOT_DISTANCES_IN = {44, 47, 52, 66, 88};
-    public static double[] SHOT_RPMS = {2800, 2800, 2800, 2950, 3250};
+    public static double[] SHOT_DISTANCES_IN = {42, 44, 47, 52, 66, 88};
+    public static double[] SHOT_RPMS = {2700, 2700, 2700, 2800, 2950, 3250};
     /** Out-of-table distance already logged (logs once each time the robot leaves the table range). */
     private boolean loggedOutOfRange = false;
 
@@ -67,7 +67,7 @@ public class LaunchReadinessCommand extends CommandBase {
      * Tune with TurretAimTest: the error should no longer grow with the turret angle.
      * 1.0 = no correction (old behavior).
      */
-    public static double TURRET_SCALING_FACTOR = 1.111;
+    public static double TURRET_SCALING_FACTOR = 1;
 
     /**
      * Servos give no position feedback, so readiness estimates where the turret is: the estimate

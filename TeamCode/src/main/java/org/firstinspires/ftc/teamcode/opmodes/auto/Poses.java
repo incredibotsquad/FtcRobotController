@@ -33,7 +33,7 @@ public class Poses {
     public static double[] RED_RELOCALIZE_STANCE = {8, 6.5, 180};
 
     // ---- start: touching the audience wall, or the wall opposite it
-    public static double[] RED_START_AUDIENCE_WALL = {42.5, 8, 90};
+    public static double[] RED_START_AUDIENCE_WALL = {41.5, 8, 90};
     public static double[] RED_START_FAR_WALL = {65, 133, 180};
 
     // ---- launch spots, 2 per CELL. Each must be 46-88 in from its CELL (the
@@ -53,11 +53,11 @@ public class Poses {
 
     /** FLOWER on the alliance wall (red: (0, 48)). */
     public static double[] RED_RIGHT_FLOWER_APPROACH = {24, 48, 180};
-    public static double[] RED_RIGHT_FLOWER_INTAKE = {16, 48, 180};
+    public static double[] RED_RIGHT_FLOWER_INTAKE = {14, 48, 180};
 
     /** FLOWER on the side wall (red: rear wall, (48, 144)). */
     public static double[] RED_LEFT_FLOWER_APPROACH = {48, 120, 90};
-    public static double[] RED_LEFT_FLOWER_INTAKE = {48, 128, 90};
+    public static double[] RED_LEFT_FLOWER_INTAKE = {48, 130, 90};
 
     /** Whether each intake point lowers the intake bar (and backs out to the approach pose before raising it). */
     public static boolean GARDEN_NEEDS_BAR = true;

@@ -52,12 +52,12 @@ public class LaunchSubsystem extends SubsystemBase {
      */
     public static boolean USE_GAIN_TABLE = true;
     //match these values to LaunchReadinessCommand.SHOT_DISTANCES_IN
-    public static double[] GAIN_TABLE_DISTANCES_IN = {44, 47, 52, 66, 88};
-    public static double[] GAIN_TABLE_P  = {0.025, 0.025, 0.025, 0.03, 0.035};
-    public static double[] GAIN_TABLE_I  = {0.0, 0.0, 0.0, 0.0, 0.0};
-    public static double[] GAIN_TABLE_D  = {0.0, 0.0, 0.0, 0.0, 0.0};
-    public static double[] GAIN_TABLE_KS = {0.16, 0.16, 0.16, 0.16, 0.16};
-    public static double[] GAIN_TABLE_KV = {0.00032419, 0.00032419, 0.00032419, 0.00032419, 0.00032419};
+    public static double[] GAIN_TABLE_DISTANCES_IN = {42, 44, 47, 52, 66, 88};
+    public static double[] GAIN_TABLE_P  = {0.022, 0.0225, 0.023, 0.025, 0.03, 0.035};
+    public static double[] GAIN_TABLE_I  = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    public static double[] GAIN_TABLE_D  = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    public static double[] GAIN_TABLE_KS = {0.16, 0.16, 0.16, 0.16, 0.16, 0.16};
+    public static double[] GAIN_TABLE_KV = {0.00032419, 0.00032419, 0.00032419, 0.00032419, 0.00032419, 0.00032419};
 
     /** Run full power while more than this far below target (fast spin-up and shot recovery). */
     public static boolean FLYWHEEL_BANG_BANG_ENABLED = true;

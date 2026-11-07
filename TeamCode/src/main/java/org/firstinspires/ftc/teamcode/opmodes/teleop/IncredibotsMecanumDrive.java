@@ -38,12 +38,6 @@ public class IncredibotsMecanumDrive extends LinearOpMode { // Changed this
 
 
 
-        // Power the intake bar servos at RAISED so the bar can't drop under gravity. The bar starts
-        // physically raised, so this should not move it. G403: only re-holding a position is allowed
-        // in INIT. If this makes the bar move or twitch, fix IntakeBarSubsystem's RAISED positions,
-        // and until then wait for TELEOP to begin before pressing INIT.
-        incredibot.intakeBarSubsystem.raise();
-
         Log.i("IncredibotsMecanumDrive. Crossopmode pose: ", CrossOpModeStorage.currentPose.toString());
 
         //use cross opmode storage to ensure odometry knows where we started from.
@@ -78,6 +72,10 @@ public class IncredibotsMecanumDrive extends LinearOpMode { // Changed this
 
         //this is done later to avoid all the other commands from running.
         incredibot.initialize(Incredibot.OpModeType.TELEOP, driverGamepad, operatorGamepad);
+
+        // Raise the intake bar at START (DynamicAuto leaves it lowered). Not in INIT: commanding a
+        // servo that moves it is not allowed then (G304.H / G403).
+        incredibot.intakeBarSubsystem.raise();
 
         // 4. MAIN TELEOP LOOP
         while (opModeIsActive() && !isStopRequested()) {

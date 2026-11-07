@@ -51,8 +51,11 @@ import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
  * -----------------------------
  * Only the intake motor is watched (the transfer is not), while it is commanded forward and not
  * launching (LaunchBallsCommand drives the motors then). A stall is high current (STALL_SIGNAL = CURRENT,
- * works without encoders) or near-zero encoder speed (VELOCITY, needs the encoder cable) lasting
- * STALL_TIME_MS, ignoring the first STALL_STARTUP_MS after the motor starts. Then the intake
+ * works without encoders), near-zero encoder speed (VELOCITY, needs the encoder cable), or both at
+ * once (BOTH, the most robust: a loaded but still-turning roller isn't a stall) lasting
+ * STALL_TIME_MS, ignoring the first STALL_STARTUP_MS after the motor starts. The current is
+ * low-pass filtered (STALL_CURRENT_FILTER_MS), so short spikes from an artifact squeezing through
+ * the rollers don't count. Then the intake
  * motor reverses at UNJAM_REVERSE_POWER for UNJAM_REVERSE_MS (backs the stuck artifact out of the
  * rollers; the transfer keeps going), then goes forward again.
  * More than UNJAM_MAX_TRIES unjams within UNJAM_WINDOW_MS: the intake motor gives up and stays stopped
@@ -103,23 +106,34 @@ public class IntakeSubsystem extends SubsystemBase {
     public static long FULL_RUN_ON_MS = 250;
 
     // ---------------------------------------------------------------- stall detection (see class comment)
-    public enum StallSignal { CURRENT, VELOCITY }
+    public enum StallSignal { CURRENT, VELOCITY, BOTH }
 
-    public static boolean STALL_DETECTION_ENABLED = true;
-    /** CURRENT works on any wiring; VELOCITY needs the motor's encoder cable plugged in. */
+    public static boolean STALL_DETECTION_ENABLED = false;
+    /**
+     * CURRENT works on any wiring; VELOCITY needs the motor's encoder cable plugged in; BOTH (high
+     * current AND low speed) needs the encoder too and is the least likely to false-trigger.
+     */
     public static StallSignal STALL_SIGNAL = StallSignal.CURRENT;
-    /** CURRENT: stalled at or above this draw (a goBILDA 5203 stalls around 9 A at 12 V; free-running about 0.5-2 A). */
-    public static double STALL_CURRENT_A = 6.0;
+    /**
+     * CURRENT / BOTH: stalled at or above this FILTERED draw (a goBILDA 5203 stalls around 9 A at
+     * 12 V, less on a low battery; free-running about 0.5-2 A; pulling an artifact in, 3-6 A).
+     */
+    public static double STALL_CURRENT_A = 7.5;
+    /**
+     * CURRENT / BOTH: time constant of the current low-pass filter. Spikes much shorter than this
+     * barely move it. 0 = no filtering (raw readings).
+     */
+    public static long STALL_CURRENT_FILTER_MS = 150;
     /** CURRENT: how often to read current (each read is a separate hub call, not bulk-cached). */
     public static long CURRENT_READ_INTERVAL_MS = 40;
-    /** VELOCITY: stalled at or below this encoder speed (ticks/s; free speed is about 2800). */
+    /** VELOCITY / BOTH: stalled at or below this encoder speed (ticks/s; free speed is about 2800). */
     public static double STALL_MAX_VELOCITY_TPS = 250;
     /** Only watch a motor commanded at least this much forward. */
     public static double STALL_MIN_POWER = 0.5;
     /** Ignore this long after a motor starts (startup current spike, zero speed while spinning up). */
     public static long STALL_STARTUP_MS = 300;
-    /** Stall condition must hold this long. */
-    public static long STALL_TIME_MS = 250;
+    /** Stall condition must hold this long, without a break. */
+    public static long STALL_TIME_MS = 500;
 
     public static double UNJAM_REVERSE_POWER = 0.8;
     public static long UNJAM_REVERSE_MS = 250;
@@ -520,7 +534,9 @@ public class IntakeSubsystem extends SubsystemBase {
         private long giveUpUntilMs = 0;
         private int tries = 0;
         private long firstTryMs = 0;
+        /** Filtered current (NaN until the first reading after the motor starts) and the last raw reading. */
         private double currentA = Double.NaN;
+        private double rawCurrentA = Double.NaN;
         private long currentReadAtMs = 0;
 
         StallGuard(String name, MotorEx motor) {
@@ -573,10 +589,14 @@ public class IntakeSubsystem extends SubsystemBase {
             if (!watch || requested < STALL_MIN_POWER) {
                 forwardSinceMs = -1;
                 stalledSinceMs = -1;
+                currentA = Double.NaN;
                 return;
             }
             if (forwardSinceMs < 0) forwardSinceMs = now;
-            if (now - forwardSinceMs < STALL_STARTUP_MS) return;
+            if (now - forwardSinceMs < STALL_STARTUP_MS) {
+                currentA = Double.NaN; // don't let the startup spike seed the filter
+                return;
+            }
 
             if (!isStalled(now)) {
                 stalledSinceMs = -1;
@@ -592,9 +612,7 @@ public class IntakeSubsystem extends SubsystemBase {
                 firstTryMs = now;
             }
             tries++;
-            String signal = STALL_SIGNAL == StallSignal.CURRENT
-                    ? String.format("%.1f A", currentA)
-                    : String.format("%.0f ticks/s", Math.abs(motor.getVelocity()));
+            String signal = describeSignal();
             if (tries > UNJAM_MAX_TRIES) {
                 giveUpUntilMs = now + UNJAM_GIVE_UP_MS;
                 motor.set(0);
@@ -609,24 +627,47 @@ public class IntakeSubsystem extends SubsystemBase {
         }
 
         private boolean isStalled(long now) {
-            if (STALL_SIGNAL == StallSignal.VELOCITY) {
-                return Math.abs(motor.getVelocity()) <= STALL_MAX_VELOCITY_TPS;
+            switch (STALL_SIGNAL) {
+                case VELOCITY: return slow();
+                case BOTH: return highCurrent(now) && slow();
+                default: return highCurrent(now);
             }
+        }
+
+        private boolean slow() {
+            return Math.abs(motor.getVelocity()) <= STALL_MAX_VELOCITY_TPS;
+        }
+
+        /** Reads current every CURRENT_READ_INTERVAL_MS and low-passes it (STALL_CURRENT_FILTER_MS). */
+        private boolean highCurrent(long now) {
             if (Double.isNaN(currentA) || now - currentReadAtMs >= CURRENT_READ_INTERVAL_MS) {
-                currentA = motor.motorEx.getCurrent(CurrentUnit.AMPS);
+                rawCurrentA = motor.motorEx.getCurrent(CurrentUnit.AMPS);
+                if (Double.isNaN(currentA) || STALL_CURRENT_FILTER_MS <= 0) {
+                    currentA = rawCurrentA;
+                } else {
+                    double dt = now - currentReadAtMs;
+                    currentA += (rawCurrentA - currentA) * (1 - Math.exp(-dt / STALL_CURRENT_FILTER_MS));
+                }
                 currentReadAtMs = now;
             }
             return currentA >= STALL_CURRENT_A;
+        }
+
+        private String describeSignal() {
+            String amps = Double.isNaN(currentA) ? "-" : String.format("%.1f A filtered (%.1f raw)", currentA, rawCurrentA);
+            String speed = String.format("%.0f ticks/s", Math.abs(motor.getVelocity()));
+            switch (STALL_SIGNAL) {
+                case VELOCITY: return speed;
+                case BOTH: return amps + ", " + speed;
+                default: return amps;
+            }
         }
 
         String status() {
             long now = nowMs();
             if (now < unjamUntilMs) return "UNJAMMING";
             if (now < giveUpUntilMs) return "GAVE UP";
-            String reading = STALL_SIGNAL == StallSignal.CURRENT
-                    ? (Double.isNaN(currentA) ? "-" : String.format("%.1f A", currentA))
-                    : String.format("%.0f t/s", Math.abs(motor.getVelocity()));
-            return "ok (" + reading + ")";
+            return "ok (" + describeSignal() + ")";
         }
     }
 

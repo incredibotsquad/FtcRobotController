@@ -51,8 +51,8 @@ import java.util.List;
  * When a sequence runs out (no next launch or intake point), the robot parks.
  *
  * Park: the OpMode keeps its own AUTO_LENGTH_S clock from START. In the last PARK_WINDOW_S
- * seconds it drives to the LOADING ZONE only if there is nothing left to launch (no artifacts or
- * no launch point left); otherwise launching wins: it cuts any intake short and goes to launch,
+ * seconds it drives to the LOADING ZONE if it can't launch soon (no artifacts, no launch point
+ * left, or waiting at a launch point whose CELL is down); otherwise launching wins: it cuts any intake short and goes to launch,
  * parking after the launch if time remains.
  *
  * INIT controls (gamepad 1 or 2); nothing is commanded until START (G304.H / G403). At START the
@@ -82,6 +82,12 @@ public class DynamicAuto extends LinearOpMode {
     /** Park when this little time is left (unless launching). */
     public static double PARK_WINDOW_S = 3;
     public static boolean PARK_WITH_SPLINE = false;
+    /**
+     * End of auto: the intake bar is lowered once parked, or at the latest this long before
+     * AUTO_LENGTH_S (about the bar's travel time, so it is down before the period ends and nothing
+     * moves after it). Not while a launch is running (the launch holds the bar up).
+     */
+    public static double END_BAR_LOWER_S = 0.7;
 
     /** Longest wait for LaunchSubsystem.isReadyToLaunch() once the CELL is up; then it fires anyway. */
     public static long READY_TIMEOUT_MS = 1500;
@@ -93,6 +99,12 @@ public class DynamicAuto extends LinearOpMode {
      * long for one.
      */
     public static long TIP_CHECK_TIMEOUT_MS = 500;
+    /**
+     * The TIP check also accepts a Limelight reading of our HIVE taken up to this long BEFORE
+     * arriving (e.g. on the drive in, when the tags are often in view and drop out at the spot).
+     * 0 = only readings taken after arriving.
+     */
+    public static long TIP_READING_MAX_AGE_MS = 1000;
     /**
      * No fresh reading by TIP_CHECK_TIMEOUT_MS: true = launch anyway (the CELL may have tipped),
      * false = treat the CELL as tipped and move on to the next launch point (or park if it was the
@@ -192,6 +204,8 @@ public class DynamicAuto extends LinearOpMode {
     /** DRIVE_TO_LAUNCH through the HIVE: waypoints still to visit, then the launch pose (last). */
     private final Deque<Pose> launchRoute = new ArrayDeque<>();
     private boolean parkStarted = false;
+    /** The end-of-auto bar lowering has been commanded. */
+    private boolean endBarLowered = false;
     /** WAIT state: how long, and what to do after. */
     private long waitMs = 0;
     private Runnable afterWait;
@@ -367,13 +381,18 @@ public class DynamicAuto extends LinearOpMode {
             loggedUpCell = upCell;
         }
 
+        if (state != State.LAUNCHING && matchTimer.seconds() >= AUTO_LENGTH_S - END_BAR_LOWER_S) {
+            lowerBarAtEnd(String.format("%.1f s left (END_BAR_LOWER_S %.1f)",
+                    AUTO_LENGTH_S - matchTimer.seconds(), END_BAR_LOWER_S));
+        }
+
         if (!parkStarted && state != State.LAUNCHING && parkTime()) {
             if (launchTakesPriority()) {
                 // Launching beats parking: carry artifacts on to the launch point, cutting any intake short.
                 if (hurryToLaunch()) return;
             } else {
                 startPark("park window: " + String.format("%.1f", AUTO_LENGTH_S - matchTimer.seconds())
-                        + " s left (PARK_WINDOW_S " + PARK_WINDOW_S + "), nothing left to launch");
+                        + " s left (PARK_WINDOW_S " + PARK_WINDOW_S + "), " + noLaunchReason());
                 return;
             }
         }
@@ -511,7 +530,10 @@ public class DynamicAuto extends LinearOpMode {
                 break;
 
             case DRIVE_TO_PARK:
-                if (pathDone()) setState(State.DONE, "parked at " + String.format("%.1f s", matchTimer.seconds()));
+                if (pathDone()) {
+                    setState(State.DONE, "parked at " + String.format("%.1f s", matchTimer.seconds()));
+                    lowerBarAtEnd("parked");
+                }
                 break;
 
             case DONE:
@@ -530,18 +552,21 @@ public class DynamicAuto extends LinearOpMode {
                 setStatus("checking " + cell + " CELL for a TIP (TIP_CHECK_MS " + TIP_CHECK_MS + ")");
                 return;
             }
-            boolean fresh = HiveState.getLastUpdateMs(AutoPlan.alliance) >= arrivedAtLaunchMs;
+            long lastReadingMs = HiveState.getLastUpdateMs(AutoPlan.alliance);
+            boolean fresh = lastReadingMs > 0 && lastReadingMs >= arrivedAtLaunchMs - TIP_READING_MAX_AGE_MS;
             if (!fresh && stateTimer.milliseconds() < TIP_CHECK_TIMEOUT_MS) {
-                setStatus("no Limelight reading of our HIVE since arriving, waiting (TIP_CHECK_TIMEOUT_MS "
-                        + TIP_CHECK_TIMEOUT_MS + ")");
+                setStatus("no Limelight reading of our HIVE since " + TIP_READING_MAX_AGE_MS
+                        + " ms before arriving, waiting (TIP_CHECK_TIMEOUT_MS " + TIP_CHECK_TIMEOUT_MS + ")");
                 return;
             }
             tipChecked = true;
             tipConfirmed = fresh;
             String seen = robot.limelightSubsystem.describeHive(AutoPlan.alliance);
             if (fresh) {
+                long ageMs = nowMs() - lastReadingMs;
                 log("TIP check: Limelight confirms " + HiveState.getUpCell(AutoPlan.alliance) + " CELL up -> "
-                        + (cellUp ? "not tipped" : "tipped") + " | " + seen);
+                        + (cellUp ? "not tipped" : "tipped") + " (reading " + ageMs + " ms old"
+                        + (lastReadingMs < arrivedAtLaunchMs ? ", from before arriving" : "") + ") | " + seen);
             } else {
                 Log.w(TAG, String.format("[%5.2fs] TIP check UNCONFIRMED: no Limelight reading of the %s HIVE in %d ms, %s | %s",
                         matchTimer.seconds(), AutoPlan.alliance, TIP_CHECK_TIMEOUT_MS,
@@ -699,6 +724,15 @@ public class DynamicAuto extends LinearOpMode {
         setState(State.DRIVE_TO_PARK, "parking " + AutoPlan.parkLabel() + ": " + reason);
     }
 
+    /** End of auto: lower the intake bar once (see END_BAR_LOWER_S). */
+    private void lowerBarAtEnd(String why) {
+        if (!mechanisms || endBarLowered) return;
+        endBarLowered = true;
+        robot.intakeBarSubsystem.lower();
+        barDown = true;
+        log("end of auto: lowering the intake bar (" + why + ")");
+    }
+
     private void raiseBar() {
         if (barDown) {
             robot.intakeBarSubsystem.raise();
@@ -715,7 +749,28 @@ public class DynamicAuto extends LinearOpMode {
      * and the plan still has a launch point. It parks only when there is nothing left to launch.
      */
     private boolean launchTakesPriority() {
-        return mechanisms && robot.intakeSubsystem.getArtifactCount() > 0 && launchIndex < launchLegs.size();
+        return noLaunchReason() == null;
+    }
+
+    /**
+     * Why the robot can't launch soon (so it should park in the park window), or null if it can:
+     * it holds artifacts, the plan has a launch point, and it isn't stuck at a launch point whose
+     * CELL is down (waiting there for it to come up can't end in a launch before time runs out).
+     * Still driving to a launch point counts as able: the CELL may be confirmed up on arrival.
+     */
+    private String noLaunchReason() {
+        if (!mechanisms) return "mechanisms off";
+        if (robot.intakeSubsystem.getArtifactCount() <= 0) return "no artifacts to launch";
+        if (launchIndex >= launchLegs.size()) return "no launch points left";
+        if (state == State.AT_LAUNCH) {
+            HiveCell cell = currentLaunch().point.cell;
+            boolean tipCheckPending = launchedHere && !tipChecked;
+            if (!tipCheckPending && HiveState.getUpCell(AutoPlan.alliance) != cell) {
+                return "at " + currentLaunch().point.label() + " but its CELL is down (up CELL "
+                        + HiveState.getUpCell(AutoPlan.alliance) + ")";
+            }
+        }
+        return null;
     }
 
     /**
