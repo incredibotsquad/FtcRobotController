@@ -162,7 +162,22 @@ public class LimelightSubsystem extends SubsystemBase {
      * For each tag: tagField = robot + R(heading) * tagRobot, so robot = tagField - R(heading) * tagRobot.
      */
     public PositionEstimate estimateRobotPosition(double headingRad) {
+        return estimateRobotPosition(headingRad, null);
+    }
+
+    /**
+     * Same, but only from the tags of {@code alliance}'s HIVE (null = all HIVE tags). Used by the
+     * turret's vision correction, which only trusts the HIVE it is aiming at.
+     */
+    public PositionEstimate estimateRobotPosition(double headingRad, AllianceColors alliance) {
         List<TagObservation> obs = observations;
+        if (alliance != null) {
+            List<TagObservation> mine = new ArrayList<>();
+            for (TagObservation o : obs) {
+                if (HiveTags.allianceOf(o.id) == alliance) mine.add(o);
+            }
+            obs = mine;
+        }
         if (obs.isEmpty()) return null;
 
         double cos = Math.cos(headingRad);

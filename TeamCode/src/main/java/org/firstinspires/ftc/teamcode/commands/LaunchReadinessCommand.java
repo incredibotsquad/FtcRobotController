@@ -13,13 +13,15 @@ import com.bylazar.telemetry.TelemetryManager;
 import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 import org.firstinspires.ftc.teamcode.common.LaunchTargets;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LimelightSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
 
 /**
  * Default command for the launcher. Every loop it:
  *  1. picks the target CELL (LaunchTargets) from the robot pose,
  *  2. optionally leads the target for shooting while moving,
- *  3. aims the turret (choosing the reachable angle closest to where the turret is now),
+ *  3. aims the turret (choosing the reachable angle closest to where the turret is now), from the
+ *     odometry position fine-tuned by the Limelight when it has clean data (TurretVisionCorrection),
  *  4. runs the flywheel at the RPM for that distance (always, so shots are never waiting on spin-up),
  *  5. reports whether a valid shot exists via LaunchSubsystem.setShotSolutionReady().
  *
@@ -109,6 +111,7 @@ public class LaunchReadinessCommand extends CommandBase {
     private final LaunchSubsystem launcher;
     private final OdometrySubsystem odometry;
     private final TelemetryManager telemetry;
+    private final TurretVisionCorrection visionCorrection;
 
     /** Last commanded turret position. */
     private double lastTurretPosition = Double.NaN;
@@ -125,9 +128,16 @@ public class LaunchReadinessCommand extends CommandBase {
     private boolean loggedFirstAim = false;
 
     public LaunchReadinessCommand(LaunchSubsystem launcher, OdometrySubsystem odometry, TelemetryManager telemetry) {
+        this(launcher, odometry, null, telemetry);
+    }
+
+    /** {@code limelight} may be null (odometry-only aiming). Read only, so not a requirement. */
+    public LaunchReadinessCommand(LaunchSubsystem launcher, OdometrySubsystem odometry,
+                                  LimelightSubsystem limelight, TelemetryManager telemetry) {
         this.launcher = launcher;
         this.odometry = odometry;
         this.telemetry = telemetry;
+        this.visionCorrection = new TurretVisionCorrection(limelight, odometry);
         // Odometry is only read, so it is not a requirement.
         addRequirements(launcher);
     }
@@ -162,13 +172,19 @@ public class LaunchReadinessCommand extends CommandBase {
             }
         }
 
-        double dx = aimPoint.getX() - robot.getX();
-        double dy = aimPoint.getY() - robot.getY();
+        // ---------------------------------------------------- Limelight fine-tuning
+        // Odometry position, nudged by the Limelight while it has clean data (else unchanged).
+        Translation2d aimFrom = visionCorrection.update(pose, CrossOpModeStorage.allianceColor);
+        Pose2d aimPose = new Pose2d(aimFrom, pose.getRotation());
+
+        Translation2d distFrom = TurretVisionCorrection.CORRECT_DISTANCE ? aimFrom : robot;
+        double dx = aimPoint.getX() - distFrom.getX();
+        double dy = aimPoint.getY() - distFrom.getY();
         double distance = Math.hypot(dx, dy);
         lastDistanceIn = distance;
 
         // ---------------------------------------------------- turret
-        double relativeDeg = relativeTurretDeg(pose, aimPoint);
+        double relativeDeg = relativeTurretDeg(aimPose, aimPoint);
         if (turretLocked) {
             // Locked: park the turret at TURRET_MID. Done before choosing the aim position so the
             // wrap (the turret can reach some angles two ways) is chosen relative to TURRET_MID.
@@ -228,6 +244,7 @@ public class LaunchReadinessCommand extends CommandBase {
         if (DebugTelemetry.ENABLED) telemetry.addData("Launch: Distance (in)", Math.round(distance * 10) / 10.0
                 + (inRange ? "" : " (outside table, end RPM)"));
         if (DebugTelemetry.ENABLED) telemetry.addData("Launch: Turret angle (deg)", Math.round(relativeDeg));
+        if (DebugTelemetry.ENABLED) telemetry.addData("Launch: Turret aim from", visionCorrection.status());
         if (DebugTelemetry.ENABLED) telemetry.addData("Launch: Turret position", turretLocked ? LaunchSubsystem.TURRET_MID + " (LOCKED)" : String.valueOf(turretReachable ? turretPosition : -1));
         if (DebugTelemetry.ENABLED) telemetry.addData("Launch: RPM target / actual", Math.round(rpm) + " / " + Math.round(launcher.getCurrentFlywheelRPM()));
         if (DebugTelemetry.ENABLED) telemetry.addData("Launch: Solution", solutionValid ? "READY" : notReadyReason);
@@ -246,6 +263,11 @@ public class LaunchReadinessCommand extends CommandBase {
     /** RPM target from the shot table on the last loop. NaN before the first loop. */
     public double getLastRpmTarget() {
         return lastRpmTarget;
+    }
+
+    /** Limelight turret fine-tuning state, for telemetry. */
+    public String getVisionStatus() {
+        return visionCorrection.status();
     }
 
     public String getNotReadyReason() {
