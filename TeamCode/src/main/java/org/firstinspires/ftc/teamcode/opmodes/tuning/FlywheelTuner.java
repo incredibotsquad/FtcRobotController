@@ -8,7 +8,7 @@ import com.arcrobotics.ftclib.gamepad.GamepadKeys;
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+import com.pedropathing.math.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
@@ -16,7 +16,10 @@ import org.firstinspires.ftc.teamcode.Incredibot;
 import org.firstinspires.ftc.teamcode.commands.LaunchBallsCommand;
 import org.firstinspires.ftc.teamcode.commands.LaunchReadinessCommand;
 import org.firstinspires.ftc.teamcode.commands.RelocalizeWithLimelightCommand;
+import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
+import org.firstinspires.ftc.teamcode.opmodes.auto.LaunchPoint;
+import org.firstinspires.ftc.teamcode.opmodes.auto.Poses;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 
 import java.util.ArrayList;
@@ -57,12 +60,16 @@ import java.util.List;
  * the code (Y logs them) to keep them. Panels is not legal in matches (R704).
  */
 @Configurable
-@Disabled
 @TeleOp(name = "FlywheelTuner", group = "Tests")
 public class FlywheelTuner extends LinearOpMode {
 
     /** Edits only apply within this many inches of a table distance. */
     public static double ROW_SNAP_IN = 3.0;
+    /**
+     * true = INIT sets the pose to launch point RIGHT_SPOT_1 (place the robot there);
+     * false = keep the stored pose from the last OpMode, as TeleOp does.
+     */
+    public static boolean START_AT_RIGHT_SPOT_1 = true;
     public static double RPM_STEP = 25;
     /** A drop of more than this below the recent peak counts as a shot. */
     public static double SHOT_DETECT_DROP_RPM = 75;
@@ -104,8 +111,14 @@ public class FlywheelTuner extends LinearOpMode {
                 incredibot.limelightSubsystem, incredibot.odometrySubsystem, incredibot.driveSubsystem);
 
         incredibot.intakeBarSubsystem.raise();
-        incredibot.odometrySubsystem.resetPose(CrossOpModeStorage.currentPose.getX(), CrossOpModeStorage.currentPose.getY(),
-                Math.toDegrees(CrossOpModeStorage.currentPose.getHeading()));
+        if (START_AT_RIGHT_SPOT_1) {
+            // Place the robot on RIGHT spot 1 (red: Poses.RED_LAUNCH_AUDIENCE_CELL_1, rotated for blue).
+            Pose start = new Poses(CrossOpModeStorage.allianceColor == AllianceColors.RED).launch(LaunchPoint.RIGHT_SPOT_1);
+            incredibot.odometrySubsystem.resetPose(start.x(), start.y(), Math.toDegrees(start.heading()));
+        } else {
+            incredibot.odometrySubsystem.resetPose(CrossOpModeStorage.currentPose.getX(), CrossOpModeStorage.currentPose.getY(),
+                    Math.toDegrees(CrossOpModeStorage.currentPose.getHeading()));
+        }
         if (!Incredibot.DRIVE_ONLY_MODE) relocalize.schedule();
 
         while (opModeInInit()) {
@@ -188,6 +201,8 @@ public class FlywheelTuner extends LinearOpMode {
             panels.addData("power", launcher.getLastFlywheelPower());
 
             panels.addLine("--- FlywheelTuner ---");
+            panels.addData("Moving shots (op X)", LaunchReadinessCommand.ENABLE_MOVING_SHOT_COMPENSATION
+                    ? "ON (ball speed " + LaunchReadinessCommand.BALL_SPEED_IN_PER_SEC + " in/s)" : "off");
             panels.addData("Distance (in)", Double.isNaN(distance) ? "-" : String.format("%.1f", distance));
             panels.addData("Shot row", shotRow >= 0
                     ? String.format("%d (%.0f in): RPM %.0f  [A +%.0f / X -%.0f]", shotRow,

@@ -6,7 +6,6 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.hardware.lynx.LynxModule;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
@@ -43,7 +42,6 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
  *   Tune with a charged battery at about NOMINAL_VOLTAGE.
  */
 @Configurable
-@Disabled
 @TeleOp(name = "FlywheelBenchTuner", group = "Tests")
 public class FlywheelBenchTuner extends LinearOpMode {
 

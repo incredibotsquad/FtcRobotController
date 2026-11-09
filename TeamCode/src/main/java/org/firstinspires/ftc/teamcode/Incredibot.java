@@ -125,7 +125,7 @@ public class Incredibot extends Robot {
         operatorGamepad.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER)
                 .whenPressed(new LaunchBallsCommand(launchGateSubsystem, intakeSubsystem, driveSubsystem, intakeBarSubsystem));
 
-        operatorGamepad.getGamepadButton(GamepadKeys.Button.Y)
+        operatorGamepad.getGamepadButton(GamepadKeys.Button.LEFT_BUMPER)
                 .whenPressed(new RelocalizeCommand(odometrySubsystem, telemetry));
 
         // Intake bar: A lowers it in front of the robot (FLOWER POLLEN pickup) / raises it again.

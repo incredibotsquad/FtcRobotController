@@ -51,8 +51,8 @@ public class LaunchReadinessCommand extends CommandBase {
      * Outside the table the nearest end RPM is used, and the shot still counts as ready (no
      * waiting for the robot to get into range).
      */
-    public static double[] SHOT_DISTANCES_IN = {42, 44, 47, 52, 66, 88};
-    public static double[] SHOT_RPMS = {2700, 2700, 2700, 2800, 2950, 3250};
+    public static double[] SHOT_DISTANCES_IN = {42, 43.5, 44, 47, 48.75, 52, 66, 88};
+    public static double[] SHOT_RPMS = {2515, 2515, 2515, 2668, 2668, 2731, 2878, 3170};
     /** Out-of-table distance already logged (logs once each time the robot leaves the table range). */
     private boolean loggedOutOfRange = false;
 
@@ -102,7 +102,7 @@ public class LaunchReadinessCommand extends CommandBase {
     /** Toggled by the operator. When on, the target is led by robot velocity x flight time. */
     public static boolean ENABLE_MOVING_SHOT_COMPENSATION = false;
     /** Average horizontal ball speed, used to estimate flight time. Tune from video/testing. */
-    public static double BALL_SPEED_IN_PER_SEC = 200.0;
+    public static double BALL_SPEED_IN_PER_SEC = 190;
     /** With compensation off, no shot is offered above this robot speed. */
     public static double MAX_STATIONARY_SHOT_SPEED_IN_PER_SEC = 4.0;
 

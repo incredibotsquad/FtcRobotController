@@ -15,7 +15,8 @@ import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
  *      command overrides it (LaunchBallsCommand's kick).
  *      IntakeSubsystem is told it is launching, so artifacts leaving the top are subtracted.
  *  INTAKING (gate closed, not full): intake and transfer run.
- *  FULL (gate closed, count at MAX_ARTIFACTS): everything stops (G407: control at most 4).
+ *  FULL (gate closed, count at MAX_ARTIFACTS): the intake stops (G407: control at most 4); the
+ *      transfer stops IntakeSubsystem.TRANSFER_FULL_DELAY_MS later.
  *
  * The artifact count itself comes from IntakeSubsystem.periodic(), which the scheduler runs
  * before this command each loop. Other commands that require the intake (e.g.
@@ -36,6 +37,8 @@ public class SmartIntakeCommand extends CommandBase {
     private final OdometrySubsystem odometry;
 
     private State state;
+    /** FULL: the transfer has been stopped (after its run-on). */
+    private boolean transferStopped;
 
     public SmartIntakeCommand(IntakeSubsystem intake, LaunchGateSubsystem gate, OdometrySubsystem odometry) {
         this.intake = intake;
@@ -82,8 +85,16 @@ public class SmartIntakeCommand extends CommandBase {
                 intake.startIntakeAndTransfer();
                 break;
             case FULL:
-                // Only write on the transition so the motors aren't commanded every loop
-                if (state != State.FULL) intake.stopIntakeAndTransfer();
+                // Only write on transitions so the motors aren't commanded every loop. The intake
+                // stops at once; the transfer runs on until IntakeSubsystem.TRANSFER_FULL_DELAY_MS is up.
+                if (state != State.FULL) {
+                    intake.stopIntakeMotorOnly();
+                    transferStopped = false;
+                }
+                if (!transferStopped && intake.isFullAndTransferDone()) {
+                    intake.stopTransferMotorOnly();
+                    transferStopped = true;
+                }
                 break;
         }
 

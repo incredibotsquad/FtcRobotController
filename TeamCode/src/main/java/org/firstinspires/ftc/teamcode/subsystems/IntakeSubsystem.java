@@ -105,7 +105,13 @@ public class IntakeSubsystem extends SubsystemBase {
      * fully inside). 0 = stop immediately (old behavior). Keep short: running on while full could
      * pick up a 5th artifact (G407).
      */
-    public static long FULL_RUN_ON_MS = 250;
+    public static long FULL_RUN_ON_MS = 1000;
+    /**
+     * Extra time the TRANSFER keeps running after the intake motor stops when intaking fills the
+     * robot (on top of FULL_RUN_ON_MS), so the stack settles up against the gate. The intake motor
+     * is already off, so nothing new is pulled in. 0 = transfer stops with the intake (old behavior).
+     */
+    public static long TRANSFER_FULL_DELAY_MS = 250;
 
     // ---------------------------------------------------------------- stall detection (see class comment)
     public enum StallSignal { CURRENT, VELOCITY, BOTH }
@@ -168,6 +174,8 @@ public class IntakeSubsystem extends SubsystemBase {
     private long feedClearSinceMs = -1;
     /** Intake keeps running until this time after intaking filled the robot (see FULL_RUN_ON_MS). */
     private long fullRunOnUntilMs = 0;
+    /** Transfer keeps running until this time after intaking filled the robot (see TRANSFER_FULL_DELAY_MS). */
+    private long transferRunOnUntilMs = 0;
     private boolean launching = false;
     /** Transfer power to use while launching instead of the default; NaN = no override. */
     private double launchTransferOverride = Double.NaN;
@@ -199,7 +207,8 @@ public class IntakeSubsystem extends SubsystemBase {
     /** Starts intake and transfer, unless already full. */
     public void startIntakeAndTransfer() {
         if (isFullAndDoneIntaking()) {
-            stopIntakeAndTransfer();
+            intakeGuard.request(0);
+            transferMotor.set(isFullAndTransferDone() ? 0 : 1); // transfer runs on TRANSFER_FULL_DELAY_MS
             return;
         }
         intakeGuard.request(1);
@@ -310,6 +319,11 @@ public class IntakeSubsystem extends SubsystemBase {
         return isFull() && nowMs() >= fullRunOnUntilMs;
     }
 
+    /** Full, and past both run-ons (FULL_RUN_ON_MS + TRANSFER_FULL_DELAY_MS): the transfer stops too. */
+    public boolean isFullAndTransferDone() {
+        return isFull() && nowMs() >= transferRunOnUntilMs;
+    }
+
     /** Manually override the count, e.g. preloads at the start of auto. */
     public void setArtifactCount(int count) {
         changeCount(count, "set by code (setArtifactCount)");
@@ -396,6 +410,7 @@ public class IntakeSubsystem extends SubsystemBase {
         // (Not for setArtifactCount(), e.g. AUTO preloads, or while launching.)
         if (!wasFull && isFull() && intakePower > 0 && !launching) {
             fullRunOnUntilMs = now + Math.max(0, FULL_RUN_ON_MS);
+            transferRunOnUntilMs = fullRunOnUntilMs + Math.max(0, TRANSFER_FULL_DELAY_MS);
         }
     }
 
@@ -473,8 +488,10 @@ public class IntakeSubsystem extends SubsystemBase {
         updateStallGuards();
 
         // Auto-stop when full (only while intaking, not while feeding the launcher)
-        if (isFullAndDoneIntaking() && !launching && intakeMotor.get() > 0) {
-            stopIntakeAndTransfer();
+        // The transfer stops TRANSFER_FULL_DELAY_MS after the intake motor.
+        if (isFullAndDoneIntaking() && !launching) {
+            if (intakeMotor.get() > 0) stopIntakeMotorOnly();
+            if (isFullAndTransferDone() && transferMotor.get() > 0) stopTransferMotorOnly();
         }
 
         updateStatusLight(artifactCount);

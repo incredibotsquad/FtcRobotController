@@ -9,6 +9,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode; // Changed this
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.Incredibot;
+import org.firstinspires.ftc.teamcode.commands.LaunchReadinessCommand;
 import org.firstinspires.ftc.teamcode.commands.RelocalizeWithLimelightCommand;
 import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 
@@ -81,6 +82,10 @@ public class IncredibotsMecanumDrive extends LinearOpMode { // Changed this
         while (opModeIsActive() && !isStopRequested()) {
             // The scheduler runs all active commands (including Relocalize and Drive)
             CommandScheduler.getInstance().run();
+
+            // Always on the Driver Hub (not gated by DebugTelemetry): operator X toggles it.
+            PanelsTelemetry.INSTANCE.getTelemetry().addData("Moving shots (op X)",
+                    LaunchReadinessCommand.ENABLE_MOVING_SHOT_COMPENSATION ? "ON" : "off");
 
             // Update your custom telemetry panels
             PanelsTelemetry.INSTANCE.getTelemetry().update(telemetry);

@@ -40,7 +40,7 @@ public class Poses {
     // LaunchReadinessCommand.SHOT_DISTANCES_IN range) and on the CELL's outer side (an up CELL's
     // opening faces away from y = 72). The turret aims, so the heading only has to suit the drive.
     // Red AUDIENCE CELL is at (60, 54), red FAR CELL at (60, 90) (LaunchTargets).
-    public static double[] RED_LAUNCH_AUDIENCE_CELL_1 = {42.5, 10, 90};   // ~44.6 in: BELOW the 46 in table minimum
+    public static double[] RED_LAUNCH_AUDIENCE_CELL_1 = {42.5, 10, 90};   // ~48.75 in (shot row 48.75 = 2668 RPM)
     public static double[] RED_LAUNCH_AUDIENCE_CELL_2 = {30, 24, 90};   // ~53 in
     public static double[] RED_LAUNCH_FAR_CELL_1 = {40, 134, 270};       // ~48 in
     public static double[] RED_LAUNCH_FAR_CELL_2 = {30.5, 120, 270};       // ~53 in

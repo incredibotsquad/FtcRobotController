@@ -16,7 +16,12 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
  * Presumes the launcher is already ready: LaunchReadinessCommand keeps the flywheel at speed and
  * the turret on target, so there is no readiness wait. The gate opens immediately on the press.
  *
- * Kick (every launch, when KICK_ENABLED): an artifact resting against the closed gate starts from
+ * SIMPLE_LAUNCH (default on): none of the kick logic below. The gate opens, the transfer feeds
+ * forward at launch power the whole time (no reverse), and the launch ends once the count reads 0
+ * for CLEAR_MS (or MAX_FIRE_MS), the same way for any number of artifacts: no lone-ball or
+ * last-ball special cases. Turn it off to bring back the kick behavior described next.
+ *
+ * Kick (every launch, when KICK_ENABLED and not SIMPLE_LAUNCH): an artifact resting against the closed gate starts from
  * rest, and the dead zone between the top of the transfer and the flywheel (above sensor 4) can
  * stop it. So every launch starts with a run-up:
  *  1. Gate opens and the transfer runs in REVERSE for a time that depends on how many artifacts
@@ -59,6 +64,13 @@ public class LaunchBallsCommand extends CommandBase {
     public static long CLEAR_MS = 250;
     /** Hard cap on how long the gate stays open, in case the artifact count misses an exit. */
     public static long MAX_FIRE_MS = 3000;
+
+    /**
+     * Master switch: true = plain forward feed for any artifact count (no transfer reverse, no
+     * lone-ball or last-ball handling), overriding KICK_ENABLED and LAST_BALL_KICK_ENABLED.
+     * false = those two flags decide. Read when the launch starts.
+     */
+    public static boolean SIMPLE_LAUNCH = true;
 
     /** Reverse-then-forward run-up at the start of every launch. false = straight forward feed. */
     public static boolean KICK_ENABLED = true;
@@ -106,6 +118,9 @@ public class LaunchBallsCommand extends CommandBase {
     private long emptySinceMs;
 
     private int countAtStart;
+    /** Kick logic for this launch (latched at the press so a Panels toggle mid-launch can't half-apply). */
+    private boolean kickActive;
+    private boolean lastBallKickActive;
     private boolean singleBall;
     /** LAST-BALL KICK: when the count first hit 1 mid-launch, or -1. */
     private long lastBallSinceMs;
@@ -142,8 +157,10 @@ public class LaunchBallsCommand extends CommandBase {
             enter(State.DONE);
             return;
         }
+        kickActive = !SIMPLE_LAUNCH && KICK_ENABLED;
+        lastBallKickActive = kickActive && LAST_BALL_KICK_ENABLED;
         // One ball: count says so, or the stack shows only the top slot filled (fills top-down).
-        singleBall = KICK_ENABLED
+        singleBall = kickActive
                 && (countAtStart == 1 || (intake.isSensor4Blocked() && !intake.isSensor3Blocked()));
         kicks = 0;
         reversing = false;
@@ -159,7 +176,9 @@ public class LaunchBallsCommand extends CommandBase {
 
         gate.openGate();
         enter(State.FIRING);
-        if (KICK_ENABLED) startKick(nowMs(), singleBall ? 1 : countAtStart);
+        Log.i("LaunchBallsCommand", "Launch: " + countAtStart + " artifact(s), "
+                + (kickActive ? "kick" : "simple feed"));
+        if (kickActive) startKick(nowMs(), singleBall ? 1 : countAtStart);
     }
 
     @Override
@@ -213,7 +232,7 @@ public class LaunchBallsCommand extends CommandBase {
      * switch to lone-ball handling and kick it. Returns true if the kick started this loop.
      */
     private boolean startLastBallKickIfNeeded(long now) {
-        if (!LAST_BALL_KICK_ENABLED || !KICK_ENABLED || lastBallKickStarted || countAtStart < 2) return false;
+        if (!lastBallKickActive || lastBallKickStarted || countAtStart < 2) return false;
         if (intake.getArtifactCount() != 1) {
             lastBallSinceMs = -1;
             return false;
