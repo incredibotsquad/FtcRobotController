@@ -6,6 +6,7 @@ import com.arcrobotics.ftclib.command.CommandScheduler;
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
+import com.pedropathing.algorithm.ForesightConfig;
 import com.pedropathing.api.Paths;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.math.Pose;
@@ -53,6 +54,8 @@ import java.util.List;
  *     forward and back ROCK_COUNT times (bar still down, so the bar keeps the elements in front of
  *     the intake while they get pulled in), then raise it. Then go back to the current launch point
  *     (step 2).
+ * With FINAL_LAUNCH_AT_LEFT_SPOT_4, the trip after the LAST intake point goes to LEFT spot 4
+ * (straight line) for the final launch instead of the current launch point.
  * When a sequence runs out (no next launch or intake point), the robot parks.
  *
  * Park: the OpMode keeps its own AUTO_LENGTH_S clock from START. In the last PARK_WINDOW_S
@@ -117,7 +120,7 @@ public class DynamicAuto extends LinearOpMode {
      */
     public static boolean LAUNCH_IF_TIP_UNCONFIRMED = false;
 
-    public static long INTAKE_TIMEOUT_MS = 2500;
+    public static long INTAKE_TIMEOUT_MS = 1200;
     public static long BAR_LOWER_TIMEOUT_MS = 600;
 
     /** A path counts as done once this close to its end (or when Pedro says it's done). */
@@ -134,18 +137,24 @@ public class DynamicAuto extends LinearOpMode {
      * maxAchievableForwardVelocity). 1 = no limit.
      */
     public static double INTAKE_DRIVE_IN_SPEED_FRACTION = 0.4;
+    /**
+     * At an intake point's approach pose, turn in place until facing the approach heading within
+     * this before lowering the bar and driving in (e.g. from LEFT spot 3, which shares the side
+     * FLOWER's approach position but faces the HIVE). Gives up after PATH_TIMEOUT_MS.
+     */
+    public static double INTAKE_APPROACH_HEADING_TOLERANCE_DEG = 10;
 
     /**
      * After backing out of an intake point with the bar down: rock forward (toward the intake pose)
      * and back to the approach pose this many times before raising the bar. 0 = no rocking.
      */
-    public static int ROCK_COUNT = 2;
+    public static int ROCK_COUNT = 1;
     /**
      * FLOWERS don't rock: the bar funnels the POLLEN into the intake, so the robot stays at the
      * FLOWER (intake pose) this long, or until full, instead of INTAKE_TIMEOUT_MS. Then it backs out
      * to the approach pose and raises the bar.
      */
-    public static long FLOWER_WAIT_MS = 2000;
+    public static long FLOWER_WAIT_MS = 1200;
     /**
      * How far forward each rock goes. Rocks run along one field axis only: X when the robot faces
      * 0/180 deg, Y when it faces 90/270 (heading snapped to the nearest 90), from where the robot
@@ -156,6 +165,14 @@ public class DynamicAuto extends LinearOpMode {
     public static double ROCK_SPEED_FRACTION = 0.4;
     /** A rock leg counts as done this close to its end (smaller than PATH_END_TOLERANCE_IN; the legs are short). */
     public static double ROCK_END_TOLERANCE_IN = 0.75;
+
+    /**
+     * true = after the LAST intake point in the plan, the final launch is at LEFT spot 4
+     * (Poses.RED_LAUNCH_FAR_CELL_4), reached by a straight line with linear heading, instead of
+     * going back to the plan's current launch point. Launches there only if the LEFT CELL is up,
+     * like any first visit; then parks. false = the plan's launch point as before.
+     */
+    public static boolean FINAL_LAUNCH_AT_LEFT_SPOT_4 = true;
 
     /**
      * true = show informational telemetry: the subsystems' readouts (drive, odometry, intake,
@@ -221,6 +238,7 @@ public class DynamicAuto extends LinearOpMode {
 
     @Override
     public void runOpMode() {
+        Constants.foresightConfig.maxPathSpeed.set(ForesightConfig.Constraint.NONE);
         TelemetryManager panels = PanelsTelemetry.INSTANCE.getTelemetry();
         robot = new Incredibot(hardwareMap, panels);
         follower = robot.driveSubsystem.getFollower();
@@ -297,6 +315,8 @@ public class DynamicAuto extends LinearOpMode {
             panels.addLine("LEFT / RIGHT: as seen by the drivers, from behind your alliance wall");
             panels.addData("Launch-to-launch (L/R trigger)", AutoPlan.hiveRouteLabel());
             panels.addData("Up CELL at start", sideName(startUpCell()));
+            panels.addData("Final launch (after last intake)", FINAL_LAUNCH_AT_LEFT_SPOT_4
+                    ? LaunchPoint.LEFT_SPOT_4.label() + " (line)" : "plan's launch point");
             panels.addLine("-------------------------------");
             panels.addData("Editing (Y)", editing);
             panels.addData("Point (dpad L/R)", choice);
@@ -450,7 +470,9 @@ public class DynamicAuto extends LinearOpMode {
                 break;
 
             case DRIVE_TO_INTAKE:
-                if (pathDone()) {
+                if (followingPath && !pathDone()) break;
+                followingPath = false; // path over (Pedro holds its end pose): turn in place if needed
+                if (approachHeadingReached()) {
                     if (mechanisms && currentIntake().point.needsBar()) {
                         robot.intakeBarSubsystem.lower();
                         barDown = true;
@@ -674,6 +696,27 @@ public class DynamicAuto extends LinearOpMode {
                 + describe(leg.point, AutoPlan.isRed()) + " approach [" + leg.moveLabel() + "]");
     }
 
+    /**
+     * True once the robot faces the current intake point's approach heading (within
+     * INTAKE_APPROACH_HEADING_TOLERANCE_DEG), or PATH_TIMEOUT_MS has passed in DRIVE_TO_INTAKE.
+     * The follower is holding the approach pose, so it turns in place meanwhile.
+     */
+    private boolean approachHeadingReached() {
+        Pose approach = poses.intakeApproach(currentIntake().point);
+        double d = approach.heading() - follower.pose().heading();
+        double errDeg = Math.abs(Math.toDegrees(Math.atan2(Math.sin(d), Math.cos(d))));
+        if (errDeg <= INTAKE_APPROACH_HEADING_TOLERANCE_DEG) return true;
+        if (stateTimer.milliseconds() > PATH_TIMEOUT_MS) {
+            Log.w(TAG, String.format("[%5.2fs]   TURN TIMEOUT at the approach pose: %.0f deg off, going on",
+                    matchTimer.seconds(), errDeg));
+            return true;
+        }
+        if (!follower.holding()) follower.hold(approach); // e.g. path timed out: hold here and turn
+        setStatus(String.format("at the approach, turning to %.0f deg (%.0f deg off)",
+                Math.toDegrees(approach.heading()), errDeg));
+        return false;
+    }
+
     private void driveIntoIntakePoint() {
         driveTo(poses.intake(currentIntake().point), null, false, INTAKE_DRIVE_IN_SPEED_FRACTION);
         setState(State.DRIVE_INTO_INTAKE, "driving straight in at " + INTAKE_DRIVE_IN_SPEED_FRACTION + " speed");
@@ -717,7 +760,23 @@ public class DynamicAuto extends LinearOpMode {
         long delay = currentIntake().delayMs;
         String what = "after intake point " + (intakeIndex + 1);
         intakeIndex++;
-        waitThen(delay, what, this::driveToLaunchPoint);
+        boolean lastIntake = intakeIndex >= intakeLegs.size();
+        waitThen(delay, what, lastIntake && FINAL_LAUNCH_AT_LEFT_SPOT_4
+                ? this::driveToFinalLaunchPoint : this::driveToLaunchPoint);
+    }
+
+    /**
+     * After the last intake point: the final launch is at LEFT spot 4. Added to the end of this
+     * run's launch sequence as a straight-line leg (linear heading, see driveThrough) and made the
+     * current launch point, so the usual arrive / CELL-up / launch / park logic runs there.
+     */
+    private void driveToFinalLaunchPoint() {
+        launchLegs.add(new AutoPlan.Leg<>(LaunchPoint.LEFT_SPOT_4, false));
+        launchIndex = launchLegs.size() - 1;
+        launchedHere = false;
+        log("last intake point done: final launch at " + LaunchPoint.LEFT_SPOT_4.label() + " "
+                + fmt(poses.launch(LaunchPoint.LEFT_SPOT_4)) + " (FINAL_LAUNCH_AT_LEFT_SPOT_4)");
+        driveToLaunchPoint();
     }
 
     /** Holds still for {@code ms} (a plan delay), then runs {@code next}. ms 0 runs it now. */
