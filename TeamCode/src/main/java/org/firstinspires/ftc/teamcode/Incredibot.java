@@ -29,6 +29,7 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LimelightSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.PowerMonitorSubsystem;
 
 @Configurable
 public class Incredibot extends Robot {
@@ -55,6 +56,8 @@ public class Incredibot extends Robot {
     public final LaunchGateSubsystem launchGateSubsystem;
     public final OdometrySubsystem odometrySubsystem;
     public final LimelightSubsystem limelightSubsystem;
+    /** Logs hub voltage/current and per-motor current (tag PowerLog). See PowerMonitorSubsystem.ENABLED. */
+    public final PowerMonitorSubsystem powerMonitorSubsystem;
     /** The launcher's default command, set by initTeleop()/initAuto() (null in drive-only mode). Read by FlywheelTuner. */
     public LaunchReadinessCommand launchReadinessCommand;
     // Hardware
@@ -78,6 +81,7 @@ public class Incredibot extends Robot {
         odometrySubsystem = new OdometrySubsystem(driveSubsystem, telemetry); // reads the Pinpoint via Pedro's Follower
         launchSubsystem = new LaunchSubsystem(hwMap, telemetry);
         limelightSubsystem = new LimelightSubsystem(hwMap, telemetry);
+        powerMonitorSubsystem = new PowerMonitorSubsystem(hwMap);
     }
 
     public void initialize(OpModeType opModeType, GamepadEx driverGamepad, GamepadEx operatorGamepad) {
@@ -162,12 +166,12 @@ public class Incredibot extends Robot {
      * holds it there); no other subsystem is registered or commanded. Called at START.
      */
     private void initDriveOnly() {
-        register(driveSubsystem, odometrySubsystem);
+        register(driveSubsystem, odometrySubsystem, powerMonitorSubsystem);
         launchSubsystem.setTurretPosition(LaunchSubsystem.TURRET_MID);
     }
 
     private void initCommon() {
-        register(driveSubsystem, intakeSubsystem, intakeBarSubsystem, launchGateSubsystem, launchSubsystem, odometrySubsystem, limelightSubsystem);
+        register(driveSubsystem, intakeSubsystem, intakeBarSubsystem, launchGateSubsystem, launchSubsystem, odometrySubsystem, limelightSubsystem, powerMonitorSubsystem);
 
         // 1. SET THE DEFAULT COMMAND FOR THE GATE
         // This will run at match start and any time the gate isn't being used by a launcher command.
