@@ -31,8 +31,19 @@ import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
  *    empty with one left, and the intake would then take a 5th (G407). Counting too few only makes
  *    the launch run to MAX_FIRE_MS, where confirmEmptyAfterLaunch() fixes it.
  *  - Jam: sensor 1 blocked for JAM_MS while intaking means the artifact can't move up: full.
- * Sensors 2 and 3 (digital beam breaks) are TEMPORARILY ignored: still read and shown for testing,
- * but not used for counting (the old settle corrections that used them are gone).
+ *  - Sensor 2 full check (beam break, SENSOR2_FULL_ENABLED): with 4 POLLEN inside, the last one
+ *    rests at sensor 2 (POLLEN is smaller than NECTAR, so a stack of 3 sits above it). Sensor 2
+ *    blocked for SENSOR2_FULL_MS while the transfer runs forward (a ball that could move up would
+ *    have) and not launching or reversing means full: the count is raised to MAX_ARTIFACTS (never
+ *    lowered). That last ball is already inside, so there's no FULL_RUN_ON_MS run-on: the intake
+ *    stops at once and the transfer TRANSFER_FULL_DELAY_MS later.
+ *  - Sensor 4 leftover (SENSOR4_LEFTOVER_ENABLED): with the gate closed nothing gets past sensor 4,
+ *    so sensor 4 blocked for SENSOR4_LEFTOVER_MS while not launching or reversing means at least one
+ *    artifact inside. Catches a launch that fed n-1 of n but counted n exits (a seam miscount) and
+ *    ended at 0: the one left rests at (or rides up to) sensor 4 once the gate closes, and the count
+ *    goes 0 -> 1. Never lowers the count.
+ *  - Sensor 3 minimum (beam break, SENSOR3_MIN_ENABLED, off until checked on the robot): sensor 3
+ *    blocked the same way means at least SENSOR3_MIN_COUNT inside.
  *
  * When the count reaches MAX_ARTIFACTS while intaking, the intake stops automatically.
  *
@@ -76,7 +87,21 @@ public class IntakeSubsystem extends SubsystemBase {
     /** Duration rule at the exit: off, since overcounting exits risks a 5th artifact (see class comment). */
     public static boolean SENSOR4_DURATION_RULE = false;
 
-    /** Sensors 2/3 (digital, display only for now): set false if they read LOW when blocked. */
+    /**
+     * Sensor 2 full check (see class comment): blocked this long with the transfer forward means the
+     * 4th artifact is resting there. Must be longer than a ball takes to ride past sensor 2.
+     */
+    public static boolean SENSOR2_FULL_ENABLED = true;
+    public static long SENSOR2_FULL_MS = 250;
+    /** Sensor 4 leftover (see class comment): blocked this long with the gate closed = at least 1 inside. */
+    public static boolean SENSOR4_LEFTOVER_ENABLED = true;
+    public static long SENSOR4_LEFTOVER_MS = 150;
+    /** Sensor 3 minimum (see class comment): off until checked where the balls rest with 3 inside. */
+    public static boolean SENSOR3_MIN_ENABLED = false;
+    public static int SENSOR3_MIN_COUNT = 3;
+    public static long SENSOR3_MIN_MS = 250;
+
+    /** Sensors 2/3 (digital beam breaks): set false if they read LOW when blocked. */
     public static boolean BLOCKED_READS_HIGH = true;
 
     /** Sensors 2/3: a sensor must hold a new state this long before it counts (filters flicker). */
@@ -156,6 +181,8 @@ public class IntakeSubsystem extends SubsystemBase {
     private int s1SeenApplied, s1GoneApplied, s4GoneApplied;
     private boolean wasLaunching = false;
     private boolean wasReversing = false;
+    /** Since when sensor 4 has been blocked while not launching or reversing; -1 = not now. */
+    private long s4IdleBlockedSinceMs = -1;
 
     private final TelemetryManager telemetry;
 
@@ -415,6 +442,32 @@ public class IntakeSubsystem extends SubsystemBase {
             fullRunOnUntilMs = now + Math.max(0, FULL_RUN_ON_MS);
             transferRunOnUntilMs = fullRunOnUntilMs + Math.max(0, TRANSFER_FULL_DELAY_MS);
         }
+
+        // Leftover after a launch: with the gate closed, a ball at sensor 4 is still inside.
+        // Own timer (not laser4.msInState), so it starts only once the launch has ended.
+        if (!launching && !reversing && laser4.isBlocked()) {
+            if (s4IdleBlockedSinceMs < 0) s4IdleBlockedSinceMs = now;
+        } else {
+            s4IdleBlockedSinceMs = -1;
+        }
+        if (SENSOR4_LEFTOVER_ENABLED && artifactCount == 0 && s4IdleBlockedSinceMs >= 0
+                && now - s4IdleBlockedSinceMs >= SENSOR4_LEFTOVER_MS) {
+            changeCount(1, "sensor 4 blocked " + SENSOR4_LEFTOVER_MS + " ms with the gate closed (ball left after launch)");
+        }
+
+        // Resting balls at sensors 2/3 (after the run-on check above: no run-on for these, the
+        // ball is already inside). Only raises the count.
+        boolean settled = !launching && !reversing && transferPower > 0;
+        if (SENSOR3_MIN_ENABLED && settled && artifactCount < SENSOR3_MIN_COUNT
+                && beamBreak3.isBlocked() && beamBreak3.msInState(now) >= SENSOR3_MIN_MS) {
+            changeCount(SENSOR3_MIN_COUNT, "sensor 3 blocked " + SENSOR3_MIN_MS + " ms with transfer forward");
+        }
+        if (SENSOR2_FULL_ENABLED && settled && !isFull()
+                && beamBreak2.isBlocked() && beamBreak2.msInState(now) >= SENSOR2_FULL_MS) {
+            changeCount(MAX_ARTIFACTS, "sensor 2 blocked " + SENSOR2_FULL_MS + " ms with transfer forward (4th resting there)");
+            fullRunOnUntilMs = now;
+            transferRunOnUntilMs = now + Math.max(0, TRANSFER_FULL_DELAY_MS);
+        }
     }
 
     /** Sets the count (clamped to 0..MAX) and logs the change with its reason. */
@@ -427,10 +480,10 @@ public class IntakeSubsystem extends SubsystemBase {
         artifactCount = newCount;
     }
 
-    /** Sensors 1-4 as X (blocked) / - (clear); 2 and 3 are lower case since they're ignored. */
+    /** Sensors 1-4 as X (blocked) / - (clear). */
     private String sensorString() {
-        return (laser1.isBlocked() ? "X" : "-") + (beamBreak2.isBlocked() ? "x" : "-")
-                + (beamBreak3.isBlocked() ? "x" : "-") + (laser4.isBlocked() ? "X" : "-");
+        return (laser1.isBlocked() ? "X" : "-") + (beamBreak2.isBlocked() ? "X" : "-")
+                + (beamBreak3.isBlocked() ? "X" : "-") + (laser4.isBlocked() ? "X" : "-");
     }
 
     private static int clamp(int count) {
@@ -494,7 +547,7 @@ public class IntakeSubsystem extends SubsystemBase {
         intakeGuard.update(now, STALL_DETECTION_ENABLED && !launching);
     }
 
-    /** Sensors 1 and 4 (2 and 3 are ignored for now). */
+    /** Sensors 1 and 4 (the lasers). */
     private boolean laserSensorsClear() {
         return !laser1.isBlocked() && !laser4.isBlocked();
     }

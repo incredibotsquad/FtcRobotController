@@ -6,7 +6,7 @@ Open work items. Check items off (or delete them) when done; add the date when y
 
 Sensors 1 and 4 are now analog goBILDA laser distance sensors read by
 `subsystems/LaserBallCounter` (values tuned in `opmodes/tuning/laserAnalogExample`).
-Sensors 2 and 3 are ignored for now.
+Sensor 2 (beam break) corrects the count up to 4 when a ball rests there; sensor 3 is optional.
 
 - [ ] **Measure the laser baselines.** Enable `SensorTestOpMode` ("Test: Beam Break Sensors"),
       keep both lasers clear, and set `IntakeSubsystem.SENSOR1_BASELINE_MM` and
@@ -18,8 +18,15 @@ Sensors 2 and 3 are ignored for now.
       as one exit (safe, but the launch then runs to `MAX_FIRE_MS`). Watch logcat tags
       `IntakeCount` and `LaserBallCounter`. `SENSOR4_DURATION_RULE` is off on purpose (overcounting
       exits → reads empty with a ball left → intake takes a 5th, G407).
-- [ ] **Decide what to do with sensors 2 and 3.** Temporarily ignored (read for display only). The
-      old settle corrections that used them were removed; git history before 2026-11-16 has them.
+- [ ] **Test the sensor 2 full check (2026-11-16).** With 4 POLLEN the last rests at sensor 2; blocked
+      `SENSOR2_FULL_MS` (250 ms) with the transfer forward raises the count to 4. Check that a ball
+      riding past sensor 2 with 1-3 inside never holds it that long (log tag `IntakeCount`, reason
+      "sensor 2 blocked"). Won't hold for NECTAR (larger, stack sits lower).
+- [ ] **Test the sensor 4 leftover check (2026-11-17).** Launch n, let one stay behind: after the gate
+      closes the count should go 0 -> 1 (`IntakeCount`, "ball left after launch"). Check the laser
+      doesn't read blocked with sensor 4 clear and the gate closed (the gate in view, baseline drift).
+- [ ] **Decide on the sensor 3 minimum.** `SENSOR3_MIN_ENABLED` is off. Check where the balls rest
+      with 3 inside; if one always rests at sensor 3, turn it on (`SENSOR3_MIN_COUNT = 3`).
 - [ ] **Re-check `JAM_MS` (400 ms) with the laser.** Slow singles stayed deep up to ~240 ms in the
       tests; make sure a slow ball doesn't trip the "jam = full" rule.
 
