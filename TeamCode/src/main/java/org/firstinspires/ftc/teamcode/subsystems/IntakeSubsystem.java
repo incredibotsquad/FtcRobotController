@@ -45,7 +45,11 @@ import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
  *  - Sensor 3 minimum (beam break, SENSOR3_MIN_ENABLED, off until checked on the robot): sensor 3
  *    blocked the same way means at least SENSOR3_MIN_COUNT inside.
  *
- * When the count reaches MAX_ARTIFACTS while intaking, the intake stops automatically.
+ * When the count reaches MAX_ARTIFACTS while intaking, the intake stops automatically. On entering
+ * FULL, SmartIntakeCommand first runs the intake motor (not the transfer) in reverse for
+ * FULL_EJECT_MS (startFullEject()) to push out a 5th artifact straddling the intake (G407). Balls
+ * leaving past sensor 1 then aren't subtracted: the 4 inside are in the transfer, so anything pushed
+ * out is the straddler (counted on arrival and clamped at 4, or never counted).
  *
  * confirmEmptyAfterLaunch (called by LaunchBallsCommand when it hits MAX_FIRE_MS): if the transfer
  * has run forward with sensors 1 and 4 clear for at least EMPTY_CONFIRM_MS, any artifact inside
@@ -127,6 +131,9 @@ public class IntakeSubsystem extends SubsystemBase {
      * is already off, so nothing new is pulled in. 0 = transfer stops with the intake (old behavior).
      */
     public static long TRANSFER_FULL_DELAY_MS = 250;
+    /** On reaching full: reverse the intake motor (not the transfer) this long to push out a straddler. 0 = off. */
+    public static long FULL_EJECT_MS = 500;
+    public static double FULL_EJECT_POWER = 1.0;
 
     // ---------------------------------------------------------------- stall detection (see class comment)
     public enum StallSignal { CURRENT, VELOCITY, BOTH }
@@ -195,6 +202,8 @@ public class IntakeSubsystem extends SubsystemBase {
     private long fullRunOnUntilMs = 0;
     /** Transfer keeps running until this time after intaking filled the robot (see TRANSFER_FULL_DELAY_MS). */
     private long transferRunOnUntilMs = 0;
+    /** Full-eject intake reverse runs until this time (see FULL_EJECT_MS). */
+    private long fullEjectUntilMs = 0;
     private boolean launching = false;
     /** Transfer power to use while launching instead of the default; NaN = no override. */
     private double launchTransferOverride = Double.NaN;
@@ -279,6 +288,26 @@ public class IntakeSubsystem extends SubsystemBase {
      */
     public void setLaunching(boolean launching) {
         this.launching = launching;
+        if (launching) fullEjectUntilMs = 0;
+    }
+
+    /**
+     * Full: reverses the intake motor (transfer untouched) for FULL_EJECT_MS to push out an artifact
+     * straddling the intake. With FULL_EJECT_MS = 0 the intake just stops. Ends early on a launch.
+     */
+    public void startFullEject() {
+        if (FULL_EJECT_MS <= 0) {
+            stopIntakeMotorOnly();
+            return;
+        }
+        fullEjectUntilMs = nowMs() + FULL_EJECT_MS;
+        intakeGuard.request(-Math.abs(FULL_EJECT_POWER));
+        Log.i("IntakeCount", "full: intake reversing " + FULL_EJECT_MS + " ms to push out a straddler, sensors " + sensorString());
+    }
+
+    /** The full-eject reverse from startFullEject() is still running. */
+    public boolean isFullEjecting() {
+        return nowMs() < fullEjectUntilMs;
     }
 
     /**
@@ -414,7 +443,9 @@ public class IntakeSubsystem extends SubsystemBase {
         if (!launching && entered > 0 && intakePower > 0) {
             changeCount(artifactCount + entered, "sensor 1: " + entered + " entered, intake forward");
         }
-        if (!launching && ejected > 0 && reversing) {
+        if (!launching && ejected > 0 && reversing && isFullEjecting()) {
+            Log.i("IntakeCount", "sensor 1: " + ejected + " pushed out by the full eject (straddler, not subtracted)");
+        } else if (!launching && ejected > 0 && reversing) {
             changeCount(artifactCount - ejected, "sensor 1: " + ejected + " ejected, intake reversed");
         }
 

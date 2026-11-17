@@ -25,6 +25,10 @@ Sensor 2 (beam break) corrects the count up to 4 when a ball rests there; sensor
 - [ ] **Test the sensor 4 leftover check (2026-11-17).** Launch n, let one stay behind: after the gate
       closes the count should go 0 -> 1 (`IntakeCount`, "ball left after launch"). Check the laser
       doesn't read blocked with sensor 4 clear and the gate closed (the gate in view, baseline drift).
+- [ ] **Test the full eject (2026-11-17).** On reaching 4 the intake reverses `FULL_EJECT_MS` (500 ms).
+      Check it pushes a straddler out without pulling the 4th back out of the transfer (if it does,
+      the count stays 4 with 3 inside). It also runs at auto start (preloads = 4) and each time
+      SmartIntakeCommand re-enters FULL (e.g. after BACK reverse).
 - [ ] **Decide on the sensor 3 minimum.** `SENSOR3_MIN_ENABLED` is off. Check where the balls rest
       with 3 inside; if one always rests at sensor 3, turn it on (`SENSOR3_MIN_COUNT = 3`).
 - [ ] **Re-check `JAM_MS` (400 ms) with the laser.** Slow singles stayed deep up to ~240 ms in the
