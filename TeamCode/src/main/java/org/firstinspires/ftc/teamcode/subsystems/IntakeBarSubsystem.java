@@ -41,10 +41,11 @@ public class IntakeBarSubsystem extends SubsystemBase {
     public static String RIGHT_SERVO_NAME = "intakeBarRightServo";
 
     // PLACEHOLDERS: tune with ServoPositionTuner (see class comment).
-    public static double LEFT_LOWERED = 0.650;
-    public static double LEFT_RAISED = 0.310;
-    public static double RIGHT_LOWERED = 0.600;
-    public static double RIGHT_RAISED = 0.940;
+    // Confirmed on the robot 2026-11-16: left 0.120 / right 0.840 is DOWN.
+    public static double LEFT_RAISED = 0.640;
+    public static double LEFT_LOWERED = 0.120;
+    public static double RIGHT_RAISED = 0.320;
+    public static double RIGHT_LOWERED = 0.840;
 
     /**
      * Time for the bar to travel all the way from RAISED to LOWERED. Servos give no feedback, so
@@ -110,8 +111,8 @@ public class IntakeBarSubsystem extends SubsystemBase {
         fraction = f;
         state = f == 0.0 ? State.RAISED : f == 1.0 ? State.LOWERED : State.PARTIAL;
 
-        leftServo.setPosition(LEFT_LOWERED + f * (LEFT_RAISED - LEFT_LOWERED));
-        rightServo.setPosition(RIGHT_LOWERED + f * (RIGHT_RAISED - RIGHT_LOWERED));
+        leftServo.setPosition(LEFT_RAISED + f * (LEFT_LOWERED - LEFT_RAISED));
+        rightServo.setPosition(RIGHT_RAISED + f * (RIGHT_LOWERED - RIGHT_RAISED));
     }
 
     public State getState() {

@@ -87,12 +87,6 @@ public class DynamicAuto extends LinearOpMode {
     /** Park when this little time is left (unless launching). */
     public static double PARK_WINDOW_S = 3;
     public static boolean PARK_WITH_SPLINE = false;
-    /**
-     * End of auto: the intake bar is lowered once parked, or at the latest this long before
-     * AUTO_LENGTH_S (about the bar's travel time, so it is down before the period ends and nothing
-     * moves after it). Not while a launch is running (the launch holds the bar up).
-     */
-    public static double END_BAR_LOWER_S = 0.7;
 
     /** Longest wait for LaunchSubsystem.isReadyToLaunch() once the CELL is up; then it fires anyway. */
     public static long READY_TIMEOUT_MS = 1500;
@@ -210,7 +204,6 @@ public class DynamicAuto extends LinearOpMode {
     private final Deque<Pose> launchRoute = new ArrayDeque<>();
     private boolean parkStarted = false;
     /** The end-of-auto bar lowering has been commanded. */
-    private boolean endBarLowered = false;
     /** WAIT state: how long, and what to do after. */
     private long waitMs = 0;
     private Runnable afterWait;
@@ -398,11 +391,6 @@ public class DynamicAuto extends LinearOpMode {
             loggedUpCell = upCell;
         }
 
-        if (state != State.LAUNCHING && matchTimer.seconds() >= AUTO_LENGTH_S - END_BAR_LOWER_S) {
-            lowerBarAtEnd(String.format("%.1f s left (END_BAR_LOWER_S %.1f)",
-                    AUTO_LENGTH_S - matchTimer.seconds(), END_BAR_LOWER_S));
-        }
-
         if (!parkStarted && state != State.LAUNCHING && parkTime()) {
             if (launchTakesPriority()) {
                 // Launching beats parking: carry artifacts on to the launch point, cutting any intake short.
@@ -549,7 +537,6 @@ public class DynamicAuto extends LinearOpMode {
             case DRIVE_TO_PARK:
                 if (pathDone()) {
                     setState(State.DONE, "parked at " + String.format("%.1f s", matchTimer.seconds()));
-                    lowerBarAtEnd("parked");
                 }
                 break;
 
@@ -739,15 +726,6 @@ public class DynamicAuto extends LinearOpMode {
         raiseBar();
         driveTo(poses.park(AutoPlan.parkSide), poses.parkControl(AutoPlan.parkSide), PARK_WITH_SPLINE);
         setState(State.DRIVE_TO_PARK, "parking " + AutoPlan.parkLabel() + ": " + reason);
-    }
-
-    /** End of auto: lower the intake bar once (see END_BAR_LOWER_S). */
-    private void lowerBarAtEnd(String why) {
-        if (!mechanisms || endBarLowered) return;
-        endBarLowered = true;
-        robot.intakeBarSubsystem.lower();
-        barDown = true;
-        log("end of auto: lowering the intake bar (" + why + ")");
     }
 
     private void raiseBar() {

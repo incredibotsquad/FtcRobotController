@@ -85,7 +85,6 @@ public class LeftWallAuto extends LinearOpMode {
     private boolean followingPath = false;
     private boolean barDown = false;
     private boolean parkStarted = false;
-    private boolean endBarLowered = false;
     private int launchesDone = 0;
     private long cellUpSinceMs = -1;
     private long arrivedAtLaunchMs = 0;
@@ -162,10 +161,6 @@ public class LeftWallAuto extends LinearOpMode {
         if (upCell != loggedUpCell) {
             log("HIVE up CELL changed " + (loggedUpCell == null ? "?" : side(loggedUpCell)) + " -> " + side(upCell) + " (Limelight)");
             loggedUpCell = upCell;
-        }
-
-        if (state != State.LAUNCHING && matchTimer.seconds() >= DynamicAuto.AUTO_LENGTH_S - DynamicAuto.END_BAR_LOWER_S) {
-            lowerBarAtEnd();
         }
 
         if (!parkStarted && state != State.LAUNCHING && parkTime()) {
@@ -259,7 +254,6 @@ public class LeftWallAuto extends LinearOpMode {
             case DRIVE_TO_PARK:
                 if (pathDone()) {
                     setState(State.DONE, "parked at " + String.format("%.1f s", matchTimer.seconds()));
-                    lowerBarAtEnd();
                 }
                 break;
 
@@ -388,15 +382,6 @@ public class LeftWallAuto extends LinearOpMode {
             robot.intakeBarSubsystem.raise();
             barDown = false;
         }
-    }
-
-    /** End of auto: lower the intake bar once (see DynamicAuto.END_BAR_LOWER_S). */
-    private void lowerBarAtEnd() {
-        if (!mechanisms || endBarLowered) return;
-        endBarLowered = true;
-        robot.intakeBarSubsystem.lower();
-        barDown = true;
-        log("end of auto: lowering the intake bar");
     }
 
     // ================================================================ paths

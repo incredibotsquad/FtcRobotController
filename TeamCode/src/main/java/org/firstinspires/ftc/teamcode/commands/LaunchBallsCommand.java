@@ -159,9 +159,8 @@ public class LaunchBallsCommand extends CommandBase {
         }
         kickActive = !SIMPLE_LAUNCH && KICK_ENABLED;
         lastBallKickActive = kickActive && LAST_BALL_KICK_ENABLED;
-        // One ball: count says so, or the stack shows only the top slot filled (fills top-down).
-        singleBall = kickActive
-                && (countAtStart == 1 || (intake.isSensor4Blocked() && !intake.isSensor3Blocked()));
+        // One ball: the count says so. (Sensor 3 used to confirm it, but sensors 2/3 are ignored for now.)
+        singleBall = kickActive && countAtStart == 1;
         kicks = 0;
         reversing = false;
         sensor4BlockedSinceMs = -1;

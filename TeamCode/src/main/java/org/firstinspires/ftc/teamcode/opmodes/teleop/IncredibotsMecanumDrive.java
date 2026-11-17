@@ -74,7 +74,7 @@ public class IncredibotsMecanumDrive extends LinearOpMode { // Changed this
         //this is done later to avoid all the other commands from running.
         incredibot.initialize(Incredibot.OpModeType.TELEOP, driverGamepad, operatorGamepad);
 
-        // Raise the intake bar at START (DynamicAuto leaves it lowered). Not in INIT: commanding a
+        // Raise the intake bar at START (an auto stopped mid-intake can leave it lowered). Not in INIT: commanding a
         // servo that moves it is not allowed then (G304.H / G403).
         incredibot.intakeBarSubsystem.raise();
 

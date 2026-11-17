@@ -12,10 +12,11 @@
             <Servo name="intakeBarRightServo" port="2" />
             <Servo name="turretServo" port="4" />
 
-            <DigitalDevice name="ballSensor1" port="0" />
+            <AnalogInput name="ballSensor1" port="0" />
+            <AnalogInput name="ballSensor4" port="2" />
+
             <DigitalDevice name="ballSensor2" port="2" />
             <DigitalDevice name="ballSensor3" port="4" />
-            <DigitalDevice name="ballSensor4" port="6" />
 
         </LynxModule>
 

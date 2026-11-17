@@ -18,36 +18,30 @@ import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 /**
  * Artifact counting
  * -----------------
- * Sensor 1 is the lowest (entrance), sensor 4 the highest. Every artifact passes sensor 1
- * and travels up to the highest free slot, so the stack fills top-down: 4, 3, 2, then 1.
- *
- * Because artifacts are different sizes, the slot sensors alone can't be trusted to give
- * an exact count. Instead:
- *  1. Primary count = events at sensor 1:
- *       - intake forward + sensor 1 becomes blocked  -> +1 (artifact entered)
- *       - intake reversed + sensor 1 becomes clear    -> -1 (artifact ejected)
- *     Plus, while launching: sensor 4 becomes clear  -> -1 (artifact left the top)
- *  2. Correction, once nothing is moving through the entrance (sensor 1 clear for SETTLE_MS):
- *       - sensor 4 clear                 -> count = 0 (first artifact always reaches the top)
- *       - sensors 4/3/2 blocked from top -> count is at least that many
- *       - upper bound (USE_SLOT_BASED_UPPER_BOUND):
- *           true:  count is at most (blocked slots from the top) + 1, i.e. one artifact the
- *                  sensors can't see (e.g. a 4th resting between sensors 1 and 2)
- *           false: count is at most MAX - 1 (old rule: assumes a 4th artifact rests on sensor 1)
- *  3. If sensor 1 stays blocked for JAM_MS while intaking, the artifact can't move up -> full.
+ * Sensor 1 is the entrance, sensor 4 the top (just below the gate). Both are goBILDA laser distance
+ * sensors in analog mode, each read by a LaserBallCounter (episode, seam and duration rules tuned in
+ * laserAnalogExample). Count = artifacts that entered - artifacts that left:
+ *  - Entered: balls sensor 1 sees arrive while the intake runs forward (not while launching: the
+ *    launch kick shuffles the stack past sensor 1).
+ *  - Ejected: balls that have passed sensor 1 while the intake runs in reverse (also unjams).
+ *  - Launched: balls that have passed sensor 4 while launching with the transfer forward. A ball
+ *    resting on sensor 4 when the launch starts is re-timed then (LaserBallCounter.rebase), so its
+ *    resting time doesn't look like two balls; likewise sensor 1 when the intake starts reversing.
+ *    SENSOR4_DURATION_RULE is off by default: counting one ball too many at the exit would read
+ *    empty with one left, and the intake would then take a 5th (G407). Counting too few only makes
+ *    the launch run to MAX_FIRE_MS, where confirmEmptyAfterLaunch() fixes it.
+ *  - Jam: sensor 1 blocked for JAM_MS while intaking means the artifact can't move up: full.
+ * Sensors 2 and 3 (digital beam breaks) are TEMPORARILY ignored: still read and shown for testing,
+ * but not used for counting (the old settle corrections that used them are gone).
  *
  * When the count reaches MAX_ARTIFACTS while intaking, the intake stops automatically.
  *
- * G407 (control at most 4): an undercount makes the intake pull in a 5th artifact, an overcount
- * only stops it early. So by default (ALLOW_SETTLED_DECREASE = false) the settle corrections in
- * step 2 may only RAISE the count. It only goes down on real exit events: sensor 1 clearing with
- * the intake reversed, or sensor 4 clearing while launching. A ball stuck low after a launch, which
- * the slot sensors can't see, then still counts.
- * One exception (confirmEmptyAfterLaunch, called by LaunchBallsCommand when it hits MAX_FIRE_MS):
- * if the transfer has run forward with all four sensors clear for at least EMPTY_CONFIRM_MS, any
- * artifact inside would have been carried past sensor 4 by then, so the robot is empty: count = 0.
+ * confirmEmptyAfterLaunch (called by LaunchBallsCommand when it hits MAX_FIRE_MS): if the transfer
+ * has run forward with sensors 1 and 4 clear for at least EMPTY_CONFIRM_MS, any artifact inside
+ * would have been carried past sensor 4 by then, so the robot is empty: count = 0.
  *
- * Every count change is logged (tag "IntakeCount") with its reason.
+ * Every count change is logged (tag "IntakeCount") with its reason; laser episodes are logged with
+ * tag "LaserBallCounter".
  *
  * Stall detection and unjamming
  * -----------------------------
@@ -70,32 +64,28 @@ public class IntakeSubsystem extends SubsystemBase {
 
     public static int MAX_ARTIFACTS = 4;
 
-    /** Set false if your beam breaks read LOW (false) when the beam is broken. */
+    /**
+     * Laser background distance (mm) with the sensor clear, measured on the robot (shown in
+     * Test: Beam Break Sensors). 0 = take the first reading at INIT, which is wrong if a ball is in
+     * front then (e.g. AUTO preloads resting on sensor 4), so measure and set these.
+     */
+    public static double SENSOR1_BASELINE_MM = 108.2;
+    public static double SENSOR4_BASELINE_MM = 98.9;
+    /** Duration rule (a long deep episode = 2 balls) at the entrance: tuned on, errs toward overcounting. */
+    public static boolean SENSOR1_DURATION_RULE = true;
+    /** Duration rule at the exit: off, since overcounting exits risks a 5th artifact (see class comment). */
+    public static boolean SENSOR4_DURATION_RULE = false;
+
+    /** Sensors 2/3 (digital, display only for now): set false if they read LOW when blocked. */
     public static boolean BLOCKED_READS_HIGH = true;
 
-    /** A sensor must hold a new state this long before it counts (filters flicker). */
+    /** Sensors 2/3: a sensor must hold a new state this long before it counts (filters flicker). */
     public static long DEBOUNCE_MS = 15;
-    /** Must be longer than the time for an artifact to travel from sensor 1 to the top. */
-    public static long SETTLE_MS = 500;
     /** Sensor 1 blocked this long while intaking means the artifact can't move up: full. */
     public static long JAM_MS = 400;
-    /** Use sensors 2-4 as a lower bound when settled. Disable if one large artifact can block two sensors. */
-    public static boolean USE_SLOT_SENSORS_AS_LOWER_BOUND = true;
-    /**
-     * Settled upper bound on the count. true = (blocked slots from the top) + 1, which keeps a full
-     * stack at 4 when the 4th artifact doesn't reach sensor 1. false = the old MAX_ARTIFACTS - 1
-     * cap, which drops a full stack to 3 in that case. Experimental: flip live in Panels to compare.
-     */
-    public static boolean USE_SLOT_BASED_UPPER_BOUND = true;
-    /**
-     * Let the settle corrections LOWER the count (sensor 4 clear -> 0, and the upper bound above).
-     * false (default) = they can only raise it, so a hidden artifact can't make the intake take a
-     * 5th (G407). Cost: a double count stays until the next launch, and the robot stops one short.
-     */
-    public static boolean ALLOW_SETTLED_DECREASE = false;
     /**
      * confirmEmptyAfterLaunch(): how long the transfer must have run forward, while launching, with
-     * all four sensors clear before the robot is taken as empty. Must be longer than an artifact
+     * sensors 1 and 4 clear before the robot is taken as empty. Must be longer than an artifact
      * takes to ride from the intake up past sensor 4.
      */
     public static long EMPTY_CONFIRM_MS = 1000;
@@ -158,18 +148,20 @@ public class IntakeSubsystem extends SubsystemBase {
     private final MotorEx intakeMotor;
     private final MotorEx transferMotor;
     private final SimpleServo artifactCountLight;
-    private final BeamBreak beamBreak1;
+    private final LaserBallCounter laser1;
     private final BeamBreak beamBreak2;
     private final BeamBreak beamBreak3;
-    private final BeamBreak beamBreak4;
+    private final LaserBallCounter laser4;
+    /** Laser totals already applied to the count. */
+    private int s1SeenApplied, s1GoneApplied, s4GoneApplied;
+    private boolean wasLaunching = false;
+    private boolean wasReversing = false;
 
     private final TelemetryManager telemetry;
 
     private final StallGuard intakeGuard;
 
     private int artifactCount = 0;
-    /** A skipped settle decrease was logged; reset whenever the count changes so it logs once per count. */
-    private boolean loggedSkippedDecrease = false;
     /** While launching: since when the transfer has run forward with all sensors clear; -1 = not now. */
     private long feedClearSinceMs = -1;
     /** Intake keeps running until this time after intaking filled the robot (see FULL_RUN_ON_MS). */
@@ -192,10 +184,10 @@ public class IntakeSubsystem extends SubsystemBase {
         transferMotor.setInverted(true);
         transferMotor.setRunMode(Motor.RunMode.RawPower);
 
-        beamBreak1 = new BeamBreak(hardwareMap, "ballSensor1");
+        laser1 = new LaserBallCounter(hardwareMap, "ballSensor1", SENSOR1_BASELINE_MM);
         beamBreak2 = new BeamBreak(hardwareMap, "ballSensor2");
         beamBreak3 = new BeamBreak(hardwareMap, "ballSensor3");
-        beamBreak4 = new BeamBreak(hardwareMap, "ballSensor4");
+        laser4 = new LaserBallCounter(hardwareMap, "ballSensor4", SENSOR4_BASELINE_MM);
 
         artifactCountLight = new SimpleServo(hardwareMap, "artifactCountLight", 0, 270);
 
@@ -330,7 +322,7 @@ public class IntakeSubsystem extends SubsystemBase {
     }
 
     public boolean isSensor1Blocked() {
-        return beamBreak1.isBlocked();
+        return laser1.isBlocked();
     }
 
     public boolean isSensor2Blocked() {
@@ -342,65 +334,76 @@ public class IntakeSubsystem extends SubsystemBase {
     }
 
     public boolean isSensor4Blocked() {
-        return beamBreak4.isBlocked();
+        return laser4.isBlocked();
+    }
+
+    /** Laser distance readings (mm), and their baselines, for test OpModes. */
+    public double getSensor1DistanceMm() {
+        return laser1.getDistanceMm();
+    }
+
+    public double getSensor4DistanceMm() {
+        return laser4.getDistanceMm();
+    }
+
+    public double getSensor1BaselineMm() {
+        return laser1.getBaselineMm();
+    }
+
+    public double getSensor4BaselineMm() {
+        return laser4.getBaselineMm();
     }
 
     private void updateArtifactCount() {
         long now = nowMs();
         boolean wasFull = isFull();
+        double intakePower = intakeMotor.get();
+        double transferPower = transferMotor.get();
+        boolean reversing = intakePower < 0;
 
-        boolean s1Changed = beamBreak1.update(now);
+        // Re-time a ball resting on a sensor when it starts to move, so its resting time isn't
+        // taken for two balls: sensor 4 when a launch starts, sensor 1 when the intake reverses.
+        if (launching && !wasLaunching) laser4.rebase(now);
+        if (reversing && !wasReversing) laser1.rebase(now);
+        wasLaunching = launching;
+        wasReversing = reversing;
+
+        laser1.setDurationRule(SENSOR1_DURATION_RULE);
+        laser4.setDurationRule(SENSOR4_DURATION_RULE);
+        laser1.update(now);
+        laser4.update(now);
         beamBreak2.update(now);
         beamBreak3.update(now);
-        boolean s4Changed = beamBreak4.update(now);
 
-        double intakePower = intakeMotor.get();
+        int entered = laser1.getTotalSeen() - s1SeenApplied;
+        int ejected = laser1.getTotalGone() - s1GoneApplied;
+        int launched = laser4.getTotalGone() - s4GoneApplied;
+        s1SeenApplied = laser1.getTotalSeen();
+        s1GoneApplied = laser1.getTotalGone();
+        s4GoneApplied = laser4.getTotalGone();
 
-        // 1. Event counting at the entrance. Not while launching: the launch kick runs the intake
-        // while the transfer shuffles the stack up and down past sensor 1, which isn't a new artifact.
-        if (s1Changed && !launching) {
-            if (beamBreak1.isBlocked() && intakePower > 0) {
-                changeCount(artifactCount + 1, "sensor 1 blocked, intake forward (entered)");
-            } else if (!beamBreak1.isBlocked() && intakePower < 0) {
-                changeCount(artifactCount - 1, "sensor 1 cleared, intake reversed (ejected)");
-            }
+        // Entrance. Not while launching: the launch kick runs the intake while the transfer
+        // shuffles the stack up and down past sensor 1, which isn't a new artifact.
+        if (!launching && entered > 0 && intakePower > 0) {
+            changeCount(artifactCount + entered, "sensor 1: " + entered + " entered, intake forward");
+        }
+        if (!launching && ejected > 0 && reversing) {
+            changeCount(artifactCount - ejected, "sensor 1: " + ejected + " ejected, intake reversed");
         }
 
-        // Artifact leaving the top into the launcher
-        if (s4Changed && !beamBreak4.isBlocked() && launching && transferMotor.get() > 0) {
-            changeCount(artifactCount - 1, "sensor 4 cleared while launching (launched)");
+        // Exit into the launcher
+        if (launching && launched > 0 && transferPower > 0) {
+            changeCount(artifactCount - launched, "sensor 4: " + launched + " launched");
         }
 
-        // 2. Correct drift once the entrance has been quiet for a while
-        boolean settled = !launching
-                && !beamBreak1.isBlocked()
-                && beamBreak1.msInState(now) >= SETTLE_MS;
-
-        if (settled) {
-            if (!beamBreak4.isBlocked() && beamBreak4.msInState(now) >= SETTLE_MS) {
-                settledDecrease(0, "settled: sensor 4 clear (empty)");
-            } else {
-                if (USE_SLOT_SENSORS_AS_LOWER_BOUND && contiguousSlotsFromTop() > artifactCount) {
-                    changeCount(contiguousSlotsFromTop(), "settled: " + contiguousSlotsFromTop() + " slot(s) blocked from the top");
-                }
-                if (USE_SLOT_BASED_UPPER_BOUND) {
-                    // At most one artifact the slot sensors can't see (below the lowest blocked one).
-                    settledDecrease(contiguousSlotsFromTop() + 1, "settled: upper bound (slots from top + 1)");
-                } else {
-                    // Old rule: a 4th artifact would be resting on sensor 1, which is clear
-                    settledDecrease(MAX_ARTIFACTS - 1, "settled: upper bound MAX - 1");
-                }
-            }
-        }
-
-        // 3. Entrance blocked and not moving while intaking -> nowhere left to go
+        // Entrance blocked and not moving while intaking -> nowhere left to go
         // (not while launching: during the kick the intake holds an artifact on sensor 1 on purpose)
-        if (!launching && intakePower > 0 && beamBreak1.isBlocked() && beamBreak1.msInState(now) >= JAM_MS) {
+        if (!launching && intakePower > 0 && laser1.isBlocked() && laser1.msInState(now) >= JAM_MS) {
             changeCount(MAX_ARTIFACTS, "sensor 1 blocked " + JAM_MS + " ms while intaking (jam = full)");
         }
 
         // Empty-confirmation timer for confirmEmptyAfterLaunch().
-        if (launching && transferMotor.get() > 0 && allSensorsClear()) {
+        if (launching && transferPower > 0 && laserSensorsClear()) {
             if (feedClearSinceMs < 0) feedClearSinceMs = now;
         } else {
             feedClearSinceMs = -1;
@@ -422,32 +425,12 @@ public class IntakeSubsystem extends SubsystemBase {
                 artifactCount, newCount, reason, sensorString(), intakeMotor.get(), transferMotor.get(),
                 launching ? ", launching" : ""));
         artifactCount = newCount;
-        loggedSkippedDecrease = false;
     }
 
-    /** A settle correction that would lower the count: applied only if ALLOW_SETTLED_DECREASE. */
-    private void settledDecrease(int newCount, String reason) {
-        if (newCount >= artifactCount) return;
-        if (ALLOW_SETTLED_DECREASE) {
-            changeCount(newCount, reason);
-        } else if (!loggedSkippedDecrease) {
-            Log.i("IntakeCount", String.format("kept %d (would be %d: %s; ALLOW_SETTLED_DECREASE off) | sensors %s",
-                    artifactCount, Math.max(0, newCount), reason, sensorString()));
-            loggedSkippedDecrease = true;
-        }
-    }
-
+    /** Sensors 1-4 as X (blocked) / - (clear); 2 and 3 are lower case since they're ignored. */
     private String sensorString() {
-        return (beamBreak1.isBlocked() ? "X" : "-") + (beamBreak2.isBlocked() ? "X" : "-")
-                + (beamBreak3.isBlocked() ? "X" : "-") + (beamBreak4.isBlocked() ? "X" : "-");
-    }
-
-    /** Number of blocked slot sensors counting down from the top (4, then 3, then 2). */
-    private int contiguousSlotsFromTop() {
-        if (!beamBreak4.isBlocked()) return 0;
-        if (!beamBreak3.isBlocked()) return 1;
-        if (!beamBreak2.isBlocked()) return 2;
-        return 3;
+        return (laser1.isBlocked() ? "X" : "-") + (beamBreak2.isBlocked() ? "x" : "-")
+                + (beamBreak3.isBlocked() ? "x" : "-") + (laser4.isBlocked() ? "X" : "-");
     }
 
     private static int clamp(int count) {
@@ -497,11 +480,9 @@ public class IntakeSubsystem extends SubsystemBase {
         updateStatusLight(artifactCount);
 
         if (DebugTelemetry.ENABLED) telemetry.addData("Artifact Count: ", artifactCount);
-        if (DebugTelemetry.ENABLED) telemetry.addData("Beam breaks 1/2/3/4: ",
-                (beamBreak1.isBlocked() ? "X" : "-")
-                        + (beamBreak2.isBlocked() ? "X" : "-")
-                        + (beamBreak3.isBlocked() ? "X" : "-")
-                        + (beamBreak4.isBlocked() ? "X" : "-"));
+        if (DebugTelemetry.ENABLED) telemetry.addData("Sensors 1/2/3/4: ", sensorString());
+        if (DebugTelemetry.ENABLED) telemetry.addData("Laser 1 / 4 (mm): ", String.format("%.0f (base %.0f) / %.0f (base %.0f)",
+                laser1.getDistanceMm(), laser1.getBaselineMm(), laser4.getDistanceMm(), laser4.getBaselineMm()));
         if (DebugTelemetry.ENABLED) telemetry.addData("Transfer Power: ", transferMotor.get());
         if (DebugTelemetry.ENABLED) telemetry.addData("Intake stall", intakeGuard.status());
     }
@@ -513,13 +494,14 @@ public class IntakeSubsystem extends SubsystemBase {
         intakeGuard.update(now, STALL_DETECTION_ENABLED && !launching);
     }
 
-    private boolean allSensorsClear() {
-        return !beamBreak1.isBlocked() && !beamBreak2.isBlocked() && !beamBreak3.isBlocked() && !beamBreak4.isBlocked();
+    /** Sensors 1 and 4 (2 and 3 are ignored for now). */
+    private boolean laserSensorsClear() {
+        return !laser1.isBlocked() && !laser4.isBlocked();
     }
 
     /**
      * End of a launch that timed out with artifacts still counted: if the transfer has fed forward
-     * with every sensor clear for EMPTY_CONFIRM_MS, the robot is really empty, so the count goes to 0
+     * with sensors 1 and 4 clear for EMPTY_CONFIRM_MS, the robot is really empty, so the count goes to 0
      * (the count was high). Returns true if it reset the count.
      */
     public boolean confirmEmptyAfterLaunch() {
@@ -690,7 +672,7 @@ public class IntakeSubsystem extends SubsystemBase {
         }
     }
 
-    // ---------------------------------------------------------------- debounced sensor
+    // ---------------------------------------------------------------- debounced digital sensor (2, 3)
 
     private static class BeamBreak {
         private final DigitalChannel channel;
