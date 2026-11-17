@@ -19,8 +19,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
  * Artifact counting
  * -----------------
  * Sensor 1 is the entrance, sensor 4 the top (just below the gate). Both are goBILDA laser distance
- * sensors in analog mode, each read by a LaserBallCounter (episode, seam and duration rules tuned in
- * laserAnalogExample). Count = artifacts that entered - artifacts that left:
+ * sensors in analog mode, each read by a LaserBallCounter (episode, seam and duration rules; thresholds
+ * re-tuned with LaserIntakeTuner). Count = artifacts that entered - artifacts that left:
  *  - Entered: balls sensor 1 sees arrive while the intake runs forward (not while launching: the
  *    launch kick shuffles the stack past sensor 1).
  *  - Ejected: balls that have passed sensor 1 while the intake runs in reverse (also unjams).

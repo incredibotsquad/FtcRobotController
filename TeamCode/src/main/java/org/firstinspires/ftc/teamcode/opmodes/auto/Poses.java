@@ -29,7 +29,11 @@ public class Poses {
 
     // ================================================================ red-frame values {x, y, headingDeg}
 
-    /** Robot in the red/audience corner, against both walls, facing the red wall. Matches RelocalizeCommand. */
+    /**
+     * Robot in the red/audience (GARDEN) corner, against both walls, facing the red alliance wall
+     * (length along the GARDEN tape). RelocalizeCommand's ALLIANCE_STANCE mode (operator left stick
+     * button) resets to this, rotated for blue; keep it equal to RelocalizeCommand.CORNER_*_OFFSET_IN.
+     */
     public static double[] RED_RELOCALIZE_STANCE = {8, 6.5, 180};
 
     // ---- start: touching the audience wall, or the wall opposite it

@@ -8,8 +8,8 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 
 /**
  * Counts balls passing a goBILDA Laser Distance Sensor in analog mode (0-3.3 V = 0-1000 mm).
- * The algorithm and starting values come from opmodes/tuning/laserAnalogExample (tests 2026-11-11);
- * LaserIntakeTuner re-tunes them from recorded intake trials.
+ * The algorithm and starting values come from the laser tests of 2026-11-11; LaserIntakeTuner
+ * re-tunes them from recorded intake trials.
  *
  * With nothing in front the sensor reads the background (baseline); a ball reads closer.
  * Depth = baseline - distance.

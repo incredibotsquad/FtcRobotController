@@ -128,6 +128,12 @@ public class Incredibot extends Robot {
         operatorGamepad.getGamepadButton(GamepadKeys.Button.LEFT_BUMPER)
                 .whenPressed(new RelocalizeCommand(odometrySubsystem, telemetry));
 
+        // Fallback when the pose is too far off for LB to pick the right corner (e.g. LB pressed
+        // mid-field): always resets to our own GARDEN-corner stance (Poses.RED_RELOCALIZE_STANCE,
+        // rotated for blue), whatever odometry says.
+        operatorGamepad.getGamepadButton(GamepadKeys.Button.LEFT_STICK_BUTTON)
+                .whenPressed(new RelocalizeCommand(odometrySubsystem, telemetry, RelocalizeCommand.Mode.ALLIANCE_STANCE));
+
         // Intake bar: A lowers it in front of the robot (FLOWER POLLEN pickup) / raises it again.
         // The TeleOp already holds it RAISED from INIT, so the first press lowers it.
         operatorGamepad.getGamepadButton(GamepadKeys.Button.A)

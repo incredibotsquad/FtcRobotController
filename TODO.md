@@ -5,7 +5,7 @@ Open work items. Check items off (or delete them) when done; add the date when y
 ## Laser ball counting (added 2026-11-16)
 
 Sensors 1 and 4 are now analog goBILDA laser distance sensors read by
-`subsystems/LaserBallCounter` (values tuned in `opmodes/tuning/laserAnalogExample`).
+`subsystems/LaserBallCounter` (values tuned in the 2026-11-11 laser tests; `LaserIntakeTuner` re-tunes them).
 Sensor 2 (beam break) corrects the count up to 4 when a ball rests there; sensor 3 is optional.
 
 - [ ] **Measure the laser baselines.** Enable `SensorTestOpMode` ("Test: Beam Break Sensors"),
@@ -53,9 +53,9 @@ In order:
 
 - [ ] **Measure the loop time.** Add a loop-time readout (average and max) to TeleOp and the
       autos; drive, intake and launch. Under ~10 ms: nothing to fix.
-- [ ] **Check whether it hurts.** Re-run the counter offline on `laserAnalogTrials.csv`
-      (`/sdcard/FIRST/data/`, timestamped samples per episode), keeping one sample per 15/20/25 ms,
-      and compare accuracy.
+- [ ] **Check whether it hurts.** `LaserIntakeTuner` already replays its trials
+      (`/sdcard/FIRST/data/laserIntakeTrials.csv`) at slower loop rates; compare its accuracy at
+      the measured loop time.
 - [ ] **If it does, speed up the loop.** Switch bulk caching to `MANUAL` with one `clearBulkCache()`
       per loop (in `Incredibot`, currently `AUTO`), skip unchanged motor/servo writes, poll the
       Limelight less often, keep `DebugTelemetry` off in matches.
@@ -65,9 +65,7 @@ In order:
 ## Before competition
 
 - [ ] **Re-add `@Disabled`** to `ServoPositionTuner`, `FlywheelTuner`, `FlywheelBenchTuner`,
-      `LaserIntakeTuner` and `laserAnalogExample` (Panels is illegal in matches, R704).
-- [ ] **Clean up `laserAnalogExample`.** Its header says sensor `"laser"` but it reads `ballSensor1`.
-      It has no `group`, and the class name starts lowercase.
+      and `LaserIntakeTuner` (Panels is illegal in matches, R704).
 - [ ] **Intake bar positions.** Retuned 2026-11-16 (`LEFT/RIGHT_RAISED/LOWERED`); CLAUDE.md still
       calls them placeholders. Confirm and update.
 - [x] **Intake bar naming (2026-11-16).** Fixed: formula `RAISED + f * (LOWERED - RAISED)`;
