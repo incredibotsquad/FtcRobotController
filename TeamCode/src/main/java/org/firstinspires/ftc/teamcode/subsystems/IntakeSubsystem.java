@@ -275,6 +275,29 @@ public class IntakeSubsystem extends SubsystemBase {
         transferMotor.set(0);
     }
 
+    /** Last power written to the intake motor (after the stall guard). For logging. */
+    public double getIntakeMotorPower() {
+        return intakeMotor.get();
+    }
+
+    /** Last power written to the transfer motor. For logging. */
+    public double getTransferMotorPower() {
+        return transferMotor.get();
+    }
+
+    /**
+     * Reads the four ball sensors directly, without advancing the counters, changing the count, or
+     * writing any output (the count light included). For INIT displays, where periodic() must not
+     * run. Returns {laser1 mm, beam 2 blocked (1/0), beam 3 blocked (1/0), laser4 mm}.
+     */
+    public double[] readRawSensorsForDisplay() {
+        return new double[]{
+                laser1.readDistanceMmNow(),
+                beamBreak2.readRaw() ? 1 : 0,
+                beamBreak3.readRaw() ? 1 : 0,
+                laser4.readDistanceMmNow()};
+    }
+
     /** The intake motor is currently reversing to clear a stall, or has given up after too many. */
     public boolean isUnjamming() {
         return intakeGuard.isOverriding();

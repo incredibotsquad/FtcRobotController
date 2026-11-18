@@ -182,6 +182,16 @@ public class LaunchSubsystem extends SubsystemBase {
         runFlywheel(targetRPM);
     }
 
+    /**
+     * Same controller as updateFlywheel(rpm), with gains passed in instead of read from FLYWHEEL_*
+     * or the gain table. For test OpModes (CameraLaunchTuner) that must freeze a gain set for a
+     * trial without editing the shared static tuning values. Match code doesn't call this.
+     */
+    public void updateFlywheelWithGains(double targetRPM, double p, double i, double d, double ks, double kv) {
+        applyGains(p, i, d, ks, kv);
+        runFlywheel(targetRPM);
+    }
+
     /** Usable rows: the shortest of the GAIN_TABLE_* arrays (a mismatch shows up in telemetry). */
     private static int gainTableRows() {
         return Math.min(GAIN_TABLE_DISTANCES_IN.length,

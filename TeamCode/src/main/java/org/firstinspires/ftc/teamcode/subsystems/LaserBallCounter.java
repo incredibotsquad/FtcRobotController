@@ -293,6 +293,11 @@ public class LaserBallCounter {
         return now - stateSinceMs;
     }
 
+    /** Reads the sensor now without advancing the counter (for INIT displays). */
+    public double readDistanceMmNow() {
+        return sensor != null ? readMm() : lastMm;
+    }
+
     public double getDistanceMm() {
         return lastMm;
     }

@@ -1,0 +1,5 @@
+# Camera capture and frame extraction
+opencv-python>=4.9
+# Optional: only needed for the matching --reviewer (versions current on 2026-11-17)
+openai>=3.54,<4
+anthropic>=2.10,<3

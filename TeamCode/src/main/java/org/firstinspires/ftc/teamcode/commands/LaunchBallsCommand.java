@@ -108,6 +108,12 @@ public class LaunchBallsCommand extends CommandBase {
 
     private enum State { FIRING, DONE }
 
+    /** Why the last launch ended (read by test OpModes; doesn't change behavior). */
+    public enum EndReason { RUNNING, NOTHING_LOADED, EMPTY, MAX_FIRE_MS, SINGLE_BALL_CLEARED, INTERRUPTED }
+
+    private EndReason endReason = EndReason.RUNNING;
+    private boolean emptyConfirmedAtTimeout = false;
+
     private final LaunchGateSubsystem gate;
     private final IntakeSubsystem intake;
     private final DriveSubsystem drive;
@@ -150,10 +156,13 @@ public class LaunchBallsCommand extends CommandBase {
 
     @Override
     public void initialize() {
+        endReason = EndReason.RUNNING;
+        emptyConfirmedAtTimeout = false;
         emptySinceMs = -1;
         countAtStart = intake.getArtifactCount();
         if (countAtStart == 0) {
             Log.i("LaunchBallsCommand", "No artifacts loaded, nothing to launch");
+            endReason = EndReason.NOTHING_LOADED;
             enter(State.DONE);
             return;
         }
@@ -197,14 +206,19 @@ public class LaunchBallsCommand extends CommandBase {
             // LAST-BALL KICK: now handled as a lone ball (singleBall = true) from the next loop.
         } else if (intake.getArtifactCount() == 0) {
             if (emptySinceMs < 0) emptySinceMs = now;
-            if (now - emptySinceMs >= CLEAR_MS) enter(State.DONE);
+            if (now - emptySinceMs >= CLEAR_MS) {
+                endReason = EndReason.EMPTY;
+                enter(State.DONE);
+            }
         } else {
             emptySinceMs = -1;
         }
 
         if (state == State.FIRING && now - stateStartMs >= MAX_FIRE_MS) {
             Log.w("LaunchBallsCommand", "Hit MAX_FIRE_MS with count " + intake.getArtifactCount());
-            intake.confirmEmptyAfterLaunch(); // count too high? sensors clear while feeding -> 0
+            // count too high? sensors clear while feeding -> 0
+            emptyConfirmedAtTimeout = intake.confirmEmptyAfterLaunch();
+            endReason = EndReason.MAX_FIRE_MS;
             enter(State.DONE);
         }
     }
@@ -278,7 +292,10 @@ public class LaunchBallsCommand extends CommandBase {
         } else {
             sensor4BlockedSinceMs = -1;
             if (sensor4ClearSinceMs < 0) sensor4ClearSinceMs = now;
-            if (now - sensor4ClearSinceMs >= CLEAR_MS) enter(State.DONE);
+            if (now - sensor4ClearSinceMs >= CLEAR_MS) {
+                endReason = EndReason.SINGLE_BALL_CLEARED;
+                enter(State.DONE);
+            }
         }
     }
 
@@ -309,6 +326,7 @@ public class LaunchBallsCommand extends CommandBase {
 
     @Override
     public void end(boolean interrupted) {
+        if (interrupted && endReason == EndReason.RUNNING) endReason = EndReason.INTERRUPTED;
         intake.clearLaunchTransferOverride();
         intake.clearLaunchIntakeOverride();
         gate.closeGate();
@@ -318,6 +336,15 @@ public class LaunchBallsCommand extends CommandBase {
     @Override
     public boolean isFinished() {
         return state == State.DONE;
+    }
+
+    public EndReason getEndReason() {
+        return endReason;
+    }
+
+    /** At MAX_FIRE_MS: confirmEmptyAfterLaunch() reset the count to 0. */
+    public boolean wasEmptyConfirmedAtTimeout() {
+        return emptyConfirmedAtTimeout;
     }
 
     private void enter(State next) {

@@ -1,0 +1,18 @@
+# Local credentials (copy .env.example to .env)
+.env
+.env.*
+!.env.example
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local tuning data: recordings, telemetry, reviews, spot profiles
+runs/
+profiles/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
