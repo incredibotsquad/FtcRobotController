@@ -53,7 +53,9 @@ public class Poses {
     /** GARDEN (red: tape along the audience wall, x 0-23, 4 POLLEN from the corner). */
 
     public static double[] RED_GARDEN_APPROACH = {8, 24, 270};
-    public static double[] RED_GARDEN_INTAKE = {8, 15, 270};
+    // No bar at the GARDEN: drive 4 in closer (y 15 -> 11) so the intake itself reaches the POLLEN
+    // (2.8 in balls touching the wall, y 0-2.8). Front edge ends ~2 in off the wall for an 18 in robot.
+    public static double[] RED_GARDEN_INTAKE = {8, 11, 270};
 
     /** FLOWER on the alliance wall (red: (0, 48)). */
     public static double[] RED_RIGHT_FLOWER_APPROACH = {24, 48, 180};
@@ -64,7 +66,7 @@ public class Poses {
     public static double[] RED_LEFT_FLOWER_INTAKE = {48, 130, 90};
 
     /** Whether each intake point lowers the intake bar (and backs out to the approach pose before raising it). */
-    public static boolean GARDEN_NEEDS_BAR = true;
+    public static boolean GARDEN_NEEDS_BAR = false; // no bar at the GARDEN (so no back-out or rocking there)
     public static boolean WALL_FLOWER_NEEDS_BAR = true;
     public static boolean SIDE_FLOWER_NEEDS_BAR = true;
 
