@@ -70,7 +70,7 @@ public class LaunchBallsCommand extends CommandBase {
      * lone-ball or last-ball handling), overriding KICK_ENABLED and LAST_BALL_KICK_ENABLED.
      * false = those two flags decide. Read when the launch starts.
      */
-    public static boolean SIMPLE_LAUNCH = true;
+    public static boolean SIMPLE_LAUNCH = false; // kick on (2026-11-18): reverse briefly (by count), then feed
 
     /** Reverse-then-forward run-up at the start of every launch. false = straight forward feed. */
     public static boolean KICK_ENABLED = true;
