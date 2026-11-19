@@ -99,8 +99,7 @@ rows within 3 in of the robot. Press gamepad 1 Y at the end and copy the logged 
 - [x] **47 in** row: 2607 RPM, P 0.0015, kV 0.0003156 (tested at 60, 8 = 47.5 in: 2614 RPM, 2026-11-18).
 - [x] **52 in** row: 2698 RPM, P 0.001, kV 0.0003102 (retuned at 41.5, 8 = 51.0 in: 2679 RPM, 2026-11-19).
 - [x] **66 in** row: 2928 RPM, P 0.0005, kV 0.00031 (tested at 12, 12 = 64.8 in: 2905 RPM, 2026-11-19).
-- [ ] **88 in** row (3170, P 0.035 placeholders). Only reachable at (135, 9); consider moving it to ~69 in
-      (red corner, 9, 9).
+- [x] **88 in** row: 3195 RPM, P 0.0015, kV 0.00032419 (not retuned; held speed fine) (tested at 132, 12 = 84.1 in: 3148 RPM, 2026-11-19).
 - [ ] Check the extrapolated close shots: auto spots at ~43.5 in (RIGHT/LEFT_SPOT_2, about 2561 RPM) and
       ~32 in (LEFT_SPOT_3, about 2409 RPM). Add a row there if they miss.
 - [ ] kS is 0.16 in every row; only re-fit with steady-state data at two speeds.
