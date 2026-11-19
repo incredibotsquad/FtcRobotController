@@ -71,6 +71,15 @@ public class FlywheelTuner extends LinearOpMode {
      * false = keep the stored pose from the last OpMode, as TeleOp does.
      */
     public static boolean START_AT_RIGHT_SPOT_1 = false;
+    /**
+     * Start pose set by hand (red-frame inches / degrees, robot center), e.g. 60, 8, 90. When
+     * USE_START_POSE is true it wins over START_AT_RIGHT_SPOT_1 and the stored pose. Edit these in
+     * Panels before or during INIT: a change during INIT resets the pose again.
+     */
+    public static boolean USE_START_POSE = false;
+    public static double START_X = 60;
+    public static double START_Y = 8;
+    public static double START_HEADING_DEG = 90;
     public static double RPM_STEP = 25;
     /** A drop of more than this below the recent peak counts as a shot. */
     public static double SHOT_DETECT_DROP_RPM = 75;
@@ -78,6 +87,17 @@ public class FlywheelTuner extends LinearOpMode {
     public static double SHOT_REARM_RPM = 30;
 
     private static final String TAG = "FlywheelTuner";
+
+    private double appliedX = Double.NaN, appliedY = Double.NaN, appliedHeading = Double.NaN;
+
+    /** Resets odometry (and CrossOpModeStorage) to START_X / START_Y / START_HEADING_DEG. */
+    private void applyStartPose(Incredibot incredibot) {
+        appliedX = START_X;
+        appliedY = START_Y;
+        appliedHeading = START_HEADING_DEG;
+        incredibot.odometrySubsystem.resetPose(START_X, START_Y, START_HEADING_DEG);
+        Log.i(TAG, String.format(java.util.Locale.US, "start pose set by hand: (%.1f, %.1f, %.0f deg)", START_X, START_Y, START_HEADING_DEG));
+    }
 
     private final double[] stepSizes = {0.1, 0.01, 0.001, 0.0001, 0.00001};
     private int stepIndex = 2;
@@ -112,7 +132,9 @@ public class FlywheelTuner extends LinearOpMode {
                 incredibot.limelightSubsystem, incredibot.odometrySubsystem, incredibot.driveSubsystem);
 
         incredibot.intakeBarSubsystem.raise();
-        if (START_AT_RIGHT_SPOT_1) {
+        if (USE_START_POSE) {
+            applyStartPose(incredibot);
+        } else if (START_AT_RIGHT_SPOT_1) {
             // Place the robot on RIGHT spot 1 (red: Poses.RED_LAUNCH_AUDIENCE_CELL_1, rotated for blue).
             Pose start = new Poses(CrossOpModeStorage.allianceColor == AllianceColors.RED).launch(LaunchPoint.RIGHT_SPOT_1);
             incredibot.odometrySubsystem.resetPose(start.x(), start.y(), Math.toDegrees(start.heading()));
@@ -123,6 +145,10 @@ public class FlywheelTuner extends LinearOpMode {
         if (!Incredibot.DRIVE_ONLY_MODE) relocalize.schedule();
 
         while (opModeInInit()) {
+            // Start pose typed into Panels during INIT: apply it as soon as it changes.
+            if (USE_START_POSE && (START_X != appliedX || START_Y != appliedY || START_HEADING_DEG != appliedHeading)) {
+                applyStartPose(incredibot);
+            }
             CommandScheduler.getInstance().run();
             panels.addLine("FlywheelTuner: runs the real TeleOp. Flywheel spins up on START.");
             if (Incredibot.DRIVE_ONLY_MODE) panels.addLine("WARNING: DRIVE_ONLY_MODE is on, the launcher won't run.");
