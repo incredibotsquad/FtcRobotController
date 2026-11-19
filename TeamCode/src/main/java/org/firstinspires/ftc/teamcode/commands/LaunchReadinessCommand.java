@@ -54,7 +54,7 @@ public class LaunchReadinessCommand extends CommandBase {
      * waiting for the robot to get into range).
      */
     public static double[] SHOT_DISTANCES_IN = {42, 43.5, 44, 47, 48.75, 52, 66, 88};
-    public static double[] SHOT_RPMS = {2515, 2515, 2515, 2668, 2668, 2731, 2878, 3170};
+    public static double[] SHOT_RPMS = {2515, 2515, 2515, 2668, 2668, 2656, 2878, 3170}; // 52 in: 2731 -> 2656 (FlywheelTuner, 2026-11-18)
     /** Out-of-table distance already logged (logs once each time the robot leaves the table range). */
     private boolean loggedOutOfRange = false;
 
