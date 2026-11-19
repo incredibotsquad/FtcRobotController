@@ -63,7 +63,7 @@ public class LaunchBallsCommand extends CommandBase {
     /** Keep the gate open this long after the last artifact is gone so it clears the flywheel. */
     public static long CLEAR_MS = 250;
     /** Hard cap on how long the gate stays open, in case the artifact count misses an exit. */
-    public static long MAX_FIRE_MS = 3000;
+    public static long MAX_FIRE_MS = 1500;
 
     /**
      * Master switch: true = plain forward feed for any artifact count (no transfer reverse, no

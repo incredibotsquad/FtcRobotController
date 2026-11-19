@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.pedro;
 import com.pedropathing.algorithm.Foresight;
 import com.pedropathing.algorithm.ForesightConfig;
 import com.pedropathing.controllers.Controller;
+import com.pedropathing.drivetrain.Drivetrain;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.math.Matrix;
 import com.pedropathing.math.Vector2D;
@@ -19,9 +20,17 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 public class Constants {
 
     public static Follower create(HardwareMap h) {
+        return create(h, d -> d);
+    }
+
+    /**
+     * Same as {@link #create(HardwareMap)}, but lets the caller wrap the Mecanum drivetrain
+     * (DriveSubsystem uses this to cap motor power during the launch hold).
+     */
+    public static Follower create(HardwareMap h, java.util.function.UnaryOperator<Drivetrain> wrapDrivetrain) {
         return new Follower(
                 new PinpointLocalizer(h, localizerConfig),
-                new Mecanum(h, drivetrainConfig),
+                wrapDrivetrain.apply(new Mecanum(h, drivetrainConfig)),
                 new Foresight(foresightConfig)
         );
     }

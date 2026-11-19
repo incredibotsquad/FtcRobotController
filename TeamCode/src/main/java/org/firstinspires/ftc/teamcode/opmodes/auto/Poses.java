@@ -48,12 +48,19 @@ public class Poses {
     public static double[] RED_LAUNCH_AUDIENCE_CELL_2 = {30, 24, 90};   // ~53 in
     public static double[] RED_LAUNCH_FAR_CELL_1 = {40, 134, 270};       // ~48 in
     public static double[] RED_LAUNCH_FAR_CELL_2 = {30.5, 120, 270};       // ~53 in
+    // LEFT spot 3 has no array of its own: x, y from RED_LEFT_FLOWER_APPROACH, heading from
+    // RED_LAUNCH_FAR_CELL_2 (faces the HIVE so the Limelight can see it; tune those two). ~32 in from
+    // the CELL, closer than the 46 in shot table, so the launcher uses the table's nearest RPM.
+    /** LEFT spot 4: DynamicAuto's final launch, after the last intake point (straight line, linear heading). */
+    public static double[] RED_LAUNCH_FAR_CELL_4 = {16, 116, 315};       // ~51 in
 
     // ---- intake points: drive to the approach pose, then straight in to the intake pose
     /** GARDEN (red: tape along the audience wall, x 0-23, 4 POLLEN from the corner). */
 
     public static double[] RED_GARDEN_APPROACH = {8, 24, 270};
-    public static double[] RED_GARDEN_INTAKE = {8, 15, 270};
+    // No bar at the GARDEN: drive 4 in closer (y 15 -> 11) so the intake itself reaches the POLLEN
+    // (2.8 in balls touching the wall, y 0-2.8). Front edge ends ~2 in off the wall for an 18 in robot.
+    public static double[] RED_GARDEN_INTAKE = {8, 11, 270};
 
     /** FLOWER on the alliance wall (red: (0, 48)). */
     public static double[] RED_RIGHT_FLOWER_APPROACH = {24, 48, 180};
@@ -64,7 +71,7 @@ public class Poses {
     public static double[] RED_LEFT_FLOWER_INTAKE = {48, 130, 90};
 
     /** Whether each intake point lowers the intake bar (and backs out to the approach pose before raising it). */
-    public static boolean GARDEN_NEEDS_BAR = true;
+    public static boolean GARDEN_NEEDS_BAR = false; // no bar at the GARDEN (so no back-out or rocking there)
     public static boolean WALL_FLOWER_NEEDS_BAR = true;
     public static boolean SIDE_FLOWER_NEEDS_BAR = true;
 
@@ -81,15 +88,17 @@ public class Poses {
     public static double[] RED_CONTROL_LAUNCH_AUDIENCE_CELL_2 = {30, 36, 0};
     public static double[] RED_CONTROL_LAUNCH_FAR_CELL_1 = {48, 114, 0};
     public static double[] RED_CONTROL_LAUNCH_FAR_CELL_2 = {30, 108, 0};
+    /** Only used if LEFT spot 4 is added to a plan as a spline; the automatic final launch drives a straight line. */
+    public static double[] RED_CONTROL_LAUNCH_FAR_CELL_4 = {24, 108, 0};
     public static double[] RED_CONTROL_GARDEN = {40, 24, 0};
-    public static double[] RED_CONTROL_WALL_FLOWER = {32.58, 51.36, 0};
+    public static double[] RED_CONTROL_WALL_FLOWER = {2.58, 51.36, 0}; // was {32.58, 51.36}: x -30, the path from LEFT spot 3 hit the HIVE
     public static double[] RED_CONTROL_SIDE_FLOWER = {54.85, 109.79, 0};
     /**
      * Moving between launch points on opposite sides of the HIVE (audience-side CELL <-> far-side
      * CELL), from any spot to any spot, picked in INIT. AROUND: a spline through this control
      * point, past the HIVE on the alliance-wall side.
      */
-    public static double[] RED_CONTROL_AROUND_HIVE = {24, 72, 0};
+    public static double[] RED_CONTROL_AROUND_HIVE = {16, 88, 0}; // was {24, 72}: x -8, y +16, away from the HIVE
     /**
      * THROUGH: straight lines via these two waypoints {x, y} (the robot drives to each one), under
      * the HIVE between them. Used in travel order, the one nearer the start first, so it works in
@@ -123,14 +132,29 @@ public class Poses {
         if (p.side == Side.RIGHT) {
             return of(p.spot == 1 ? RED_LAUNCH_AUDIENCE_CELL_1 : RED_LAUNCH_AUDIENCE_CELL_2);
         }
-        return of(p.spot == 1 ? RED_LAUNCH_FAR_CELL_1 : RED_LAUNCH_FAR_CELL_2);
+        switch (p.spot) {
+            case 1: return of(RED_LAUNCH_FAR_CELL_1);
+            case 2: return of(RED_LAUNCH_FAR_CELL_2);
+            case 3: return of(launchFarCell3()); // rear-wall FLOWER approach x, y; LEFT spot 2 heading
+            default: return of(RED_LAUNCH_FAR_CELL_4);
+        }
+    }
+
+    /** LEFT spot 3 {x, y, headingDeg}: the rear-wall FLOWER approach position, facing like LEFT spot 2. */
+    private static double[] launchFarCell3() {
+        return new double[] {RED_LEFT_FLOWER_APPROACH[0], RED_LEFT_FLOWER_APPROACH[1], RED_LAUNCH_FAR_CELL_2[2]};
     }
 
     public Pose launchControl(LaunchPoint p) {
         if (p.side == Side.RIGHT) {
             return of(p.spot == 1 ? RED_CONTROL_LAUNCH_AUDIENCE_CELL_1 : RED_CONTROL_LAUNCH_AUDIENCE_CELL_2);
         }
-        return of(p.spot == 1 ? RED_CONTROL_LAUNCH_FAR_CELL_1 : RED_CONTROL_LAUNCH_FAR_CELL_2);
+        switch (p.spot) {
+            case 1: return of(RED_CONTROL_LAUNCH_FAR_CELL_1);
+            case 2: return of(RED_CONTROL_LAUNCH_FAR_CELL_2);
+            case 3: return of(RED_CONTROL_SIDE_FLOWER);
+            default: return of(RED_CONTROL_LAUNCH_FAR_CELL_4);
+        }
     }
 
     /** Spline control point for a move between launch points AROUND the HIVE. */
