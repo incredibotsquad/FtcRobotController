@@ -69,7 +69,7 @@ public class FlywheelTuner extends LinearOpMode {
      * true = INIT sets the pose to launch point RIGHT_SPOT_1 (place the robot there);
      * false = keep the stored pose from the last OpMode, as TeleOp does.
      */
-    public static boolean START_AT_RIGHT_SPOT_1 = true;
+    public static boolean START_AT_RIGHT_SPOT_1 = false;
     public static double RPM_STEP = 25;
     /** A drop of more than this below the recent peak counts as a shot. */
     public static double SHOT_DETECT_DROP_RPM = 75;
