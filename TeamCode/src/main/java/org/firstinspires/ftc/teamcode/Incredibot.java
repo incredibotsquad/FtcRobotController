@@ -156,6 +156,10 @@ public class Incredibot extends Robot {
 
         initCommon();
 
+        // Auto always aims with the turret (and uses the distance-based RPM): the lock is a TeleOp
+        // option only (operator START). It defaults to locked, so clear it here.
+        launchSubsystem.setLaunchReadinessLock(false);
+
         // G304.G: every robot starts the match with exactly 4 POLLEN pre-loads. Without this the
         // count starts at 0 and SmartIntakeCommand runs the intake until the jam check marks it full.
         intakeSubsystem.setArtifactCount(IntakeSubsystem.MAX_ARTIFACTS);
