@@ -117,7 +117,7 @@ are on. Most-used spots first (red-frame distances to their CELL):
 ## Before competition
 
 - [ ] **Re-add `@Disabled`** to `ServoPositionTuner`, `FlywheelTuner`, `FlywheelBenchTuner`,
-      `LaserIntakeTuner` and `CameraLaunchTuner` (Panels is illegal in matches, R704).
+      `LaserIntakeTuner`, `CameraLaunchTuner` and `IntakeTransferRattleTest` (Panels is illegal in matches, R704).
 - [ ] **Continue camera tuning at `rightstart` (2026-11-18).** Resume run `20261118-001849-rightstart`
       (validation streak 1/3, starting settings s-06f97d39e66a, 2 calibration examples saved). Watch for
       a late 4th ball coming in under: if it keeps happening, fix the dead zone (or try the last-ball
