@@ -375,6 +375,13 @@ public class CameraLaunchTuner extends LinearOpMode {
                     + " must confirm every ball left, or check the dead zone and press X).";
             return;
         }
+        if (intake.getArtifactCount() == 0 && (intake.isSensor1Blocked() || intake.isSensor4Blocked())) {
+            message = String.format(Locale.US, "Can't arm: sensor %s reads blocked with the count at 0 (laser 1 %.0f/%.0f mm, laser 4 %.0f/%.0f mm, reading/baseline)."
+                            + " Remove any ball there, or check the baseline; then try A again.",
+                    intake.isSensor1Blocked() ? "1" : "4", intake.getSensor1DistanceMm(), intake.getSensor1BaselineMm(),
+                    intake.getSensor4DistanceMm(), intake.getSensor4BaselineMm());
+            return;
+        }
         String err = current.validate();
         if (!err.isEmpty()) {
             message = "Can't arm: settings invalid (" + err + "). Send settings from the laptop"

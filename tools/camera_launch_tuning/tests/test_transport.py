@@ -98,3 +98,37 @@ class LocalContract(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Reconnect(unittest.TestCase):
+    def test_reconnects_once_after_lost_device(self):
+        calls = []
+
+        def runner(cmd, capture_output, text, timeout):
+            calls.append(cmd)
+            if cmd[1] == "connect":
+                return subprocess.CompletedProcess(cmd, 0, stdout="connected to 192.168.43.1:5555", stderr="")
+            if len([c for c in calls if "cat" in c]) == 1:
+                return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="error: no devices/emulators found")
+            return subprocess.CompletedProcess(cmd, 0, stdout=json.dumps({"protocol": 1}), stderr="")
+
+        t = AdbTransport(runner=runner, connect="192.168.43.1:5555")
+        self.assertEqual(t.read_status()["protocol"], 1)
+        self.assertEqual(calls[1], ["adb", "connect", "192.168.43.1:5555"])
+        self.assertEqual(calls[0][1:3], ["-s", "192.168.43.1:5555"])
+
+    def test_no_route_gives_local_network_hint(self):
+        def runner(cmd, capture_output, text, timeout):
+            if cmd[1] == "connect":
+                return subprocess.CompletedProcess(cmd, 1, stdout="failed to connect to '192.168.43.1:5555': No route to host", stderr="")
+            return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="error: no devices/emulators found")
+
+        with self.assertRaises(TransportError) as cm:
+            AdbTransport(runner=runner, connect="192.168.43.1:5555").read_status()
+        self.assertIn("Local Network", str(cm.exception))
+
+    def test_without_connect_errors_pass_through(self):
+        def runner(cmd, capture_output, text, timeout):
+            return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="error: no devices/emulators found")
+        with self.assertRaises(TransportError):
+            AdbTransport(runner=runner).read_status()

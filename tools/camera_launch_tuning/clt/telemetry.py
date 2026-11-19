@@ -15,7 +15,7 @@ DEFAULT_THRESHOLDS = {
     "steady_window_ms": 300,      # window before the gate opens used for steady-state error
     "steady_tolerance_rpm": 40,   # |mean error| at or below this = speed tracking is good
     "mismatch_tolerance_rpm": 60, # left vs right encoder disagreement
-    "dip_detect_rpm": 60,         # a drop this far below the running peak = one ball's dip
+    "dip_detect_rpm": 60,         # a drop this far below the TARGET = one ball's dip (encoder noise is ~+/-20)
     "recovery_ok_ms": 300,        # back within steady_tolerance of target this fast = recovered
 }
 
@@ -81,13 +81,11 @@ def compute_metrics(rows, summary, thresholds=None):
         stop = end if end is not None else fire + 10000
         burst = [r for r in rows if fire <= r["t_wall_ms"] <= stop + 1500]
         dips = []
-        peak = None
         dip = None
         for r in burst:
             rpm, t = r["mean_rpm"], r["t_wall_ms"]
             if dip is None:
-                peak = rpm if peak is None else max(peak, rpm)
-                if peak - rpm >= th["dip_detect_rpm"]:
+                if target - rpm >= th["dip_detect_rpm"]:
                     dip = {"start_ms": t - fire, "min_rpm": rpm, "min_ms": t - fire, "recovery_ms": None}
             else:
                 if rpm < dip["min_rpm"]:
@@ -95,7 +93,7 @@ def compute_metrics(rows, summary, thresholds=None):
                 if abs(rpm - target) <= th["steady_tolerance_rpm"]:
                     dip["recovery_ms"] = (t - fire) - dip["start_ms"]
                     dips.append(dip)
-                    dip, peak = None, rpm
+                    dip = None
         if dip is not None:
             dips.append(dip)  # never recovered within the log
         for d in dips:

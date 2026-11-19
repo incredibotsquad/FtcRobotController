@@ -8,6 +8,12 @@ Sensors 1 and 4 are now analog goBILDA laser distance sensors read by
 `subsystems/LaserBallCounter` (values tuned in the 2026-11-11 laser tests; `LaserIntakeTuner` re-tunes them).
 Sensor 2 (beam break) corrects the count up to 4 when a ball rests there; sensor 3 is optional.
 
+- [ ] **Check the baseline-jump fix (2026-11-17).** A single far reading right after START (intake bar
+      moving) moved sensor 1's baseline 109 -> 120 mm, so the background then read "blocked" and the
+      jam rule set the count to 4 with one ball. `LaserBallCounter.BASELINE_JUMP_MS` (250 ms) now makes a
+      farther reading persist before the baseline moves. Watch the `LaserBallCounter` "baseline ... ->"
+      log after START in TeleOp and the tuner; if it still jumps, look at what's in the laser's view
+      when the bar moves.
 - [ ] **Measure the laser baselines.** Enable `SensorTestOpMode` ("Test: Beam Break Sensors"),
       keep both lasers clear, and set `IntakeSubsystem.SENSOR1_BASELINE_MM` and
       `SENSOR4_BASELINE_MM` to the distances shown. Until then each sensor takes its first INIT
@@ -62,10 +68,38 @@ In order:
 - [ ] **Last resort:** read the two lasers on a dedicated ~5 ms background thread and run the
       counters there (more complex, adds hub traffic).
 
+## Flywheel consistency (added 2026-11-17, POLLEN only)
+
+Hardware: 2x Rhino 30A + 4 steel flywheels, 1:1 belt, 2 free hood rollers, 6 mm compression.
+Estimate: ~2-3% RPM drop per ball, ~20-30 ms full-power recovery. Balls stream with no metering.
+
+- [ ] **Build a target** at CELL distance/height; mark impacts by shot index (1-4) for 1/2/3/4-ball
+      loads. Spread of impact height per index is the metric.
+- [ ] **Log at loop rate** during bursts: flywheel RPM, battery voltage, sensor 4 exit timestamps.
+      Get per-ball RPM dip, recovery time, ball spacing, and the sensor 4 -> wheel contact delay.
+- [ ] **Measure the inertia** (power step, angular acceleration); estimate ~3650 g·cm².
+- [ ] **Set the spacing with transfer power** (`SmartIntakeCommand.LAUNCH_TRANSFER_POWER`): spacing
+      >= 2-3x recovery, without the last ball stalling in the dead zone.
+- [ ] **Pre-ball boost:** full power timed from sensor 4 + the measured delay, for about the recovery time.
+- [ ] **Ball-1 offset** if shot 1 still hits low (rollers at rest, starts from rest at the gate).
+- [ ] **Dead zone:** look at a driven roller/flap so the last/lone ball arrives at transfer speed.
+- [ ] **Hood rollers:** light and free-spinning (spin by hand, coast evenly).
+- [ ] **Caliper 10-20 POLLEN**; check the 30A tread each event; buy spare 30A wheels.
+- [ ] **Repeat at 12.0 / 12.8 / 13.5 V**, then rebuild `SHOT_DISTANCES_IN`/`SHOT_RPMS` from burst means.
+- [ ] Optional: A/B test 70A Rhino (3601) wheels (both wheels, compression re-set).
+
 ## Before competition
 
 - [ ] **Re-add `@Disabled`** to `ServoPositionTuner`, `FlywheelTuner`, `FlywheelBenchTuner`,
-      and `LaserIntakeTuner` (Panels is illegal in matches, R704).
+      `LaserIntakeTuner` and `CameraLaunchTuner` (Panels is illegal in matches, R704).
+- [ ] **Continue camera tuning at `rightstart` (2026-11-18).** Resume run `20261118-001849-rightstart`
+      (validation streak 1/3, starting settings s-06f97d39e66a, 2 calibration examples saved). Watch for
+      a late 4th ball coming in under: if it keeps happening, fix the dead zone (or try the last-ball
+      kick) before tuning RPM further.
+- [ ] **CameraLaunchTuner first run (2026-11-17).** On the robot: check INIT shows sensors with nothing
+      moving, both flywheel encoders read sensibly, the laptop handshake fires only when stable, the
+      refill is refused after a burst until review/X, and LT clearing works. Then a manual-review run
+      at one spot before trying `--reviewer openai/anthropic`. Promote validated values by hand (`export`).
 - [ ] **Intake bar positions.** Retuned 2026-11-16 (`LEFT/RIGHT_RAISED/LOWERED`); CLAUDE.md still
       calls them placeholders. Confirm and update.
 - [x] **Intake bar naming (2026-11-16).** Fixed: formula `RAISED + f * (LOWERED - RAISED)`;

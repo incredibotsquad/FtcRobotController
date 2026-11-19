@@ -44,6 +44,13 @@ public class LaserBallCounter {
     public static long LONG_EPISODE_MS = 115;
     /** Baseline tracking while clear: fraction of the error applied per update. */
     public static double BASELINE_TRACK_RATE = 0.002;
+    /**
+     * A clear reading farther than the baseline (by more than ENTER_DEPTH_MM) must persist this long
+     * before the baseline jumps to it. A single stray far sample (seen right after START, when the
+     * intake bar moves) used to move the baseline 10+ mm out, after which the normal background read
+     * as "blocked" forever and the jam rule called the robot full with one ball inside.
+     */
+    public static long BASELINE_JUMP_MS = 250;
 
     private static final double MAX_VOLTS = 3.3;
     private static final double MAX_DISTANCE_MM = 1000.0;
@@ -99,6 +106,8 @@ public class LaserBallCounter {
     private double baselineMm;
     private double lastMm;
     private long lastUpdateMs = -1;
+    /** Since when clear readings have been farther than the baseline (see BASELINE_JUMP_MS); -1 = not now. */
+    private long fartherSinceMs = -1;
 
     private boolean inEpisode;
     private long episodeStartMs;
@@ -164,14 +173,21 @@ public class LaserBallCounter {
 
         if (!inEpisode) {
             if (depth >= p.enterDepthMm) {
+                fartherSinceMs = -1;
                 startEpisode(mm, now);
             } else if (-depth > p.enterDepthMm) {
-                if (sensor != null) {
-                    Log.i("LaserBallCounter", String.format("%s: baseline %.1f -> %.1f mm (reading farther than baseline)",
-                            name, baselineMm, mm));
+                // Farther than the baseline: only trust it once it persists (a stray sample is ignored).
+                if (fartherSinceMs < 0) fartherSinceMs = now;
+                if (now - fartherSinceMs >= BASELINE_JUMP_MS) {
+                    if (sensor != null) {
+                        Log.i("LaserBallCounter", String.format("%s: baseline %.1f -> %.1f mm (reading farther than baseline for %d ms)",
+                                name, baselineMm, mm, now - fartherSinceMs));
+                    }
+                    baselineMm = mm;
+                    fartherSinceMs = -1;
                 }
-                baselineMm = mm;
             } else {
+                fartherSinceMs = -1;
                 baselineMm += (mm - baselineMm) * p.baselineTrackRate;
             }
             return;

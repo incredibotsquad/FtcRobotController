@@ -6,12 +6,14 @@ is mapped onto those timestamps with the clock offset measured over ADB.
 """
 
 import csv
+import os
 import threading
 import time
 from pathlib import Path
 
 
 def _cv2():
+    os.environ.setdefault("OPENCV_LOG_LEVEL", "ERROR")  # hide backend warnings from device probing
     try:
         import cv2  # noqa: PLC0415
     except ImportError as e:
@@ -20,14 +22,19 @@ def _cv2():
 
 
 def list_cameras(max_index=6):
+    """Cameras that open and return a frame. Device numbers are contiguous, so the scan stops at the
+    first number that doesn't open (fewer "out device of bound" messages from OpenCV)."""
     cv2 = _cv2()
     found = []
     for i in range(max_index):
         cap = cv2.VideoCapture(i)
-        ok, frame = cap.read() if cap.isOpened() else (False, None)
+        opened = cap.isOpened()
+        ok, frame = cap.read() if opened else (False, None)
+        cap.release()
+        if not opened:
+            break
         if ok and frame is not None:
             found.append({"index": i, "width": frame.shape[1], "height": frame.shape[0]})
-        cap.release()
     return found
 
 

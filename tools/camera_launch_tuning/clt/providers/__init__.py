@@ -13,7 +13,10 @@ def make_reviewer(name, **kwargs):
     if name == "anthropic":
         from .anthropic_provider import AnthropicReviewer
         return AnthropicReviewer(**kwargs)
+    if name == "claude-cli":
+        from .claude_cli import ClaudeCliReviewer
+        return ClaudeCliReviewer(**kwargs)
     if name == "agent-file":
         from .agent_file import AgentFileReviewer
         return AgentFileReviewer(**kwargs)
-    raise ValueError(f"unknown reviewer {name!r} (manual, openai, anthropic, agent-file)")
+    raise ValueError(f"unknown reviewer {name!r} (manual, openai, anthropic, claude-cli, agent-file)")

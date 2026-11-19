@@ -11,14 +11,14 @@ import shutil
 import time
 from pathlib import Path
 
-from .base import ASSESSMENT_SCHEMA, SYSTEM_PROMPT, ReviewError, Reviewer, build_prompt
+from .base import ASSESSMENT_SCHEMA, SYSTEM_PROMPT, ReviewError, Reviewer, build_prompt, review_images
 
 INSTRUCTIONS = """# Launch trial review request
 
 {system}
 
 ## How to answer
-1. Look at every image in `frames/` (listed in order in request.json, with times from gate open).
+1. Look at every image in `frames/`, in the order listed under "images" in request.json (each has a caption).
 2. Read `request.json` (settings, bounds, encoder metrics, robot summary, kept history).
 3. Write `assessment.json` in this folder, matching `schema.json` exactly. Write it to
    `assessment.json.tmp` first and rename it, so the tool never reads half a file.
@@ -44,12 +44,13 @@ class AgentFileReviewer(Reviewer):
         frames_dir = folder / "frames"
         frames_dir.mkdir(parents=True, exist_ok=True)
         listed = []
-        for i, f in enumerate(req.frames):
-            dst = frames_dir / f"{i + 1:02d}_{Path(f['path']).name}"
+        for i, f in enumerate(review_images(req)):
+            dst = frames_dir / f"{i + 1:02d}_{'ex_' if f.get('kind') == 'example' else ''}{Path(f['path']).name}"
             shutil.copyfile(f["path"], dst)
-            listed.append({"frame": i + 1, "file": f"frames/{dst.name}", "t_from_gate_open_ms": f["t_from_gate_open_ms"]})
+            listed.append({"image": i + 1, "file": f"frames/{dst.name}", "kind": f.get("kind", "frame"), "ball": f.get("ball"),
+                           "caption": f["caption"]})
         (folder / "schema.json").write_text(json.dumps(ASSESSMENT_SCHEMA, indent=2), encoding="utf-8")
-        (folder / "request.json").write_text(json.dumps({"frames": listed, "context": json.loads(build_prompt(req).split("\n", 1)[1])},
+        (folder / "request.json").write_text(json.dumps({"images": listed, "context": json.loads(build_prompt(req).split("\n", 1)[1])},
                                                         indent=2, default=str), encoding="utf-8")
         (folder / "REVIEW_REQUEST.md").write_text(INSTRUCTIONS.format(system=SYSTEM_PROMPT, prompt=build_prompt(req)),
                                                   encoding="utf-8")

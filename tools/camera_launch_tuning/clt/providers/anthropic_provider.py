@@ -10,13 +10,14 @@ import json
 import os
 
 from ..env import get_model
-from .base import ASSESSMENT_SCHEMA, SYSTEM_PROMPT, ReviewError, Reviewer, build_prompt
+from .base import ASSESSMENT_SCHEMA, SYSTEM_PROMPT, ReviewError, Reviewer, build_prompt, review_images
 
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
 
 
 class AnthropicReviewer(Reviewer):
     name = "anthropic"
+    needs_frames = True
 
     def __init__(self, client=None, model=None, effort="high", max_tokens=16000, fallbacks=True):
         self.model = model or get_model("ANTHROPIC_MODEL")
@@ -32,8 +33,8 @@ class AnthropicReviewer(Reviewer):
 
     def build_content(self, req):
         content = [{"type": "text", "text": build_prompt(req)}]
-        for i, f in enumerate(req.frames):
-            content.append({"type": "text", "text": f"Frame {i + 1}: t = {f['t_from_gate_open_ms']:+.0f} ms"})
+        for i, f in enumerate(review_images(req)):
+            content.append({"type": "text", "text": f"Image {i + 1}: {f['caption']}"})
             content.append({"type": "image", "source": {"type": "base64", "media_type": "image/jpeg",
                                                          "data": req.image_b64(f)}})
         return content

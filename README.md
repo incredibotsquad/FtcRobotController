@@ -3,7 +3,7 @@
 This repository contains the public FTC SDK for the BIOBUZZ (2026-2027) competition season.
 
 ## Team tools
-- [Camera-assisted launch tuning](CAMERA_LAUNCH_TUNING.md): the `CameraLaunchTuner` OpMode plus a laptop program that records launches, reviews them (manually or with an AI API), and tunes RPM, flywheel gains, transfer power, timeout and turret position per spot.
+- [Camera-assisted launch tuning](CAMERA_LAUNCH_TUNING.md): the `CameraLaunchTuner` OpMode plus a laptop program that records launches, reviews them (manually or with an AI API), and tunes RPM, flywheel gains, transfer power, timeout and turret position per spot. Step-by-step: [walkthrough](CAMERA_LAUNCH_TUNING_WALKTHROUGH.md).
 
 ## Welcome!
 This GitHub repository contains the source code that is used to build an Android app to control a *FIRST* Tech Challenge competition robot.  To use this SDK, download/clone the entire project to your local computer.

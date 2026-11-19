@@ -37,6 +37,13 @@ class ProposalBounds(unittest.TestCase):
         r = policy.check_proposal({"parameter": "turret_position", "new_value": 0.56}, BASE_SETTINGS, bounds(), c)
         self.assertIn("not supported", r["reasons"][0])
 
+    def test_mixed_over_and_under_blocks_rpm_changes(self):
+        for v in (2636.6, 2786.6):
+            r = self.check("target_rpm", v, labels=("long", "long", "long", "short"))
+            self.assertFalse(r["accepted"])
+            self.assertIn("both ways", " ".join(r["reasons"]))
+        self.assertTrue(self.check("target_rpm", 2636.6, labels=("long", "long", "scored", "long"))["accepted"])
+
     def test_wrong_direction_and_no_misses(self):
         self.assertFalse(self.check("target_rpm", 2568)["accepted"])  # lowering for short misses
         self.assertFalse(self.check("target_rpm", 2768, labels=("left", "left", "scored", "scored"))["accepted"])

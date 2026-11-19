@@ -29,7 +29,7 @@ This guide is for anyone (human or coding agent) changing this tool or the `Came
 | `clt/settings.py` | Parameters, units, bounds, identity hashing, production-table interpolation |
 | `clt/store.py` | Run folders, state, append-only history and audit, discard, profiles |
 | `clt/env.py` | `.env` parsing (literal), precedence, redaction, default models |
-| `clt/providers/` | `base.py` (schema, prompt, request), `manual.py`, `openai_provider.py`, `anthropic_provider.py`, `agent_file.py` |
+| `clt/providers/` | `base.py` (schema, prompt, request), `manual.py`, `openai_provider.py`, `anthropic_provider.py`, `claude_cli.py`, `agent_file.py` |
 | `tests/` | Offline unittest suite (no network, camera or robot) |
 
 ## Robot state machine
@@ -121,6 +121,19 @@ All adapters implement `Reviewer.review(ReviewRequest, folder=None) -> raw dict`
   - Images are base64 `image` blocks.
   - No `thinking` parameter is sent: it is always on for `claude-opus-5-5`, and disabling it or giving a budget is rejected.
   - A `stop_reason` of `refusal` or `max_tokens` raises `ReviewError`.
+- **claude-cli** (`claude_cli.py`) writes the same bundle as agent-file, then runs this in the bundle folder:
+
+  ```
+  claude -p <prompt> --output-format json --json-schema <ASSESSMENT_SCHEMA> --tools Read --allowedTools Read
+         --add-dir <bundle> --permission-mode dontAsk --no-session-persistence [--model M]
+  ```
+
+  - It uses the JSON result's `structured_output`, falling back to `result` parsed as JSON.
+  - A non-zero exit, `is_error`, a `subtype` other than `success`, a timeout, or a non-object answer raises `ReviewError`.
+  - `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` are removed from the child environment, so the CLI uses its own login.
+  - The raw CLI result and stderr are saved in the bundle.
+  - `probe()` (`doctor --probe-claude`) makes one tool-less call to check login and structured output.
+  - Verified once by hand on 2026-11-17 against Claude Code 2.1.326 with synthetic frames (about 18 s, 8 turns, no permission denials). Real robot footage is still untested.
 - **agent-file** writes `review_request/` and waits for `assessment.json`. It needs no key. Run your own agent session pointed at the folder.
 - **manual** asks at the terminal.
 
@@ -160,6 +173,7 @@ The suite runs on the Python standard library only.
 | `test_store_undo.py` | Settings replay, discard and restore, preserved files, audit, CLI undo |
 | `test_transport.py` | Command contract, adb command lines (atomic push and rename, serial, pull paths), clock offset parsing and fallback, local transport |
 | `test_providers.py` | Strict-schema rules, OpenAI and Anthropic request and response contracts with fake clients, refusal handling, agent-file round trip and timeout, manual |
+| `test_claude_cli.py` | claude-cli command contract (read-only tools, schema, dontAsk, add-dir, cwd), keys stripped from the child environment, failure modes, result fallback, probe |
 | `test_session.py` | Telemetry metrics, `process_trial` (stuck 4th, refill, undo revocation, applied and rejected proposals, no frames, keys never saved, validation), and a simulated-robot handshake |
 
 ## Extending

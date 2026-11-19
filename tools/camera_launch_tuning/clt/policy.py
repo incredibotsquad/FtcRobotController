@@ -219,12 +219,17 @@ def check_proposal(proposal, settings, bounds, context):
         if metrics.get("steady_bias") or metrics.get("motor_mismatch"):
             reasons.append("flywheel isn't reaching its target: fix tracking (kV/P) before trusting RPM changes")
         misses = summary.get("misses", {})
-        if misses.get("short", 0) == 0 and misses.get("long", 0) == 0:
+        short, long_ = misses.get("short", 0), misses.get("long", 0)
+        if short == 0 and long_ == 0:
             reasons.append("RPM changes need short or long misses")
-        elif new > old and misses.get("short", 0) <= misses.get("long", 0):
-            reasons.append("raising RPM needs more short than long misses")
-        elif new < old and misses.get("long", 0) <= misses.get("short", 0):
-            reasons.append("lowering RPM needs more long than short misses")
+        elif short and long_:
+            # Over AND under in one burst: one RPM can't fix both (lowering it makes the short ones worse).
+            reasons.append(f"misses went both ways ({long_} over, {short} under): a shot-to-shot consistency problem "
+                           "(feed / dead zone / recovery), not an RPM one")
+        elif new > old and not short:
+            reasons.append("raising RPM is for balls that came in under (short); these went over")
+        elif new < old and not long_:
+            reasons.append("lowering RPM is for balls that went over (long); these came in under")
     if param == "turret_position":
         misses = summary.get("misses", {})
         if misses.get("left", 0) + misses.get("right", 0) == 0:

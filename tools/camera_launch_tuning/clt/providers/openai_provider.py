@@ -10,11 +10,12 @@ import json
 import os
 
 from ..env import get_model
-from .base import ASSESSMENT_SCHEMA, SYSTEM_PROMPT, ReviewError, Reviewer, build_prompt
+from .base import ASSESSMENT_SCHEMA, SYSTEM_PROMPT, ReviewError, Reviewer, build_prompt, review_images
 
 
 class OpenAIReviewer(Reviewer):
     name = "openai"
+    needs_frames = True
 
     def __init__(self, client=None, model=None, detail="high", max_output_tokens=4000):
         self.model = model or get_model("OPENAI_MODEL")
@@ -29,8 +30,8 @@ class OpenAIReviewer(Reviewer):
 
     def build_input(self, req):
         content = [{"type": "input_text", "text": build_prompt(req)}]
-        for i, f in enumerate(req.frames):
-            content.append({"type": "input_text", "text": f"Frame {i + 1}: t = {f['t_from_gate_open_ms']:+.0f} ms"})
+        for i, f in enumerate(review_images(req)):
+            content.append({"type": "input_text", "text": f"Image {i + 1}: {f['caption']}"})
             content.append({"type": "input_image", "image_url": f"data:image/jpeg;base64,{req.image_b64(f)}",
                             "detail": self.detail})
         return [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": content}]

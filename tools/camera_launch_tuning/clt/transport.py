@@ -61,9 +61,13 @@ def check_status(status):
 class AdbTransport:
     """Talks to the Control Hub with the `adb` command line tool (USB or Wi-Fi adb)."""
 
-    def __init__(self, adb="adb", serial=None, remote_dir=REMOTE_DIR, runner=subprocess.run, timeout_s=10):
+    def __init__(self, adb="adb", serial=None, remote_dir=REMOTE_DIR, runner=subprocess.run, timeout_s=10,
+                 connect=None):
         self.adb = adb
-        self.serial = serial
+        # Wi-Fi ADB address (e.g. 192.168.43.1:5555). When set, it is also the device serial, and a lost
+        # connection (the adb server restarted, e.g. by Android Studio) is re-made once per failing call.
+        self.connect_addr = connect
+        self.serial = serial or connect
         self.remote_dir = remote_dir.rstrip("/")
         self.runner = runner
         self.timeout_s = timeout_s
@@ -75,6 +79,27 @@ class AdbTransport:
         return base + list(args)
 
     def _run(self, *args, text=True):
+        try:
+            return self._run_once(*args, text=text)
+        except TransportError as e:
+            msg = str(e).lower()
+            lost = any(s in msg for s in ("no devices", "not found", "offline", "device unauthorized"))
+            if not (self.connect_addr and lost and args[:1] != ("connect",)):
+                raise
+            self.reconnect()
+            return self._run_once(*args, text=text)
+
+    def reconnect(self):
+        """`adb connect` to the Wi-Fi address. Raises TransportError if it can't."""
+        out = self.runner([self.adb, "connect", self.connect_addr], capture_output=True, text=True, timeout=self.timeout_s)
+        text = ((out.stdout or "") + (out.stderr or "")).strip()
+        if "connected to" not in text:
+            hint = (" (macOS: allow your terminal app under System Settings > Privacy & Security > Local Network,"
+                    " then run `adb kill-server`)") if "no route to host" in text.lower() else ""
+            raise TransportError(f"adb connect {self.connect_addr} failed: {text[:200]}{hint}")
+        return text
+
+    def _run_once(self, *args, text=True):
         try:
             res = self.runner(self._cmd(*args), capture_output=True, text=text, timeout=self.timeout_s)
         except FileNotFoundError as e:
@@ -89,12 +114,16 @@ class AdbTransport:
         out = self._run("devices")
         return [line.split()[0] for line in out.splitlines()[1:] if line.strip().endswith("device")]
 
-    def read_status(self):
-        out = self._run("exec-out", "cat", f"{self.remote_dir}/status.json")
-        try:
-            return check_status(json.loads(out))
-        except json.JSONDecodeError as e:
-            raise TransportError("status.json not readable yet (is CameraLaunchTuner initialized?)") from e
+    def read_status(self, attempts=3):
+        # The robot rewrites status.json a few times a second; a read can land mid-rewrite, so retry briefly.
+        for i in range(attempts):
+            out = self._run("exec-out", "cat", f"{self.remote_dir}/status.json")
+            try:
+                return check_status(json.loads(out))
+            except json.JSONDecodeError as e:
+                if i == attempts - 1:
+                    raise TransportError("status.json not readable (is CameraLaunchTuner initialized?)") from e
+                time.sleep(0.1)
 
     def write_command(self, command):
         fd, tmp = tempfile.mkstemp(suffix=".json")

@@ -146,7 +146,11 @@ class Session:
         return self.process_trial(rec, summary_path, csv_path, video, frames_csv, offset)
 
     # ---------------------------------------------------------------- review + decision
-    def review_frames(self, tdir, summary, video, frames_csv, offset):
+    def review_frames(self, tdir, summary, video, frames_csv, offset, metrics=None):
+        if metrics is not None:
+            from .frames import prepare
+            return prepare(tdir, summary, metrics, video, frames_csv, offset,
+                           {"frames_per_ball": self.cfg.get("frames_per_ball", 9), "frame_max_side": self.cfg["frame_max_side"]})
         ts = summary.get("timestamps", {})
         if video is None or frames_csv is None or ts.get("fire_ms") is None:
             return []
@@ -187,21 +191,25 @@ class Session:
             assessment["flags"].append("no_burst:" + str(summary.get("completion_reason")))
             raw = None
         else:
-            frames = self.review_frames(tdir, summary, video, frames_csv, offset)
+            frames = self.review_frames(tdir, summary, video, frames_csv, offset, metrics)
             req = ReviewRequest(trial_n=n, loaded_count=loaded, goal=self.cfg["goal"], settings=rec["settings"],
                                 bounds=self.bounds, metrics=metrics, robot_summary=robot_summary,
                                 history=self.store.context_history(), spot=self.spot_info(), frames=frames,
-                                camera_notes=f"clock offset uncertainty ~{offset[1]} ms ({offset[2]})")
+                                camera_notes=f"clock offset uncertainty ~{offset[1]} ms ({offset[2]})",
+                                examples=self.calibration_examples())
             raw = self.call_reviewer(req, tdir, have_frames=bool(frames))
             assessment = policy.normalize_assessment(raw or {}, loaded, self.cfg["min_confidence"])
             if raw is None:
                 assessment["flags"].append("review_failed")
         write_json(tdir / "assessment_raw.json", {"reviewer": self.reviewer.name, "raw": raw})
+        agreement = None
+        if self.cfg.get("confirm_labels") and summary.get("burst_started") and self.reviewer.name != "manual":
+            assessment, agreement = self.confirm_labels(rec, assessment, loaded, tdir)
         write_json(tdir / "assessment.json", assessment)
         summ = policy.summarize(assessment)
         outcome = policy.evaluate_goal(summ, self.cfg["goal"], bool(summary.get("burst_started")))
         rec = self.store.update_trial(n, summary=summ, outcome=outcome, metrics=metrics, robot_summary=robot_summary,
-                                      reviewer=self.reviewer.name)
+                                      reviewer=self.reviewer.name, label_agreement=agreement)
         eligible, why = policy.refill_eligible(rec)
         rec = self.store.update_trial(n, refill_eligible=eligible, refill_reason=why)
         self.refill_trial = rec["robot_trial_id"] if eligible else None
@@ -226,7 +234,7 @@ class Session:
         return rec
 
     def call_reviewer(self, req, tdir, have_frames):
-        if not have_frames and self.reviewer.name in ("openai", "anthropic"):
+        if not have_frames and getattr(self.reviewer, "needs_frames", False):
             self.say("No review frames (camera off or clip missing): balls are unknown. Use --reviewer manual.")
             return None
         try:
@@ -239,6 +247,56 @@ class Session:
         p = self.profile or {}
         return {"spot": p.get("spot"), "description": p.get("description"), "distance_in": p.get("distance_in")}
 
+    def calibration_examples(self):
+        spot = (self.profile or {}).get("spot")
+        if not spot or self.cfg.get("max_examples", 2) <= 0:
+            return []
+        from .examples import load_for_review
+        return load_for_review(spot, self.cfg.get("max_examples", 2), self.profiles_root)
+
+    def confirm_labels(self, rec, assessment, loaded, tdir):
+        """Shows the reviewer's labels; the operator accepts (Enter) or corrects them. Corrections become the
+        trial's labels and can be saved as a calibration example. Returns (assessment, agreement)."""
+        from .examples import add_example, parse_labels
+        ai = [b["label"] for b in assessment["balls"]]
+        self.say(f"{self.reviewer.name} labels: " + "  ".join(f"{b['index']}={b['label']}({b['confidence']:.1f})" for b in assessment["balls"]))
+        for b in assessment["balls"]:
+            if b["evidence"]:
+                self.say(f"    {b['index']}: {b['evidence'][:150]}")
+        while True:
+            a = self.ask(f"Enter = correct, or type the right {loaded} labels (e.g. l l l h): ").strip()
+            if not a:
+                return assessment, {"matched": loaded, "total": loaded, "corrected": False, "ai": ai}
+            try:
+                human = parse_labels(a, loaded)
+                break
+            except ValueError as e:
+                self.say(f"  {e}")
+        corrected = dict(assessment)
+        corrected["balls"] = [{"index": i + 1, "label": l, "confidence": 1.0, "evidence": "operator correction"}
+                              for i, l in enumerate(human)]
+        corrected["flags"] = list(assessment["flags"]) + ["operator_corrected"]
+        corrected["reviewer_labels"] = ai
+        matched = sum(1 for x, y in zip(ai, human) if x == y)
+        spot = (self.profile or {}).get("spot")
+        if spot and human != ai and self.ask("Save this trial as a calibration example for this spot? [Y/n] ").strip().lower() != "n":
+            try:
+                ex = add_example(spot, tdir, human, {"run": self.store.run["run_id"], "trial": rec["n"]},
+                                 note="corrected during tuning", root=self.profiles_root)
+                self.say(f"  saved example {ex}; the reviewer sees it from the next trial on")
+            except (ValueError, FileNotFoundError, FileExistsError) as e:
+                self.say(f"  not saved as an example: {e}")
+        return corrected, {"matched": matched, "total": loaded, "corrected": True, "ai": ai}
+
+    def agreement_so_far(self):
+        m = t = 0
+        for tr in self.store.kept_trials():
+            ag = tr.get("label_agreement")
+            if ag:
+                m += ag["matched"]
+                t += ag["total"]
+        return m, t
+
     def report(self, rec, summ, outcome, check, accepted, eligible, why):
         self.say(f"Trial {rec['n']}: {' '.join(summ['labels'])} -> {outcome.upper()} "
                  f"({summ['confirmed_scores']} scored, {summ['confirmed_exits']} confirmed out, {summ['unknown']} unknown)")
@@ -249,6 +307,9 @@ class Session:
         self.say("  refill: " + ("allowed (" + why + ")" if eligible else "NOT allowed - " + why))
         v = policy.validation_status(self.store.trials(), self.cfg["validation_required"])
         self.say(f"  validation streak: {v['streak']}/{v['required']}")
+        m, t = self.agreement_so_far()
+        if t:
+            self.say(f"  reviewer agreement with you so far: {m}/{t} balls ({100 * m / t:.0f}%)")
 
     # ---------------------------------------------------------------- checkpoint / undo
     def checkpoint(self):

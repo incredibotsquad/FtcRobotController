@@ -16,3 +16,6 @@ profiles/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Camera preview snapshots
+camera_preview*.jpg

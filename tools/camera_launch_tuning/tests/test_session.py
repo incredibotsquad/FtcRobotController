@@ -112,7 +112,7 @@ class ProcessTrial(unittest.TestCase):
 
     def test_no_frames_means_unknown_not_invented(self):
         s = self.session([])
-        s.reviewer.name = "openai"
+        s.reviewer.needs_frames = True
         rec = self.trial(s, 1, frames=False)
         self.assertEqual(rec["summary"]["unknown"], 4)
         self.assertEqual(rec["outcome"], "inconclusive")
@@ -205,3 +205,74 @@ class EndToEndSimulated(unittest.TestCase):
             t = store.trials()[0]
             self.assertEqual((t["outcome"], t["refill_eligible"]), ("success", False))
             self.assertTrue((store.trial_dir(1) / "decision.json").exists())
+
+
+class FramePlan(unittest.TestCase):
+    def test_windows_start_at_encoder_dips(self):
+        from clt.frames import plan
+        summary = robot_summary()  # fire 10000, end 11200
+        metrics = {"dips": [{"start_ms": 150}, {"start_ms": 180}, {"start_ms": 400}]}  # 180 is the same ball
+        items = plan(summary, metrics, 4)
+        balls = [i for i in items if i["kind"] == "ball"]
+        self.assertEqual(len(balls), 4 * 9)
+        firsts = [b["robot_ms"] for b in balls if b["caption"].startswith(f"ball {b['ball']} window") and "-33 ms" in b["caption"]]
+        self.assertEqual(firsts[:2], [10150 - 33, 10400 - 33])
+        self.assertIn("estimated", [b for b in balls if b["ball"] == 3][0]["caption"])
+        self.assertEqual(items[0]["kind"], "reference")
+        self.assertEqual([i["kind"] for i in items[-2:]], ["rest", "rest"])
+
+
+class Calibration(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        root = Path(self.tmp.name)
+        self.profiles = root / "profiles"
+        self.tdir = root / "trial"
+        (self.tdir / "review_frames").mkdir(parents=True)
+        frames = []
+        for k in (1, 2):
+            p = self.tdir / "review_frames" / f"trail_ball_{k}.jpg"
+            p.write_bytes(b"jpg")
+            frames.append({"path": str(p), "kind": "trail", "ball": k, "t_from_gate_open_ms": 0, "caption": "t"})
+        r = self.tdir / "review_frames" / "rest.jpg"
+        r.write_bytes(b"jpg")
+        frames.append({"path": str(r), "kind": "rest", "ball": None, "t_from_gate_open_ms": 0, "caption": "r"})
+        write_json(self.tdir / "review_frames.json", {"frames": frames})
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_example_roundtrip_and_prompt_order(self):
+        from clt.examples import add_example, load_for_review, parse_labels
+        from clt.providers.base import ReviewRequest, build_prompt, review_images
+        self.assertEqual(parse_labels("l, l h k", 4), ["long", "long", "short", "stuck"])
+        with self.assertRaises(ValueError):
+            parse_labels("l l", 4)
+        ex = add_example("spot", self.tdir, ["long", "short"], {"run": "r", "trial": 1}, root=self.profiles)
+        exs = load_for_review("spot", 2, self.profiles)
+        self.assertEqual(exs[0]["id"], ex)
+        self.assertEqual(len(exs[0]["images"]), 3)
+        req = ReviewRequest(trial_n=2, loaded_count=2, goal="3of4", settings={}, bounds={}, metrics={}, robot_summary={},
+                            history=[], spot={}, frames=[{"path": "x.jpg", "t_from_gate_open_ms": 5.0, "caption": "ball 1"}],
+                            examples=exs)
+        imgs = review_images(req)
+        self.assertTrue(imgs[0]["caption"].startswith("EXAMPLE"))
+        self.assertTrue(imgs[-1]["caption"].startswith("THIS TRIAL"))
+        self.assertIn("person_labels", build_prompt(req))
+        with self.assertRaises(ValueError):
+            add_example("spot", self.tdir, ["unknown", "unknown"], {}, root=self.profiles)
+
+    def test_confirm_override_counts_agreement_and_saves_example(self):
+        store = RunStore.create(Path(self.tmp.name) / "runs", "spot", "3of4", BASE_SETTINGS, bounds(), {}, run_id="r")
+        answers = iter(["l l l h", "y"])
+        s = Session(store, LocalDirTransport(Path(self.tmp.name) / "robot"), ScriptedReviewer([]),
+                    profile={"spot": "spot"}, config={"confirm_labels": True}, say=lambda *_: None,
+                    ask=lambda _: next(answers), sleep=lambda _: None, profiles_root=self.profiles)
+        rec = store.new_trial(BASE_SETTINGS, "R1", 1)
+        from clt import policy
+        a = policy.normalize_assessment(assessment(["unknown", "unknown", "long", "short"]), 4)
+        fixed, ag = s.confirm_labels(rec, a, 4, self.tdir)
+        self.assertEqual([b["label"] for b in fixed["balls"]], ["long", "long", "long", "short"])
+        self.assertEqual((ag["matched"], ag["total"], ag["corrected"]), (2, 4, True))
+        from clt.examples import list_examples
+        self.assertEqual(list_examples("spot", self.profiles)[0]["labels"], ["long", "long", "long", "short"])

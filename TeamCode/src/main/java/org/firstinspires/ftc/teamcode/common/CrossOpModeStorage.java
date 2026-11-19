@@ -15,7 +15,9 @@ public class CrossOpModeStorage {
     // Launch target coordinates live in LaunchTargets (HIVE CELLS, nearest-CELL selection).
 
 //    public static Pose2d currentPose = new Pose2d(40, 6.5, new Rotation2d(Math.toRadians(180)));
-    public static Pose2d currentPose = new Pose2d(42.5, 10, new Rotation2d(Math.toRadians(90)));
+    // Default when no OpMode has run since the app started: red RIGHT start against the audience wall
+    // (same as Poses.RED_START_AUDIENCE_WALL), facing away from the audience.
+    public static Pose2d currentPose = new Pose2d(41.5, 8, new Rotation2d(Math.toRadians(90)));
 
     public static AllianceColors allianceColor = AllianceColors.RED;
 

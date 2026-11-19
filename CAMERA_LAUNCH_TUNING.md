@@ -3,11 +3,11 @@
 This setup tunes the launcher at a fixed spot so the robot reliably scores **3 of 4** loaded POLLEN, or optionally all 4. It has two halves:
 
 - **Robot:** the `CameraLaunchTuner` OpMode (Driver Station group **Tests**). The file is `TeamCode/src/main/java/org/firstinspires/ftc/teamcode/opmodes/tuning/CameraLaunchTuner.java`.
-- **Laptop:** `tools/camera_launch_tuning/`, a Python program. It records each burst with a laptop camera, collects the robot's telemetry over ADB, and reviews the finished trial. A review can be done by you, by the OpenAI API, by the Anthropic API, or by an agent session reading files. It then checks any proposed change against bounds and sends the next settings to the robot.
+- **Laptop:** `tools/camera_launch_tuning/`, a Python program. It records each burst with a laptop camera, collects the robot's telemetry over ADB, and reviews the finished trial. A review can be done by you, by the OpenAI API, by the Anthropic API, by your locally installed Claude Code CLI (your login, no API key), or by an agent session reading files. It then checks any proposed change against bounds and sends the next settings to the robot.
 
 The program reviews **saved frames of a finished trial** between bursts. Nothing watches a live feed.
 
-Reference docs: [operator/config reference](tools/camera_launch_tuning/README.md) and [architecture and agent guide](tools/camera_launch_tuning/AGENT_GUIDE.md).
+**New here? Follow the step-by-step [walkthrough](CAMERA_LAUNCH_TUNING_WALKTHROUGH.md).** Reference docs: [operator/config reference](tools/camera_launch_tuning/README.md) and [architecture and agent guide](tools/camera_launch_tuning/AGENT_GUIDE.md).
 
 ---
 
@@ -132,7 +132,7 @@ Fill in only what you use: `OPENAI_API_KEY` / `OPENAI_MODEL` or `ANTHROPIC_API_K
 - `.env` is git-ignored and read as plain text. Nothing in it is executed.
 - Variables already set in your shell win over the file. `--env-file PATH` points at another file.
 - Keys are never printed, saved, or sent to the robot.
-- **API keys are separate from a Codex or Claude login.** Signing in to an interactive agent doesn't give this program API access. To use your agent subscription instead, choose `--reviewer agent-file` (section 7).
+- **API keys are separate from a Codex or Claude login.** Signing in to an interactive agent doesn't give this program API access. To review with your Claude Code login instead, choose `--reviewer claude-cli`; it runs `claude -p` headless, needs no key, and removes any API keys from the CLI's environment. For another agent, choose `--reviewer agent-file` (section 7).
 
 Check everything:
 
@@ -154,9 +154,10 @@ The tuner doesn't invent calibration values. It uses whatever `IntakeSubsystem` 
 
 ## 4. Camera setup
 
-- Mount the camera on a tripod **behind and slightly above the robot**. It should see the launcher exit, the whole ball flight, and the target CELL opening. Don't move it during a run; every trial must be comparable.
+- Mount the camera on a tripod **to one side, square to the line from the robot to the HIVE**, about 6–8 ft away and at about CELL height. It should see the launcher exit, the whole arc, and the target CELL opening. Don't move it during a run; every trial must be comparable.
+- **Why the side:** from behind the robot the balls fly straight away from the lens, so short and long can't be told apart, and those are what RPM tuning needs. A first test from behind gave a person and Claude opposite short/long calls. From the side, short and long show as left/right in the image and the arc height is visible. Check turret left/right separately, from behind or by eye.
 - Use 60 fps if the camera supports it (`--fps`). Use bright, even light and avoid backlighting from windows. Ball flight should be visible without motion smear.
-- "left/right" mean as seen from behind the robot toward the target. Keep that orientation so labels stay consistent.
+- Labels still mean "as seen from behind the robot toward the target": short/long along the shot line, left/right across it. Put the camera position in the profile description (for example, "camera on the right side, 7 ft, CELL height"); the reviewer reads it.
 - Put the spot name and camera placement in the profile description, so later sessions can repeat them.
 
 ## 5. Spot profiles
@@ -166,7 +167,7 @@ A profile stores the **starting** settings and, after validation, the **selected
 ```bash
 # From the robot's production tables at a distance (robot center to CELL, inches):
 python camera_launch_tuning.py spot-init --spot right1 --from-robot --distance 48.75 \
-    --description "RIGHT_SPOT_1, tripod 2 m behind, centered"
+    --description "RIGHT_SPOT_1, camera on the right side, 7 ft, CELL height"
 # Or fully manual:
 python camera_launch_tuning.py spot-init --spot right1 --target-rpm 2668 --p 0.023 --ks 0.16 \
     --kv 0.00032419 --transfer-power 1.0 --max-fire-ms 3000 --turret-position 0.55
@@ -199,7 +200,8 @@ python camera_launch_tuning.py run --spot right1 --reviewer manual --max-trials 
 ```bash
 python camera_launch_tuning.py run --spot right1 --reviewer anthropic --auto-apply
 python camera_launch_tuning.py run --spot right1 --reviewer openai --goal 4of4
-python camera_launch_tuning.py run --spot right1 --reviewer agent-file   # a Codex/Claude session answers
+python camera_launch_tuning.py run --spot right1 --reviewer claude-cli   # your Claude Code login, automatic
+python camera_launch_tuning.py run --spot right1 --reviewer agent-file   # a Codex/Claude session you prompt
 ```
 
 For each trial, the reviewer gets about 16 timed frames from the burst, the encoder metrics, the robot summary, and the kept history. It labels each ball and may propose **one** change, which the program checks before applying. Without `--auto-apply`, every accepted proposal asks y/N first. The checks:
@@ -208,6 +210,7 @@ For each trial, the reviewer gets about 16 timed frames from the burst, the enco
 - No change after a success, or after an inconclusive (ambiguous) trial.
 - RPM changes need short or long misses in the matching direction, with good speed tracking.
 - Turret changes need left/right misses.
+- RPM changes need misses in one direction: lower RPM for balls that go over (long), higher for balls that come in under (short). If a trial has both, no RPM change is made: that is a consistency problem.
 - P / kV changes need encoder evidence: slow recovery, oscillation, or a steady-state error.
 - kS changes need steady data at two operating speeds at least 300 RPM apart, because one speed can't separate kS from kV.
 - A stuck ball while tracking is fine counts as **mechanical**, so gain changes are refused.
@@ -262,6 +265,7 @@ The laptop never authorizes a refill when a ball is stuck or unknown, or when th
 | Symptom | Fix |
 |---|---|
 | `status.json not readable` | Start CameraLaunchTuner (INIT is enough), then check `adb devices` |
+| Wi-Fi `adb connect` says "No route to host" on macOS, but `ping 192.168.43.1` works | macOS Local Network privacy blocks the background ADB server. Run `adb kill-server`, then `adb nodaemon server` in a Terminal tab you leave open, then `adb connect 192.168.43.1:5555`. Keep Android Studio closed, and use `--connect 192.168.43.1` |
 | `protocol mismatch` | The robot app and the laptop tool are from different versions: rebuild and reinstall |
 | Robot shows "settings invalid" | Settings were outside the robot's limits: see `settings_error` in `status` |
 | Never fires | Check both RPMs on the Driver Station. Look for a dead encoder (one reads ~0) or a target too high for the battery (spin-up timeout). Make sure the laptop sent permission (link required) |
