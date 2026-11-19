@@ -439,7 +439,7 @@ public class CameraLaunchTuner extends LinearOpMode {
         savedMaxFireMs = LaunchBallsCommand.MAX_FIRE_MS;
         SmartIntakeCommand.LAUNCH_TRANSFER_POWER = trialSettings.transferPower;
         LaunchBallsCommand.MAX_FIRE_MS = trialSettings.maxFireMs;
-        launchCommand = new LaunchBallsCommand(gate, intake, robot.driveSubsystem, robot.intakeBarSubsystem);
+        launchCommand = new LaunchBallsCommand(gate, intake, robot.driveSubsystem, robot.intakeBarSubsystem, launcher);
         CommandScheduler.getInstance().schedule(launchCommand);
         needsEmptyConfirmation = true; // the gate opens now: a ball can end up in the dead zone
         lastBurstTrialId = trialId;

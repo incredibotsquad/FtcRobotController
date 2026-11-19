@@ -627,7 +627,7 @@ public class DynamicAuto extends LinearOpMode {
 
     private void startLaunch(boolean ready) {
         launchCommand = new LaunchBallsCommand(robot.launchGateSubsystem, robot.intakeSubsystem,
-                robot.driveSubsystem, robot.intakeBarSubsystem);
+                robot.driveSubsystem, robot.intakeBarSubsystem, robot.launchSubsystem);
         launchCommand.schedule();
         String why = currentLaunch().point.side + " CELL is up and launcher "
                 + (ready ? "ready" : "NOT ready after READY_TIMEOUT_MS " + READY_TIMEOUT_MS + ", firing anyway ("

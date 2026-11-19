@@ -9,6 +9,9 @@ import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeBarSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
+
+import java.util.Locale;
 
 /**
  * One-press "empty the robot" shot. Schedule with whenPressed().
@@ -59,6 +62,17 @@ import org.firstinspires.ftc.teamcode.subsystems.LaunchGateSubsystem;
  */
 @Configurable
 public class LaunchBallsCommand extends CommandBase {
+
+    /**
+     * Wait for a steady flywheel before opening the gate (added 2026-11-18): both motors within
+     * STEADY_TOLERANCE_RPM of the target, not in bang-bang, for STEADY_MS. Gives up after
+     * MAX_STEADY_WAIT_MS and fires anyway (logged), so a launch is never blocked for long.
+     * Every launch also logs the flywheel speed at the gate opening and at each exit (tag LaunchShot).
+     */
+    public static boolean WAIT_FOR_STEADY_FLYWHEEL = true;
+    public static double STEADY_TOLERANCE_RPM = 50;
+    public static long STEADY_MS = 150;
+    public static long MAX_STEADY_WAIT_MS = 1000;
 
     /** Keep the gate open this long after the last artifact is gone so it clears the flywheel. */
     public static long CLEAR_MS = 250;
@@ -112,7 +126,7 @@ public class LaunchBallsCommand extends CommandBase {
     /** Wait this long after the count drops to 1 before reversing (lets the previous one clear the flywheel). */
     public static long LAST_BALL_KICK_DELAY_MS = 0;
 
-    private enum State { FIRING, DONE }
+    private enum State { WAIT_STEADY, FIRING, DONE }
 
     /** Why the last launch ended (read by test OpModes; doesn't change behavior). */
     public enum EndReason { RUNNING, NOTHING_LOADED, EMPTY, MAX_FIRE_MS, SINGLE_BALL_CLEARED, INTERRUPTED }
@@ -124,6 +138,14 @@ public class LaunchBallsCommand extends CommandBase {
     private final IntakeSubsystem intake;
     private final DriveSubsystem drive;
     private final IntakeBarSubsystem bar;
+    /** null = no steady-flywheel wait and no speed logging. */
+    private final LaunchSubsystem launcher;
+    private long waitStartMs;
+    private long steadySinceMs;
+    private long gateOpenMs;
+    private int lastCount;
+    private double minRpm;
+    private final StringBuilder shotLog = new StringBuilder();
 
     private State state;
     private long stateStartMs;
@@ -153,10 +175,17 @@ public class LaunchBallsCommand extends CommandBase {
 
     public LaunchBallsCommand(LaunchGateSubsystem gate, IntakeSubsystem intake, DriveSubsystem drive,
                               IntakeBarSubsystem bar) {
+        this(gate, intake, drive, bar, null);
+    }
+
+    /** With the launcher: waits for a steady flywheel before opening the gate and logs shot speeds. */
+    public LaunchBallsCommand(LaunchGateSubsystem gate, IntakeSubsystem intake, DriveSubsystem drive,
+                              IntakeBarSubsystem bar, LaunchSubsystem launcher) {
         this.gate = gate;
         this.intake = intake;
         this.drive = drive;
         this.bar = bar;
+        this.launcher = launcher;
         addRequirements(gate);
     }
 
@@ -188,11 +217,41 @@ public class LaunchBallsCommand extends CommandBase {
 
         if (!bar.isRaised()) bar.raise(); // command the bar up; the launch doesn't wait for it
 
+        waitStartMs = nowMs();
+        steadySinceMs = -1;
+        if (WAIT_FOR_STEADY_FLYWHEEL && launcher != null) {
+            enter(State.WAIT_STEADY); // gate stays closed until the flywheel holds its speed
+        } else {
+            openGateAndFire(nowMs(), "no wait");
+        }
+    }
+
+    /** Opens the gate and starts the feed (and the kick). */
+    private void openGateAndFire(long now, String why) {
         gate.openGate();
         enter(State.FIRING);
+        gateOpenMs = now;
+        lastCount = intake.getArtifactCount();
+        shotLog.setLength(0);
+        String speed = "";
+        if (launcher != null) {
+            minRpm = launcher.getCurrentFlywheelRPM();
+            speed = String.format(Locale.US, ", target %.0f, L/R %.0f/%.0f RPM, %.2f V, waited %d ms (%s)",
+                    launcher.getTargetRPM(), launcher.getLeftFlywheelRPM(), launcher.getRightFlywheelRPM(),
+                    launcher.getBatteryVoltage(), now - waitStartMs, why);
+        }
         Log.i("LaunchBallsCommand", "Launch: " + countAtStart + " artifact(s), "
-                + (kickActive ? "kick" : "simple feed"));
-        if (kickActive) startKick(nowMs(), singleBall ? 1 : countAtStart);
+                + (kickActive ? "kick" : "simple feed") + speed);
+        if (launcher != null) Log.i("LaunchShot", "gate open" + speed);
+        if (kickActive) startKick(now, singleBall ? 1 : countAtStart);
+    }
+
+    /** Both motors within STEADY_TOLERANCE_RPM of the target and not in bang-bang. */
+    private boolean flywheelSteady() {
+        double target = launcher.getTargetRPM();
+        return target > 0 && !launcher.isFlywheelInBangBang()
+                && Math.abs(launcher.getLeftFlywheelRPM() - target) <= STEADY_TOLERANCE_RPM
+                && Math.abs(launcher.getRightFlywheelRPM() - target) <= STEADY_TOLERANCE_RPM;
     }
 
     @Override
@@ -203,6 +262,20 @@ public class LaunchBallsCommand extends CommandBase {
         // Keep the bar up for the whole launch (undoes an operator toggle mid-launch).
         if (!bar.isRaised()) bar.raise();
 
+        if (state == State.WAIT_STEADY) {
+            if (flywheelSteady()) {
+                if (steadySinceMs < 0) steadySinceMs = now;
+                if (now - steadySinceMs >= STEADY_MS) openGateAndFire(now, "steady");
+            } else {
+                steadySinceMs = -1;
+            }
+            if (state == State.WAIT_STEADY && now - waitStartMs >= MAX_STEADY_WAIT_MS) {
+                Log.w("LaunchBallsCommand", "Flywheel not steady after " + MAX_STEADY_WAIT_MS + " ms, firing anyway");
+                openGateAndFire(now, "NOT steady, gave up waiting");
+            }
+            return;
+        }
+        logShots(now);
 
         if (!updateKick(now)) {
             // Still reversing: no completion checks yet, only the backstop below.
@@ -330,9 +403,26 @@ public class LaunchBallsCommand extends CommandBase {
         return Math.max(0, table[i]);
     }
 
+    /** Per-exit flywheel speed: each count drop while firing is one artifact past sensor 4. */
+    private void logShots(long now) {
+        if (launcher == null || state != State.FIRING) return;
+        double rpm = launcher.getCurrentFlywheelRPM();
+        minRpm = Math.min(minRpm, rpm);
+        int count = intake.getArtifactCount();
+        if (count < lastCount) {
+            shotLog.append(String.format(Locale.US, "%s+%d ms: %.0f/%.0f", shotLog.length() > 0 ? ", " : "",
+                    now - gateOpenMs, launcher.getLeftFlywheelRPM(), launcher.getRightFlywheelRPM()));
+        }
+        lastCount = count;
+    }
+
     @Override
     public void end(boolean interrupted) {
         if (interrupted && endReason == EndReason.RUNNING) endReason = EndReason.INTERRUPTED;
+        if (launcher != null && gateOpenMs > 0 && state != State.WAIT_STEADY) {
+            Log.i("LaunchShot", String.format(Locale.US, "done (%s): target %.0f, exits at [%s] L/R RPM, burst min %.0f RPM, %.2f V",
+                    endReason.name().toLowerCase(Locale.US), launcher.getTargetRPM(), shotLog, minRpm, launcher.getBatteryVoltage()));
+        }
         intake.clearLaunchTransferOverride();
         intake.clearLaunchIntakeOverride();
         gate.closeGate();
@@ -351,6 +441,11 @@ public class LaunchBallsCommand extends CommandBase {
     /** At MAX_FIRE_MS: confirmEmptyAfterLaunch() reset the count to 0. */
     public boolean wasEmptyConfirmedAtTimeout() {
         return emptyConfirmedAtTimeout;
+    }
+
+    /** Waiting for a steady flywheel (gate still closed). */
+    public boolean isWaitingForFlywheel() {
+        return state == State.WAIT_STEADY;
     }
 
     private void enter(State next) {

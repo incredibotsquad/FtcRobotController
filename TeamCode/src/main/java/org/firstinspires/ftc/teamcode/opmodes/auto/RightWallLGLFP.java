@@ -332,7 +332,7 @@ public class RightWallLGLFP extends LinearOpMode {
             return;
         }
         launchCommand = new LaunchBallsCommand(robot.launchGateSubsystem, robot.intakeSubsystem,
-                robot.driveSubsystem, robot.intakeBarSubsystem);
+                robot.driveSubsystem, robot.intakeBarSubsystem, robot.launchSubsystem);
         launchCommand.schedule();
         setState(State.LAUNCHING, "launch " + launchVisit + ": " + side(cell) + " CELL is up, launcher "
                 + (ready ? "ready" : "NOT ready after READY_TIMEOUT_MS, firing anyway"));
