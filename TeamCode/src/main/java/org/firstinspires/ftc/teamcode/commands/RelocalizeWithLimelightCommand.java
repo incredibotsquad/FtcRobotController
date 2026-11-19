@@ -7,6 +7,7 @@ import com.arcrobotics.ftclib.geometry.Pose2d;
 import com.arcrobotics.ftclib.geometry.Rotation2d;
 import com.bylazar.configurables.annotations.Configurable;
 
+import org.firstinspires.ftc.teamcode.common.DriverBanner;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LimelightSubsystem;
@@ -100,6 +101,8 @@ public class RelocalizeWithLimelightCommand extends CommandBase {
             Pose2d current = odometry.getPose();
             Pose2d corrected = new Pose2d(sumX / samples, sumY / samples, new Rotation2d(current.getHeading()));
             odometry.updatePoseFromLimelight(corrected);
+            DriverBanner.showRelocalized("Limelight (" + samples + " frames)", corrected.getX(), corrected.getY(),
+                    Math.toDegrees(corrected.getHeading()));
             done = true;
         }
     }

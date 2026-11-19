@@ -18,6 +18,7 @@ import org.firstinspires.ftc.teamcode.commands.LaunchReadinessCommand;
 import org.firstinspires.ftc.teamcode.commands.RelocalizeWithLimelightCommand;
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
+import org.firstinspires.ftc.teamcode.common.DriverBanner;
 import org.firstinspires.ftc.teamcode.opmodes.auto.LaunchPoint;
 import org.firstinspires.ftc.teamcode.opmodes.auto.Poses;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
@@ -126,6 +127,7 @@ public class FlywheelTuner extends LinearOpMode {
             panels.addLine("FlywheelTuner: runs the real TeleOp. Flywheel spins up on START.");
             if (Incredibot.DRIVE_ONLY_MODE) panels.addLine("WARNING: DRIVE_ONLY_MODE is on, the launcher won't run.");
             panels.addData("Start pose", CrossOpModeStorage.currentPose);
+            DriverBanner.render(telemetry);
             panels.update(telemetry);
         }
         waitForStart();
@@ -224,6 +226,7 @@ public class FlywheelTuner extends LinearOpMode {
             panels.addData("Shots total / worst dip", totalShots + " / " + Math.round(worstDipRpm));
             panels.addData("Recovery ms (last)", lastRecoveryMs >= 0 ? String.valueOf(lastRecoveryMs) : "-");
 
+            DriverBanner.render(telemetry);
             panels.update(telemetry);
         }
 

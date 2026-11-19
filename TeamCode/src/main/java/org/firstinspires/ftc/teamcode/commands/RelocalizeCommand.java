@@ -11,6 +11,7 @@ import com.pedropathing.math.Pose;
 
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
+import org.firstinspires.ftc.teamcode.common.DriverBanner;
 import org.firstinspires.ftc.teamcode.opmodes.auto.Poses;
 import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
 
@@ -89,6 +90,7 @@ public class RelocalizeCommand extends CommandBase {
         telemetry.addData("Relocalized to", String.format("%s corner (%.1f, %.1f, %.0f deg)", corner, x, y, headingDeg));
 
         odometry.resetPose(x, y, headingDeg); // also writes CrossOpModeStorage.currentPose
+        DriverBanner.showRelocalized(corner + " corner", x, y, headingDeg);
     }
 
     /** Resets to our GARDEN-corner stance (see class comment), whatever odometry says. */
@@ -105,6 +107,7 @@ public class RelocalizeCommand extends CommandBase {
                 alliance, stance.x(), stance.y(), headingDeg));
 
         odometry.resetPose(stance.x(), stance.y(), headingDeg); // also writes CrossOpModeStorage.currentPose
+        DriverBanner.showRelocalized(alliance + " GARDEN corner", stance.x(), stance.y(), headingDeg);
     }
 
     @Override

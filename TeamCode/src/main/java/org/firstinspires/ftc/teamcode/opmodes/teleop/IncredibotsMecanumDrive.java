@@ -12,6 +12,7 @@ import org.firstinspires.ftc.teamcode.Incredibot;
 import org.firstinspires.ftc.teamcode.commands.LaunchReadinessCommand;
 import org.firstinspires.ftc.teamcode.commands.RelocalizeWithLimelightCommand;
 import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
+import org.firstinspires.ftc.teamcode.common.DriverBanner;
 
 @TeleOp(name = "IncredibotsMecanumDrive", group = "TeleOp")
 public class IncredibotsMecanumDrive extends LinearOpMode { // Changed this
@@ -59,6 +60,7 @@ public class IncredibotsMecanumDrive extends LinearOpMode { // Changed this
 //            telemetry.addData("Current Pose", incredibot.odometrySubsystem.getPose().toString());
 
             // Update your custom telemetry panels
+            DriverBanner.render(telemetry); // big RELOCALIZED banner for a few seconds
             PanelsTelemetry.INSTANCE.getTelemetry().update(telemetry);
         }
 
@@ -88,6 +90,7 @@ public class IncredibotsMecanumDrive extends LinearOpMode { // Changed this
                     LaunchReadinessCommand.ENABLE_MOVING_SHOT_COMPENSATION ? "ON" : "off");
 
             // Update your custom telemetry panels
+            DriverBanner.render(telemetry); // big RELOCALIZED banner for a few seconds
             PanelsTelemetry.INSTANCE.getTelemetry().update(telemetry);
         }
 
