@@ -93,6 +93,12 @@ public class LaunchBallsCommand extends CommandBase {
     public static long KICK_RETURN_TIMEOUT_MS = 1000;
     /** 1 artifact only: maximum kicks per launch (the first one included). */
     public static int MAX_KICKS = 2;
+    /**
+     * Lone-ball handling (sensor-4 completion with re-kicks, above) for a launch that starts with 1
+     * artifact. false (default since 2026-11-18): a lone ball is launched like any other count, with
+     * its own KICK_REVERSE_MS_BY_COUNT reverse, and the launch ends when the count reads 0.
+     */
+    public static boolean SINGLE_BALL_HANDLING_ENABLED = false;
 
     // LAST-BALL KICK (experimental; LAST_BALL_KICK_ENABLED = false turns it off live in Panels)
     /**
@@ -100,7 +106,7 @@ public class LaunchBallsCommand extends CommandBase {
      * When the count drops to 1 mid-launch, give it its own kick: reverse LAST_BALL_REVERSE_MS
      * (intake running), then forward, with the same sensor-4 completion and retries as a lone ball.
      */
-    public static boolean LAST_BALL_KICK_ENABLED = true;
+    public static boolean LAST_BALL_KICK_ENABLED = false; // off since 2026-11-18: the per-count reverse is enough
     /** Reverse time for the last artifact's kick. Longer than a full-stack reverse: it has room. */
     public static long LAST_BALL_REVERSE_MS = 500;
     /** Wait this long after the count drops to 1 before reversing (lets the previous one clear the flywheel). */
@@ -169,7 +175,7 @@ public class LaunchBallsCommand extends CommandBase {
         kickActive = !SIMPLE_LAUNCH && KICK_ENABLED;
         lastBallKickActive = kickActive && LAST_BALL_KICK_ENABLED;
         // One ball: the count says so. (Sensor 3 used to confirm it, but sensors 2/3 are ignored for now.)
-        singleBall = kickActive && countAtStart == 1;
+        singleBall = kickActive && SINGLE_BALL_HANDLING_ENABLED && countAtStart == 1;
         kicks = 0;
         reversing = false;
         sensor4BlockedSinceMs = -1;
