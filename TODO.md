@@ -97,7 +97,7 @@ between points and **extrapolated** outside them (`EXTRAPOLATE_SHOT_RPM`, limite
 rows within 3 in of the robot. Press gamepad 1 Y at the end and copy the logged rows into code.
 
 - [x] **47 in** row: 2607 RPM, P 0.0015, kV 0.0003156 (tested at 60, 8 = 47.5 in: 2614 RPM, 2026-11-18).
-- [x] **52 in** row: 2673 RPM, P 0.022, kV 0.0003145 (tested at 41.5, 8 = 51.0 in: 2660 RPM, 2026-11-18).
+- [x] **52 in** row: 2698 RPM, P 0.001, kV 0.0003102 (retuned at 41.5, 8 = 51.0 in: 2679 RPM, 2026-11-19).
 - [x] **66 in** row: 2928 RPM, P 0.0005, kV 0.00031 (tested at 12, 12 = 64.8 in: 2905 RPM, 2026-11-19).
 - [ ] **88 in** row (3170, P 0.035 placeholders). Only reachable at (135, 9); consider moving it to ~69 in
       (red corner, 9, 9).

@@ -54,11 +54,11 @@ public class LaunchReadinessCommand extends CommandBase {
      * waiting for the robot to get into range).
      */
     // Tuning points (2026-11-19). 47 and 52 reproduce the two tested shots exactly: 2614 RPM at
-    // 47.5 in (from 60, 8) and 2660 RPM at 51.0 in (from 41.5, 8). 66 tuned from (12, 12) = 64.8 in
+    // 47.5 in (from 60, 8) and 2679 RPM at 51.0 in (from 41.5, 8, retuned). 66 tuned from (12, 12) = 64.8 in
     // (2905 RPM there, 2026-11-19). 88 is still a placeholder.
     // Add rows as more spots are tuned (FlywheelTuner edits rows within ROW_SNAP_IN of the robot).
     public static double[] SHOT_DISTANCES_IN = {47, 52, 66, 88};
-    public static double[] SHOT_RPMS = {2607, 2673, 2928, 3170};
+    public static double[] SHOT_RPMS = {2607, 2698, 2928, 3170};
     /**
      * Outside the table, continue the line through the two nearest rows (true) instead of holding the
      * end RPM (false). The result is limited to MIN_SHOT_RPM..MAX_SHOT_RPM.
@@ -69,7 +69,7 @@ public class LaunchReadinessCommand extends CommandBase {
     /**
      * Turret lock also fixes the shot: while LaunchSubsystem.isLaunchReadinessLocked(), the RPM and the
      * flywheel gains come from the table rows at this distance instead of the robot's real distance,
-     * so a locked shot is always the same one. 51.0 = the spot the 52 in row was tuned from (2660 RPM). NaN = off
+     * so a locked shot is always the same one. 51.0 = the spot the 52 in row was tuned from (2679 RPM). NaN = off
      * (locked shots then use the real distance, as before).
      */
     public static double LOCKED_SHOT_DISTANCE_IN = 51.0;
