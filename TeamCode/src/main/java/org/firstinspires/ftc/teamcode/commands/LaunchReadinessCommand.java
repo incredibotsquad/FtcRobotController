@@ -55,6 +55,13 @@ public class LaunchReadinessCommand extends CommandBase {
      */
     public static double[] SHOT_DISTANCES_IN = {42, 43.5, 44, 47, 48.75, 52, 66, 88};
     public static double[] SHOT_RPMS = {2515, 2515, 2515, 2668, 2668, 2656, 2878, 3170}; // 52 in: 2731 -> 2656 (FlywheelTuner, 2026-11-18)
+    /**
+     * Turret lock also fixes the shot: while LaunchSubsystem.isLaunchReadinessLocked(), the RPM and the
+     * flywheel gains come from the table rows at this distance instead of the robot's real distance,
+     * so a locked shot is always the same one. 52 = the row tuned on 2026-11-18 (2656 RPM). NaN = off
+     * (locked shots then use the real distance, as before).
+     */
+    public static double LOCKED_SHOT_DISTANCE_IN = 52.0;
     /** Out-of-table distance already logged (logs once each time the robot leaves the table range). */
     private boolean loggedOutOfRange = false;
 
@@ -212,9 +219,12 @@ public class LaunchReadinessCommand extends CommandBase {
         }
 
         // ---------------------------------------------------- flywheel (always running)
-        double rpm = rpmForDistance(distance);
+        // Locked: a fixed shot (LOCKED_SHOT_DISTANCE_IN's RPM and gains), so there's no variability.
+        double shotDistance = turretLocked && !Double.isNaN(LOCKED_SHOT_DISTANCE_IN) ? LOCKED_SHOT_DISTANCE_IN : distance;
+        lastDistanceIn = shotDistance; // FlywheelTuner edits the row for this distance
+        double rpm = rpmForDistance(shotDistance);
         lastRpmTarget = rpm;
-        launcher.updateFlywheel(rpm, distance);
+        launcher.updateFlywheel(rpm, shotDistance);
 
         // ---------------------------------------------------- shot validity
         // Outside the table: rpmForDistance() already snapped to the end RPM; shoot with it.
@@ -246,7 +256,8 @@ public class LaunchReadinessCommand extends CommandBase {
         if (DebugTelemetry.ENABLED) telemetry.addData("Launch: Turret angle (deg)", Math.round(relativeDeg));
         if (DebugTelemetry.ENABLED) telemetry.addData("Launch: Turret aim from", visionCorrection.status());
         if (DebugTelemetry.ENABLED) telemetry.addData("Launch: Turret position", turretLocked ? LaunchSubsystem.TURRET_MID + " (LOCKED)" : String.valueOf(turretReachable ? turretPosition : -1));
-        if (DebugTelemetry.ENABLED) telemetry.addData("Launch: RPM target / actual", Math.round(rpm) + " / " + Math.round(launcher.getCurrentFlywheelRPM()));
+        if (DebugTelemetry.ENABLED) telemetry.addData("Launch: RPM target / actual", Math.round(rpm) + " / " + Math.round(launcher.getCurrentFlywheelRPM())
+                + (shotDistance != distance ? " (LOCKED: " + LOCKED_SHOT_DISTANCE_IN + " in row)" : ""));
         if (DebugTelemetry.ENABLED) telemetry.addData("Launch: Solution", solutionValid ? "READY" : notReadyReason);
     }
 
