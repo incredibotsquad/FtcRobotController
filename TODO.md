@@ -88,31 +88,22 @@ Estimate: ~2-3% RPM drop per ball, ~20-30 ms full-power recovery. Balls stream w
 - [ ] **Repeat at 12.0 / 12.8 / 13.5 V**, then rebuild `SHOT_DISTANCES_IN`/`SHOT_RPMS` from burst means.
 - [ ] Optional: A/B test 70A Rhino (3601) wheels (both wheels, compression re-set).
 
-## Shot table tuning (added 2026-11-18)
+## Shot table tuning (added 2026-11-18, reworked 2026-11-19)
 
-Tune with FlywheelTuner: robot on the spot, edits apply within 3 in of a row (`ROW_SNAP_IN`); press
-gamepad 1 Y at the end and copy the logged rows into `LaunchReadinessCommand.SHOT_RPMS` and
-`LaunchSubsystem.GAIN_TABLE_*`. Use a charged battery; the steady-flywheel wait and `LaunchShot` logs
-are on. Most-used spots first (red-frame distances to their CELL):
+The shot and gain tables now have four tuning points, 47 / 52 / 66 / 88 in. RPM is interpolated
+between points and **extrapolated** outside them (`EXTRAPOLATE_SHOT_RPM`, limited to
+`MIN/MAX_SHOT_RPM`); gains hold the nearest end row. Add a row (same index in `SHOT_DISTANCES_IN`,
+`SHOT_RPMS` and every `GAIN_TABLE_*` array) when a spot needs its own tuning: FlywheelTuner only edits
+rows within 3 in of the robot. Press gamepad 1 Y at the end and copy the logged rows into code.
 
-| Spot | Distance | Nearest rows (shot / gain) |
-|---|---|---|
-| RED_LAUNCH_AUDIENCE_CELL_1 (RIGHT_SPOT_1) | 48.7 in | shot 48.75 / gain 47 + 52 |
-| RED_LAUNCH_FAR_CELL_1 (LEFT_SPOT_1) | 49.7 in | shot 48.75 / gain 47 + 52 |
-| RED_LAUNCH_AUDIENCE_CELL_2 (RIGHT_SPOT_2) | 43.5 in | shot 43.5 / gain 44 |
-| RED_LAUNCH_FAR_CELL_2 (LEFT_SPOT_2) | 43.2 in | shot 43.5 / gain 44 |
-| RED_START_FAR_WALL | 55.9 in | between 52 and 66 (no row) |
-
-- [x] **52 in** (spot: red RIGHT start, 41.5, 8 = 51.0 in): RPM 2656, P 0.022, kV 0.0003145 (2026-11-18).
-- [ ] **48.75 in** shot row (2668, placeholder): RIGHT_SPOT_1 / LEFT_SPOT_1. Gain row **47 in** too.
-- [ ] **43.5 in** shot row (2515): RIGHT_SPOT_2 / LEFT_SPOT_2. Gain row **44 in** too.
-- [ ] **42 / 44 in** shot rows (2515, placeholders): close shots; 42 = start of the table.
-- [ ] **47 in** shot row (2668, placeholder).
-- [ ] **66 in** shot row (2878) and gain row: longer TeleOp shots (and RED_START_FAR_WALL at 55.9 in
-      interpolates 52-66: check a shot there).
-- [ ] **88 in** shot row (3170) and gain row: end of the table, used for anything farther.
-- [ ] kS is still 0.16 in every row; only re-fit if two speeds show a steady-state error (kS and kV
-      can't be separated at one speed).
+- [x] **47 in** row: 2607 RPM, P 0.0015, kV 0.0003156 (tested at 60, 8 = 47.5 in: 2614 RPM, 2026-11-18).
+- [x] **52 in** row: 2673 RPM, P 0.022, kV 0.0003145 (tested at 41.5, 8 = 51.0 in: 2660 RPM, 2026-11-18).
+- [ ] **66 in** row (2878, P 0.03, kV 0.00032419 placeholders). Spot: (13, 9) heading 90.
+- [ ] **88 in** row (3170, P 0.035 placeholders). Only reachable at (135, 9); consider moving it to ~69 in
+      (red corner, 9, 9).
+- [ ] Check the extrapolated close shots: auto spots at ~43.5 in (RIGHT/LEFT_SPOT_2, about 2561 RPM) and
+      ~32 in (LEFT_SPOT_3, about 2409 RPM). Add a row there if they miss.
+- [ ] kS is 0.16 in every row; only re-fit with steady-state data at two speeds.
 
 ## Before competition
 

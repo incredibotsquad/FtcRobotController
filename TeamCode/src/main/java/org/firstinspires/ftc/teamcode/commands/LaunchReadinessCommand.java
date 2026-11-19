@@ -53,15 +53,25 @@ public class LaunchReadinessCommand extends CommandBase {
      * Outside the table the nearest end RPM is used, and the shot still counts as ready (no
      * waiting for the robot to get into range).
      */
-    public static double[] SHOT_DISTANCES_IN = {42, 43.5, 44, 47, 48.75, 52, 66, 88};
-    public static double[] SHOT_RPMS = {2515, 2515, 2515, 2668, 2668, 2656, 2878, 3170}; // 52 in: 2731 -> 2656 (FlywheelTuner, 2026-11-18)
+    // Tuning points (2026-11-19). 47 and 52 reproduce the two tested shots exactly: 2614 RPM at
+    // 47.5 in (from 60, 8) and 2660 RPM at 51.0 in (from 41.5, 8). 66 and 88 are still placeholders.
+    // Add rows as more spots are tuned (FlywheelTuner edits rows within ROW_SNAP_IN of the robot).
+    public static double[] SHOT_DISTANCES_IN = {47, 52, 66, 88};
+    public static double[] SHOT_RPMS = {2607, 2673, 2878, 3170};
+    /**
+     * Outside the table, continue the line through the two nearest rows (true) instead of holding the
+     * end RPM (false). The result is limited to MIN_SHOT_RPM..MAX_SHOT_RPM.
+     */
+    public static boolean EXTRAPOLATE_SHOT_RPM = true;
+    public static double MIN_SHOT_RPM = 1500;
+    public static double MAX_SHOT_RPM = 4500;
     /**
      * Turret lock also fixes the shot: while LaunchSubsystem.isLaunchReadinessLocked(), the RPM and the
      * flywheel gains come from the table rows at this distance instead of the robot's real distance,
-     * so a locked shot is always the same one. 52 = the row tuned on 2026-11-18 (2656 RPM). NaN = off
+     * so a locked shot is always the same one. 51.0 = the spot the 52 in row was tuned from (2660 RPM). NaN = off
      * (locked shots then use the real distance, as before).
      */
-    public static double LOCKED_SHOT_DISTANCE_IN = 52.0;
+    public static double LOCKED_SHOT_DISTANCE_IN = 51.0;
     /** Out-of-table distance already logged (logs once each time the robot leaves the table range). */
     private boolean loggedOutOfRange = false;
 
@@ -231,7 +241,7 @@ public class LaunchReadinessCommand extends CommandBase {
         boolean inRange = distance >= SHOT_DISTANCES_IN[0]
                 && distance <= SHOT_DISTANCES_IN[SHOT_DISTANCES_IN.length - 1];
         if (!inRange && !loggedOutOfRange) {
-            Log.i("LaunchReadiness", String.format("distance %.1f in is outside the shot table (%.0f-%.0f): using %.0f RPM",
+            Log.i("LaunchReadiness", String.format("distance %.1f in is outside the shot table (%.0f-%.0f): %.0f RPM (" + (EXTRAPOLATE_SHOT_RPM ? "extrapolated" : "end row") + ")",
                     distance, SHOT_DISTANCES_IN[0], SHOT_DISTANCES_IN[SHOT_DISTANCES_IN.length - 1], rpm));
         }
         loggedOutOfRange = !inRange;
@@ -252,7 +262,7 @@ public class LaunchReadinessCommand extends CommandBase {
         // ---------------------------------------------------- telemetry
         if (DebugTelemetry.ENABLED) telemetry.addData("Launch: Target cell", CrossOpModeStorage.allianceColor + " " + LaunchTargets.getLastSelectedCell());
         if (DebugTelemetry.ENABLED) telemetry.addData("Launch: Distance (in)", Math.round(distance * 10) / 10.0
-                + (inRange ? "" : " (outside table, end RPM)"));
+                + (inRange ? "" : EXTRAPOLATE_SHOT_RPM ? " (outside table, extrapolated)" : " (outside table, end RPM)"));
         if (DebugTelemetry.ENABLED) telemetry.addData("Launch: Turret angle (deg)", Math.round(relativeDeg));
         if (DebugTelemetry.ENABLED) telemetry.addData("Launch: Turret aim from", visionCorrection.status());
         if (DebugTelemetry.ENABLED) telemetry.addData("Launch: Turret position", turretLocked ? LaunchSubsystem.TURRET_MID + " (LOCKED)" : String.valueOf(turretReachable ? turretPosition : -1));
@@ -365,10 +375,20 @@ public class LaunchReadinessCommand extends CommandBase {
         return estimatedTurretPosition;
     }
 
-    /** Linear interpolation over the shot table, clamped to its ends so the flywheel always has a target. */
+    /**
+     * Linear interpolation over the shot table. Outside it: extrapolated from the two nearest rows
+     * (EXTRAPOLATE_SHOT_RPM, limited to MIN/MAX_SHOT_RPM) or the end RPM.
+     */
     static double rpmForDistance(double distance) {
         int n = Math.min(SHOT_DISTANCES_IN.length, SHOT_RPMS.length);
         if (n == 0) return 0;
+        if (EXTRAPOLATE_SHOT_RPM && n >= 2 && (distance < SHOT_DISTANCES_IN[0] || distance > SHOT_DISTANCES_IN[n - 1])) {
+            int a = distance < SHOT_DISTANCES_IN[0] ? 0 : n - 2;
+            double span = SHOT_DISTANCES_IN[a + 1] - SHOT_DISTANCES_IN[a];
+            double slope = span > 0 ? (SHOT_RPMS[a + 1] - SHOT_RPMS[a]) / span : 0;
+            double rpm = SHOT_RPMS[a] + (distance - SHOT_DISTANCES_IN[a]) * slope;
+            return Math.max(MIN_SHOT_RPM, Math.min(MAX_SHOT_RPM, rpm));
+        }
         if (distance <= SHOT_DISTANCES_IN[0]) return SHOT_RPMS[0];
         for (int i = 1; i < n; i++) {
             if (distance <= SHOT_DISTANCES_IN[i]) {
