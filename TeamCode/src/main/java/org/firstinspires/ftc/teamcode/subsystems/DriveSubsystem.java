@@ -48,7 +48,7 @@ import java.util.Map;
 public class DriveSubsystem extends SubsystemBase {
 
     /** Master switch for the launch hold. false = always manual driving. Live in Panels. */
-    public static boolean LAUNCH_HOLD_ENABLED = true;
+    public static boolean LAUNCH_HOLD_ENABLED = false; // off by default since 2026-11-18
 
     /**
      * Max drive wheel power (0-1) while the launch hold is active. 1.0 = no cap. Lower = less current
