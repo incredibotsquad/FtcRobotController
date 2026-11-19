@@ -112,7 +112,7 @@ public class LaunchSubsystem extends SubsystemBase {
     private boolean inBangBang = false;
 
     /** Turret lock: see setLaunchReadinessLock(). */
-    private boolean isLaunchReadinessLocked = true;
+    private boolean isLaunchReadinessLocked = false; // unlocked by default again (2026-11-18): auto-aim from the start
 
     public static boolean SKIP_FLYWHEEL = false;
 
