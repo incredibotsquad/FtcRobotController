@@ -54,14 +54,14 @@ public class LaunchSubsystem extends SubsystemBase {
      */
     public static boolean USE_GAIN_TABLE = true;
     //match these values to LaunchReadinessCommand.SHOT_DISTANCES_IN
-    // Rows match LaunchReadinessCommand.SHOT_DISTANCES_IN. 47 / 52 tuned 2026-11-18/19, 66 / 88 on 2026-11-19 (88 kV not retuned).
+    // Rows match LaunchReadinessCommand.SHOT_DISTANCES_IN. 47 / 52 tuned 2026-11-18/19, 66 / 88 on 2026-11-19.
     // Outside the table the nearest end row is used (gains are not extrapolated).
     public static double[] GAIN_TABLE_DISTANCES_IN = {47, 52, 66, 88};
-    public static double[] GAIN_TABLE_P  = {0.0015, 0.001, 0.0005, 0.0015};
+    public static double[] GAIN_TABLE_P  = {0.0015, 0.001, 0.0005, 0.001};
     public static double[] GAIN_TABLE_I  = {0.0, 0.0, 0.0, 0.0};
     public static double[] GAIN_TABLE_D  = {0.0, 0.0, 0.0, 0.0};
     public static double[] GAIN_TABLE_KS = {0.16, 0.16, 0.16, 0.16};
-    public static double[] GAIN_TABLE_KV = {0.0003156, 0.0003102, 0.00031, 0.00032419};
+    public static double[] GAIN_TABLE_KV = {0.0003156, 0.0003102, 0.00031, 0.0003144};
 
     /** Run full power while more than this far below target (fast spin-up and shot recovery). */
     public static boolean FLYWHEEL_BANG_BANG_ENABLED = true;
