@@ -10,7 +10,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.Incredibot;
 import org.firstinspires.ftc.teamcode.commands.LaunchReadinessCommand;
-import org.firstinspires.ftc.teamcode.commands.RelocalizeWithLimelightCommand;
+import org.firstinspires.ftc.teamcode.commands.LaunchRelocalizeCommand;
 import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 import org.firstinspires.ftc.teamcode.common.DriverBanner;
 
@@ -30,13 +30,6 @@ public class IncredibotsMecanumDrive extends LinearOpMode { // Changed this
                 hardwareMap,
                 PanelsTelemetry.INSTANCE.getTelemetry());
 
-        // Schedule the RelocalizeCommand
-        // In LinearOpMode, we schedule it once here
-        RelocalizeWithLimelightCommand relocalizeWithLimelightCommand = new RelocalizeWithLimelightCommand(
-                incredibot.limelightSubsystem,
-                incredibot.odometrySubsystem,
-                incredibot.driveSubsystem
-        );
 
 
 
@@ -46,10 +39,8 @@ public class IncredibotsMecanumDrive extends LinearOpMode { // Changed this
         //odometry subsystem periodically updates this in cross oomode storage.
         incredibot.odometrySubsystem.resetPose(CrossOpModeStorage.currentPose.getX(), CrossOpModeStorage.currentPose.getY(), Math.toDegrees(CrossOpModeStorage.currentPose.getHeading()));
 
-        //relocalize based on april tags - this only schedules it once (skipped in drive-only mode)
-        if (!Incredibot.DRIVE_ONLY_MODE) {
-            relocalizeWithLimelightCommand.schedule();
-        }
+        // Limelight relocalization no longer runs here: it runs during launches and on the operator's
+        // right stick button (LaunchRelocalizeCommand / RelocalizeWithLimelightCommand).
 
         // 2. THE INIT-LOOP (Runs after you hit INIT, but before you hit START)
         while (opModeInInit()) {
@@ -85,6 +76,8 @@ public class IncredibotsMecanumDrive extends LinearOpMode { // Changed this
             // The scheduler runs all active commands (including Relocalize and Drive)
             CommandScheduler.getInstance().run();
 
+            // Always on the Driver Hub: Limelight relocalization state (launch auto + right stick button).
+            PanelsTelemetry.INSTANCE.getTelemetry().addData("LL relocalize", LaunchRelocalizeCommand.status());
             // Always on the Driver Hub (not gated by DebugTelemetry): operator X toggles it.
             PanelsTelemetry.INSTANCE.getTelemetry().addData("Moving shots (op X)",
                     LaunchReadinessCommand.ENABLE_MOVING_SHOT_COMPENSATION ? "ON" : "off");

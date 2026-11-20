@@ -28,7 +28,7 @@ import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
 public class RelocalizeWithLimelightCommand extends CommandBase {
 
     /** Master switch. false = the command finishes immediately and never touches the pose. Live in Panels. */
-    public static boolean ENABLED = false;
+    public static boolean ENABLED = true; // on since 2026-11-19 (operator right stick button; no longer run at INIT)
 
     public static int SAMPLES_NEEDED = 5;
     public static int MIN_TAGS = 2;
@@ -61,7 +61,12 @@ public class RelocalizeWithLimelightCommand extends CommandBase {
         sumX = 0;
         sumY = 0;
         done = !ENABLED;
-        if (!ENABLED) Log.i("RelocalizeWithLimelight", "Disabled (ENABLED = false), pose unchanged");
+        if (!ENABLED) {
+            Log.i("RelocalizeWithLimelight", "Disabled (ENABLED = false), pose unchanged");
+            LaunchRelocalizeCommand.report("button: OFF (RelocalizeWithLimelightCommand.ENABLED)");
+        } else {
+            LaunchRelocalizeCommand.report("button: sampling...");
+        }
     }
 
     @Override
@@ -74,6 +79,7 @@ public class RelocalizeWithLimelightCommand extends CommandBase {
 
         if (System.currentTimeMillis() - startMs > TIMEOUT_MS) {
             Log.w("RelocalizeWithLimelight", "Timed out with " + samples + "/" + SAMPLES_NEEDED + " samples, pose unchanged");
+            LaunchRelocalizeCommand.report("button: FAILED, " + samples + "/" + SAMPLES_NEEDED + " clean frames in " + TIMEOUT_MS + " ms (keep still, 2+ tags)");
             done = true;
             return;
         }
@@ -101,6 +107,8 @@ public class RelocalizeWithLimelightCommand extends CommandBase {
             Pose2d current = odometry.getPose();
             Pose2d corrected = new Pose2d(sumX / samples, sumY / samples, new Rotation2d(current.getHeading()));
             odometry.updatePoseFromLimelight(corrected);
+            LaunchRelocalizeCommand.report(String.format(java.util.Locale.US, "button: moved %.1f in to (%.1f, %.1f)",
+                    current.getTranslation().getDistance(corrected.getTranslation()), corrected.getX(), corrected.getY()));
             DriverBanner.showRelocalized("Limelight (" + samples + " frames)", corrected.getX(), corrected.getY(),
                     Math.toDegrees(corrected.getHeading()));
             done = true;

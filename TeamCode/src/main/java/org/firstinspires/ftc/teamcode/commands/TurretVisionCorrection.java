@@ -53,6 +53,8 @@ public class TurretVisionCorrection {
     public static long HOLD_MS = 300;
     /** Then fade it out over this long (0 = drop at once). */
     public static long FADE_MS = 300;
+    /** Odometry moving more than this in one loop is a pose reset (relocalize): the correction restarts. */
+    public static double POSE_JUMP_RESET_IN = 3.0;
 
     /**
      * Threshold check logging (tag TurretVision): every STATS_LOG_MS with new frames, a summary of the
@@ -86,6 +88,7 @@ public class TurretVisionCorrection {
     private double weight = 0;
     private String reason = "no data yet";
     private boolean wasUsingVision = false;
+    private Pose2d lastPose = null;
 
     public TurretVisionCorrection(LimelightSubsystem limelight, OdometrySubsystem odometry) {
         this.limelight = limelight;
@@ -96,6 +99,13 @@ public class TurretVisionCorrection {
     public Translation2d update(Pose2d pose, AllianceColors alliance) {
         long now = System.nanoTime() / 1_000_000L;
         updateTurnRate(pose.getHeading(), now);
+        // Relocalized: odometry now holds what the correction was adding, so drop the correction.
+        if (lastPose != null && lastPose.getTranslation().getDistance(pose.getTranslation()) > POSE_JUMP_RESET_IN) {
+            Log.i(TAG, String.format("odometry jumped %.1f in (relocalized): correction reset",
+                    lastPose.getTranslation().getDistance(pose.getTranslation())));
+            reset("odometry reset");
+        }
+        lastPose = pose;
 
         if (!ENABLED || limelight == null) {
             reset(!ENABLED ? "off" : "no Limelight");

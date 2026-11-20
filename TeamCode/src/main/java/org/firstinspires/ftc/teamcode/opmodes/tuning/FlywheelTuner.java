@@ -15,7 +15,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import org.firstinspires.ftc.teamcode.Incredibot;
 import org.firstinspires.ftc.teamcode.commands.LaunchBallsCommand;
 import org.firstinspires.ftc.teamcode.commands.LaunchReadinessCommand;
-import org.firstinspires.ftc.teamcode.commands.RelocalizeWithLimelightCommand;
+import org.firstinspires.ftc.teamcode.commands.LaunchRelocalizeCommand;
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
 import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 import org.firstinspires.ftc.teamcode.common.DriverBanner;
@@ -128,8 +128,6 @@ public class FlywheelTuner extends LinearOpMode {
         // ---------------------------------------------------- INIT: same as IncredibotsMecanumDrive
         Incredibot incredibot = new Incredibot(hardwareMap, panels);
         launcher = incredibot.launchSubsystem;
-        RelocalizeWithLimelightCommand relocalize = new RelocalizeWithLimelightCommand(
-                incredibot.limelightSubsystem, incredibot.odometrySubsystem, incredibot.driveSubsystem);
 
         incredibot.intakeBarSubsystem.raise();
         if (USE_START_POSE) {
@@ -142,7 +140,6 @@ public class FlywheelTuner extends LinearOpMode {
             incredibot.odometrySubsystem.resetPose(CrossOpModeStorage.currentPose.getX(), CrossOpModeStorage.currentPose.getY(),
                     Math.toDegrees(CrossOpModeStorage.currentPose.getHeading()));
         }
-        if (!Incredibot.DRIVE_ONLY_MODE) relocalize.schedule();
 
         while (opModeInInit()) {
             // Start pose typed into Panels during INIT: apply it as soon as it changes.
@@ -252,6 +249,7 @@ public class FlywheelTuner extends LinearOpMode {
             panels.addData("Shots total / worst dip", totalShots + " / " + Math.round(worstDipRpm));
             panels.addData("Recovery ms (last)", lastRecoveryMs >= 0 ? String.valueOf(lastRecoveryMs) : "-");
 
+            panels.addData("LL relocalize", LaunchRelocalizeCommand.status());
             DriverBanner.render(telemetry);
             panels.update(telemetry);
         }

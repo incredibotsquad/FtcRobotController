@@ -13,6 +13,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import org.firstinspires.ftc.teamcode.commands.CloseGateCommand;
 import org.firstinspires.ftc.teamcode.commands.LaunchBallsCommand;
 import org.firstinspires.ftc.teamcode.commands.LaunchReadinessCommand;
+import org.firstinspires.ftc.teamcode.commands.LaunchRelocalizeCommand;
 import org.firstinspires.ftc.teamcode.commands.DriveRobotCommand;
 import org.firstinspires.ftc.teamcode.commands.RelocalizeCommand;
 import org.firstinspires.ftc.teamcode.commands.RelocalizeWithLimelightCommand;
@@ -138,6 +139,12 @@ public class Incredibot extends Robot {
         operatorGamepad.getGamepadButton(GamepadKeys.Button.LEFT_STICK_BUTTON)
                 .whenPressed(new RelocalizeCommand(odometrySubsystem, telemetry, RelocalizeCommand.Mode.ALLIANCE_STANCE));
 
+        // Limelight relocalization: manual on the operator's right stick button (robot still, 5 clean
+        // frames within 2 s), and automatic during every launch at standstill (applied when the launch ends).
+        operatorGamepad.getGamepadButton(GamepadKeys.Button.RIGHT_STICK_BUTTON)
+                .whenPressed(new RelocalizeWithLimelightCommand(limelightSubsystem, odometrySubsystem, driveSubsystem));
+        new LaunchRelocalizeCommand(limelightSubsystem, odometrySubsystem, driveSubsystem, launchGateSubsystem).schedule();
+
         // Intake bar: A lowers it in front of the robot (FLOWER POLLEN pickup) / raises it again.
         // The TeleOp already holds it RAISED from INIT, so the first press lowers it.
         operatorGamepad.getGamepadButton(GamepadKeys.Button.A)
@@ -155,6 +162,11 @@ public class Incredibot extends Robot {
         }
 
         initCommon();
+
+        // Limelight relocalization during launches, if turned on for auto (LaunchRelocalizeCommand.ENABLED_IN_AUTO).
+        if (LaunchRelocalizeCommand.ENABLED_IN_AUTO) {
+            new LaunchRelocalizeCommand(limelightSubsystem, odometrySubsystem, driveSubsystem, launchGateSubsystem, true).schedule();
+        }
 
         // Auto always aims with the turret (and uses the distance-based RPM): the lock is a TeleOp
         // option only (operator START). It defaults to locked, so clear it here.
