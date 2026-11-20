@@ -1,6 +1,9 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import org.firstinspires.ftc.teamcode.common.DebugTelemetry;
+import org.firstinspires.ftc.teamcode.common.DriverBanner;
+
+import java.util.Locale;
 
 import android.util.Log;
 
@@ -135,6 +138,28 @@ public class IntakeSubsystem extends SubsystemBase {
     public static long FULL_EJECT_MS = 500;
     public static double FULL_EJECT_POWER = 1.0;
 
+    // ---------------------------------------------------------------- transfer jam protection (2026-11-20)
+    /**
+     * An artifact caught in the gate stops the whole stack, and the transfer and intake pushing into it
+     * at full power (with the drive and flywheel on top) can blow the 20 A battery fuse. On a jam both
+     * are blocked from running FORWARD (reverse still works) until the operator clears it by holding
+     * the reverse (BACK) for JAM_CLEAR_REVERSE_MS; LaunchBallsCommand ends and refuses to start
+     * meanwhile. Drive, turret and flywheel keep running. Logged with tag IntakeJam.
+     * Two rules, either one is a jam:
+     *  - current: filtered transfer draw >= JAM_CURRENT_A for JAM_CURRENT_MS while it runs forward
+     *    (ignoring the first JAM_STARTUP_MS). The 435 RPM transfer stalls around 9 A at 12 V; four
+     *    artifacts pressed against the closed gate averaged about 5.3 A (2026-11-19).
+     *  - no progress (launching only): transfer forward, count > 0, sensor 4 blocked, and no exit
+     *    counted for JAM_NO_EXIT_MS.
+     * Uses STALL_CURRENT_FILTER_MS / CURRENT_READ_INTERVAL_MS for the current reading.
+     */
+    public static boolean JAM_DETECTION_ENABLED = true;
+    public static double JAM_CURRENT_A = 6.5;
+    public static long JAM_CURRENT_MS = 300;
+    public static long JAM_STARTUP_MS = 250;
+    public static long JAM_NO_EXIT_MS = 700;
+    public static long JAM_CLEAR_REVERSE_MS = 300;
+
     // ---------------------------------------------------------------- stall detection (see class comment)
     public enum StallSignal { CURRENT, VELOCITY, BOTH }
 
@@ -210,6 +235,20 @@ public class IntakeSubsystem extends SubsystemBase {
     /** Intake motor power to use while launching instead of off; NaN = no override (intake off). */
     private double launchIntakeOverride = Double.NaN;
 
+    // Transfer jam protection (see JAM_DETECTION_ENABLED)
+    private boolean jammed = false;
+    private String jamReason = "";
+    private double transferCurrentA = Double.NaN;
+    private double transferRawCurrentA = Double.NaN;
+    private long transferCurrentReadAtMs = 0;
+    private long transferForwardSinceMs = -1;
+    private long transferHighSinceMs = -1;
+    private long jamS4BlockedSinceMs = -1;
+    private long jamReverseSinceMs = -1;
+    private long lastExitMs = 0;
+    /** Highest filtered transfer current since resetTransferCurrentPeak() (for launch logs). */
+    private double transferCurrentPeakA = 0;
+
     public IntakeSubsystem(HardwareMap hardwareMap, TelemetryManager telemetry) {
         this.telemetry = telemetry;
         intakeMotor = new MotorEx(hardwareMap, "intakeMotor", Motor.GoBILDA.BARE);
@@ -235,24 +274,24 @@ public class IntakeSubsystem extends SubsystemBase {
     /** Starts intake and transfer, unless already full. */
     public void startIntakeAndTransfer() {
         if (isFullAndDoneIntaking()) {
-            intakeGuard.request(0);
-            transferMotor.set(isFullAndTransferDone() ? 0 : 1); // transfer runs on TRANSFER_FULL_DELAY_MS
+            requestIntake(0);
+            setTransfer(isFullAndTransferDone() ? 0 : 1); // transfer runs on TRANSFER_FULL_DELAY_MS
             return;
         }
-        intakeGuard.request(1);
-        transferMotor.set(1);
+        requestIntake(1);
+        setTransfer(1);
     }
 
     /** Stops intake and transfer. */
     public void stopIntakeAndTransfer() {
-        intakeGuard.request(0);
-        transferMotor.set(0);
+        requestIntake(0);
+        setTransfer(0);
     }
 
     /** Runs intake and transfer in reverse to eject artifacts. */
     public void reverseIntakeAndTransfer() {
-        intakeGuard.request(-1);
-        transferMotor.set(-1);
+        requestIntake(-1);
+        setTransfer(-1);
     }
 
     public boolean isOn() {
@@ -260,19 +299,19 @@ public class IntakeSubsystem extends SubsystemBase {
     }
 
     public void setIntakeMotorPower(double power) {
-        intakeGuard.request(power);
+        requestIntake(power);
     }
 
     public void setTransferMotorPower(double power) {
-        transferMotor.set(power);
+        setTransfer(power);
     }
 
     public void stopIntakeMotorOnly() {
-        intakeGuard.request(0);
+        requestIntake(0);
     }
 
     public void stopTransferMotorOnly() {
-        transferMotor.set(0);
+        setTransfer(0);
     }
 
     /** Last power written to the intake motor (after the stall guard). For logging. */
@@ -324,7 +363,7 @@ public class IntakeSubsystem extends SubsystemBase {
             return;
         }
         fullEjectUntilMs = nowMs() + FULL_EJECT_MS;
-        intakeGuard.request(-Math.abs(FULL_EJECT_POWER));
+        requestIntake(-Math.abs(FULL_EJECT_POWER));
         Log.i("IntakeCount", "full: intake reversing " + FULL_EJECT_MS + " ms to push out a straddler, sensors " + sensorString());
     }
 
@@ -531,6 +570,7 @@ public class IntakeSubsystem extends SubsystemBase {
         Log.i("IntakeCount", String.format("%d -> %d: %s | sensors %s, intake %.1f, transfer %.1f%s",
                 artifactCount, newCount, reason, sensorString(), intakeMotor.get(), transferMotor.get(),
                 launching ? ", launching" : ""));
+        if (newCount < artifactCount) lastExitMs = nowMs();
         artifactCount = newCount;
     }
 
@@ -583,6 +623,7 @@ public class IntakeSubsystem extends SubsystemBase {
             if (intakeMotor.get() > 0) stopIntakeMotorOnly();
             if (isFullAndTransferDone() && transferMotor.get() > 0) stopTransferMotorOnly();
         }
+        updateJam(nowMs());
 
         updateStatusLight(artifactCount);
 
@@ -592,6 +633,116 @@ public class IntakeSubsystem extends SubsystemBase {
                 laser1.getDistanceMm(), laser1.getBaselineMm(), laser4.getDistanceMm(), laser4.getBaselineMm()));
         if (DebugTelemetry.ENABLED) telemetry.addData("Transfer Power: ", transferMotor.get());
         if (DebugTelemetry.ENABLED) telemetry.addData("Intake stall", intakeGuard.status());
+    }
+
+    // ---------------------------------------------------------------- transfer jam protection
+
+    /** Transfer write: forward is blocked while jammed. */
+    private void setTransfer(double power) {
+        if (jammed && power > 0) power = 0;
+        transferMotor.set(power);
+    }
+
+    /** Intake write (through the stall guard): forward is blocked while jammed. */
+    private void requestIntake(double power) {
+        if (jammed && power > 0) power = 0;
+        intakeGuard.request(power);
+    }
+
+    public boolean isJammed() {
+        return jammed;
+    }
+
+    public String getJamReason() {
+        return jamReason;
+    }
+
+    public double getTransferCurrentPeakA() {
+        return transferCurrentPeakA;
+    }
+
+    public void resetTransferCurrentPeak() {
+        transferCurrentPeakA = 0;
+    }
+
+    private void updateJam(long now) {
+        double transfer = transferMotor.get();
+        if (jammed) {
+            if (transfer > 0) transferMotor.set(0);
+            if (intakeMotor.get() > 0) intakeGuard.request(0);
+            if (transfer < 0 && !launching) { // the operator's reverse, not a launch kick
+                if (jamReverseSinceMs < 0) jamReverseSinceMs = now;
+                if (now - jamReverseSinceMs >= JAM_CLEAR_REVERSE_MS) {
+                    jammed = false;
+                    Log.i("IntakeJam", "cleared: reversed " + (now - jamReverseSinceMs) + " ms | count " + artifactCount + ", sensors " + sensorString());
+                    DriverBanner.show("JAM CLEARED", "intake and transfer back on", "#00E676");
+                }
+            } else {
+                jamReverseSinceMs = -1;
+            }
+            return;
+        }
+        if (!JAM_DETECTION_ENABLED || transfer <= 0) {
+            transferForwardSinceMs = -1;
+            transferHighSinceMs = -1;
+            jamS4BlockedSinceMs = -1;
+            transferCurrentA = Double.NaN;
+            return;
+        }
+        if (transferForwardSinceMs < 0) transferForwardSinceMs = now;
+
+        // Current rule (after the start / reversal spike).
+        if (now - transferForwardSinceMs >= JAM_STARTUP_MS) {
+            readTransferCurrent(now);
+            transferCurrentPeakA = Math.max(transferCurrentPeakA, transferCurrentA);
+            if (transferCurrentA >= JAM_CURRENT_A) {
+                if (transferHighSinceMs < 0) transferHighSinceMs = now;
+                if (now - transferHighSinceMs >= JAM_CURRENT_MS) {
+                    jam(String.format(Locale.US, "transfer %.1f A filtered (%.1f raw) for %d ms",
+                            transferCurrentA, transferRawCurrentA, now - transferHighSinceMs));
+                    return;
+                }
+            } else {
+                transferHighSinceMs = -1;
+            }
+        } else {
+            transferCurrentA = Double.NaN;
+        }
+
+        // No-progress rule: feeding the launcher, something on sensor 4, nothing leaving.
+        if (launching && artifactCount > 0 && laser4.isBlocked()) {
+            if (jamS4BlockedSinceMs < 0) jamS4BlockedSinceMs = now;
+            long since = Math.max(Math.max(transferForwardSinceMs, lastExitMs), jamS4BlockedSinceMs);
+            if (now - since >= JAM_NO_EXIT_MS) {
+                jam("launching: sensor 4 blocked, no exit for " + (now - since) + " ms with count " + artifactCount);
+            }
+        } else {
+            jamS4BlockedSinceMs = -1;
+        }
+    }
+
+    /** Reads the transfer current every CURRENT_READ_INTERVAL_MS, low-passed over STALL_CURRENT_FILTER_MS. */
+    private void readTransferCurrent(long now) {
+        if (!Double.isNaN(transferCurrentA) && now - transferCurrentReadAtMs < CURRENT_READ_INTERVAL_MS) return;
+        transferRawCurrentA = transferMotor.motorEx.getCurrent(CurrentUnit.AMPS);
+        if (Double.isNaN(transferCurrentA) || STALL_CURRENT_FILTER_MS <= 0) {
+            transferCurrentA = transferRawCurrentA;
+        } else {
+            double dt = now - transferCurrentReadAtMs;
+            transferCurrentA += (transferRawCurrentA - transferCurrentA) * (1 - Math.exp(-dt / STALL_CURRENT_FILTER_MS));
+        }
+        transferCurrentReadAtMs = now;
+    }
+
+    private void jam(String reason) {
+        jammed = true;
+        jamReason = reason;
+        jamReverseSinceMs = -1;
+        transferMotor.set(0);
+        intakeGuard.request(0);
+        Log.w("IntakeJam", "JAM: " + reason + " | count " + artifactCount + ", sensors " + sensorString()
+                + (launching ? ", launching" : "") + ": transfer and intake stopped, hold reverse (BACK) to clear");
+        DriverBanner.show("JAM: TRANSFER STOPPED", "hold BACK (reverse) to clear", "#FF5252");
     }
 
     // ---------------------------------------------------------------- stall detection

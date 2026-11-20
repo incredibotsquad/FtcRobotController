@@ -78,6 +78,9 @@ public class IncredibotsMecanumDrive extends LinearOpMode { // Changed this
 
             // Always on the Driver Hub: Limelight relocalization state (launch auto + right stick button).
             PanelsTelemetry.INSTANCE.getTelemetry().addData("LL relocalize", LaunchRelocalizeCommand.status());
+            if (incredibot.intakeSubsystem.isJammed()) {
+                PanelsTelemetry.INSTANCE.getTelemetry().addData("JAM", incredibot.intakeSubsystem.getJamReason() + " | hold BACK (reverse) to clear");
+            }
             // Always on the Driver Hub (not gated by DebugTelemetry): operator X toggles it.
             PanelsTelemetry.INSTANCE.getTelemetry().addData("Moving shots (op X)",
                     LaunchReadinessCommand.ENABLE_MOVING_SHOT_COMPENSATION ? "ON" : "off");

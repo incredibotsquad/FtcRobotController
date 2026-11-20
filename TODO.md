@@ -120,3 +120,4 @@ rows within 3 in of the robot. Press gamepad 1 Y at the end and copy the logged 
       calls them placeholders. Confirm and update.
 - [x] **Intake bar naming (2026-11-16).** Fixed: formula `RAISED + f * (LOWERED - RAISED)`;
       0.120 / 0.840 is DOWN (seen on the robot), so `LEFT/RIGHT_RAISED = 0.640 / 0.320`.
+- [ ] Jam detector thresholds: read `transfer peak` in the `LaunchShot` done lines over normal launches and intaking with 4 balls; set `JAM_CURRENT_A` safely above the normal peak (placeholder 6.5 A), check `JAM_NO_EXIT_MS` (700) never fires on a normal burst, and test a real gate jam.

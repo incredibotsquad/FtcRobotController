@@ -150,7 +150,7 @@ public class LaunchBallsCommand extends CommandBase {
     private enum State { WAIT_STEADY, FIRING, DONE }
 
     /** Why the last launch ended (read by test OpModes; doesn't change behavior). */
-    public enum EndReason { RUNNING, NOTHING_LOADED, EMPTY, MAX_FIRE_MS, SINGLE_BALL_CLEARED, INTERRUPTED }
+    public enum EndReason { RUNNING, NOTHING_LOADED, EMPTY, MAX_FIRE_MS, SINGLE_BALL_CLEARED, INTERRUPTED, JAMMED }
 
     private EndReason endReason = EndReason.RUNNING;
     private boolean emptyConfirmedAtTimeout = false;
@@ -220,6 +220,13 @@ public class LaunchBallsCommand extends CommandBase {
         emptyConfirmedAtTimeout = false;
         emptySinceMs = -1;
         countAtStart = intake.getArtifactCount();
+        intake.resetTransferCurrentPeak();
+        if (intake.isJammed()) {
+            Log.w("LaunchBallsCommand", "Launch refused: transfer jammed (" + intake.getJamReason() + "), hold reverse (BACK) to clear");
+            endReason = EndReason.JAMMED;
+            enter(State.DONE);
+            return;
+        }
         if (countAtStart == 0) {
             Log.i("LaunchBallsCommand", "No artifacts loaded, nothing to launch");
             endReason = EndReason.NOTHING_LOADED;
@@ -310,6 +317,12 @@ public class LaunchBallsCommand extends CommandBase {
     public void execute() {
         long now = nowMs();
         if (state == State.DONE) return;
+        if (intake.isJammed()) { // IntakeSubsystem stopped the transfer and intake
+            Log.w("LaunchBallsCommand", "Launch stopped: transfer jammed (" + intake.getJamReason() + ")");
+            endReason = EndReason.JAMMED;
+            enter(State.DONE);
+            return;
+        }
 
         // Keep the bar up for the whole launch (undoes an operator toggle mid-launch).
         if (!bar.isRaised()) bar.raise();
@@ -474,8 +487,9 @@ public class LaunchBallsCommand extends CommandBase {
     public void end(boolean interrupted) {
         if (interrupted && endReason == EndReason.RUNNING) endReason = EndReason.INTERRUPTED;
         if (launcher != null && gateOpenMs > 0 && state != State.WAIT_STEADY) {
-            Log.i("LaunchShot", String.format(Locale.US, "done (%s): target %.0f, exits at [%s] L/R RPM, burst min %.0f RPM, %.2f V",
-                    endReason.name().toLowerCase(Locale.US), launcher.getTargetRPM(), shotLog, minRpm, launcher.getBatteryVoltage()));
+            Log.i("LaunchShot", String.format(Locale.US, "done (%s): target %.0f, exits at [%s] L/R RPM, burst min %.0f RPM, %.2f V, transfer peak %.1f A",
+                    endReason.name().toLowerCase(Locale.US), launcher.getTargetRPM(), shotLog, minRpm, launcher.getBatteryVoltage(),
+                    intake.getTransferCurrentPeakA()));
         }
         intake.clearLaunchTransferOverride();
         intake.clearLaunchIntakeOverride();
