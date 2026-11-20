@@ -65,6 +65,16 @@ public class LimelightSubsystem extends SubsystemBase {
      */
     public static boolean ROBOT_SPACE_Y_IS_LEFT = false;
 
+    /**
+     * true (default): the Limelight's target pose in robot space uses camera-style axes (x right,
+     * y down, z forward), so forward = z, left = -x, up = -y. Verified on the robot 2026-11-19 at
+     * (41.5, 8, 90 deg): tags 34-37 read within ~1 in of their field positions. false = the old
+     * reading (x forward, y right/left per ROBOT_SPACE_Y_IS_LEFT, z up), which put every tag 90 deg off
+     * and made the turret correction reject all frames ("tags disagree").
+     * Camera pose in the Limelight UI (measured): 5.0 in forward, 11.5 in up, pitch +40 deg (up from level).
+     */
+    public static boolean ROBOT_SPACE_CAMERA_AXES = true;
+
     /** Ignore results older than this. */
     public static long MAX_RESULT_AGE_MS = 100;
     /** Ignore tags farther than this (horizontal distance); pose error grows with range. */
@@ -235,9 +245,18 @@ public class LimelightSubsystem extends SubsystemBase {
             hiveTags++;
 
             Position p = f.getTargetPoseRobotSpace().getPosition().toUnit(DistanceUnit.INCH);
-            double forward = p.x;
-            double left = ROBOT_SPACE_Y_IS_LEFT ? p.y : -p.y;
-            double up = p.z;
+            double forward, left, up;
+            if (ROBOT_SPACE_CAMERA_AXES) {
+                // Measured 2026-11-19: the target pose in robot space comes back with camera-style axes
+                // (x right, y down, z forward), shifted to the robot center.
+                forward = p.z;
+                left = -p.x;
+                up = -p.y;
+            } else {
+                forward = p.x;
+                left = ROBOT_SPACE_Y_IS_LEFT ? p.y : -p.y;
+                up = p.z;
+            }
             double dist = Math.hypot(forward, left);
 
             String verdict = dist > MAX_TAG_DISTANCE_IN ? "too far"
