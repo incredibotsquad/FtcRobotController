@@ -46,8 +46,11 @@ import java.util.List;
  *   A / X         - shot RPM for this row +/- RPM_STEP (does it hit the CELL?)
  *   Dpad up/down  - P +/- step        (gain row for this distance, or FLYWHEEL_* if
  *   Dpad R/L      - kS +/- step        LaunchSubsystem.USE_GAIN_TABLE is off)
- *   RB / LB       - kV +/- step
- *   B             - cycle gain step size
+ *   RB / LB       - kV +/- KV_STEP_PERCENT of its value (kV is ~0.0003, so a fixed step doesn't fit)
+ *   B             - cycle the P / kS step size
+ * Every gain edit is shown on the "Last edit" line and logged (tag FlywheelTuner); a press away from
+ * a gain row says it was ignored. Panels' configurable view may not refresh values changed by the
+ * gamepad: the tuner's telemetry (and Y) shows the live values.
  *   Back          - auto-adjust kV from the current speed (P = 0, bang-bang off, flywheel settled)
  *   Y             - log all tables to logcat (tag FlywheelTuner) to copy into the code
  *   Left stick    - (press) reset statistics
@@ -81,6 +84,8 @@ public class FlywheelTuner extends LinearOpMode {
     public static double START_Y = 8;
     public static double START_HEADING_DEG = 90;
     public static double RPM_STEP = 25;
+    /** RB / LB change kV by this percent of its current value. */
+    public static double KV_STEP_PERCENT = 1.0;
     /** A drop of more than this below the recent peak counts as a shot. */
     public static double SHOT_DETECT_DROP_RPM = 75;
     /** After a shot, RPM must rise this much above the dip's low point before the next shot can be detected. */
@@ -117,6 +122,7 @@ public class FlywheelTuner extends LinearOpMode {
     private double worstDipRpm = 0;
 
     private LaunchSubsystem launcher;
+    private String lastEdit = "none yet";
 
     @Override
     public void runOpMode() {
@@ -192,13 +198,20 @@ public class FlywheelTuner extends LinearOpMode {
                     LaunchReadinessCommand.SHOT_RPMS[shotRow] = Math.max(0, LaunchReadinessCommand.SHOT_RPMS[shotRow] - RPM_STEP);
                 }
             }
+            boolean gainPressed = false;
+            for (GamepadKeys.Button b : new GamepadKeys.Button[]{GamepadKeys.Button.DPAD_UP, GamepadKeys.Button.DPAD_DOWN,
+                    GamepadKeys.Button.DPAD_RIGHT, GamepadKeys.Button.DPAD_LEFT, GamepadKeys.Button.RIGHT_BUMPER,
+                    GamepadKeys.Button.LEFT_BUMPER, GamepadKeys.Button.BACK}) {
+                if (tuningPad.wasJustPressed(b)) gainPressed = true;
+            }
             if (canEditGains) {
-                if (tuningPad.wasJustPressed(GamepadKeys.Button.DPAD_UP)) addGain(GainColumn.P, gainRow, step);
-                if (tuningPad.wasJustPressed(GamepadKeys.Button.DPAD_DOWN)) addGain(GainColumn.P, gainRow, -step);
-                if (tuningPad.wasJustPressed(GamepadKeys.Button.DPAD_RIGHT)) addGain(GainColumn.KS, gainRow, step);
-                if (tuningPad.wasJustPressed(GamepadKeys.Button.DPAD_LEFT)) addGain(GainColumn.KS, gainRow, -step);
-                if (tuningPad.wasJustPressed(GamepadKeys.Button.RIGHT_BUMPER)) addGain(GainColumn.KV, gainRow, step);
-                if (tuningPad.wasJustPressed(GamepadKeys.Button.LEFT_BUMPER)) addGain(GainColumn.KV, gainRow, -step);
+                if (tuningPad.wasJustPressed(GamepadKeys.Button.DPAD_UP)) editGain(GainColumn.P, gainRow, step, "dpad up");
+                if (tuningPad.wasJustPressed(GamepadKeys.Button.DPAD_DOWN)) editGain(GainColumn.P, gainRow, -step, "dpad down");
+                if (tuningPad.wasJustPressed(GamepadKeys.Button.DPAD_RIGHT)) editGain(GainColumn.KS, gainRow, step, "dpad right");
+                if (tuningPad.wasJustPressed(GamepadKeys.Button.DPAD_LEFT)) editGain(GainColumn.KS, gainRow, -step, "dpad left");
+                double kvStep = kvStep(gainRow);
+                if (tuningPad.wasJustPressed(GamepadKeys.Button.RIGHT_BUMPER)) editGain(GainColumn.KV, gainRow, kvStep, "RB");
+                if (tuningPad.wasJustPressed(GamepadKeys.Button.LEFT_BUMPER)) editGain(GainColumn.KV, gainRow, -kvStep, "LB");
 
                 // Back: rescale kV so feedforward alone gives the current speed (see FlywheelBenchTuner).
                 if (tuningPad.wasJustPressed(GamepadKeys.Button.BACK)) {
@@ -206,9 +219,14 @@ public class FlywheelTuner extends LinearOpMode {
                     double targetTPS = LaunchSubsystem.rpmToTps(launcher.getTargetRPM());
                     if (actualTPS > 100 && targetTPS > 0) {
                         double kv = getGain(GainColumn.KV, gainRow);
-                        addGain(GainColumn.KV, gainRow, kv * targetTPS / actualTPS - kv);
+                        editGain(GainColumn.KV, gainRow, kv * targetTPS / actualTPS - kv, "Back (auto kV)");
+                    } else {
+                        lastEdit = "Back ignored: flywheel not spinning";
                     }
                 }
+            } else if (gainPressed) {
+                lastEdit = String.format(java.util.Locale.US, "IGNORED: %.1f in is not within %.0f in of a gain row %s",
+                        distance, ROW_SNAP_IN, Arrays.toString(LaunchSubsystem.GAIN_TABLE_DISTANCES_IN));
             }
 
             // ------------------------------------------------ measurements
@@ -237,10 +255,12 @@ public class FlywheelTuner extends LinearOpMode {
                     : gainRow >= 0 ? String.format("%d (%.0f in)", gainRow, LaunchSubsystem.GAIN_TABLE_DISTANCES_IN[gainRow])
                     : "none: drive within " + ROW_SNAP_IN + " in of " + Arrays.toString(LaunchSubsystem.GAIN_TABLE_DISTANCES_IN));
             if (canEditGains) {
-                panels.addData("P (dpad U/D) / kS (dpad R/L) / kV (RB/LB)", String.format("%.5f / %.4f / %.6f",
-                        getGain(GainColumn.P, gainRow), getGain(GainColumn.KS, gainRow), getGain(GainColumn.KV, gainRow)));
+                panels.addData("P (dpad U/D)", String.format("%.5f", getGain(GainColumn.P, gainRow)));
+                panels.addData("kS (dpad R/L)", String.format("%.4f", getGain(GainColumn.KS, gainRow)));
+                panels.addData("kV (RB/LB)", String.format("%.7f  (step %.1f%%)", getGain(GainColumn.KV, gainRow), KV_STEP_PERCENT));
             }
-            panels.addData("Step (B)", step);
+            panels.addData("Step P/kS (B)", step);
+            panels.addData("Last edit", lastEdit);
             panels.addData("Mode / at speed", (launcher.isFlywheelInBangBang() ? "BANG-BANG" : "PIDF")
                     + " / " + launcher.isFlywheelAtSpeed());
             panels.addData("Battery V / loop ms", String.format("%.2f / %.1f", launcher.getBatteryVoltage(), loopMs));
@@ -347,6 +367,23 @@ public class FlywheelTuner extends LinearOpMode {
         }
         double[] col = column(c);
         return row >= 0 && row < col.length ? col[row] : Double.NaN;
+    }
+
+    /** kV step for RB / LB: KV_STEP_PERCENT of the current value (or a small absolute step from 0). */
+    private static double kvStep(int row) {
+        double kv = getGain(GainColumn.KV, row);
+        return kv > 0 ? kv * KV_STEP_PERCENT / 100.0 : 0.00001;
+    }
+
+    /** Applies an edit and reports it on the "Last edit" line and in logcat. */
+    private void editGain(GainColumn c, int row, double delta, String button) {
+        double before = getGain(c, row);
+        addGain(c, row, delta);
+        double after = getGain(c, row);
+        String where = !LaunchSubsystem.USE_GAIN_TABLE ? "FLYWHEEL_" + c
+                : String.format(java.util.Locale.US, "%s row %d (%.0f in)", c, row, LaunchSubsystem.GAIN_TABLE_DISTANCES_IN[row]);
+        lastEdit = String.format(java.util.Locale.US, "%s: %s %.7f -> %.7f", button, where, before, after);
+        Log.i(TAG, "edit " + lastEdit);
     }
 
     private static void addGain(GainColumn c, int row, double delta) {
