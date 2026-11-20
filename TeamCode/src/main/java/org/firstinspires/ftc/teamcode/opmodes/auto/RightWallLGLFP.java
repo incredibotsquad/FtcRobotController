@@ -29,8 +29,9 @@ import java.util.ArrayList;
  * Poses are the red-frame Poses values, rotated 180 deg for blue like everything else:
  *  1. Start at RED_START_AUDIENCE_WALL, drive to RED_LAUNCH_AUDIENCE_CELL_2 and launch the 4
  *     preloads into that CELL (up at the start: red AUDIENCE CELL, blue FAR CELL).
- *  2. GARDEN: approach, bar down, in at the drive-in speed until full or INTAKE_TIMEOUT_MS, back out,
- *     rock ROCK_COUNT times (stops when full), bar up.
+ *  2. GARDEN: approach, in at the drive-in speed until full or INTAKE_TIMEOUT_MS. Only with
+ *     Poses.GARDEN_NEEDS_BAR (false since 2026-11-17): bar down first, then back out, rock
+ *     ROCK_COUNT times (stops when full), bar up.
  *  3. Back to the same launch spot and check for a TIP (a Limelight reading from after arriving or
  *     up to TIP_READING_MAX_AGE_MS before). Not tipped: launch. Tipped / unconfirmed: no launch, and
  *     straight to park (no FLOWER: the robot still holds artifacts and may not possess more than 4).
