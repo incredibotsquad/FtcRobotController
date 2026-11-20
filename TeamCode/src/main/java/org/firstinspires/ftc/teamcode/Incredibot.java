@@ -16,7 +16,6 @@ import org.firstinspires.ftc.teamcode.commands.LaunchReadinessCommand;
 import org.firstinspires.ftc.teamcode.commands.LaunchRelocalizeCommand;
 import org.firstinspires.ftc.teamcode.commands.DriveRobotCommand;
 import org.firstinspires.ftc.teamcode.commands.RelocalizeCommand;
-import org.firstinspires.ftc.teamcode.commands.RelocalizeWithLimelightCommand;
 import org.firstinspires.ftc.teamcode.commands.SmartIntakeCommand;
 import org.firstinspires.ftc.teamcode.commands.ReverseIntakeCommand;
 import org.firstinspires.ftc.teamcode.common.AllianceColors;
@@ -139,10 +138,10 @@ public class Incredibot extends Robot {
         operatorGamepad.getGamepadButton(GamepadKeys.Button.LEFT_STICK_BUTTON)
                 .whenPressed(new RelocalizeCommand(odometrySubsystem, telemetry, RelocalizeCommand.Mode.ALLIANCE_STANCE));
 
-        // Limelight relocalization: manual on the operator's right stick button (robot still, 5 clean
-        // frames within 2 s), and automatic during every launch at standstill (applied when the launch ends).
+        // Limelight relocalization during launches (applied when each launch ends): the operator's right
+        // stick button turns it on / off. The Driver Station always shows ON / OFF (LaunchRelocalizeCommand.status()).
         operatorGamepad.getGamepadButton(GamepadKeys.Button.RIGHT_STICK_BUTTON)
-                .whenPressed(new RelocalizeWithLimelightCommand(limelightSubsystem, odometrySubsystem, driveSubsystem));
+                .whenPressed(new InstantCommand(LaunchRelocalizeCommand::toggle));
         new LaunchRelocalizeCommand(limelightSubsystem, odometrySubsystem, driveSubsystem, launchGateSubsystem).schedule();
 
         // Intake bar: A lowers it in front of the robot (FLOWER POLLEN pickup) / raises it again.

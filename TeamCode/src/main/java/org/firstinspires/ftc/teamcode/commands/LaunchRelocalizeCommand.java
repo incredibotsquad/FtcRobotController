@@ -85,9 +85,22 @@ public class LaunchRelocalizeCommand extends CommandBase {
         // No requirements: it only reads subsystems and resets the odometry pose.
     }
 
-    /** One line for the Driver Station: what the relocalization is doing now and the last result. */
+    /**
+     * One line for the Driver Station. OFF: just that (and how to turn it on). ON: what it is doing now
+     * and the last result.
+     */
     public static String status() {
-        return status + " | last: " + lastResult;
+        if (!ENABLED) return "OFF (operator right stick: turn on)";
+        return "ON | " + status + " | last: " + lastResult;
+    }
+
+    /** Operator right stick button: turns launch relocalization on / off, with a banner and a log line. */
+    public static void toggle() {
+        ENABLED = !ENABLED;
+        Log.i(TAG, "turned " + (ENABLED ? "ON" : "OFF") + " by the operator");
+        DriverBanner.show("LL RELOCALIZE " + (ENABLED ? "ON" : "OFF"),
+                ENABLED ? "odometry updates after launches at standstill" : "odometry is not changed by the Limelight",
+                ENABLED ? "#00E676" : "#FF5252");
     }
 
     /** Lets the manual relocalize report its result in the same status line. */
@@ -105,7 +118,7 @@ public class LaunchRelocalizeCommand extends CommandBase {
     public void execute() {
         if (!enabled()) {
             clear();
-            status = "OFF (LaunchRelocalizeCommand." + (auto ? "ENABLED_IN_AUTO" : "ENABLED") + ")";
+            status = "off";
             return;
         }
         boolean launching = gate.isGateOpen();
