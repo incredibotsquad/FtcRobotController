@@ -107,7 +107,7 @@ rows within 3 in of the robot. Press gamepad 1 Y at the end and copy the logged 
 ## Before competition
 
 - [ ] **Re-add `@Disabled`** to `ServoPositionTuner`, `FlywheelTuner`, `FlywheelBenchTuner`,
-      `LaserIntakeTuner`, `CameraLaunchTuner`, `IntakeTransferRattleTest` and `TurretVisionTuner` (Panels is illegal in matches, R704).
+      `LaserIntakeTuner`, `CameraLaunchTuner`, `IntakeTransferRattleTest`, `TurretVisionTuner` and `OdometryDriftTest` (Panels is illegal in matches, R704).
 - [ ] **Continue camera tuning at `rightstart` (2026-11-18).** Resume run `20261118-001849-rightstart`
       (validation streak 1/3, starting settings s-06f97d39e66a, 2 calibration examples saved). Watch for
       a late 4th ball coming in under: if it keeps happening, fix the dead zone (or try the last-ball
