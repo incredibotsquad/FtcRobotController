@@ -144,6 +144,16 @@ public class LaunchReadinessCommand extends CommandBase {
     private double lastRpmTarget = Double.NaN;
     /** Turret debug: log the first aim decision of each run (logcat tag TurretDebug). */
     private boolean loggedFirstAim = false;
+    /**
+     * Extra turret angle (deg, CCW +) added to the aim. Always 0 in match code; TurretVisionTuner sets
+     * it from the dpad to find how far off the aim is.
+     */
+    private double aimTrimDeg = 0;
+    // Last aim decision, for TurretVisionTuner logging.
+    private double lastAimAngleDeg = Double.NaN;      // commanded turret angle incl. trim and wrap
+    private double lastOdometryAngleDeg = Double.NaN; // angle from odometry alone (no vision, no trim)
+    private Translation2d lastAimFrom, lastAimPoint;
+    private double lastCommandedTurret = Double.NaN;
 
     public LaunchReadinessCommand(LaunchSubsystem launcher, OdometrySubsystem odometry, TelemetryManager telemetry) {
         this(launcher, odometry, null, telemetry);
@@ -202,7 +212,10 @@ public class LaunchReadinessCommand extends CommandBase {
         lastDistanceIn = distance;
 
         // ---------------------------------------------------- turret
-        double relativeDeg = relativeTurretDeg(aimPose, aimPoint);
+        double relativeDeg = normalizeDeg(relativeTurretDeg(aimPose, aimPoint) + aimTrimDeg);
+        lastAimFrom = aimFrom;
+        lastAimPoint = aimPoint;
+        lastOdometryAngleDeg = relativeTurretDeg(pose, aimPoint);
         if (turretLocked) {
             // Locked: park the turret at TURRET_MID. Done before choosing the aim position so the
             // wrap (the turret can reach some angles two ways) is chosen relative to TURRET_MID.
@@ -213,6 +226,8 @@ public class LaunchReadinessCommand extends CommandBase {
 
         double turretPosition = chooseTurretPosition(relativeDeg);
         boolean turretReachable = !Double.isNaN(turretPosition);
+        lastCommandedTurret = turretLocked ? LaunchSubsystem.TURRET_MID : turretPosition;
+        lastAimAngleDeg = turretReachable ? turretPositionToRelativeDeg(turretPosition) : Double.NaN;
 
         if (!turretLocked && turretReachable) {
             launcher.setTurretPosition(turretPosition);
@@ -285,6 +300,41 @@ public class LaunchReadinessCommand extends CommandBase {
     /** RPM target from the shot table on the last loop. NaN before the first loop. */
     public double getLastRpmTarget() {
         return lastRpmTarget;
+    }
+
+    public void setAimTrimDeg(double deg) {
+        aimTrimDeg = deg;
+    }
+
+    public double getAimTrimDeg() {
+        return aimTrimDeg;
+    }
+
+    /** Commanded turret angle (deg, CCW from robot forward, wrap included, trim included). NaN if unreachable. */
+    public double getLastAimAngleDeg() {
+        return lastAimAngleDeg;
+    }
+
+    /** Turret angle odometry alone would give (no Limelight correction, no trim), in (-180, 180]. */
+    public double getLastOdometryAngleDeg() {
+        return lastOdometryAngleDeg;
+    }
+
+    public Translation2d getLastAimFrom() {
+        return lastAimFrom;
+    }
+
+    public Translation2d getLastAimPoint() {
+        return lastAimPoint;
+    }
+
+    /** Servo position commanded on the last loop (TURRET_MID when locked, NaN if unreachable). */
+    public double getLastCommandedTurret() {
+        return lastCommandedTurret;
+    }
+
+    public TurretVisionCorrection getVisionCorrection() {
+        return visionCorrection;
     }
 
     /** Limelight turret fine-tuning state, for telemetry. */

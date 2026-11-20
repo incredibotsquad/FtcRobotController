@@ -162,6 +162,25 @@ public class TurretVisionCorrection {
         wasUsingVision = false;
     }
 
+    /** Correction currently applied to the aim position, field inches (already weighted). */
+    public double getAppliedOffsetX() {
+        return weight * offX;
+    }
+
+    public double getAppliedOffsetY() {
+        return weight * offY;
+    }
+
+    /** 1 = full vision correction, 0 = odometry only, in between = fading. */
+    public double getWeight() {
+        return weight;
+    }
+
+    /** Why the last frame was used or rejected. */
+    public String getReason() {
+        return reason;
+    }
+
     /** For telemetry: "LIMELIGHT (dx, dy)" or "odometry (reason)". */
     public String status() {
         return weight > 0
