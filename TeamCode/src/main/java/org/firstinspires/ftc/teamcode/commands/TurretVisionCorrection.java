@@ -29,8 +29,8 @@ import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
  * Aiming from tag-relative position also cancels errors in the placeholder HIVE coordinates
  * (LaunchTargets.RED_HIVE_X etc.): the tag and CELL positions share them.
  *
- * Turret angle only by default. CORRECT_DISTANCE also uses it for the shot-table distance (RPM);
- * off by default because the shot table was tuned with odometry distances.
+ * CORRECT_DISTANCE (on) also uses the corrected position for the shot-table distance (RPM). The
+ * shot rows were tuned from fresh start poses, where odometry and vision agree.
  */
 @Configurable
 public class TurretVisionCorrection {
@@ -38,13 +38,13 @@ public class TurretVisionCorrection {
     /** Master switch, live in Panels. false = odometry only. */
     public static boolean ENABLED = true;
     /** Also use the corrected position for the distance -> RPM lookup. */
-    public static boolean CORRECT_DISTANCE = false;
+    public static boolean CORRECT_DISTANCE = true; // on since 2026-11-19: odometry drifted 8-10 in in a run
 
     public static int MIN_TAGS = 2;
     /** Largest disagreement between single-tag estimates in one frame, inches. */
-    public static double MAX_SPREAD_IN = 2.0;
+    public static double MAX_SPREAD_IN = 3.0; // 2.0 -> 3.0 (2026-11-19): 5-tag frames (both CELLs) sat at 2.0-2.9 in
     /** Reject frames that would move the aim point more than this from odometry, inches. */
-    public static double MAX_CORRECTION_IN = 8.0;
+    public static double MAX_CORRECTION_IN = 12.0; // 8 -> 12 (2026-11-19): real drift reached 8-10 in with tags agreeing
     public static double MAX_SPEED_IN_PER_SEC = 20.0;
     public static double MAX_TURN_DEG_PER_SEC = 45.0;
     /** 0..1: fraction of the way the correction moves toward each clean frame. */
