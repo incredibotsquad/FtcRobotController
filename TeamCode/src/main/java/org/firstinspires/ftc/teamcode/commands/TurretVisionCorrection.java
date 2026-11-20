@@ -54,7 +54,24 @@ public class TurretVisionCorrection {
     /** Then fade it out over this long (0 = drop at once). */
     public static long FADE_MS = 300;
 
+    /**
+     * Threshold check logging (tag TurretVision): every STATS_LOG_MS with new frames, a summary of the
+     * frames that had enough tags: how many were used, how many MAX_SPREAD_IN / MAX_CORRECTION_IN
+     * rejected, the rejected values, and how many would have passed at 1.5x and 2x the threshold.
+     * Each spread / correction rejection is also logged on its own, at most once per REJECT_LOG_MS.
+     */
+    public static boolean LOG_THRESHOLD_STATS = true;
+    public static long STATS_LOG_MS = 10000;
+    public static long REJECT_LOG_MS = 1000;
+
     private static final String TAG = "TurretVision";
+
+    // Threshold stats since the last summary (frames with >= MIN_TAGS of our tags, robot slow).
+    private int statCandidates, statUsed, statSpreadRejected, statCorrectionRejected, statFewTags, statNoTags, statMoving;
+    private final java.util.List<Double> statSpreadRejectedValues = new java.util.ArrayList<>();
+    private final java.util.List<Double> statCorrectionRejectedValues = new java.util.ArrayList<>();
+    private double statMaxSpreadUsed = 0, statMaxCorrectionUsed = 0;
+    private long statSinceMs = -1, lastRejectLogMs = 0;
 
     private final LimelightSubsystem limelight; // null = no Limelight: odometry only
     private final OdometrySubsystem odometry;
@@ -116,21 +133,39 @@ public class TurretVisionCorrection {
     }
 
     private void evaluateFrame(Pose2d pose, AllianceColors alliance, long now) {
+        if (statSinceMs < 0) statSinceMs = now;
+        maybeLogStats(now);
         double speed = odometry.getFieldSpeedInchesPerSecond();
-        if (speed > MAX_SPEED_IN_PER_SEC) { reason = "moving too fast"; return; }
-        if (turnDegPerSec > MAX_TURN_DEG_PER_SEC) { reason = "turning too fast"; return; }
+        if (speed > MAX_SPEED_IN_PER_SEC) { reason = "moving too fast"; statMoving++; return; }
+        if (turnDegPerSec > MAX_TURN_DEG_PER_SEC) { reason = "turning too fast"; statMoving++; return; }
 
         LimelightSubsystem.PositionEstimate est = limelight.estimateRobotPosition(pose.getHeading(), alliance);
-        if (est == null) { reason = "no tags of our HIVE"; return; }
-        if (est.tagCount < MIN_TAGS) { reason = est.tagCount + " tag(s), need " + MIN_TAGS; return; }
-        if (est.spreadIn > MAX_SPREAD_IN) { reason = String.format("tags disagree (%.1f in)", est.spreadIn); return; }
+        if (est == null) { reason = "no tags of our HIVE"; statNoTags++; return; }
+        if (est.tagCount < MIN_TAGS) { reason = est.tagCount + " tag(s), need " + MIN_TAGS; statFewTags++; return; }
 
         double dx = est.position.getX() - pose.getX();
         double dy = est.position.getY() - pose.getY();
-        if (Math.hypot(dx, dy) > MAX_CORRECTION_IN) {
-            reason = String.format("too far from odometry (%.1f in)", Math.hypot(dx, dy));
+        double correction = Math.hypot(dx, dy);
+        statCandidates++;
+        if (est.spreadIn > MAX_SPREAD_IN) {
+            reason = String.format("tags disagree (%.1f in)", est.spreadIn);
+            statSpreadRejected++;
+            statSpreadRejectedValues.add(est.spreadIn);
+            logRejection(now, String.format(java.util.Locale.US, "REJECTED by MAX_SPREAD_IN %.1f: spread %.2f in, %d tags, correction would be %.1f in",
+                    MAX_SPREAD_IN, est.spreadIn, est.tagCount, correction));
             return;
         }
+        if (correction > MAX_CORRECTION_IN) {
+            reason = String.format("too far from odometry (%.1f in)", correction);
+            statCorrectionRejected++;
+            statCorrectionRejectedValues.add(correction);
+            logRejection(now, String.format(java.util.Locale.US, "REJECTED by MAX_CORRECTION_IN %.1f: correction %.2f in (dx %.1f, dy %.1f), %d tags, spread %.2f in",
+                    MAX_CORRECTION_IN, correction, dx, dy, est.tagCount, est.spreadIn));
+            return;
+        }
+        statUsed++;
+        statMaxSpreadUsed = Math.max(statMaxSpreadUsed, est.spreadIn);
+        statMaxCorrectionUsed = Math.max(statMaxCorrectionUsed, correction);
 
         // Continue from what is applied now (it may be part-faded), then smooth toward this frame.
         offX *= weight;
@@ -141,6 +176,45 @@ public class TurretVisionCorrection {
         lastCleanMs = now;
         weight = 1;
         reason = est.tagCount + " tags";
+    }
+
+    private void logRejection(long now, String line) {
+        if (!LOG_THRESHOLD_STATS || now - lastRejectLogMs < REJECT_LOG_MS) return;
+        lastRejectLogMs = now;
+        Log.i(TAG, line);
+    }
+
+    /** Summary of the threshold checks since the last one (see LOG_THRESHOLD_STATS). */
+    private void maybeLogStats(long now) {
+        if (!LOG_THRESHOLD_STATS || now - statSinceMs < STATS_LOG_MS) return;
+        if (statCandidates + statFewTags + statNoTags + statMoving > 0) {
+            Log.i(TAG, String.format(java.util.Locale.US,
+                    "THRESHOLDS last %.0f s: %d frames with >= %d tags: %d used, %d rejected by spread (> %.1f in): %s, %d rejected by correction (> %.1f in): %s"
+                            + " | largest used: spread %.2f in, correction %.2f in | also skipped: %d too few tags, %d none of our tags, %d moving/turning",
+                    (now - statSinceMs) / 1000.0, statCandidates, MIN_TAGS, statUsed,
+                    statSpreadRejected, MAX_SPREAD_IN, describe(statSpreadRejectedValues, MAX_SPREAD_IN),
+                    statCorrectionRejected, MAX_CORRECTION_IN, describe(statCorrectionRejectedValues, MAX_CORRECTION_IN),
+                    statMaxSpreadUsed, statMaxCorrectionUsed, statFewTags, statNoTags, statMoving));
+        }
+        statCandidates = statUsed = statSpreadRejected = statCorrectionRejected = statFewTags = statNoTags = statMoving = 0;
+        statSpreadRejectedValues.clear();
+        statCorrectionRejectedValues.clear();
+        statMaxSpreadUsed = statMaxCorrectionUsed = 0;
+        statSinceMs = now;
+    }
+
+    /** "min-max, median m; would pass at 1.5x: n, at 2x: n" for rejected values. */
+    private static String describe(java.util.List<Double> values, double threshold) {
+        if (values.isEmpty()) return "none";
+        java.util.List<Double> v = new java.util.ArrayList<>(values);
+        java.util.Collections.sort(v);
+        int at15 = 0, at2 = 0;
+        for (double x : v) {
+            if (x <= threshold * 1.5) at15++;
+            if (x <= threshold * 2.0) at2++;
+        }
+        return String.format(java.util.Locale.US, "%.2f-%.2f in, median %.2f; would pass at %.1f in: %d, at %.1f in: %d",
+                v.get(0), v.get(v.size() - 1), v.get(v.size() / 2), threshold * 1.5, at15, threshold * 2, at2);
     }
 
     private void updateTurnRate(double headingRad, long now) {
