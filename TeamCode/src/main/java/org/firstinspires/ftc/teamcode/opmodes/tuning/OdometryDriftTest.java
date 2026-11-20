@@ -116,7 +116,7 @@ public class OdometryDriftTest extends LinearOpMode {
             }
 
             telemetry.addData("TEST", (test.ordinal() + 1) + "/5 " + test + (test == Test.SPIN ? String.format(Locale.US, " (%d/%d)", spins.size(), SPIN_REPEATS) : ""));
-            telemetry.addLine(String.format(Locale.US, INSTRUCTIONS[test.ordinal()], test == Test.HEADING ? HEADING_TURNS : TEST_DISTANCE_IN));
+            telemetry.addLine(instructions());
             telemetry.addData("State", zeroed ? "MEASURING: move it, then A" : "press A at the mark to zero");
             telemetry.addData("Pose now", String.format(Locale.US, "x %.2f  y %.2f  heading %.1f deg (total turned %.1f)",
                     p.x(), p.y(), Math.toDegrees(p.heading()), Math.toDegrees(unwrappedHeading)));
@@ -125,6 +125,17 @@ public class OdometryDriftTest extends LinearOpMode {
             for (String line : summary().split("\n")) telemetry.addLine(line);
             telemetry.addLine("Dpad L/R test | B redo | Y log summary");
             telemetry.update();
+        }
+    }
+
+    /** Instruction text for the current test (each format takes its own argument type). */
+    private String instructions() {
+        String f = INSTRUCTIONS[test.ordinal()];
+        switch (test) {
+            case FORWARD:
+            case STRAFE: return String.format(Locale.US, f, TEST_DISTANCE_IN);
+            case HEADING: return String.format(Locale.US, f, HEADING_TURNS);
+            default: return f;
         }
     }
 
@@ -144,6 +155,7 @@ public class OdometryDriftTest extends LinearOpMode {
 
     private void record(Pose p) {
         double[] r = {p.x(), p.y(), Math.toDegrees(unwrappedHeading)};
+        Test recorded = test; // select() below moves on to the next test
         switch (test) {
             case FORWARD: forward = r; select(Test.STRAFE); break;
             case STRAFE: strafe = r; select(Test.SPIN); break;
@@ -158,10 +170,10 @@ public class OdometryDriftTest extends LinearOpMode {
             case HEADING: heading = r; select(Test.LOOP); break;
             case LOOP: loop = r; break;
         }
-        String row = String.format(Locale.US, "%d,%s,%.3f,%.3f,%.2f,%.4f,%.4f", System.currentTimeMillis(), test, r[0], r[1], r[2],
+        String row = String.format(Locale.US, "%d,%s,%.3f,%.3f,%.2f,%.4f,%.4f", System.currentTimeMillis(), recorded, r[0], r[1], r[2],
                 Constants.localizerConfig.xPodOffset.get(), Constants.localizerConfig.yPodOffset.get());
         appendCsv(row);
-        log(String.format(Locale.US, "recorded: x %.3f y %.3f heading %.2f deg", r[0], r[1], r[2]));
+        log(String.format(Locale.US, "recorded %s: x %.3f y %.3f heading %.2f deg", recorded, r[0], r[1], r[2]));
         if (lastMessage.isEmpty()) lastMessage = "recorded";
     }
 
