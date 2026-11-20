@@ -48,8 +48,8 @@ public class Constants {
     public static PinpointConfig localizerConfig = new PinpointConfig(c -> {
         c.name.set("pinpoint");
         c.podType.set(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
-        c.xPodOffset.set(0.5906894263320082);
-        c.yPodOffset.set(2.2375808175154557);
+        c.xPodOffset.set(3.194); // from OdometryDriftTest, 4 x 180 deg spins averaged (2026-11-19); was 0.5907 (Pedro autotune)
+        c.yPodOffset.set(-5.431); // from OdometryDriftTest, 4 x 180 deg spins averaged (2026-11-19); was 2.2376 (Pedro autotune)
         c.xPodDirection.set(GoBildaPinpointDriver.EncoderDirection.FORWARD);
         c.yPodDirection.set(GoBildaPinpointDriver.EncoderDirection.REVERSED);
         c.globalDistanceUnit.set(DistanceUnit.INCH);
