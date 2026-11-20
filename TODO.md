@@ -90,7 +90,7 @@ Estimate: ~2-3% RPM drop per ball, ~20-30 ms full-power recovery. Balls stream w
 
 ## Shot table tuning (added 2026-11-18, reworked 2026-11-19)
 
-The shot and gain tables now have four tuning points, 47 / 52 / 66 / 88 in. RPM is interpolated
+The shot and gain tables now have four tuning points, 47 / 52 / 66 / 84 in. RPM is interpolated
 between points and **extrapolated** outside them (`EXTRAPOLATE_SHOT_RPM`, limited to
 `MIN/MAX_SHOT_RPM`); gains hold the nearest end row. Add a row (same index in `SHOT_DISTANCES_IN`,
 `SHOT_RPMS` and every `GAIN_TABLE_*` array) when a spot needs its own tuning: FlywheelTuner only edits

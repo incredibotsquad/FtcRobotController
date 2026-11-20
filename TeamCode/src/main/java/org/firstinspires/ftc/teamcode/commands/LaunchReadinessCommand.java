@@ -57,8 +57,8 @@ public class LaunchReadinessCommand extends CommandBase {
     // 47.5 in (from 60, 8) and 2679 RPM at 51.0 in (from 41.5, 8, retuned). 66 tuned from (12, 12) = 64.8 in
     // (2905 RPM there); 88 tuned from the (132, 12) area (3197 RPM in the retune), both 2026-11-19.
     // Add rows as more spots are tuned (FlywheelTuner edits rows within ROW_SNAP_IN of the robot).
-    public static double[] SHOT_DISTANCES_IN = {47, 52, 66, 88};
-    public static double[] SHOT_RPMS = {2607, 2698, 2928, 3220};
+    public static double[] SHOT_DISTANCES_IN = {47, 52, 66, 84}; // last row was 88 until 2026-11-20 (tuned from (132, 12) = 84.1 in)
+    public static double[] SHOT_RPMS = {2560, 2600, 2760, 3097}; // 2026-11-20, after adding 2 flywheel weights: 47 at (60, 8) (checked from (24, 24)), 52 at 51 in (41.5, 8), 66 at (12, 12), 84 at (132, 12)
     /**
      * Outside the table, continue the line through the two nearest rows (true) instead of holding the
      * end RPM (false). The result is limited to MIN_SHOT_RPM..MAX_SHOT_RPM.

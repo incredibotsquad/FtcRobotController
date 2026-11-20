@@ -38,13 +38,13 @@ public class LaunchSubsystem extends SubsystemBase {
     //  - The GAIN_TABLE_* arrays: one row per launch distance, used by updateFlywheel(rpm, distance)
     //    from LaunchReadinessCommand. Tune each row with FlywheelTuner at that distance's RPM, then
     //    copy the FLYWHEEL_* values it shows into that row.
-    public static double FLYWHEEL_P = 0.08;
+    public static double FLYWHEEL_P = 0.015; // FlywheelBenchTuner 2026-11-20, after adding 2 flywheel weights
     public static double FLYWHEEL_I = 0.0;
     public static double FLYWHEEL_D = 0.0;
     /** Static friction: power needed to just start turning. */
-    public static double FLYWHEEL_KS = 0.16;
+    public static double FLYWHEEL_KS = 0.10;
     /** Power per tick/sec needed to hold a speed, measured at NOMINAL_VOLTAGE. */
-    public static double FLYWHEEL_KV = 0.0005;
+    public static double FLYWHEEL_KV = 0.00037023;
 
     /**
      * Gain table, indexed by distance (inches, robot center to CELL). All arrays are rows of the
@@ -55,14 +55,15 @@ public class LaunchSubsystem extends SubsystemBase {
      */
     public static boolean USE_GAIN_TABLE = true;
     //match these values to LaunchReadinessCommand.SHOT_DISTANCES_IN
-    // Rows match LaunchReadinessCommand.SHOT_DISTANCES_IN. 47 / 52 tuned 2026-11-18/19, 66 / 88 on 2026-11-19.
+    // Rows match LaunchReadinessCommand.SHOT_DISTANCES_IN. 2026-11-20: 2 flywheel weights added, every row reset to
+    // the FlywheelBenchTuner set (P 0.015, kS 0.10, kV 0.00037023); retune each row with FlywheelTuner.
     // Outside the table the nearest end row is used (gains are not extrapolated).
-    public static double[] GAIN_TABLE_DISTANCES_IN = {47, 52, 66, 88};
-    public static double[] GAIN_TABLE_P  = {0.0015, 0.001, 0.0005, 0.001};
+    public static double[] GAIN_TABLE_DISTANCES_IN = {47, 52, 66, 84}; // match SHOT_DISTANCES_IN
+    public static double[] GAIN_TABLE_P  = {0.007, 0.015, 0.0155, 0.017}; // 2026-11-20: 47 at (60, 8), 52 at (41.5, 8), 66 at (12, 12), 84 at (132, 12)
     public static double[] GAIN_TABLE_I  = {0.0, 0.0, 0.0, 0.0};
     public static double[] GAIN_TABLE_D  = {0.0, 0.0, 0.0, 0.0};
-    public static double[] GAIN_TABLE_KS = {0.16, 0.16, 0.16, 0.16};
-    public static double[] GAIN_TABLE_KV = {0.0003156, 0.0003102, 0.00031, 0.0003144};
+    public static double[] GAIN_TABLE_KS = {0.10, 0.10, 0.10, 0.10};
+    public static double[] GAIN_TABLE_KV = {0.00037023, 0.00037023, 0.00037023, 0.00037023};
 
     /** Run full power while more than this far below target (fast spin-up and shot recovery). */
     public static boolean FLYWHEEL_BANG_BANG_ENABLED = true;
