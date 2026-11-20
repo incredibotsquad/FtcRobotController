@@ -10,7 +10,7 @@ import org.firstinspires.ftc.teamcode.subsystems.OdometrySubsystem;
 /**
  * Default command for the intake. Runs forever and picks a state every loop:
  *
- *  LAUNCHING (gate open): the transfer feeds artifacts up past sensor 4 into the launcher.
+ *  LAUNCHING (gate open, or a launch command's transfer override is set): the transfer feeds artifacts up past sensor 4 into the launcher.
  *      The intake motor stays off so nothing new is pulled in mid-shot, except while a launch
  *      command overrides it (LaunchBallsCommand's kick).
  *      IntakeSubsystem is told it is launching, so artifacts leaving the top are subtracted.
@@ -60,7 +60,9 @@ public class SmartIntakeCommand extends CommandBase {
     @Override
     public void execute() {
         State next;
-        if (gate.isGateOpen()) {
+        // A launch override with the gate still closed is LaunchBallsCommand's reverse-before-gate
+        // kick: the launch has started, so drive the motors (and count) as launching.
+        if (gate.isGateOpen() || intake.hasLaunchTransferOverride()) {
             next = State.LAUNCHING;
         } else if (intake.isFullAndDoneIntaking()) { // full, after the run-on that pulls the last one in
             next = State.FULL;

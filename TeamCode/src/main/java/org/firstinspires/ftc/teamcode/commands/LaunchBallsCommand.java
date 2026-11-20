@@ -16,8 +16,9 @@ import java.util.Locale;
 /**
  * One-press "empty the robot" shot. Schedule with whenPressed().
  *
- * Presumes the launcher is already ready: LaunchReadinessCommand keeps the flywheel at speed and
- * the turret on target, so there is no readiness wait. The gate opens immediately on the press.
+ * LaunchReadinessCommand keeps the flywheel at speed and the turret on target the whole time.
+ * The press starts the steady-flywheel wait (WAIT_FOR_STEADY_FLYWHEEL; a flywheel already steady
+ * before the press counts) and, with the kick, the transfer reverse at the same moment.
  *
  * SIMPLE_LAUNCH (default on): none of the kick logic below. The gate opens, the transfer feeds
  * forward at launch power the whole time (no reverse), and the launch ends once the count reads 0
@@ -27,10 +28,15 @@ import java.util.Locale;
  * Kick (every launch, when KICK_ENABLED and not SIMPLE_LAUNCH): an artifact resting against the closed gate starts from
  * rest, and the dead zone between the top of the transfer and the flywheel (above sensor 4) can
  * stop it. So every launch starts with a run-up:
- *  1. Gate opens and the transfer runs in REVERSE for a time that depends on how many artifacts
- *     are loaded (KICK_REVERSE_MS_BY_COUNT): a full stack can only back up a little before the
- *     bottom artifact is pushed out of the intake.
+ *  1. On the press the transfer runs in REVERSE, gate still closed (REVERSE_BEFORE_GATE), for a
+ *     time that depends on how many artifacts are loaded (KICK_REVERSE_MS_BY_COUNT): a full stack
+ *     can only back up a little before the bottom artifact is pushed out of the intake. Pulling
+ *     the top artifact off the gate first keeps the opening gate from catching in its holes.
+ *     The gate opens GATE_OPEN_DELAY_MS into the reverse, or later once the flywheel is steady
+ *     (the steady wait runs at the same time as the reverse, from the press).
  *  2. Transfer runs forward at full launch power, so the top artifact reaches the dead zone moving.
+ *     If the gate opened late, the transfer stops after the reverse and waits until the gate has
+ *     been open MIN_GATE_LEAD_MS.
  *  The intake motor runs forward (KICK_INTAKE_POWER) during the reverse and for KICK_INTAKE_EXTRA_MS
  *  into the forward drive, holding in artifacts the reversed transfer pushes down. After that it is
  *  off again, as in any launch, so nothing new is pulled in mid-shot.
@@ -88,6 +94,21 @@ public class LaunchBallsCommand extends CommandBase {
 
     /** Reverse-then-forward run-up at the start of every launch. false = straight forward feed. */
     public static boolean KICK_ENABLED = true;
+    /**
+     * Start the kick's reverse on the press with the gate still closed (2026-11-19). The top
+     * artifact rests (and spins) against the closed gate; a gate swinging open while an artifact
+     * presses on it can catch in the artifact's holes and jam the launch. false = the old order
+     * (gate opens and the reverse starts in the same loop).
+     */
+    public static boolean REVERSE_BEFORE_GATE = true;
+    /** REVERSE_BEFORE_GATE: open the gate this long into the reverse (if the flywheel is steady by then). */
+    public static long GATE_OPEN_DELAY_MS = 60;
+    /**
+     * REVERSE_BEFORE_GATE: the forward feed starts no sooner than this after the gate was commanded
+     * open, so it can't push the artifact into a gate still moving. Only waits when the gate opened
+     * late (flywheel not steady in time); normally the reverse is long enough. 0 = never wait.
+     */
+    public static long MIN_GATE_LEAD_MS = 100;
     /**
      * Reverse time (ms) by artifacts loaded at the press: index 0 = 1 artifact ... index 3 = 4.
      * More artifacts = shorter, since the bottom one is close to falling out the intake.
@@ -166,6 +187,10 @@ public class LaunchBallsCommand extends CommandBase {
     private long reverseMs;
     private long kickPhaseStartMs;   // start of the reverse, then start of the forward drive
     private int kicks;
+    /** REVERSE_BEFORE_GATE for this launch (latched at the press). */
+    private boolean reverseFirst;
+    /** The first forward feed after the reverse has been logged. */
+    private boolean feedLogged;
 
     // Single-artifact completion
     private long sensor4BlockedSinceMs;
@@ -212,18 +237,45 @@ public class LaunchBallsCommand extends CommandBase {
         ballReturned = true; // without a kick the ball never goes below sensor 4
         lastBallSinceMs = -1;
         lastBallKickStarted = false;
+        reverseFirst = kickActive && REVERSE_BEFORE_GATE;
+        feedLogged = false;
+        gateOpenMs = 0;
 
         drive.requestLaunchHold();
 
         if (!bar.isRaised()) bar.raise(); // command the bar up; the launch doesn't wait for it
 
         waitStartMs = nowMs();
-        steadySinceMs = -1;
-        if (WAIT_FOR_STEADY_FLYWHEEL && launcher != null) {
+        // A flywheel already steady before the press counts from when it got steady (no extra STEADY_MS).
+        steadySinceMs = launcher != null ? launcher.getFlywheelSteadySinceMs() : -1;
+        if (reverseFirst) {
+            startKick(waitStartMs, singleBall ? 1 : countAtStart); // reverse now, gate still closed
+            enter(State.WAIT_STEADY); // gate opens after GATE_OPEN_DELAY_MS and a steady flywheel
+        } else if (WAIT_FOR_STEADY_FLYWHEEL && launcher != null) {
             enter(State.WAIT_STEADY); // gate stays closed until the flywheel holds its speed
         } else {
             openGateAndFire(nowMs(), "no wait");
         }
+    }
+
+    /** WAIT_STEADY: why the gate may open now, or null to keep it closed. */
+    private String gateOpenReason(long now) {
+        boolean waitForFlywheel = WAIT_FOR_STEADY_FLYWHEEL && launcher != null;
+        if (waitForFlywheel) {
+            if (flywheelSteady()) {
+                if (steadySinceMs < 0) steadySinceMs = now;
+            } else {
+                steadySinceMs = -1;
+            }
+        }
+        if (reverseFirst && now - waitStartMs < GATE_OPEN_DELAY_MS) return null;
+        if (!waitForFlywheel) return "no wait";
+        if (steadySinceMs >= 0 && now - steadySinceMs >= STEADY_MS) return "steady";
+        if (now - waitStartMs >= MAX_STEADY_WAIT_MS) {
+            Log.w("LaunchBallsCommand", "Flywheel not steady after " + MAX_STEADY_WAIT_MS + " ms, firing anyway");
+            return "NOT steady, gave up waiting";
+        }
+        return null;
     }
 
     /** Opens the gate and starts the feed (and the kick). */
@@ -241,9 +293,9 @@ public class LaunchBallsCommand extends CommandBase {
                     launcher.getBatteryVoltage(), now - waitStartMs, why);
         }
         Log.i("LaunchBallsCommand", "Launch: " + countAtStart + " artifact(s), "
-                + (kickActive ? "kick" : "simple feed") + speed);
+                + (kickActive ? (reverseFirst ? "kick, reverse before gate" : "kick") : "simple feed") + speed);
         if (launcher != null) Log.i("LaunchShot", "gate open" + speed);
-        if (kickActive) startKick(now, singleBall ? 1 : countAtStart);
+        if (kickActive && !reverseFirst) startKick(now, singleBall ? 1 : countAtStart);
     }
 
     /** Both motors within STEADY_TOLERANCE_RPM of the target and not in bang-bang. */
@@ -263,16 +315,9 @@ public class LaunchBallsCommand extends CommandBase {
         if (!bar.isRaised()) bar.raise();
 
         if (state == State.WAIT_STEADY) {
-            if (flywheelSteady()) {
-                if (steadySinceMs < 0) steadySinceMs = now;
-                if (now - steadySinceMs >= STEADY_MS) openGateAndFire(now, "steady");
-            } else {
-                steadySinceMs = -1;
-            }
-            if (state == State.WAIT_STEADY && now - waitStartMs >= MAX_STEADY_WAIT_MS) {
-                Log.w("LaunchBallsCommand", "Flywheel not steady after " + MAX_STEADY_WAIT_MS + " ms, firing anyway");
-                openGateAndFire(now, "NOT steady, gave up waiting");
-            }
+            if (reverseFirst) updateKick(now); // reverse running; holds the transfer if it ends first
+            String why = gateOpenReason(now);
+            if (why != null) openGateAndFire(now, why);
             return;
         }
         logShots(now);
@@ -309,6 +354,15 @@ public class LaunchBallsCommand extends CommandBase {
     private boolean updateKick(long now) {
         if (reversing) {
             if (now - kickPhaseStartMs < reverseMs) return false;
+            if (reverseFirst && (state != State.FIRING || now - gateOpenMs < MIN_GATE_LEAD_MS)) {
+                intake.setLaunchTransferOverride(0); // reverse done, gate not (long enough) open: hold
+                return false;
+            }
+            if (reverseFirst && !feedLogged) {
+                feedLogged = true;
+                Log.i("LaunchBallsCommand", String.format(Locale.US, "Feed forward at +%d ms after the press, gate opened at +%d ms",
+                        now - waitStartMs, gateOpenMs - waitStartMs));
+            }
             reversing = false;
             kickPhaseStartMs = now;
             intake.clearLaunchTransferOverride(); // back to full forward launch power
@@ -443,7 +497,7 @@ public class LaunchBallsCommand extends CommandBase {
         return emptyConfirmedAtTimeout;
     }
 
-    /** Waiting for a steady flywheel (gate still closed). */
+    /** Gate still closed: waiting for a steady flywheel (and, reversing first, GATE_OPEN_DELAY_MS). */
     public boolean isWaitingForFlywheel() {
         return state == State.WAIT_STEADY;
     }

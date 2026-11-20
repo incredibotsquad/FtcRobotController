@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import org.firstinspires.ftc.teamcode.commands.LaunchBallsCommand;
 import org.firstinspires.ftc.teamcode.common.DebugTelemetry;
 
 import com.arcrobotics.ftclib.command.SubsystemBase;
@@ -112,6 +113,9 @@ public class LaunchSubsystem extends SubsystemBase {
 
     private double lastFlywheelPower = 0;
     private boolean inBangBang = false;
+    /** See trackSteady(). */
+    private long flywheelSteadySinceMs = -1;
+    private long lastSteadyCheckMs = 0;
 
     /** Turret lock: see setLaunchReadinessLock(). */
     private boolean isLaunchReadinessLocked = false; // unlocked by default again (2026-11-18): auto-aim from the start
@@ -221,12 +225,15 @@ public class LaunchSubsystem extends SubsystemBase {
         if (targetRPM <= 0) {
             flywheelPID.reset();
             inBangBang = false;
+            flywheelSteadySinceMs = -1;
             setFlywheelPower(0);
             return;
         }
 
         double targetTPS = rpmToTps(targetRPM);
-        double currentTPS = getFlywheelVelocityTPS();
+        double leftTPS = leftLaunchMotor.getVelocity();
+        double rightTPS = rightLaunchMotor.getVelocity();
+        double currentTPS = (leftTPS + rightTPS) / 2.0;
         double errorRPM = targetRPM - tpsToRpm(currentTPS);
 
         double power;
@@ -244,6 +251,30 @@ public class LaunchSubsystem extends SubsystemBase {
         }
 
         setFlywheelPower(Math.max(0.0, Math.min(1.0, power)));
+        trackSteady(tpsToRpm(leftTPS), tpsToRpm(rightTPS));
+    }
+
+    /**
+     * Keeps track, every control update, of how long both flywheel motors have been within
+     * LaunchBallsCommand.STEADY_TOLERANCE_RPM of the target and out of bang-bang, so a launch press
+     * on an already-steady flywheel doesn't have to wait STEADY_MS again.
+     */
+    private void trackSteady(double leftRpm, double rightRpm) {
+        long now = System.nanoTime() / 1_000_000L;
+        double tol = LaunchBallsCommand.STEADY_TOLERANCE_RPM;
+        boolean steady = !inBangBang && Math.abs(leftRpm - targetRPM) <= tol && Math.abs(rightRpm - targetRPM) <= tol;
+        if (!steady) flywheelSteadySinceMs = -1;
+        else if (flywheelSteadySinceMs < 0) flywheelSteadySinceMs = now;
+        lastSteadyCheckMs = now;
+    }
+
+    /**
+     * Since when (System.nanoTime() in ms) the flywheel has been steady, or -1: not steady, or the
+     * controller hasn't run in the last 200 ms (then the caller must time it itself).
+     */
+    public long getFlywheelSteadySinceMs() {
+        long now = System.nanoTime() / 1_000_000L;
+        return now - lastSteadyCheckMs > 200 ? -1 : flywheelSteadySinceMs;
     }
 
     private void setFlywheelPower(double power) {
@@ -392,6 +423,7 @@ public class LaunchSubsystem extends SubsystemBase {
         this.targetRPM = 0;
         flywheelPID.reset();
         inBangBang = false;
+        flywheelSteadySinceMs = -1;
         setFlywheelPower(0);
     }
 
