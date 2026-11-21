@@ -107,6 +107,14 @@ public class Poses {
      */
     public static double[] RED_CONTROL_SIDE_FLOWER_FROM_AUDIENCE = {12, 110, 0};
     /**
+     * LEFT spot 2 <-> alliance-wall FLOWER (2026-11-21): a spline that runs parallel to the HIVE frame
+     * (x ~33-37), so it stays clear of a robot parked in the LOADING ZONE (our left edge at x 26+ there)
+     * and of the frame (4.6 in). Two control points, far (high y) one first for the trip to the FLOWER;
+     * DynamicAuto uses them reversed for the trip back. Checked on paper for both directions.
+     */
+    public static double[] RED_CONTROL_FRAME_ROUTE_FAR = {39, 108, 0};
+    public static double[] RED_CONTROL_FRAME_ROUTE_AUDIENCE = {39, 60, 0};
+    /**
      * Moving between launch points on opposite sides of the HIVE (audience-side CELL <-> far-side
      * CELL), from any spot to any spot, picked in INIT. AROUND: a spline with these two control
      * points, past the HIVE on the alliance-wall side. Used in travel order (the one nearer the start
@@ -218,6 +226,11 @@ public class Poses {
             case RIGHT_FLOWER: return of(RED_CONTROL_WALL_FLOWER);
             default: return of(RED_CONTROL_SIDE_FLOWER);
         }
+    }
+
+    /** LEFT spot 2 -> alliance-wall FLOWER controls (far one first); reverse them for the trip back. */
+    public Pose[] frameRouteControls() {
+        return new Pose[] {of(RED_CONTROL_FRAME_ROUTE_FAR), of(RED_CONTROL_FRAME_ROUTE_AUDIENCE)};
     }
 
     /** Spline control for the rear-wall FLOWER from the audience half (see RED_CONTROL_SIDE_FLOWER_FROM_AUDIENCE). */

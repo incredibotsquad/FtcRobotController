@@ -11,6 +11,7 @@ import com.pedropathing.api.Paths;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.math.Pose;
 import com.pedropathing.paths.Path;
+import com.pedropathing.paths.interpolator.Interpolator;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -233,6 +234,16 @@ public class DynamicAuto extends LinearOpMode {
      * frame (2026-11-20). false = the plan leg's line / spline as before.
      */
     public static boolean SIDE_FLOWER_SPLINE_FROM_AUDIENCE = true;
+    /**
+     * LEFT spot 2 <-> alliance-wall FLOWER (2026-11-21): always a spline through
+     * Poses.RED_CONTROL_FRAME_ROUTE_FAR / _AUDIENCE, parallel to the HIVE frame, clear of a robot parked
+     * in the LOADING ZONE. The robot keeps its heading along the frame and turns only over the last
+     * FRAME_ROUTE_TURN_FRACTION of the path at the FLOWER end (the first part on the way back).
+     * Used when the robot is within FRAME_ROUTE_NEAR_IN of the start of the move. false = plan leg.
+     */
+    public static boolean FRAME_ROUTE_ENABLED = true;
+    public static double FRAME_ROUTE_TURN_FRACTION = 0.25;
+    public static double FRAME_ROUTE_NEAR_IN = 12.0;
 
     /**
      * true = show informational telemetry: the subsystems' readouts (drive, odometry, intake,
@@ -765,6 +776,15 @@ public class DynamicAuto extends LinearOpMode {
         AutoPlan.Leg<LaunchPoint> leg = currentLaunch();
         launchRoute.clear();
         LaunchTargets.setForcedCell(leg.point.cell(AutoPlan.isRed())); // turret aims at it on the way
+        if (FRAME_ROUTE_ENABLED && leg.point == LaunchPoint.LEFT_SPOT_2
+                && near(follower.pose(), poses.intakeApproach(IntakePoint.RIGHT_FLOWER), FRAME_ROUTE_NEAR_IN)) {
+            Pose[] c = poses.frameRouteControls();
+            driveFrameRoute(poses.launch(leg.point), new Pose[] {c[1], c[0]}, false);
+            setState(State.DRIVE_TO_LAUNCH, "to launch point " + (launchIndex + 1) + "/" + launchLegs.size() + " "
+                    + leg.point.label() + " [spline along the HIVE frame from the alliance-wall FLOWER]"
+                    + (launchedHere ? ", back after intaking" : ""));
+            return;
+        }
         driveTo(poses.launch(leg.point), poses.launchControl(leg.point), leg.spline);
         setState(State.DRIVE_TO_LAUNCH, "to launch point " + (launchIndex + 1) + "/" + launchLegs.size() + " "
                 + leg.point.label() + " [" + leg.moveLabel() + "]" + (launchedHere ? ", back after intaking" : ""));
@@ -776,6 +796,14 @@ public class DynamicAuto extends LinearOpMode {
             return;
         }
         AutoPlan.Leg<IntakePoint> leg = currentIntake();
+        if (FRAME_ROUTE_ENABLED && leg.point == IntakePoint.RIGHT_FLOWER
+                && near(follower.pose(), poses.launch(LaunchPoint.LEFT_SPOT_2), FRAME_ROUTE_NEAR_IN)) {
+            Pose[] c = poses.frameRouteControls();
+            driveFrameRoute(poses.intakeApproach(leg.point), c, true);
+            setState(State.DRIVE_TO_INTAKE, "to intake point " + (intakeIndex + 1) + "/" + intakeLegs.size() + " "
+                    + describe(leg.point, AutoPlan.isRed()) + " approach [spline along the HIVE frame from LEFT spot 2]");
+            return;
+        }
         if (SIDE_FLOWER_SPLINE_FROM_AUDIENCE && leg.point == IntakePoint.LEFT_FLOWER && poses.onAudienceHalf(follower.pose())) {
             // A line (or the usual control point) from the audience half clips the HIVE frame.
             driveTo(poses.intakeApproach(leg.point), poses.sideFlowerFromAudienceControl(), true);
@@ -944,6 +972,18 @@ public class DynamicAuto extends LinearOpMode {
         launchedHere = false;
         log("last intake point done: final launch at " + LaunchPoint.LEFT_SPOT_3.label() + " "
                 + fmt(poses.launch(LaunchPoint.LEFT_SPOT_3)) + " (FINAL_LAUNCH_AT_LEFT_SPOT_3)");
+        if (FRAME_ROUTE_ENABLED && near(follower.pose(), poses.intakeApproach(IntakePoint.RIGHT_FLOWER), FRAME_ROUTE_NEAR_IN)) {
+            // From the alliance-wall FLOWER: back along the HIVE frame to LEFT spot 2 first, then the short
+            // line to LEFT spot 3, instead of a straight line through the LOADING ZONE (a parked robot).
+            launchRoute.clear();
+            LaunchTargets.setForcedCell(LaunchPoint.LEFT_SPOT_3.cell(AutoPlan.isRed()));
+            Pose[] c = poses.frameRouteControls();
+            driveFrameRoute(poses.launch(LaunchPoint.LEFT_SPOT_2), new Pose[] {c[1], c[0]}, false);
+            launchRoute.add(poses.launch(LaunchPoint.LEFT_SPOT_3)); // DRIVE_TO_LAUNCH goes on from LEFT spot 2
+            setState(State.DRIVE_TO_LAUNCH, "to launch point " + (launchIndex + 1) + "/" + launchLegs.size() + " "
+                    + LaunchPoint.LEFT_SPOT_3.label() + " [spline along the HIVE frame to LEFT spot 2, then a line]");
+            return;
+        }
         driveToLaunchPoint();
     }
 
@@ -1133,6 +1173,35 @@ public class DynamicAuto extends LinearOpMode {
      * Drives from where the robot is now to {@code target}: a straight line, or a spline bending
      * through {@code control}. Heading turns linearly to the target heading. Pedro holds the end.
      */
+    private static boolean near(Pose a, Pose b, double in) {
+        return Math.hypot(a.x() - b.x(), a.y() - b.y()) <= in;
+    }
+
+    /**
+     * FRAME_ROUTE: spline from here through {@code controls} to {@code target}. The heading stays at the
+     * start heading and turns to the target heading only over FRAME_ROUTE_TURN_FRACTION of the path: at
+     * the end ({@code turnAtEnd}, toward the FLOWER) or at the start (on the way back).
+     */
+    private void driveFrameRoute(Pose target, Pose[] controls, boolean turnAtEnd) {
+        Pose start = follower.pose();
+        Pose[] pts = new Pose[controls.length + 2];
+        pts[0] = start;
+        System.arraycopy(controls, 0, pts, 1, controls.length);
+        pts[pts.length - 1] = target;
+        final double h0 = start.heading();
+        final double dh = Math.atan2(Math.sin(target.heading() - h0), Math.cos(target.heading() - h0)); // shortest turn
+        final double f = Math.max(0.01, Math.min(1.0, FRAME_ROUTE_TURN_FRACTION));
+        Interpolator heading = (curve, t) -> {
+            double k = turnAtEnd ? (t <= 1 - f ? 0 : (t - (1 - f)) / f) : Math.min(1.0, t / f);
+            return h0 + dh * k;
+        };
+        Path path = Paths.curve(pts).heading(heading);
+        follower.follow(path);
+        followingPath = true;
+        log("  path spline (" + controls.length + " control points, turn over the "
+                + (turnAtEnd ? "last" : "first") + String.format(" %.0f%%) ", f * 100) + fmt(start) + " -> " + fmt(target));
+    }
+
     private void driveTo(Pose target, Pose control, boolean spline) {
         driveTo(target, control, spline, 1.0);
     }
