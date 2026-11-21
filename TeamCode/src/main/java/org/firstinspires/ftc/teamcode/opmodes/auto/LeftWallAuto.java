@@ -100,6 +100,9 @@ public class LeftWallAuto extends LinearOpMode {
     public void runOpMode() {
         TelemetryManager panels = PanelsTelemetry.INSTANCE.getTelemetry();
         robot = new Incredibot(hardwareMap, panels);
+        // The 4 preloads are in before INIT: count them now so the count light shows 4 during INIT
+        // (Incredibot.initAuto() sets it again at START). Otherwise the sensor-4 leftover rule reads 1.
+        robot.intakeSubsystem.setArtifactCount(org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem.MAX_ARTIFACTS);
         follower = robot.driveSubsystem.getFollower();
         mechanisms = !Incredibot.DRIVE_ONLY_MODE;
 

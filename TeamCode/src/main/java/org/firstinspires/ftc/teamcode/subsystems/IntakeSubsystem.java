@@ -232,6 +232,8 @@ public class IntakeSubsystem extends SubsystemBase {
     /** Full-eject intake reverse runs until this time (see FULL_EJECT_MS). */
     private long fullEjectUntilMs = 0;
     private boolean launching = false;
+    /** Full because the sensors counted the robot full (not setArtifactCount): only then the full eject runs. */
+    private boolean filledByIntaking = false;
     /** Transfer power to use while launching instead of the default; NaN = no override. */
     private double launchTransferOverride = Double.NaN;
     /** Intake motor power to use while launching instead of off; NaN = no override (intake off). */
@@ -360,6 +362,11 @@ public class IntakeSubsystem extends SubsystemBase {
      * straddling the intake. With FULL_EJECT_MS = 0 the intake just stops. Ends early on a launch.
      */
     public void startFullEject() {
+        if (!filledByIntaking) {
+            // Full because the count was set by code (AUTO preloads): no 5th can be straddling the intake.
+            stopIntakeMotorOnly();
+            return;
+        }
         if (FULL_EJECT_MS <= 0) {
             stopIntakeMotorOnly();
             return;
@@ -439,6 +446,7 @@ public class IntakeSubsystem extends SubsystemBase {
     /** Manually override the count, e.g. preloads at the start of auto. */
     public void setArtifactCount(int count) {
         changeCount(count, "set by code (setArtifactCount)");
+        filledByIntaking = false; // e.g. AUTO preloads: nothing to eject (see startFullEject)
     }
 
     public boolean isSensor1Blocked() {
@@ -573,6 +581,7 @@ public class IntakeSubsystem extends SubsystemBase {
                 artifactCount, newCount, reason, sensorString(), intakeMotor.get(), transferMotor.get(),
                 launching ? ", launching" : ""));
         if (newCount < artifactCount) lastExitMs = nowMs();
+        if (newCount >= MAX_ARTIFACTS && artifactCount < MAX_ARTIFACTS) filledByIntaking = true; // setArtifactCount clears it
         artifactCount = newCount;
     }
 
