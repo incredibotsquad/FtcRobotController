@@ -95,6 +95,14 @@ public class Poses {
     public static double[] RED_CONTROL_WALL_FLOWER = {2.58, 51.36, 0}; // was {32.58, 51.36}: x -30, the path from LEFT spot 3 hit the HIVE
     public static double[] RED_CONTROL_SIDE_FLOWER = {54.85, 109.79, 0};
     /**
+     * To the rear-wall (side) FLOWER from the audience half (red y < 72, e.g. RIGHT spot 2): a
+     * straight line or the RED_CONTROL_SIDE_FLOWER spline clips the HIVE frame (x >= 47.3,
+     * y 52.5-91.5), so DynamicAuto always splines through this point, toward the LOADING ZONE.
+     * Checked on paper from RIGHT spot 2, RIGHT spot 1, the alliance-wall FLOWER and the GARDEN:
+     * the robot stays 6+ in clear of the frame.
+     */
+    public static double[] RED_CONTROL_SIDE_FLOWER_FROM_AUDIENCE = {12, 110, 0};
+    /**
      * Moving between launch points on opposite sides of the HIVE (audience-side CELL <-> far-side
      * CELL), from any spot to any spot, picked in INIT. AROUND: a spline through this control
      * point, past the HIVE on the alliance-wall side.
@@ -200,6 +208,16 @@ public class Poses {
             case RIGHT_FLOWER: return of(RED_CONTROL_WALL_FLOWER);
             default: return of(RED_CONTROL_SIDE_FLOWER);
         }
+    }
+
+    /** Spline control for the rear-wall FLOWER from the audience half (see RED_CONTROL_SIDE_FLOWER_FROM_AUDIENCE). */
+    public Pose sideFlowerFromAudienceControl() {
+        return of(RED_CONTROL_SIDE_FLOWER_FROM_AUDIENCE);
+    }
+
+    /** True if {@code p} is on the audience half of the field in the red frame (red y < 72; blue y > 72). */
+    public boolean onAudienceHalf(Pose p) {
+        return isRed ? p.y() < FIELD_SIZE / 2 : p.y() > FIELD_SIZE / 2;
     }
 
     /** Park at the driver's RIGHT end of the LOADING ZONE (RED_PARK_RIGHT) or LEFT end (RED_PARK_LEFT). */

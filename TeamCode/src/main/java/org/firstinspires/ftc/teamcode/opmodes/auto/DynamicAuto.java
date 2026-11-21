@@ -182,6 +182,12 @@ public class DynamicAuto extends LinearOpMode {
      * left it parks. false = follow the plan order regardless.
      */
     public static boolean REFILL_BEFORE_LAUNCH = true;
+    /**
+     * To the rear-wall FLOWER from the audience half (e.g. RIGHT spot 2): always a spline through
+     * Poses.RED_CONTROL_SIDE_FLOWER_FROM_AUDIENCE, whatever the plan leg says; a line hits the HIVE
+     * frame (2026-11-20). false = the plan leg's line / spline as before.
+     */
+    public static boolean SIDE_FLOWER_SPLINE_FROM_AUDIENCE = true;
 
     /**
      * true = show informational telemetry: the subsystems' readouts (drive, odometry, intake,
@@ -693,6 +699,14 @@ public class DynamicAuto extends LinearOpMode {
             return;
         }
         AutoPlan.Leg<IntakePoint> leg = currentIntake();
+        if (SIDE_FLOWER_SPLINE_FROM_AUDIENCE && leg.point == IntakePoint.LEFT_FLOWER && poses.onAudienceHalf(follower.pose())) {
+            // A line (or the usual control point) from the audience half clips the HIVE frame.
+            driveTo(poses.intakeApproach(leg.point), poses.sideFlowerFromAudienceControl(), true);
+            setState(State.DRIVE_TO_INTAKE, "to intake point " + (intakeIndex + 1) + "/" + intakeLegs.size() + " "
+                    + describe(leg.point, AutoPlan.isRed()) + " approach [spline via "
+                    + fmt(poses.sideFlowerFromAudienceControl()) + ", clear of the HIVE frame]");
+            return;
+        }
         driveTo(poses.intakeApproach(leg.point), poses.intakeControl(leg.point), leg.spline);
         setState(State.DRIVE_TO_INTAKE, "to intake point " + (intakeIndex + 1) + "/" + intakeLegs.size() + " "
                 + describe(leg.point, AutoPlan.isRed()) + " approach [" + leg.moveLabel() + "]");
