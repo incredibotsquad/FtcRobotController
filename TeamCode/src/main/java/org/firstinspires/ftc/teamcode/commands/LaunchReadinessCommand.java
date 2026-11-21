@@ -10,6 +10,8 @@ import com.arcrobotics.ftclib.geometry.Translation2d;
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.TelemetryManager;
 
+import java.util.function.BooleanSupplier;
+
 import org.firstinspires.ftc.teamcode.common.CrossOpModeStorage;
 import org.firstinspires.ftc.teamcode.common.LaunchTargets;
 import org.firstinspires.ftc.teamcode.subsystems.LaunchSubsystem;
@@ -154,6 +156,9 @@ public class LaunchReadinessCommand extends CommandBase {
     private double lastOdometryAngleDeg = Double.NaN; // angle from odometry alone (no vision, no trim)
     private Translation2d lastAimFrom, lastAimPoint;
     private double lastCommandedTurret = Double.NaN;
+    /** While this reads true (a transfer jam), the flywheel is stopped and the turret is not moved. */
+    private BooleanSupplier haltWhen = null;
+    private boolean halted = false;
 
     public LaunchReadinessCommand(LaunchSubsystem launcher, OdometrySubsystem odometry, TelemetryManager telemetry) {
         this(launcher, odometry, null, telemetry);
@@ -180,8 +185,27 @@ public class LaunchReadinessCommand extends CommandBase {
         Log.i("TurretDebug", String.format("LaunchReadiness initialize: lastTurretPosition %.3f (from storage)", lastTurretPosition));
     }
 
+    /** Stop the flywheel and hold the turret while {@code halt} reads true (Incredibot: IntakeSubsystem::isJammed). */
+    public void setHaltWhen(BooleanSupplier halt) {
+        haltWhen = halt;
+    }
+
     @Override
     public void execute() {
+        if (haltWhen != null && haltWhen.getAsBoolean()) {
+            if (!halted) {
+                halted = true;
+                launcher.stop();
+                Log.w("LaunchReadiness", String.format("halted (transfer jam): flywheel stopped, turret held at %.3f", lastTurretPosition));
+            }
+            launcher.setShotSolutionReady(false);
+            launcher.setShotPossible(false);
+            return; // the turret servo keeps its last position; nothing is commanded
+        }
+        if (halted) {
+            halted = false;
+            Log.i("LaunchReadiness", "resumed: flywheel and turret back on");
+        }
         boolean turretLocked = launcher.isLaunchReadinessLocked();
 
         Pose2d pose = odometry.getPose();

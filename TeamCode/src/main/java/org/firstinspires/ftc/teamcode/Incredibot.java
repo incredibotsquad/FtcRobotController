@@ -204,6 +204,7 @@ public class Incredibot extends Robot {
         // Assign the background tracking loop here!
         // The scheduler will now call execute() on this command every single frame.
         launchReadinessCommand = new LaunchReadinessCommand(launchSubsystem, odometrySubsystem, limelightSubsystem, telemetry);
+        launchReadinessCommand.setHaltWhen(intakeSubsystem::isJammed); // a jam stops the flywheel and turret too
         launchSubsystem.setDefaultCommand(launchReadinessCommand);
     }
 }

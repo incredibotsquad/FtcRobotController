@@ -144,7 +144,8 @@ public class IntakeSubsystem extends SubsystemBase {
      * at full power (with the drive and flywheel on top) can blow the 20 A battery fuse. On a jam both
      * are blocked from running FORWARD (reverse still works) until the operator clears it by holding
      * the reverse (BACK) for JAM_CLEAR_REVERSE_MS; LaunchBallsCommand ends and refuses to start
-     * meanwhile. Drive, turret and flywheel keep running. Logged with tag IntakeJam.
+     * meanwhile, and LaunchReadinessCommand stops the flywheel and holds the turret. Only the drive keeps
+     * running. Logged with tag IntakeJam.
      * Two rules, either one is a jam:
      *  - current: filtered transfer draw >= JAM_CURRENT_A for JAM_CURRENT_MS while it runs forward
      *    (ignoring the first JAM_STARTUP_MS). The 435 RPM transfer stalls around 9 A at 12 V; four
@@ -154,7 +155,7 @@ public class IntakeSubsystem extends SubsystemBase {
      * Uses STALL_CURRENT_FILTER_MS / CURRENT_READ_INTERVAL_MS for the current reading.
      */
     public static boolean JAM_DETECTION_ENABLED = true;
-    public static double JAM_CURRENT_A = 6.5;
+    public static double JAM_CURRENT_A = 7.2; // 2026-11-20: above the 6.7 A peak with 4 pressed on the gate, below a stall on a sagging battery
     public static long JAM_CURRENT_MS = 300;
     public static long JAM_STARTUP_MS = 250;
     public static long JAM_NO_EXIT_MS = 700;
@@ -675,7 +676,7 @@ public class IntakeSubsystem extends SubsystemBase {
                 if (now - jamReverseSinceMs >= JAM_CLEAR_REVERSE_MS) {
                     jammed = false;
                     Log.i("IntakeJam", "cleared: reversed " + (now - jamReverseSinceMs) + " ms | count " + artifactCount + ", sensors " + sensorString());
-                    DriverBanner.show("JAM CLEARED", "intake and transfer back on", "#00E676");
+                    DriverBanner.show("JAM CLEARED", "intake, transfer, flywheel and turret back on", "#00E676");
                 }
             } else {
                 jamReverseSinceMs = -1;
@@ -742,7 +743,7 @@ public class IntakeSubsystem extends SubsystemBase {
         intakeGuard.request(0);
         Log.w("IntakeJam", "JAM: " + reason + " | count " + artifactCount + ", sensors " + sensorString()
                 + (launching ? ", launching" : "") + ": transfer and intake stopped, hold reverse (BACK) to clear");
-        DriverBanner.show("JAM: TRANSFER STOPPED", "hold BACK (reverse) to clear", "#FF5252");
+        DriverBanner.show("JAM: LAUNCHER STOPPED", "drive only | hold BACK (reverse) to clear", "#FF5252");
     }
 
     // ---------------------------------------------------------------- stall detection

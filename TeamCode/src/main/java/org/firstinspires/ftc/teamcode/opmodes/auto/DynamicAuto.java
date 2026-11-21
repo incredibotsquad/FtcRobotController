@@ -50,10 +50,11 @@ import java.util.List;
  *       point is done; go to step 1 with the next launch point;
  *     - its CELL is down and we haven't launched here yet: wait for it to come up.
  *  3. After a launch, drive to the next intake point, intake (bar down if the point needs it) until
- *     full or INTAKE_TIMEOUT_MS. If the bar is down, back straight out to the approach pose, rock
- *     forward and back ROCK_COUNT times (bar still down, so the bar keeps the elements in front of
- *     the intake while they get pulled in), then raise it. Then go back to the current launch point
- *     (step 2).
+ *     full or INTAKE_TIMEOUT_MS. If the bar is down, back straight out to the approach pose; at the
+ *     GARDEN also rock forward and back ROCK_COUNT times (bar still down, so the bar keeps the
+ *     elements in front of the intake while they get pulled in); then raise it. Then go back to the
+ *     current launch point (step 2). The GARDEN currently uses no bar (Poses.GARDEN_NEEDS_BAR false),
+ *     so there it just drives in and leaves: no back-out, no rocking.
  * With FINAL_LAUNCH_AT_LEFT_SPOT_4, the trip after the LAST intake point goes to LEFT spot 4
  * (straight line) for the final launch instead of the current launch point.
  * When a sequence runs out (no next launch or intake point), the robot parks.
