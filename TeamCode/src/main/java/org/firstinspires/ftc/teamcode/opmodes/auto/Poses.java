@@ -58,9 +58,10 @@ public class Poses {
     /** GARDEN (red: tape along the audience wall, x 0-23, 4 POLLEN from the corner). */
 
     public static double[] RED_GARDEN_APPROACH = {8, 24, 270};
-    // No bar at the GARDEN: drive 4 in closer (y 15 -> 11) so the intake itself reaches the POLLEN
-    // (2.8 in balls touching the wall, y 0-2.8). Front edge ends ~2 in off the wall for an 18 in robot.
-    public static double[] RED_GARDEN_INTAKE = {8, 11, 270};
+    // No bar at the GARDEN: the intake itself has to reach the POLLEN (2.8 in balls touching the
+    // wall, y 0-2.8). y 11 picked up nothing (2026-11-20 run), so 9: the front edge ends ~1 in off
+    // the wall with the 8 in half-length RelocalizeCommand.CORNER_X_OFFSET_IN uses. Measure on the field.
+    public static double[] RED_GARDEN_INTAKE = {8, 9, 270};
 
     /** FLOWER on the alliance wall (red: (0, 48)). */
     public static double[] RED_RIGHT_FLOWER_APPROACH = {24, 48, 180};

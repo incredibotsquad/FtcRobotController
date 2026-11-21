@@ -168,6 +168,20 @@ public class DynamicAuto extends LinearOpMode {
      * like any first visit; then parks. false = the plan's launch point as before.
      */
     public static boolean FINAL_LAUNCH_AT_LEFT_SPOT_4 = true;
+    /**
+     * LEFT spot 4 is partly inside the LOADING ZONE, so parking from there is no move at all: when
+     * the auto would park while the robot is within LEFT_SPOT_4_PARK_RADIUS_IN of it, it just holds
+     * and is done (2026-11-20). false = drive to the plan's park pose as before.
+     */
+    public static boolean LEFT_SPOT_4_COUNTS_AS_PARK = true;
+    public static double LEFT_SPOT_4_PARK_RADIUS_IN = 6.0;
+    /**
+     * Never drive to a launch point empty (2026-11-20): when the robot would head for a launch point
+     * with 0 artifacts (an intake point that picked nothing up, or moving on after a TIP), it goes
+     * to the CLOSEST unused intake point first, then on to that launch point. With no intake point
+     * left it parks. false = follow the plan order regardless.
+     */
+    public static boolean REFILL_BEFORE_LAUNCH = true;
 
     /**
      * true = show informational telemetry: the subsystems' readouts (drive, odometry, intake,
@@ -618,7 +632,7 @@ public class DynamicAuto extends LinearOpMode {
             launchIndex++;
             launchedHere = false;
             if (launchIndex >= launchLegs.size()) startPark("no launch points left in the plan");
-            else driveToNextLaunchPoint(cell);
+            else if (!refillFirst("moving on after the TIP")) driveToNextLaunchPoint(cell);
         } else {
             cellUpSinceMs = -1;
             setStatus("first visit and " + sideName(cell) + " CELL is down (up CELL " + upSide()
@@ -749,8 +763,41 @@ public class DynamicAuto extends LinearOpMode {
         String what = "after intake point " + (intakeIndex + 1);
         intakeIndex++;
         boolean lastIntake = intakeIndex >= intakeLegs.size();
-        waitThen(delay, what, lastIntake && FINAL_LAUNCH_AT_LEFT_SPOT_4
-                ? this::driveToFinalLaunchPoint : this::driveToLaunchPoint);
+        waitThen(delay, what, () -> {
+            if (refillFirst("intake point " + intakeIndex + " picked nothing up")) return;
+            if (lastIntake && FINAL_LAUNCH_AT_LEFT_SPOT_4) driveToFinalLaunchPoint();
+            else driveToLaunchPoint();
+        });
+    }
+
+    /**
+     * REFILL_BEFORE_LAUNCH: with 0 artifacts, go to the closest unused intake point instead of a
+     * launch point (it is moved up to be the next intake point; after it the usual return to the
+     * current launch point follows). No intake point left: park. Returns true if it took over.
+     */
+    private boolean refillFirst(String why) {
+        if (!REFILL_BEFORE_LAUNCH || !mechanisms || robot.intakeSubsystem.getArtifactCount() > 0) return false;
+        if (intakeIndex >= intakeLegs.size()) {
+            startPark("no artifacts and no intake points left (" + why + ")");
+            return true;
+        }
+        Pose here = follower.pose();
+        int best = intakeIndex;
+        double bestDist = Double.MAX_VALUE;
+        for (int i = intakeIndex; i < intakeLegs.size(); i++) {
+            Pose a = poses.intakeApproach(intakeLegs.get(i).point);
+            double d = Math.hypot(a.x() - here.x(), a.y() - here.y());
+            if (d < bestDist) {
+                bestDist = d;
+                best = i;
+            }
+        }
+        if (best != intakeIndex) intakeLegs.add(intakeIndex, intakeLegs.remove(best));
+        log(String.format("0 artifacts (%s): to the closest unused intake point, %s (%.0f in away), before launch point %s",
+                why, describe(currentIntake().point, AutoPlan.isRed()), bestDist,
+                launchIndex < launchLegs.size() ? currentLaunch().point.label() : "-"));
+        driveToIntakePoint();
+        return true;
     }
 
     /**
@@ -784,6 +831,16 @@ public class DynamicAuto extends LinearOpMode {
         parkStarted = true;
         launchRoute.clear();
         raiseBar();
+        Pose spot4 = poses.launch(LaunchPoint.LEFT_SPOT_4);
+        Pose here = follower.pose();
+        double fromSpot4 = Math.hypot(here.x() - spot4.x(), here.y() - spot4.y());
+        if (LEFT_SPOT_4_COUNTS_AS_PARK && fromSpot4 <= LEFT_SPOT_4_PARK_RADIUS_IN) {
+            follower.hold(here);
+            followingPath = false;
+            setState(State.DONE, String.format("parked at LEFT spot 4 (%.1f in from it, partly in the LOADING ZONE), no park move: %s",
+                    fromSpot4, reason));
+            return;
+        }
         driveTo(poses.park(AutoPlan.parkSide), poses.parkControl(AutoPlan.parkSide), PARK_WITH_SPLINE);
         setState(State.DRIVE_TO_PARK, "parking " + AutoPlan.parkLabel() + ": " + reason);
     }
