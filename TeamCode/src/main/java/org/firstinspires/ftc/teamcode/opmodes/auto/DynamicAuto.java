@@ -97,6 +97,17 @@ public class DynamicAuto extends LinearOpMode {
 
     /** Longest wait for LaunchSubsystem.isReadyToLaunch() once the CELL is up; then it fires anyway. */
     public static long READY_TIMEOUT_MS = 1500;
+    /**
+     * Settle before launching (2026-11-20): the robot was still moving 1-3 in when a launch started,
+     * which can shake artifacts out. A launch also waits until the pose has stayed within
+     * SETTLE_MAX_MOVE_IN and SETTLE_MAX_TURN_DEG for SETTLE_MS (SettleCheck), giving up after
+     * SETTLE_TIMEOUT_MS. READY_TIMEOUT_MS still fires anyway. Also used by LeftWallAuto and RightWallLGLFP.
+     */
+    public static boolean SETTLE_BEFORE_LAUNCH = true;
+    public static double SETTLE_MAX_MOVE_IN = 0.5;
+    public static double SETTLE_MAX_TURN_DEG = 1.0;
+    public static long SETTLE_MS = 150;
+    public static long SETTLE_TIMEOUT_MS = 1000;
     /** Back at a launch point we've already launched from: look at the HIVE this long before deciding if it tipped. */
     public static long TIP_CHECK_MS = 300;
     /**
@@ -259,6 +270,7 @@ public class DynamicAuto extends LinearOpMode {
     private final ElapsedTime stateTimer = new ElapsedTime();
     private final ElapsedTime matchTimer = new ElapsedTime();
     private boolean followingPath = false;
+    private final SettleCheck settle = new SettleCheck();
     private long cellUpSinceMs = -1;
     /** nowMs() when the robot reached the current launch point. */
     private long arrivedAtLaunchMs = 0;
@@ -682,13 +694,20 @@ public class DynamicAuto extends LinearOpMode {
         }
 
         if (cellUp) {
-            if (cellUpSinceMs < 0) cellUpSinceMs = nowMs();
+            if (cellUpSinceMs < 0) {
+                cellUpSinceMs = nowMs();
+                settle.reset();
+            }
+            boolean settled = settle.update(follower.pose(), nowMs());
             boolean ready = robot.launchSubsystem.isReadyToLaunch();
-            if (ready || nowMs() - cellUpSinceMs >= READY_TIMEOUT_MS) {
+            if ((ready && settled) || nowMs() - cellUpSinceMs >= READY_TIMEOUT_MS) {
+                log("  settle: " + settle.describe(nowMs()));
                 startLaunch(ready);
-            } else {
+            } else if (!ready) {
                 setStatus(sideName(cell) + " CELL is up, waiting for launcher" + (robot.launchReadinessCommand == null ? ""
                         : " (" + robot.launchReadinessCommand.getNotReadyReason() + ")"));
+            } else {
+                setStatus(sideName(cell) + " CELL is up, launcher ready, waiting for the robot to settle (" + settle.describe(nowMs()) + ")");
             }
         } else if (launchedHere) {
             log(sideName(cell) + " CELL is down after launching here: HIVE tipped, done with launch point "

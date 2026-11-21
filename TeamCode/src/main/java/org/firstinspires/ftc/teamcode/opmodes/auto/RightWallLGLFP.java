@@ -88,6 +88,7 @@ public class RightWallLGLFP extends LinearOpMode {
     private final ElapsedTime stateTimer = new ElapsedTime();
     private final ElapsedTime matchTimer = new ElapsedTime();
     private boolean followingPath = false;
+    private final SettleCheck settle = new SettleCheck();
     private boolean barDown = false;
     private boolean parkStarted = false;
     private boolean parkHoldReleased = false;
@@ -351,13 +352,19 @@ public class RightWallLGLFP extends LinearOpMode {
             return;
         }
 
-        if (cellUpSinceMs < 0) cellUpSinceMs = nowMs();
+        if (cellUpSinceMs < 0) {
+            cellUpSinceMs = nowMs();
+            settle.reset();
+        }
+        boolean settled = settle.update(follower.pose(), nowMs());
         boolean ready = robot.launchSubsystem.isReadyToLaunch();
-        if (!ready && nowMs() - cellUpSinceMs < DynamicAuto.READY_TIMEOUT_MS) {
-            setStatus(side(cell) + " CELL is up, waiting for launcher" + (robot.launchReadinessCommand == null ? ""
-                    : " (" + robot.launchReadinessCommand.getNotReadyReason() + ")"));
+        if (!(ready && settled) && nowMs() - cellUpSinceMs < DynamicAuto.READY_TIMEOUT_MS) {
+            setStatus(side(cell) + " CELL is up, " + (!ready ? "waiting for launcher" + (robot.launchReadinessCommand == null ? ""
+                    : " (" + robot.launchReadinessCommand.getNotReadyReason() + ")")
+                    : "launcher ready, waiting for the robot to settle (" + settle.describe(nowMs()) + ")"));
             return;
         }
+        log("  settle: " + settle.describe(nowMs()));
         launchCommand = new LaunchBallsCommand(robot.launchGateSubsystem, robot.intakeSubsystem,
                 robot.driveSubsystem, robot.intakeBarSubsystem, robot.launchSubsystem);
         launchCommand.schedule();
