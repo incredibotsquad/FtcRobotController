@@ -47,7 +47,7 @@ public class Poses {
     public static double[] RED_LAUNCH_AUDIENCE_CELL_1 = {42.5, 10, 90};   // ~48.75 in (shot row 48.75 = 2668 RPM)
     public static double[] RED_LAUNCH_AUDIENCE_CELL_2 = {30, 24, 90};   // ~53 in
     public static double[] RED_LAUNCH_FAR_CELL_1 = {40, 134, 270};       // ~48 in
-    public static double[] RED_LAUNCH_FAR_CELL_2 = {30.5, 120, 270};       // ~53 in
+    public static double[] RED_LAUNCH_FAR_CELL_2 = {30.5, 125, 270};       // was y 120
     // LEFT spot 3 has no array of its own: x, y from RED_LEFT_FLOWER_APPROACH, heading from
     // RED_LAUNCH_FAR_CELL_2 (faces the HIVE so the Limelight can see it; tune those two). ~32 in from
     // the CELL, closer than the 46 in shot table, so the launcher uses the table's nearest RPM.
@@ -65,7 +65,7 @@ public class Poses {
 
     /** FLOWER on the alliance wall (red: (0, 48)). */
     public static double[] RED_RIGHT_FLOWER_APPROACH = {24, 48, 180};
-    public static double[] RED_RIGHT_FLOWER_INTAKE = {14, 48, 180};
+    public static double[] RED_RIGHT_FLOWER_INTAKE = {12, 48, 180}; // was {14, 48}
 
     /** FLOWER on the side wall (red: rear wall, (48, 144)). */
     public static double[] RED_LEFT_FLOWER_APPROACH = {48, 120, 90};
@@ -79,7 +79,9 @@ public class Poses {
     // ---- park (red LOADING ZONE: x 0-11, y 96.5-119.5; partly inside is enough, don't touch the
     // wall or LEAVE may not count). Two spots, named by the wall they're toward:
     /** LEFT: the end of the zone toward the wall opposite the audience (red: high y). */
-    public static double[] RED_PARK_LEFT = {10, 114, 90};
+    // Same values as LEFT spot 2 (RED_LAUNCH_FAR_CELL_2), kept as its own array so they can be tuned
+    // separately. Was {10, 114, 90}, then {30.5, 120, 270}.
+    public static double[] RED_PARK_LEFT = {30.5, 125, 270};
     /** RIGHT: the end of the zone toward the audience wall (red: low y). */
     public static double[] RED_PARK_RIGHT = {10, 96, 270};
 
@@ -104,10 +106,17 @@ public class Poses {
     public static double[] RED_CONTROL_SIDE_FLOWER_FROM_AUDIENCE = {12, 110, 0};
     /**
      * Moving between launch points on opposite sides of the HIVE (audience-side CELL <-> far-side
-     * CELL), from any spot to any spot, picked in INIT. AROUND: a spline through this control
-     * point, past the HIVE on the alliance-wall side.
+     * CELL), from any spot to any spot, picked in INIT. AROUND: a spline with these two control
+     * points, past the HIVE on the alliance-wall side. Used in travel order (the one nearer the start
+     * first), so it works in both directions. Both at x 17 (were 12, which kept the path at x ~17-22) alongside the
+     * HIVE (legs at x ~47, y ~52-92) for RIGHT spot 2 <-> LEFT spot 2: away from the HIVE and the wall.
+     * Was one control point: {24, 72}, {16, 88}, {11, 88}, {0, 88}, {-5, 88}, {-10, 88}, {-7, 88}.
      */
-    public static double[] RED_CONTROL_AROUND_HIVE = {16, 88, 0}; // was {24, 72}: x -8, y +16, away from the HIVE
+    // Two-point AROUND spline, kept for reference (not used; see RED_CONTROL_AROUND_HIVE below):
+    // public static double[] RED_CONTROL_AROUND_HIVE_AUDIENCE = {17, 50, 0}; // was {12, 50}: x +5
+    // public static double[] RED_CONTROL_AROUND_HIVE_FAR = {17, 98, 0}; // was {12, 98}: x +5
+    /** AROUND spline in use: the single control point from 2026-11-07 (commit 0520b1b). */
+    public static double[] RED_CONTROL_AROUND_HIVE = {24, 72, 0};
     /**
      * THROUGH: straight lines via these two waypoints {x, y} (the robot drives to each one), under
      * the HIVE between them. Used in travel order, the one nearer the start first, so it works in
@@ -167,8 +176,14 @@ public class Poses {
     }
 
     /** Spline control point for a move between launch points AROUND the HIVE. */
-    public Pose hiveAroundControl() {
-        return of(RED_CONTROL_AROUND_HIVE);
+    /** AROUND control points for a move from {@code start}, nearer-to-start first. */
+    public Pose[] hiveAroundControls(Pose start) {
+        // 2026-11-07 spline: one control point.
+        return new Pose[] {of(RED_CONTROL_AROUND_HIVE)};
+        // Two-point version, kept for reference:
+        // Pose a = of(RED_CONTROL_AROUND_HIVE_AUDIENCE);
+        // Pose b = of(RED_CONTROL_AROUND_HIVE_FAR);
+        // return start.distance(a) <= start.distance(b) ? new Pose[] {a, b} : new Pose[] {b, a};
     }
 
     /**

@@ -89,6 +89,7 @@ public class RightWallLGLFP extends LinearOpMode {
     private boolean followingPath = false;
     private boolean barDown = false;
     private boolean parkStarted = false;
+    private boolean parkHoldReleased = false;
     /** 1 = the preload visit, 2 = back after the GARDEN (TIP check first). */
     private int launchVisit = 0;
     /** The intake point being worked (GARDEN, then RIGHT_FLOWER). */
@@ -98,6 +99,9 @@ public class RightWallLGLFP extends LinearOpMode {
     private boolean tipChecked = false;
     private int rocksDone = 0;
     private Pose rockBase;
+    private boolean rockFromIntake = false;
+    /** stateTimer time the robot became slower than STALL_SPEED_IN_PER_SEC this state, or -1. */
+    private double slowSinceMs = -1;
     private LaunchBallsCommand launchCommand;
     private String status = "";
     private String loggedStatus = "";
@@ -222,27 +226,40 @@ public class RightWallLGLFP extends LinearOpMode {
                 break;
 
             case DRIVE_INTO_INTAKE:
-                if (pathDone()) setState(State.INTAKING, "at the " + intakeLabel() + ", intaking up to "
+                // At a FLOWER, a full count while still driving in ends the drive-in: INTAKING sees full
+                // on the next loop and leaves straight away (it used to push on until the path ended).
+                if (intake != IntakePoint.GARDEN && robot.intakeSubsystem.isFull()) {
+                    log("full (" + robot.intakeSubsystem.getArtifactCount() + ") while driving into the " + intakeLabel());
+                    setState(State.INTAKING, "full during the drive-in: leaving the " + intakeLabel());
+                } else if (pathDone() || stalled()) setState(State.INTAKING, "at the " + intakeLabel() + ", intaking up to "
                         + intakeTimeoutMs() + " ms (" + robot.intakeSubsystem.getArtifactCount() + " artifacts)");
                 break;
 
             case INTAKING:
-                if (robot.intakeSubsystem.isFullAndDoneIntaking() || stateTimer.milliseconds() >= intakeTimeoutMs()) {
-                    log("intake done: " + (robot.intakeSubsystem.isFullAndDoneIntaking() ? "full" : "timed out")
+                // At a FLOWER, move on as soon as the count reads full (the intake's run-on keeps pulling
+                // the last one in while backing out); at the GARDEN wait out the run-on as before.
+                boolean full = intake == IntakePoint.GARDEN
+                        ? robot.intakeSubsystem.isFullAndDoneIntaking() : robot.intakeSubsystem.isFull();
+                if (full || stateTimer.milliseconds() >= intakeTimeoutMs()) {
+                    log("intake done: " + (full ? "full" : "timed out")
                             + " after " + ms(stateTimer) + ", " + robot.intakeSubsystem.getArtifactCount() + " artifacts");
-                    leaveIntake();
+                    if (!barDown && !full && canRockAtGarden()) {
+                        // GARDEN without the bar: at the intake pose against the wall, so each rock goes
+                        // back ROCK_DISTANCE_IN and forward to the intake pose again.
+                        startRocking(true);
+                    } else {
+                        if (intake == IntakePoint.GARDEN) log("no rocking: " + (full ? "full"
+                                : barDown ? "bar down (rocks after backing out)"
+                                : DynamicAuto.ROCK_COUNT <= 0 ? "ROCK_COUNT is 0" : "park window"));
+                        leaveIntake();
+                    }
                 }
                 break;
 
             case BACK_OUT_OF_INTAKE:
-                if (pathDone()) {
-                    rocksDone = 0;
-                    if (intake == IntakePoint.GARDEN && DynamicAuto.ROCK_COUNT > 0 && !robot.intakeSubsystem.isFull()
-                            && !(parkTime() && noLaunchReason() == null)) {
-                        Pose p = follower.pose();
-                        double snapped = Math.toRadians(90.0 * Math.round(Math.toDegrees(p.heading()) / 90.0));
-                        rockBase = new Pose(p.x(), p.y(), snapped);
-                        rockForward();
+                if (pathDone(DynamicAuto.BACK_OUT_END_TOLERANCE_IN)) {
+                    if (canRockAtGarden() && !robot.intakeSubsystem.isFull()) {
+                        startRocking(false);
                     } else {
                         finishIntake();
                     }
@@ -251,21 +268,17 @@ public class RightWallLGLFP extends LinearOpMode {
 
             case ROCK_FORWARD:
                 if (stopRockingIfFull()) break;
-                if (pathDone(DynamicAuto.ROCK_END_TOLERANCE_IN)) {
-                    driveTo(rockBase, DynamicAuto.ROCK_SPEED_FRACTION);
-                    setState(State.ROCK_BACK, "rock " + (rocksDone + 1) + "/" + DynamicAuto.ROCK_COUNT + " back");
+                if (pathDone(DynamicAuto.ROCK_END_TOLERANCE_IN) || stalled()) {
+                    if (rockFromIntake) rockDone(); // forward is the second leg of a rock from the intake pose
+                    else rockBack();
                 }
                 break;
 
             case ROCK_BACK:
                 if (stopRockingIfFull()) break;
-                if (pathDone(DynamicAuto.ROCK_END_TOLERANCE_IN)) {
-                    rocksDone++;
-                    if (rocksDone < DynamicAuto.ROCK_COUNT) rockForward();
-                    else {
-                        log("rocked " + rocksDone + " times, " + robot.intakeSubsystem.getArtifactCount() + " artifacts");
-                        finishIntake();
-                    }
+                if (pathDone(DynamicAuto.ROCK_END_TOLERANCE_IN) || stalled()) {
+                    if (rockFromIntake) rockForward();
+                    else rockDone();
                 }
                 break;
 
@@ -276,6 +289,15 @@ public class RightWallLGLFP extends LinearOpMode {
                 break;
 
             case DONE:
+                // Parked: stop holding. Pedro's end-of-path hold would keep correcting toward the park
+                // pose until the OpMode ends, and it jiggled there (a park pose ~1 in off the wall, after a
+                // full auto's odometry drift, pushed into the wall). Zero power + brake instead.
+                if (parkStarted && !parkHoldReleased && DynamicAuto.RELEASE_HOLD_AFTER_PARK
+                        && (!follower.isBusy() || stateTimer.milliseconds() >= DynamicAuto.PARK_RELEASE_MS)) {
+                    follower.manual(0, 0, 0);
+                    parkHoldReleased = true;
+                    log("parked: hold released (zero power, brake) | pose " + fmt(follower.pose()));
+                }
                 break;
         }
     }
@@ -401,15 +423,54 @@ public class RightWallLGLFP extends LinearOpMode {
                 + robot.intakeSubsystem.getArtifactCount() + " artifacts)");
     }
 
-    /** From the approach pose, ROCK_DISTANCE_IN toward the intake pose along the snapped heading. */
-    private void rockForward() {
+    /** GARDEN, rocking on, and not cut short by the park window. */
+    private boolean canRockAtGarden() {
+        return intake == IntakePoint.GARDEN && DynamicAuto.ROCK_COUNT > 0 && !(parkTime() && noLaunchReason() == null);
+    }
+
+    /**
+     * Starts rocking from where the robot is (heading snapped to the nearest 90). fromIntake = at the
+     * GARDEN intake pose without the bar: each rock goes back ROCK_DISTANCE_IN, then forward to here.
+     * Otherwise (backed out to the approach pose with the bar down): forward, then back.
+     */
+    private void startRocking(boolean fromIntake) {
+        rocksDone = 0;
+        rockFromIntake = fromIntake;
+        Pose p = follower.pose();
+        double snapped = Math.toRadians(90.0 * Math.round(Math.toDegrees(p.heading()) / 90.0));
+        rockBase = new Pose(p.x(), p.y(), snapped);
+        if (fromIntake) rockBack();
+        else rockForward();
+    }
+
+    /** Rock base moved {@code distance} along the snapped heading: exactly +/-X (0/180) or +/-Y (90/270). */
+    private Pose rockOffset(double distance) {
         double h = rockBase.heading();
-        double ux = Math.round(Math.cos(h));
-        double uy = Math.round(Math.sin(h));
-        Pose target = new Pose(rockBase.x() + ux * DynamicAuto.ROCK_DISTANCE_IN,
-                rockBase.y() + uy * DynamicAuto.ROCK_DISTANCE_IN, h);
-        driveTo(target, DynamicAuto.ROCK_SPEED_FRACTION);
-        setState(State.ROCK_FORWARD, "rock " + (rocksDone + 1) + "/" + DynamicAuto.ROCK_COUNT + " forward, bar down");
+        return new Pose(rockBase.x() + Math.round(Math.cos(h)) * distance,
+                rockBase.y() + Math.round(Math.sin(h)) * distance, h);
+    }
+
+    private void rockForward() {
+        driveTo(rockFromIntake ? rockBase : rockOffset(DynamicAuto.ROCK_DISTANCE_IN), DynamicAuto.ROCK_SPEED_FRACTION);
+        setState(State.ROCK_FORWARD, "rock " + (rocksDone + 1) + "/" + DynamicAuto.ROCK_COUNT + " forward"
+                + (rockFromIntake ? " to the intake pose" : "") + (barDown ? ", bar down" : ""));
+    }
+
+    private void rockBack() {
+        driveTo(rockFromIntake ? rockOffset(-DynamicAuto.ROCK_DISTANCE_IN) : rockBase, DynamicAuto.ROCK_SPEED_FRACTION);
+        setState(State.ROCK_BACK, "rock " + (rocksDone + 1) + "/" + DynamicAuto.ROCK_COUNT + " back");
+    }
+
+    /** One rock finished: the next one, or done at the GARDEN. */
+    private void rockDone() {
+        rocksDone++;
+        if (rocksDone < DynamicAuto.ROCK_COUNT) {
+            if (rockFromIntake) rockBack();
+            else rockForward();
+        } else {
+            log("rocked " + rocksDone + " times, " + robot.intakeSubsystem.getArtifactCount() + " artifacts");
+            finishIntake();
+        }
     }
 
     private boolean stopRockingIfFull() {
@@ -558,6 +619,24 @@ public class RightWallLGLFP extends LinearOpMode {
         panels.update(telemetry);
     }
 
+    /**
+     * True once the robot has been slower than DynamicAuto.STALL_SPEED_IN_PER_SEC for STALL_MS this
+     * state (after PATH_MIN_MS): stuck against the wall or a FLOWER.
+     */
+    private boolean stalled() {
+        double t = stateTimer.milliseconds();
+        if (t < DynamicAuto.PATH_MIN_MS || follower.velocity().linSpeed() >= DynamicAuto.STALL_SPEED_IN_PER_SEC) {
+            slowSinceMs = -1;
+            return false;
+        }
+        if (slowSinceMs < 0) slowSinceMs = t;
+        if (t - slowSinceMs < DynamicAuto.STALL_MS) return false;
+        log("  stalled (under " + DynamicAuto.STALL_SPEED_IN_PER_SEC + " in/s for " + DynamicAuto.STALL_MS + " ms) in "
+                + state + " after " + ms(stateTimer) + String.format(", %.1f in short", follower.remainingDistance())
+                + ", pose " + fmt(follower.pose()));
+        return true;
+    }
+
     private void setState(State next, String why) {
         log(state + " -> " + next + ": " + why + " | pose " + fmt(follower.pose()) + ", "
                 + robot.intakeSubsystem.getArtifactCount() + " artifacts, up CELL " + side(HiveState.getUpCell(alliance)));
@@ -565,6 +644,7 @@ public class RightWallLGLFP extends LinearOpMode {
         status = why;
         loggedStatus = why;
         stateTimer.reset();
+        slowSinceMs = -1;
     }
 
     private void setStatus(String s) {

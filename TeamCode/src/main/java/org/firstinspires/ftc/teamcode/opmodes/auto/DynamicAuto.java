@@ -73,7 +73,7 @@ import java.util.List;
  *   Right stick up/down - delay after the LAST point of the sequence being edited, +/- 0.5 s
  *                         (launch point: waits after each launch there; intake point: after intaking)
  *   L / R trigger    - between launch points across the HIVE, go AROUND it / THROUGH it
- *                      (spline through Poses.RED_CONTROL_AROUND_HIVE / straight lines via
+ *                      (spline through Poses.RED_CONTROL_AROUND_HIVE_AUDIENCE/_FAR / straight lines via
  *                      Poses.RED_THROUGH_HIVE_WAYPOINT_AUDIENCE and _FAR;
  *                      replaces the leg's own line/spline for that move only)
  *   Y                - switch between editing the LAUNCH and the INTAKE sequence
@@ -124,6 +124,21 @@ public class DynamicAuto extends LinearOpMode {
     public static long PATH_MIN_MS = 250;
     /** Give up on a path after this long (e.g. blocked by another robot). */
     public static long PATH_TIMEOUT_MS = 5000;
+    /**
+     * After the park path, stop holding the park pose (zero power, motors in brake) once Pedro says
+     * the path is done or PARK_RELEASE_MS after arriving, whichever is first. false = hold until the
+     * OpMode ends (jiggles against the wall). Also used by LeftWallAuto and RightWallLGLFP.
+     */
+    public static boolean RELEASE_HOLD_AFTER_PARK = true;
+    public static long PARK_RELEASE_MS = 500;
+    /**
+     * true = after the auto's last launch (no intake points left), park right there instead of driving
+     * to the park pose: the final launch spot (e.g. LEFT spot 4) is the park spot. Only when the robot
+     * is still within PARK_AT_LAST_LAUNCH_MAX_DIST_IN of that launch pose; parking at the park window
+     * mid-plan still drives to the park pose.
+     */
+    public static boolean PARK_AT_LAST_LAUNCH_POINT = true;
+    public static double PARK_AT_LAST_LAUNCH_MAX_DIST_IN = 6.0;
     /** Closer than this, just hold the target pose instead of building a path. */
     public static double MIN_PATH_LENGTH_IN = 1.0;
     /**
@@ -143,7 +158,7 @@ public class DynamicAuto extends LinearOpMode {
      * After backing out of an intake point with the bar down: rock forward (toward the intake pose)
      * and back to the approach pose this many times before raising the bar. 0 = no rocking.
      */
-    public static int ROCK_COUNT = 1;
+    public static int ROCK_COUNT = 2;
     /**
      * FLOWERS don't rock: the bar funnels the POLLEN into the intake, so the robot stays at the
      * FLOWER (intake pose) this long, or until full, instead of INTAKE_TIMEOUT_MS. Then it backs out
@@ -160,6 +175,22 @@ public class DynamicAuto extends LinearOpMode {
     public static double ROCK_SPEED_FRACTION = 0.4;
     /** A rock leg counts as done this close to its end (smaller than PATH_END_TOLERANCE_IN; the legs are short). */
     public static double ROCK_END_TOLERANCE_IN = 0.75;
+    /**
+     * Driving into an intake point or rocking: the leg counts as done once the robot has moved slower
+     * than STALL_SPEED_IN_PER_SEC for STALL_MS (pushing against the wall, the POLLEN or a FLOWER), not
+     * just at the path's end. The GARDEN intake pose is past the wall on purpose, so without this the
+     * drive-in pushed for the whole PATH_TIMEOUT_MS (5 s) before intaking / rocking. Also used by
+     * LeftWallAuto and RightWallLGLFP.
+     */
+    public static double STALL_SPEED_IN_PER_SEC = 2.0;
+    /**
+     * Backing out of an intake point with the bar down: the back-out counts as done this far from the
+     * approach pose, so the next path starts while the robot is still moving instead of after it has
+     * slowed to a stop at the approach pose (that stop looked like a wait at the FLOWER). The bar is
+     * clear of the FLOWER by then. Also used by LeftWallAuto and RightWallLGLFP.
+     */
+    public static double BACK_OUT_END_TOLERANCE_IN = 6.0;
+    public static long STALL_MS = 300;
 
     /**
      * true = after the LAST intake point in the plan, the final launch is at LEFT spot 4
@@ -245,10 +276,15 @@ public class DynamicAuto extends LinearOpMode {
     private int rocksDone = 0;
     /** Where rocking starts and returns to (pose after backing out, heading snapped to 90 deg). */
     private Pose rockBase;
+    /** Rocking from the intake pose (GARDEN without the bar) rather than from the approach pose. */
+    private boolean rockFromIntake = false;
+    /** stateTimer time the robot became slower than STALL_SPEED_IN_PER_SEC this state, or -1. */
+    private double slowSinceMs = -1;
     private LaunchBallsCommand launchCommand;
     /** DRIVE_TO_LAUNCH through the HIVE: waypoints still to visit, then the launch pose (last). */
     private final Deque<Pose> launchRoute = new ArrayDeque<>();
     private boolean parkStarted = false;
+    private boolean parkHoldReleased = false;
     /** The end-of-auto bar lowering has been commanded. */
     /** WAIT state: how long, and what to do after. */
     private long waitMs = 0;
@@ -510,7 +546,12 @@ public class DynamicAuto extends LinearOpMode {
                 break;
 
             case DRIVE_INTO_INTAKE:
-                if (pathDone()) setState(State.INTAKING, "at intake pose, intaking"
+                // At a FLOWER, a full count while still driving in ends the drive-in: INTAKING sees full
+                // on the next loop and leaves straight away (it used to push on until the path ended).
+                if (isFlower(currentIntake().point) && robot.intakeSubsystem.isFull()) {
+                    log("full (" + robot.intakeSubsystem.getArtifactCount() + ") while driving into the FLOWER");
+                    setState(State.INTAKING, "full during the drive-in: leaving the FLOWER");
+                } else if (pathDone() || stalled()) setState(State.INTAKING, "at intake pose, intaking"
                         + (isFlower(currentIntake().point) ? " (FLOWER: waiting up to " + FLOWER_WAIT_MS + " ms)" : "") + " ("
                         + robot.intakeSubsystem.getArtifactCount() + " artifacts)");
                 break;
@@ -518,8 +559,11 @@ public class DynamicAuto extends LinearOpMode {
             case INTAKING:
                 boolean flower = isFlower(currentIntake().point);
                 long intakeTimeoutMs = flower ? FLOWER_WAIT_MS : INTAKE_TIMEOUT_MS;
-                if (robot.intakeSubsystem.isFullAndDoneIntaking() || stateTimer.milliseconds() >= intakeTimeoutMs) {
-                    log("intake done: " + (robot.intakeSubsystem.isFullAndDoneIntaking() ? "full"
+                // At a FLOWER, move on as soon as the count reads full: the intake's FULL_RUN_ON_MS run-on
+                // keeps pulling the last one in while the robot backs out (it used to wait out that 1 s here).
+                boolean full = flower ? robot.intakeSubsystem.isFull() : robot.intakeSubsystem.isFullAndDoneIntaking();
+                if (full || stateTimer.milliseconds() >= intakeTimeoutMs) {
+                    log("intake done: " + (full ? "full"
                             : flower ? "FLOWER wait over (FLOWER_WAIT_MS)" : "timed out (INTAKE_TIMEOUT_MS)")
                             + " after " + ms(stateTimer) + ", "
                             + robot.intakeSubsystem.getArtifactCount() + " artifacts");
@@ -527,14 +571,19 @@ public class DynamicAuto extends LinearOpMode {
                         // Back straight out to the approach pose with the bar still down, then raise it.
                         driveTo(poses.intakeApproach(currentIntake().point), null, false);
                         setState(State.BACK_OUT_OF_INTAKE, "bar is down: backing out to the approach pose");
+                    } else if (!flower && !full && ROCK_COUNT > 0 && !(parkTime() && launchTakesPriority())) {
+                        // GARDEN without the bar: the robot is at the intake pose against the wall, so each
+                        // rock goes back ROCK_DISTANCE_IN and forward to the intake pose again.
+                        startRocking(true);
                     } else {
+                        if (!flower) log("no rocking: " + (full ? "full" : ROCK_COUNT <= 0 ? "ROCK_COUNT is 0" : "park window"));
                         finishIntakePoint();
                     }
                 }
                 break;
 
             case BACK_OUT_OF_INTAKE:
-                if (pathDone()) {
+                if (pathDone(BACK_OUT_END_TOLERANCE_IN)) {
                     rocksDone = 0;
                     if (parkTime() && launchTakesPriority()) {
                         log("park window: skipping the rocking to go launch");
@@ -550,30 +599,23 @@ public class DynamicAuto extends LinearOpMode {
                         finishIntakePoint();
                         break;
                     }
-                    Pose p = follower.pose();
-                    double snapped = Math.toRadians(90.0 * Math.round(Math.toDegrees(p.heading()) / 90.0));
-                    rockBase = new Pose(p.x(), p.y(), snapped);
-                    rockForward();
+                    startRocking(false);
                 }
                 break;
 
             case ROCK_FORWARD:
                 if (stopRockingIfFull()) break;
-                if (pathDone(ROCK_END_TOLERANCE_IN)) {
-                    driveTo(rockBase, null, false, rockSpeed());
-                    setState(State.ROCK_BACK, "rock " + (rocksDone + 1) + "/" + ROCK_COUNT + " back to the approach pose");
+                if (pathDone(ROCK_END_TOLERANCE_IN) || stalled()) {
+                    if (rockFromIntake) rockDone(); // forward is the second leg of a rock from the intake pose
+                    else rockBack();
                 }
                 break;
 
             case ROCK_BACK:
                 if (stopRockingIfFull()) break;
-                if (pathDone(ROCK_END_TOLERANCE_IN)) {
-                    rocksDone++;
-                    if (rocksDone < ROCK_COUNT) rockForward();
-                    else {
-                        log("rocked " + rocksDone + " times, " + robot.intakeSubsystem.getArtifactCount() + " artifacts");
-                        finishIntakePoint();
-                    }
+                if (pathDone(ROCK_END_TOLERANCE_IN) || stalled()) {
+                    if (rockFromIntake) rockForward();
+                    else rockDone();
                 }
                 break;
 
@@ -593,6 +635,15 @@ public class DynamicAuto extends LinearOpMode {
                 break;
 
             case DONE:
+                // Parked: stop holding. Pedro's end-of-path hold would keep correcting toward the park
+                // pose until the OpMode ends, and it jiggled there (a park pose ~1 in off the wall, after a
+                // full auto's odometry drift, pushed into the wall). Zero power + brake instead.
+                if (parkStarted && !parkHoldReleased && RELEASE_HOLD_AFTER_PARK
+                        && (!follower.isBusy() || stateTimer.milliseconds() >= PARK_RELEASE_MS)) {
+                    follower.manual(0, 0, 0);
+                    parkHoldReleased = true;
+                    log("parked: hold released (zero power, brake) | pose " + fmt(follower.pose()));
+                }
                 break;
         }
     }
@@ -680,7 +731,7 @@ public class DynamicAuto extends LinearOpMode {
         Pose target = poses.launch(leg.point);
         launchRoute.clear();
         if (AutoPlan.hiveRouteAround) {
-            driveTo(target, poses.hiveAroundControl(), true);
+            driveThrough(target, poses.hiveAroundControls(follower.pose()), true, 1.0);
         } else {
             // Straight lines: waypoint, waypoint, launch pose. Turns to the launch heading on the first leg.
             Pose[] waypoints = poses.hiveThroughWaypoints(follower.pose(), target.heading());
@@ -747,16 +798,58 @@ public class DynamicAuto extends LinearOpMode {
         setState(State.DRIVE_INTO_INTAKE, "driving straight in at " + INTAKE_DRIVE_IN_SPEED_FRACTION + " speed");
     }
 
-    /** From the approach pose, ROCK_DISTANCE_IN toward the intake pose, keeping the approach heading. */
-    private void rockForward() {
-        // Forward along the snapped heading: exactly +/-X (0/180) or +/-Y (90/270).
+    /**
+     * Starts rocking from where the robot is (heading snapped to the nearest 90). fromIntake = at the
+     * intake pose (GARDEN without the bar): each rock goes back ROCK_DISTANCE_IN, then forward to here.
+     * Otherwise (backed out to the approach pose with the bar down): forward ROCK_DISTANCE_IN, then back.
+     */
+    private void startRocking(boolean fromIntake) {
+        rocksDone = 0;
+        rockFromIntake = fromIntake;
+        Pose p = follower.pose();
+        double snapped = Math.toRadians(90.0 * Math.round(Math.toDegrees(p.heading()) / 90.0));
+        rockBase = new Pose(p.x(), p.y(), snapped);
+        if (fromIntake) rockBack();
+        else rockForward();
+    }
+
+    /** Rock base moved {@code distance} along the snapped heading: exactly +/-X (0/180) or +/-Y (90/270). */
+    private Pose rockOffset(double distance) {
         double h = rockBase.heading();
-        double ux = Math.round(Math.cos(h));
-        double uy = Math.round(Math.sin(h));
-        Pose target = new Pose(rockBase.x() + ux * ROCK_DISTANCE_IN, rockBase.y() + uy * ROCK_DISTANCE_IN, h);
-        driveTo(target, null, false, rockSpeed());
-        setState(State.ROCK_FORWARD, String.format("rock %d/%d forward %.1f in along %s, bar down",
-                rocksDone + 1, ROCK_COUNT, ROCK_DISTANCE_IN, ux != 0 ? "X" : "Y"));
+        return new Pose(rockBase.x() + Math.round(Math.cos(h)) * distance,
+                rockBase.y() + Math.round(Math.sin(h)) * distance, h);
+    }
+
+    private String rockAxis() {
+        return Math.round(Math.cos(rockBase.heading())) != 0 ? "X" : "Y";
+    }
+
+    /** Forward leg: from the approach pose ROCK_DISTANCE_IN toward the intake, or back to the intake pose. */
+    private void rockForward() {
+        driveTo(rockFromIntake ? rockBase : rockOffset(ROCK_DISTANCE_IN), null, false, rockSpeed());
+        setState(State.ROCK_FORWARD, String.format("rock %d/%d forward %s along %s%s", rocksDone + 1, ROCK_COUNT,
+                rockFromIntake ? "to the intake pose" : String.format("%.1f in", ROCK_DISTANCE_IN), rockAxis(),
+                barDown ? ", bar down" : ""));
+    }
+
+    /** Back leg: back to the approach pose, or ROCK_DISTANCE_IN back from the intake pose. */
+    private void rockBack() {
+        driveTo(rockFromIntake ? rockOffset(-ROCK_DISTANCE_IN) : rockBase, null, false, rockSpeed());
+        setState(State.ROCK_BACK, String.format("rock %d/%d back %s along %s", rocksDone + 1, ROCK_COUNT,
+                rockFromIntake ? String.format("%.1f in from the intake pose", ROCK_DISTANCE_IN) : "to the approach pose",
+                rockAxis()));
+    }
+
+    /** One rock finished: the next one, or done with this intake point. */
+    private void rockDone() {
+        rocksDone++;
+        if (rocksDone < ROCK_COUNT) {
+            if (rockFromIntake) rockBack();
+            else rockForward();
+        } else {
+            log("rocked " + rocksDone + " times, " + robot.intakeSubsystem.getArtifactCount() + " artifacts");
+            finishIntakePoint();
+        }
     }
 
     /** Full mid-rock: stop rocking right where the robot is and finish the intake point. */
@@ -874,6 +967,15 @@ public class DynamicAuto extends LinearOpMode {
         setState(State.DRIVE_TO_PARK, "parking " + AutoPlan.parkLabel() + ": " + reason);
     }
 
+    /**
+     * True right after the last launch of the auto: launched at the current launch point, no intake
+     * points left, and still within PARK_AT_LAST_LAUNCH_MAX_DIST_IN of that launch pose.
+     */
+    private boolean atLaunchPointAfterLastLaunch() {
+        if (!launchedHere || launchIndex >= launchLegs.size() || intakeIndex < intakeLegs.size()) return false;
+        return follower.pose().distance(poses.launch(currentLaunch().point)) <= PARK_AT_LAST_LAUNCH_MAX_DIST_IN;
+    }
+
     private void raiseBar() {
         if (barDown) {
             robot.intakeBarSubsystem.raise();
@@ -970,6 +1072,7 @@ public class DynamicAuto extends LinearOpMode {
         status = why;
         loggedStatus = why;
         stateTimer.reset();
+        slowSinceMs = -1;
     }
 
     /** Status inside a state (e.g. what it's waiting for); logged only when it changes. */
@@ -1071,6 +1174,23 @@ public class DynamicAuto extends LinearOpMode {
 
     private boolean pathDone() {
         return pathDone(PATH_END_TOLERANCE_IN);
+    }
+
+    /**
+     * True once the robot has been slower than STALL_SPEED_IN_PER_SEC for STALL_MS this state (after
+     * PATH_MIN_MS, so it has had time to start moving): stuck against the wall or a FLOWER.
+     */
+    private boolean stalled() {
+        double t = stateTimer.milliseconds();
+        if (t < PATH_MIN_MS || follower.velocity().linSpeed() >= STALL_SPEED_IN_PER_SEC) {
+            slowSinceMs = -1;
+            return false;
+        }
+        if (slowSinceMs < 0) slowSinceMs = t;
+        if (t - slowSinceMs < STALL_MS) return false;
+        log("  stalled (under " + STALL_SPEED_IN_PER_SEC + " in/s for " + STALL_MS + " ms) in " + state + " after "
+                + ms(stateTimer) + String.format(", %.1f in short", follower.remainingDistance()) + ", pose " + fmt(follower.pose()));
+        return true;
     }
 
     private boolean pathDone(double endToleranceIn) {

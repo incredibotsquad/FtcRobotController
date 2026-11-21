@@ -34,7 +34,7 @@ import java.util.ArrayList;
  *     speed, until full or FLOWER_WAIT_MS, back out, bar up).
  *  4. Back to the launch spot; if the CELL is still up (a Limelight reading from after arriving or
  *     up to TIP_READING_MAX_AGE_MS before), launch again.
- *  5. Park at RED_PARK_LEFT (red: the far end of the LOADING ZONE).
+ *  5. Park at RED_PARK_LEFT (currently the same values as LEFT spot 2, RED_LAUNCH_FAR_CELL_2).
  * Whenever it can't launch (the CELL never comes up, it tipped back down, nothing was picked up)
  * it parks instead. In the last PARK_WINDOW_S it parks unless it is launching or on its way to
  * launch with artifacts (an intake is cut short then).
@@ -85,6 +85,9 @@ public class LeftWallAuto extends LinearOpMode {
     private boolean followingPath = false;
     private boolean barDown = false;
     private boolean parkStarted = false;
+    private boolean parkHoldReleased = false;
+    /** stateTimer time the robot became slower than STALL_SPEED_IN_PER_SEC this state, or -1. */
+    private double slowSinceMs = -1;
     private int launchesDone = 0;
     private long cellUpSinceMs = -1;
     private long arrivedAtLaunchMs = 0;
@@ -220,20 +223,26 @@ public class LeftWallAuto extends LinearOpMode {
                 break;
 
             case DRIVE_INTO_INTAKE:
-                if (pathDone()) setState(State.INTAKING, "at the FLOWER, intaking up to "
+                // A full count while still driving in ends the drive-in: INTAKING sees full on the next
+                // loop and leaves straight away (it used to push on until the path ended).
+                if (robot.intakeSubsystem.isFull()) {
+                    log("full (" + robot.intakeSubsystem.getArtifactCount() + ") while driving into the FLOWER");
+                    setState(State.INTAKING, "full during the drive-in: leaving the FLOWER");
+                } else if (pathDone() || stalled()) setState(State.INTAKING, "at the FLOWER, intaking up to "
                         + DynamicAuto.FLOWER_WAIT_MS + " ms (" + robot.intakeSubsystem.getArtifactCount() + " artifacts)");
                 break;
 
             case INTAKING:
-                if (robot.intakeSubsystem.isFullAndDoneIntaking() || stateTimer.milliseconds() >= DynamicAuto.FLOWER_WAIT_MS) {
-                    log("intake done: " + (robot.intakeSubsystem.isFullAndDoneIntaking() ? "full" : "FLOWER_WAIT_MS over")
+                // Move on as soon as the count reads full: the intake's run-on keeps pulling the last one in.
+                if (robot.intakeSubsystem.isFull() || stateTimer.milliseconds() >= DynamicAuto.FLOWER_WAIT_MS) {
+                    log("intake done: " + (robot.intakeSubsystem.isFull() ? "full" : "FLOWER_WAIT_MS over")
                             + " after " + ms(stateTimer) + ", " + robot.intakeSubsystem.getArtifactCount() + " artifacts");
                     leaveIntake();
                 }
                 break;
 
             case BACK_OUT_OF_INTAKE:
-                if (pathDone()) {
+                if (pathDone(DynamicAuto.BACK_OUT_END_TOLERANCE_IN)) {
                     raiseBar();
                     driveBackToLaunch();
                 }
@@ -258,6 +267,15 @@ public class LeftWallAuto extends LinearOpMode {
                 break;
 
             case DONE:
+                // Parked: stop holding. Pedro's end-of-path hold would keep correcting toward the park
+                // pose until the OpMode ends, and it jiggled there (a park pose ~1 in off the wall, after a
+                // full auto's odometry drift, pushed into the wall). Zero power + brake instead.
+                if (parkStarted && !parkHoldReleased && DynamicAuto.RELEASE_HOLD_AFTER_PARK
+                        && (!follower.isBusy() || stateTimer.milliseconds() >= DynamicAuto.PARK_RELEASE_MS)) {
+                    follower.manual(0, 0, 0);
+                    parkHoldReleased = true;
+                    log("parked: hold released (zero power, brake) | pose " + fmt(follower.pose()));
+                }
                 break;
         }
     }
@@ -404,10 +422,14 @@ public class LeftWallAuto extends LinearOpMode {
     }
 
     private boolean pathDone() {
+        return pathDone(DynamicAuto.PATH_END_TOLERANCE_IN);
+    }
+
+    private boolean pathDone(double endToleranceIn) {
         if (!followingPath) return true;
         double t = stateTimer.milliseconds();
         if (t < DynamicAuto.PATH_MIN_MS) return false;
-        if (!follower.isBusy() || follower.remainingDistance() < DynamicAuto.PATH_END_TOLERANCE_IN) {
+        if (!follower.isBusy() || follower.remainingDistance() < endToleranceIn) {
             log("  path done in " + ms(stateTimer) + ", pose " + fmt(follower.pose()));
             return true;
         }
@@ -435,6 +457,24 @@ public class LeftWallAuto extends LinearOpMode {
         panels.update(telemetry);
     }
 
+    /**
+     * True once the robot has been slower than DynamicAuto.STALL_SPEED_IN_PER_SEC for STALL_MS this
+     * state (after PATH_MIN_MS): stuck against the wall or a FLOWER.
+     */
+    private boolean stalled() {
+        double t = stateTimer.milliseconds();
+        if (t < DynamicAuto.PATH_MIN_MS || follower.velocity().linSpeed() >= DynamicAuto.STALL_SPEED_IN_PER_SEC) {
+            slowSinceMs = -1;
+            return false;
+        }
+        if (slowSinceMs < 0) slowSinceMs = t;
+        if (t - slowSinceMs < DynamicAuto.STALL_MS) return false;
+        log("  stalled (under " + DynamicAuto.STALL_SPEED_IN_PER_SEC + " in/s for " + DynamicAuto.STALL_MS + " ms) in "
+                + state + " after " + ms(stateTimer) + String.format(", %.1f in short", follower.remainingDistance())
+                + ", pose " + fmt(follower.pose()));
+        return true;
+    }
+
     private void setState(State next, String why) {
         log(state + " -> " + next + ": " + why + " | pose " + fmt(follower.pose()) + ", "
                 + robot.intakeSubsystem.getArtifactCount() + " artifacts, up CELL " + side(HiveState.getUpCell(alliance)));
@@ -442,6 +482,7 @@ public class LeftWallAuto extends LinearOpMode {
         status = why;
         loggedStatus = why;
         stateTimer.reset();
+        slowSinceMs = -1;
     }
 
     private void setStatus(String s) {
