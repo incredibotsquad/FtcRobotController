@@ -154,7 +154,7 @@ public class IntakeSubsystem extends SubsystemBase {
      *    counted for JAM_NO_EXIT_MS.
      * Uses STALL_CURRENT_FILTER_MS / CURRENT_READ_INTERVAL_MS for the current reading.
      */
-    public static boolean JAM_DETECTION_ENABLED = true;
+    public static boolean JAM_DETECTION_ENABLED = false; // off 2026-11-20 (operator request); true = on
     public static double JAM_CURRENT_A = 7.2; // 2026-11-20: above the 6.7 A peak with 4 pressed on the gate, below a stall on a sagging battery
     public static long JAM_CURRENT_MS = 300;
     public static long JAM_STARTUP_MS = 250;
