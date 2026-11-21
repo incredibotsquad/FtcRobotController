@@ -8,20 +8,20 @@ import org.firstinspires.ftc.teamcode.common.HiveCell;
  * at the same CELL without colliding. Positions: {@link Poses} (red frame: RIGHT = the
  * RED_LAUNCH_AUDIENCE_CELL_* values, LEFT = RED_LAUNCH_FAR_CELL_*).
  *
- * LEFT_SPOT_3 is at the side-wall (rear wall) FLOWER's approach position, facing the HIVE like LEFT_SPOT_2.
- * LEFT_SPOT_4 is the final-launch spot: DynamicAuto drives there in a straight line after the last
- * intake point (DynamicAuto.FINAL_LAUNCH_AT_LEFT_SPOT_4). It can also be added to a plan in INIT.
+ * LEFT_SPOT_3 is the final-launch spot (partly in the LOADING ZONE): DynamicAuto drives there in a
+ * straight line after the last intake point (DynamicAuto.FINAL_LAUNCH_AT_LEFT_SPOT_3). It can also be
+ * added to a plan in INIT. (Until 2026-11-20 this was LEFT spot 4; the old LEFT spot 3, at the rear-wall
+ * FLOWER's approach position, was unused and removed.)
  */
 public enum LaunchPoint {
     LEFT_SPOT_1(Side.LEFT, 1),
     LEFT_SPOT_2(Side.LEFT, 2),
     LEFT_SPOT_3(Side.LEFT, 3),
-    LEFT_SPOT_4(Side.LEFT, 4),
     RIGHT_SPOT_1(Side.RIGHT, 1),
     RIGHT_SPOT_2(Side.RIGHT, 2);
 
     public final Side side;
-    /** 1 to 4 (3 and 4 are LEFT only). */
+    /** 1 to 3 (3 is LEFT only). */
     public final int spot;
 
     LaunchPoint(Side side, int spot) {

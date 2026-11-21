@@ -48,11 +48,12 @@ public class Poses {
     public static double[] RED_LAUNCH_AUDIENCE_CELL_2 = {30, 24, 90};   // ~53 in
     public static double[] RED_LAUNCH_FAR_CELL_1 = {40, 134, 270};       // ~48 in
     public static double[] RED_LAUNCH_FAR_CELL_2 = {30.5, 125, 270};       // was y 120
-    // LEFT spot 3 has no array of its own: x, y from RED_LEFT_FLOWER_APPROACH, heading from
-    // RED_LAUNCH_FAR_CELL_2 (faces the HIVE so the Limelight can see it; tune those two). ~32 in from
-    // the CELL, closer than the 46 in shot table, so the launcher uses the table's nearest RPM.
-    /** LEFT spot 4: DynamicAuto's final launch, after the last intake point (straight line, linear heading). */
-    public static double[] RED_LAUNCH_FAR_CELL_4 = {16, 116, 315};       // ~51 in
+    /**
+     * LEFT spot 3: DynamicAuto's final launch, after the last intake point (straight line, linear
+     * heading). Partly in the LOADING ZONE, so it doubles as the park spot. Was LEFT spot 4 /
+     * RED_LAUNCH_FAR_CELL_4 until 2026-11-20 (the old spot 3 was removed).
+     */
+    public static double[] RED_LAUNCH_FAR_CELL_3 = {16, 116, 315};       // ~51 in
 
     // ---- intake points: drive to the approach pose, then straight in to the intake pose
     /** GARDEN (red: tape along the audience wall, x 0-23, 4 POLLEN from the corner). */
@@ -91,10 +92,10 @@ public class Poses {
     public static double[] RED_CONTROL_LAUNCH_AUDIENCE_CELL_2 = {30, 36, 0};
     public static double[] RED_CONTROL_LAUNCH_FAR_CELL_1 = {48, 114, 0};
     public static double[] RED_CONTROL_LAUNCH_FAR_CELL_2 = {30, 108, 0};
-    /** Only used if LEFT spot 4 is added to a plan as a spline; the automatic final launch drives a straight line. */
-    public static double[] RED_CONTROL_LAUNCH_FAR_CELL_4 = {24, 108, 0};
+    /** Only used if LEFT spot 3 is added to a plan as a spline; the automatic final launch drives a straight line. */
+    public static double[] RED_CONTROL_LAUNCH_FAR_CELL_3 = {24, 108, 0};
     public static double[] RED_CONTROL_GARDEN = {40, 24, 0};
-    public static double[] RED_CONTROL_WALL_FLOWER = {2.58, 51.36, 0}; // was {32.58, 51.36}: x -30, the path from LEFT spot 3 hit the HIVE
+    public static double[] RED_CONTROL_WALL_FLOWER = {2.58, 51.36, 0}; // was {32.58, 51.36}: x -30, the path from the old LEFT spot 3 (removed 2026-11-20) hit the HIVE
     public static double[] RED_CONTROL_SIDE_FLOWER = {54.85, 109.79, 0};
     /**
      * To the rear-wall (side) FLOWER from the audience half (red y < 72, e.g. RIGHT spot 2): a
@@ -153,14 +154,8 @@ public class Poses {
         switch (p.spot) {
             case 1: return of(RED_LAUNCH_FAR_CELL_1);
             case 2: return of(RED_LAUNCH_FAR_CELL_2);
-            case 3: return of(launchFarCell3()); // rear-wall FLOWER approach x, y; LEFT spot 2 heading
-            default: return of(RED_LAUNCH_FAR_CELL_4);
+            default: return of(RED_LAUNCH_FAR_CELL_3);
         }
-    }
-
-    /** LEFT spot 3 {x, y, headingDeg}: the rear-wall FLOWER approach position, facing like LEFT spot 2. */
-    private static double[] launchFarCell3() {
-        return new double[] {RED_LEFT_FLOWER_APPROACH[0], RED_LEFT_FLOWER_APPROACH[1], RED_LAUNCH_FAR_CELL_2[2]};
     }
 
     public Pose launchControl(LaunchPoint p) {
@@ -170,8 +165,7 @@ public class Poses {
         switch (p.spot) {
             case 1: return of(RED_CONTROL_LAUNCH_FAR_CELL_1);
             case 2: return of(RED_CONTROL_LAUNCH_FAR_CELL_2);
-            case 3: return of(RED_CONTROL_SIDE_FLOWER);
-            default: return of(RED_CONTROL_LAUNCH_FAR_CELL_4);
+            default: return of(RED_CONTROL_LAUNCH_FAR_CELL_3);
         }
     }
 

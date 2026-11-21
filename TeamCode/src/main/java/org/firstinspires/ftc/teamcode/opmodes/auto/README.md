@@ -1,5 +1,10 @@
 # DynamicAuto changes: shorter waits, LEFT spots 3 and 4, final launch
 
+> **Update 2026-11-20:** the LEFT spot 3 described below (at the rear-wall FLOWER's approach) was
+> unused and has been removed. The final-launch spot described as LEFT spot 4 is now **LEFT spot 3**
+> (`LaunchPoint.LEFT_SPOT_3`, `Poses.RED_LAUNCH_FAR_CELL_3`, `DynamicAuto.FINAL_LAUNCH_AT_LEFT_SPOT_3`).
+> The rest of this page is the original change note and keeps the old names.
+
 This update makes `DynamicAuto` spend less time standing still. It also adds two new launch spots on
 the LEFT side, with a final launch that runs automatically after the last intake.
 
