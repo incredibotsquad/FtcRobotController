@@ -34,7 +34,7 @@ import java.util.ArrayList;
  *     speed, until full or FLOWER_WAIT_MS, back out, bar up).
  *  4. Back to the launch spot; if the CELL is still up (a Limelight reading from after arriving or
  *     up to TIP_READING_MAX_AGE_MS before), launch again.
- *  5. Park at RED_PARK_LEFT (currently the same values as LEFT spot 2, RED_LAUNCH_FAR_CELL_2).
+ *  5. Park at RED_PARK_LEFT (currently the same values as LEFT spot 3, partly in the LOADING ZONE).
  * Whenever it can't launch (the CELL never comes up, it tipped back down, nothing was picked up)
  * it parks instead. In the last PARK_WINDOW_S it parks unless it is launching or on its way to
  * launch with artifacts (an intake is cut short then).

@@ -80,9 +80,10 @@ public class Poses {
     // ---- park (red LOADING ZONE: x 0-11, y 96.5-119.5; partly inside is enough, don't touch the
     // wall or LEAVE may not count). Two spots, named by the wall they're toward:
     /** LEFT: the end of the zone toward the wall opposite the audience (red: high y). */
-    // Same values as LEFT spot 2 (RED_LAUNCH_FAR_CELL_2), kept as its own array so they can be tuned
-    // separately. Was {10, 114, 90}, then {30.5, 120, 270}.
-    public static double[] RED_PARK_LEFT = {30.5, 125, 270};
+    // Same values as LEFT spot 3 (RED_LAUNCH_FAR_CELL_3, the final-launch spot): the robot's edge reaches
+    // about x 6, so it is partly in the zone without touching the wall (2026-11-21). Was {10, 114, 90},
+    // then {30.5, 120, 270}, then {30.5, 125, 270} = LEFT spot 2, which is NOT in the zone (x 24-37).
+    public static double[] RED_PARK_LEFT = {16, 116, 315};
     /** RIGHT: the end of the zone toward the audience wall (red: low y). */
     public static double[] RED_PARK_RIGHT = {10, 96, 270};
 
