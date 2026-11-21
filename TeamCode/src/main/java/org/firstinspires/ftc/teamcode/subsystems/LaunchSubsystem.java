@@ -59,11 +59,11 @@ public class LaunchSubsystem extends SubsystemBase {
     // the FlywheelBenchTuner set (P 0.015, kS 0.10, kV 0.00037023); retune each row with FlywheelTuner.
     // Outside the table the nearest end row is used (gains are not extrapolated).
     public static double[] GAIN_TABLE_DISTANCES_IN = {47, 52, 66, 84}; // match SHOT_DISTANCES_IN
-    public static double[] GAIN_TABLE_P  = {0.007, 0.015, 0.0155, 0.017}; // 2026-11-20: 47 at (60, 8), 52 at (41.5, 8), 66 at (12, 12), 84 at (132, 12)
+    public static double[] GAIN_TABLE_P  = {0.005, 0.005, 0.010, 0.008}; // 2026-11-20 re-tune after removing the hood tape: 47 at (60, 8), 52 at (41.5, 8), 66 at (12, 12), 84 at (132, 12)
     public static double[] GAIN_TABLE_I  = {0.0, 0.0, 0.0, 0.0};
     public static double[] GAIN_TABLE_D  = {0.0, 0.0, 0.0, 0.0};
     public static double[] GAIN_TABLE_KS = {0.10, 0.10, 0.10, 0.10};
-    public static double[] GAIN_TABLE_KV = {0.00037023, 0.00037023, 0.00037023, 0.00037023};
+    public static double[] GAIN_TABLE_KV = {0.0003591, 0.0003591, 0.0003591, 0.0003591}; // 2026-11-20, from the 66 row re-tune without the hood tape (was 0.00037023)
 
     /** Run full power while more than this far below target (fast spin-up and shot recovery). */
     public static boolean FLYWHEEL_BANG_BANG_ENABLED = true;
