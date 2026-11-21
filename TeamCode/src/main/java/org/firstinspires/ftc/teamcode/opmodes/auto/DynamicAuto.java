@@ -53,8 +53,11 @@ import java.util.List;
  *     full or INTAKE_TIMEOUT_MS. If the bar is down, back straight out to the approach pose; at the
  *     GARDEN also rock forward and back ROCK_COUNT times (bar still down, so the bar keeps the
  *     elements in front of the intake while they get pulled in); then raise it. Then go back to the
- *     current launch point (step 2). The GARDEN currently uses no bar (Poses.GARDEN_NEEDS_BAR false),
- *     so there it just drives in and leaves: no back-out, no rocking.
+ *     current launch point (step 2). The GARDEN currently uses no bar (Poses.GARDEN_NEEDS_BAR false):
+ *     it drives in, then rocks from the intake pose (back ROCK_DISTANCE_IN, forward again) up to
+ *     ROCK_COUNT times, stopping as soon as the count reads 4; no back-out.
+ *     With 0 artifacts it never heads for a launch point (REFILL_BEFORE_LAUNCH): it goes to the
+ *     closest unused intake point first.
  * With FINAL_LAUNCH_AT_LEFT_SPOT_4, the trip after the LAST intake point goes to LEFT spot 4
  * (straight line) for the final launch instead of the current launch point.
  * When a sequence runs out (no next launch or intake point), the robot parks.
@@ -131,14 +134,6 @@ public class DynamicAuto extends LinearOpMode {
      */
     public static boolean RELEASE_HOLD_AFTER_PARK = true;
     public static long PARK_RELEASE_MS = 500;
-    /**
-     * true = after the auto's last launch (no intake points left), park right there instead of driving
-     * to the park pose: the final launch spot (e.g. LEFT spot 4) is the park spot. Only when the robot
-     * is still within PARK_AT_LAST_LAUNCH_MAX_DIST_IN of that launch pose; parking at the park window
-     * mid-plan still drives to the park pose.
-     */
-    public static boolean PARK_AT_LAST_LAUNCH_POINT = true;
-    public static double PARK_AT_LAST_LAUNCH_MAX_DIST_IN = 6.0;
     /** Closer than this, just hold the target pose instead of building a path. */
     public static double MIN_PATH_LENGTH_IN = 1.0;
     /**
@@ -214,13 +209,13 @@ public class DynamicAuto extends LinearOpMode {
      */
     public static boolean REFILL_BEFORE_LAUNCH = true;
     /**
-     * false (2026-11-20, trying it): Pedro does not hold a pose anywhere in the auto. When a path ends
-     * the drive just stops with the motors braked (Follower.holdEnd off, Mecanum stop = brake), and
-     * every "hold here" stops instead. It looked like the hold made the robot wobble at launch spots.
-     * Still holds briefly to turn in place at an intake approach (no other way to turn there).
-     * true = hold as before.
+     * true (as on 2026-11-07, and what LeftWallAuto / RightWallLGLFP do): Pedro holds the pose at
+     * every path end and wherever the auto stays put. false = no hold: a path end stops with the
+     * motors braked (Follower.holdEnd off, Mecanum stop = brake) and every "hold here" stops instead,
+     * except the turn in place at an intake approach. Tried false on 2026-11-20 for the wobble; it
+     * didn't fix it.
      */
-    public static boolean HOLD_POSITION = false;
+    public static boolean HOLD_POSITION = true;
     /**
      * To the rear-wall FLOWER from the audience half (e.g. RIGHT spot 2): always a spline through
      * Poses.RED_CONTROL_SIDE_FLOWER_FROM_AUDIENCE, whatever the plan leg says; a line hits the HIVE
@@ -965,15 +960,6 @@ public class DynamicAuto extends LinearOpMode {
         }
         driveTo(poses.park(AutoPlan.parkSide), poses.parkControl(AutoPlan.parkSide), PARK_WITH_SPLINE);
         setState(State.DRIVE_TO_PARK, "parking " + AutoPlan.parkLabel() + ": " + reason);
-    }
-
-    /**
-     * True right after the last launch of the auto: launched at the current launch point, no intake
-     * points left, and still within PARK_AT_LAST_LAUNCH_MAX_DIST_IN of that launch pose.
-     */
-    private boolean atLaunchPointAfterLastLaunch() {
-        if (!launchedHere || launchIndex >= launchLegs.size() || intakeIndex < intakeLegs.size()) return false;
-        return follower.pose().distance(poses.launch(currentLaunch().point)) <= PARK_AT_LAST_LAUNCH_MAX_DIST_IN;
     }
 
     private void raiseBar() {

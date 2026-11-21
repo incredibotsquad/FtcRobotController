@@ -72,7 +72,7 @@ public class Poses {
     public static double[] RED_LEFT_FLOWER_INTAKE = {48, 130, 90};
 
     /** Whether each intake point lowers the intake bar (and backs out to the approach pose before raising it). */
-    public static boolean GARDEN_NEEDS_BAR = false; // no bar at the GARDEN (so no back-out or rocking there)
+    public static boolean GARDEN_NEEDS_BAR = false; // no bar at the GARDEN: no back-out; the autos rock from the intake pose instead
     public static boolean WALL_FLOWER_NEEDS_BAR = true;
     public static boolean SIDE_FLOWER_NEEDS_BAR = true;
 

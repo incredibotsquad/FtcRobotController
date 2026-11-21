@@ -20,8 +20,9 @@ Why these mattered:
 
 - **GARDEN:** the 4th ball usually can't be reached from the intake pose, so the robot always
   waited the whole timeout. The rocking afterwards picks the 4th ball up anyway.
-  (Since 2026-11-17 the GARDEN uses no bar, `GARDEN_NEEDS_BAR = false`, so there is no rocking
-  there any more: the intake pose moved 4 in closer, y 15 -> 11, so the intake reaches the POLLEN.)
+  (Since 2026-11-17 the GARDEN uses no bar, `GARDEN_NEEDS_BAR = false`: the intake pose moved
+  closer to the wall (y 15 -> 11 -> 9) and the robot rocks from the intake pose, `ROCK_COUNT` 2,
+  stopping as soon as the count reads 4.)
 - **FLOWERs:** the robot rarely gets to 4 balls there, so it always waited the whole time.
 - **Launch:** the top beam break sometimes misses a ball leaving, so the count sticks above 0.
   The launch then lasted the full backstop time after the robot was already empty.
