@@ -101,7 +101,7 @@ public class DynamicAuto extends LinearOpMode {
      * Settle before launching (2026-11-20): the robot was still moving 1-3 in when a launch started,
      * which can shake artifacts out. A launch also waits until the pose has stayed within
      * SETTLE_MAX_MOVE_IN and SETTLE_MAX_TURN_DEG for SETTLE_MS (SettleCheck), giving up after
-     * SETTLE_TIMEOUT_MS. READY_TIMEOUT_MS still fires anyway. Also used by LeftWallAuto and RightWallLGLFP.
+     * SETTLE_TIMEOUT_MS. READY_TIMEOUT_MS still fires anyway. Also used by LeftWallAuto.
      */
     public static boolean SETTLE_BEFORE_LAUNCH = true;
     public static double SETTLE_MAX_MOVE_IN = 0.5;
@@ -141,7 +141,7 @@ public class DynamicAuto extends LinearOpMode {
     /**
      * After the park path, stop holding the park pose (zero power, motors in brake) once Pedro says
      * the path is done or PARK_RELEASE_MS after arriving, whichever is first. false = hold until the
-     * OpMode ends (jiggles against the wall). Also used by LeftWallAuto and RightWallLGLFP.
+     * OpMode ends (jiggles against the wall). Also used by LeftWallAuto.
      */
     public static boolean RELEASE_HOLD_AFTER_PARK = true;
     public static long PARK_RELEASE_MS = 500;
@@ -186,14 +186,14 @@ public class DynamicAuto extends LinearOpMode {
      * than STALL_SPEED_IN_PER_SEC for STALL_MS (pushing against the wall, the POLLEN or a FLOWER), not
      * just at the path's end. The GARDEN intake pose is past the wall on purpose, so without this the
      * drive-in pushed for the whole PATH_TIMEOUT_MS (5 s) before intaking / rocking. Also used by
-     * LeftWallAuto and RightWallLGLFP.
+     * LeftWallAuto.
      */
     public static double STALL_SPEED_IN_PER_SEC = 2.0;
     /**
      * Backing out of an intake point with the bar down: the back-out counts as done this far from the
      * approach pose, so the next path starts while the robot is still moving instead of after it has
      * slowed to a stop at the approach pose (that stop looked like a wait at the FLOWER). The bar is
-     * clear of the FLOWER by then. Also used by LeftWallAuto and RightWallLGLFP.
+     * clear of the FLOWER by then. Also used by LeftWallAuto.
      */
     public static double BACK_OUT_END_TOLERANCE_IN = 6.0;
     public static long STALL_MS = 300;
@@ -220,7 +220,7 @@ public class DynamicAuto extends LinearOpMode {
      */
     public static boolean REFILL_BEFORE_LAUNCH = true;
     /**
-     * true (as on 2026-11-07, and what LeftWallAuto / RightWallLGLFP do): Pedro holds the pose at
+     * true (as on 2026-11-07, and what LeftWallAuto does): Pedro holds the pose at
      * every path end and wherever the auto stays put. false = no hold: a path end stops with the
      * motors braked (Follower.holdEnd off, Mecanum stop = brake) and every "hold here" stops instead,
      * except the turn in place at an intake approach. Tried false on 2026-11-20 for the wobble; it

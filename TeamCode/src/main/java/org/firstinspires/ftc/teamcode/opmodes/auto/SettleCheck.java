@@ -8,7 +8,7 @@ import java.util.Locale;
  * "Has the robot stopped moving?" before an auto launch (DynamicAuto.SETTLE_BEFORE_LAUNCH). Settled
  * = the pose has stayed within SETTLE_MAX_MOVE_IN and SETTLE_MAX_TURN_DEG of where it was for
  * SETTLE_MS. Gives up after SETTLE_TIMEOUT_MS (counts as settled, so a launch is never blocked).
- * Settings are DynamicAuto's static fields (shared by LeftWallAuto and RightWallLGLFP).
+ * Settings are DynamicAuto's static fields (shared by LeftWallAuto).
  */
 final class SettleCheck {
     private Pose ref = null;

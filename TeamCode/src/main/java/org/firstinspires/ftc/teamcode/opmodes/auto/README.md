@@ -85,7 +85,7 @@ The HIVE spans roughly x 47-97, y 52-92. Clearances below assume an 18 in square
 
 ### 7. No more pushing at a FLOWER or the GARDEN wall
 
-All three autos (`DynamicAuto`, `LeftWallAuto`, `RightWallLGLFP`):
+All three autos (`DynamicAuto`, `LeftWallAuto`, `RightWallLGLFP`; RightWallLGLFP was removed on 2026-11-20):
 
 - **FLOWER:** if the count reaches 4 while the robot is still driving in, it leaves right away.
   Before, it kept pushing toward the intake pose until the path ended, which looked like a wait.
