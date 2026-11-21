@@ -127,11 +127,12 @@ public class IntakeSubsystem extends SubsystemBase {
      * fully inside). 0 = stop immediately (old behavior). Keep short: running on while full could
      * pick up a 5th artifact (G407).
      */
-    public static long FULL_RUN_ON_MS = 1000;
+    public static long FULL_RUN_ON_MS = 250; // 2026-11-20: was 1000 (ran too long with 4 inside)
     /**
      * Extra time the TRANSFER keeps running after the intake motor stops when intaking fills the
      * robot (on top of FULL_RUN_ON_MS), so the stack settles up against the gate. The intake motor
      * is already off, so nothing new is pulled in. 0 = transfer stops with the intake (old behavior).
+     * With FULL_RUN_ON_MS 250 the transfer runs forward 500 ms in total after the 4th is counted.
      */
     public static long TRANSFER_FULL_DELAY_MS = 250;
     /** On reaching full: reverse the intake motor (not the transfer) this long to push out a straddler. 0 = off. */
