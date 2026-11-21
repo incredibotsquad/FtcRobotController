@@ -5,6 +5,7 @@ import android.util.Log;
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.math.Pose;
 import com.pedropathing.revhub.localizers.PinpointLocalizer;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -43,6 +44,7 @@ import java.util.Locale;
  * Results: Driver Station, logcat tag OdometryDriftTest, /sdcard/FIRST/data/odometry_drift_test.csv.
  */
 @Configurable
+@Disabled // pit tool, re-enable to use (TODO.md: disabled before competition)
 @TeleOp(name = "OdometryDriftTest", group = "Tests")
 public class OdometryDriftTest extends LinearOpMode {
 

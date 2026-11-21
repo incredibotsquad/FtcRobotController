@@ -7,6 +7,7 @@ import com.arcrobotics.ftclib.command.CommandScheduler;
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
@@ -65,6 +66,7 @@ import java.util.Locale;
  * Panels is not legal in matches (R704): pit/practice tool only.
  */
 @Configurable
+@Disabled // pit tool, re-enable to use (TODO.md: disabled before competition)
 @TeleOp(name = "CameraLaunchTuner", group = "Tests")
 public class CameraLaunchTuner extends LinearOpMode {
 

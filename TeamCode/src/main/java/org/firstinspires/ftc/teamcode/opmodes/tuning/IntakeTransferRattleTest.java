@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.opmodes.tuning;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -25,6 +26,7 @@ import java.util.Locale;
  *   Y            stop both
  * The Driver Station shows each motor's power, speed (ticks/s) and current (A).
  */
+@Disabled // pit tool, re-enable to use (TODO.md: disabled before competition)
 @TeleOp(name = "Test: Intake/Transfer Rattle", group = "Tests")
 public class IntakeTransferRattleTest extends LinearOpMode {
 

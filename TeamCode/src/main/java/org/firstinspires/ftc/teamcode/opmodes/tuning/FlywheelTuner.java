@@ -9,6 +9,7 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
 import com.pedropathing.math.Pose;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
@@ -64,6 +65,7 @@ import java.util.List;
  * the code (Y logs them) to keep them. Panels is not legal in matches (R704).
  */
 @Configurable
+@Disabled // pit tool, re-enable to use (TODO.md: disabled before competition)
 @TeleOp(name = "FlywheelTuner", group = "Tests")
 public class FlywheelTuner extends LinearOpMode {
 

@@ -4,6 +4,7 @@ import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
 import com.pedropathing.math.Pose;
 import com.qualcomm.hardware.lynx.LynxModule;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
@@ -25,6 +26,7 @@ import org.firstinspires.ftc.teamcode.subsystems.PowerMonitorSubsystem;
  * Currents and hub voltages are logged with tag "PowerLog" (see PowerMonitorSubsystem); the last
  * line is also shown on the Driver Station. Pit/test tool: add @Disabled before competition.
  */
+@Disabled // pit tool, re-enable to use (TODO.md: disabled before competition)
 @TeleOp(name = "Test: Hold Pose Current", group = "Test")
 public class HoldPoseCurrentTest extends LinearOpMode {
 

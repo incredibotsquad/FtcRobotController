@@ -8,6 +8,7 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.hardware.lynx.LynxModule;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.AnalogInput;
@@ -74,6 +75,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *   BACK          re-capture both baselines (sensors clear)
  */
 @Configurable
+@Disabled // pit tool, re-enable to use (TODO.md: disabled before competition)
 @TeleOp(name = "LaserIntakeTuner", group = "Tests")
 public class LaserIntakeTuner extends LinearOpMode {
 

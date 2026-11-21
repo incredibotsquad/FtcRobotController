@@ -9,6 +9,7 @@ import com.arcrobotics.ftclib.geometry.Translation2d;
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
@@ -55,6 +56,7 @@ import java.util.Locale;
  * helps or hurts.
  */
 @Configurable
+@Disabled // pit tool, re-enable to use (TODO.md: disabled before competition)
 @TeleOp(name = "TurretVisionTuner", group = "Tests")
 public class TurretVisionTuner extends LinearOpMode {
 
