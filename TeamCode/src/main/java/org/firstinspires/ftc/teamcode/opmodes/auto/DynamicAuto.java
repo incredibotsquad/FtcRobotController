@@ -183,6 +183,14 @@ public class DynamicAuto extends LinearOpMode {
      */
     public static boolean REFILL_BEFORE_LAUNCH = true;
     /**
+     * false (2026-11-20, trying it): Pedro does not hold a pose anywhere in the auto. When a path ends
+     * the drive just stops with the motors braked (Follower.holdEnd off, Mecanum stop = brake), and
+     * every "hold here" stops instead. It looked like the hold made the robot wobble at launch spots.
+     * Still holds briefly to turn in place at an intake approach (no other way to turn there).
+     * true = hold as before.
+     */
+    public static boolean HOLD_POSITION = false;
+    /**
      * To the rear-wall FLOWER from the audience half (e.g. RIGHT spot 2): always a spline through
      * Poses.RED_CONTROL_SIDE_FLOWER_FROM_AUDIENCE, whatever the plan leg says; a line hits the HIVE
      * frame (2026-11-20). false = the plan leg's line / spline as before.
@@ -256,6 +264,7 @@ public class DynamicAuto extends LinearOpMode {
         TelemetryManager panels = PanelsTelemetry.INSTANCE.getTelemetry();
         robot = new Incredibot(hardwareMap, panels);
         follower = robot.driveSubsystem.getFollower();
+        follower.holdEnd.set(HOLD_POSITION); // this OpMode's follower only (a new one each OpMode)
         mechanisms = !Incredibot.DRIVE_ONLY_MODE;
 
         configureDuringInit(panels);
@@ -755,7 +764,7 @@ public class DynamicAuto extends LinearOpMode {
         if (!robot.intakeSubsystem.isFull()) return false;
         log("full (" + robot.intakeSubsystem.getArtifactCount() + ") during rock " + (rocksDone + 1) + "/" + ROCK_COUNT
                 + " " + (state == State.ROCK_FORWARD ? "forward" : "back") + ": stopping the rocking");
-        follower.hold(follower.pose());
+        holdHere(follower.pose());
         followingPath = false;
         finishIntakePoint();
         return true;
@@ -834,11 +843,17 @@ public class DynamicAuto extends LinearOpMode {
             next.run();
             return;
         }
-        follower.hold(follower.pose());
+        holdHere(follower.pose());
         followingPath = false;
         waitMs = ms;
         afterWait = next;
         setState(State.WAIT, String.format("waiting %.1f s (delay %s)", ms / 1000.0, what));
+    }
+
+    /** "Stay here": Pedro's hold with HOLD_POSITION, else stop with the motors braked. */
+    private void holdHere(Pose p) {
+        if (HOLD_POSITION) follower.hold(p);
+        else follower.stop();
     }
 
     private void startPark(String reason) {
@@ -849,7 +864,7 @@ public class DynamicAuto extends LinearOpMode {
         Pose here = follower.pose();
         double fromSpot4 = Math.hypot(here.x() - spot4.x(), here.y() - spot4.y());
         if (LEFT_SPOT_4_COUNTS_AS_PARK && fromSpot4 <= LEFT_SPOT_4_PARK_RADIUS_IN) {
-            follower.hold(here);
+            holdHere(here);
             followingPath = false;
             setState(State.DONE, String.format("parked at LEFT spot 4 (%.1f in from it, partly in the LOADING ZONE), no park move: %s",
                     fromSpot4, reason));
@@ -927,7 +942,7 @@ public class DynamicAuto extends LinearOpMode {
             case ROCK_BACK:
                 log("park window with " + robot.intakeSubsystem.getArtifactCount()
                         + " artifacts: stopping the rocking to go launch");
-                follower.hold(follower.pose());
+                holdHere(follower.pose());
                 followingPath = false;
                 finishIntakePoint();
                 return true;
@@ -1025,7 +1040,7 @@ public class DynamicAuto extends LinearOpMode {
         Pose start = follower.pose();
         if (start.distance(target) < MIN_PATH_LENGTH_IN) {
             log("  already within " + MIN_PATH_LENGTH_IN + " in of " + fmt(target) + ": holding, no path");
-            follower.hold(target);
+            holdHere(target);
             followingPath = false;
             return;
         }
