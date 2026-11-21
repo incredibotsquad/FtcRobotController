@@ -113,6 +113,20 @@ public class IntakeSubsystem extends SubsystemBase {
 
     /** Sensors 2/3: a sensor must hold a new state this long before it counts (filters flicker). */
     public static long DEBOUNCE_MS = 15;
+    /**
+     * Launch kick (2026-11-20): after the transfer has reversed during a launch, sensor-4 exits only count
+     * once it has fed forward again for this long. The reverse pulls the top artifact down off sensor 4,
+     * and the slow stack only clears the sensor 70-150 ms after the feed is forward again: that is the
+     * artifact moving DOWN, not launched, and it was being counted (a ball left inside with the count at
+     * 0). Real first exits came 377+ ms after the forward feed started. No reverse (SIMPLE_LAUNCH): no guard.
+     */
+    public static long KICK_EXIT_GUARD_MS = 250;
+    /**
+     * While launching with the count at 0: sensor 4 blocked this long means a ball is still there (it
+     * rose past sensor 4, was counted, then fell back short of the flywheel), so the count goes back to
+     * 1 and the launch keeps feeding (LaunchBallsCommand also needs sensor 4 clear to end). 2026-11-20.
+     */
+    public static long LAUNCH_STUCK_BALL_MS = 150;
     /** Sensor 1 blocked this long while intaking means the artifact can't move up: full. */
     public static long JAM_MS = 400;
     /**
@@ -232,6 +246,10 @@ public class IntakeSubsystem extends SubsystemBase {
     /** Full-eject intake reverse runs until this time (see FULL_EJECT_MS). */
     private long fullEjectUntilMs = 0;
     private boolean launching = false;
+    /** This launch has reversed the transfer (the kick); see KICK_EXIT_GUARD_MS. */
+    private boolean launchReversed = false;
+    /** While launching: since when the transfer has fed forward without a break; -1 = not now. */
+    private long launchForwardSinceMs = -1;
     /** Full because the sensors counted the robot full (not setArtifactCount): only then the full eject runs. */
     private boolean filledByIntaking = false;
     /** Transfer power to use while launching instead of the default; NaN = no override. */
@@ -521,9 +539,31 @@ public class IntakeSubsystem extends SubsystemBase {
             changeCount(artifactCount - ejected, "sensor 1: " + ejected + " ejected, intake reversed");
         }
 
-        // Exit into the launcher
+        // Exit into the launcher. After a kick reverse, wait KICK_EXIT_GUARD_MS of forward feed first:
+        // sensor 4 clearing then is the artifact the reverse pulled down, not one launched.
+        if (!launching) {
+            launchReversed = false;
+            launchForwardSinceMs = -1;
+        } else if (transferPower < 0) {
+            launchReversed = true;
+            launchForwardSinceMs = -1;
+        } else if (transferPower > 0) {
+            if (launchForwardSinceMs < 0) launchForwardSinceMs = now;
+        } else {
+            launchForwardSinceMs = -1; // held (reverse done, gate not open long enough yet)
+        }
         if (launching && launched > 0 && transferPower > 0) {
-            changeCount(artifactCount - launched, "sensor 4: " + launched + " launched");
+            long forwardMs = launchForwardSinceMs < 0 ? 0 : now - launchForwardSinceMs;
+            if (launchReversed && forwardMs < KICK_EXIT_GUARD_MS) {
+                Log.i("IntakeCount", String.format("sensor 4: %d not counted: %d ms into the forward feed after the kick reverse (KICK_EXIT_GUARD_MS %d), it moved down, not out | sensors %s",
+                        launched, forwardMs, KICK_EXIT_GUARD_MS, sensorString()));
+            } else {
+                changeCount(artifactCount - launched, "sensor 4: " + launched + " launched");
+            }
+        }
+        if (launching && artifactCount == 0 && transferPower > 0 && laser4.isBlocked()
+                && laser4.msInState(now) >= LAUNCH_STUCK_BALL_MS) {
+            changeCount(1, "sensor 4 blocked " + LAUNCH_STUCK_BALL_MS + " ms while launching at count 0 (a ball fell back short of the flywheel)");
         }
 
         // Entrance blocked and not moving while intaking -> nowhere left to go

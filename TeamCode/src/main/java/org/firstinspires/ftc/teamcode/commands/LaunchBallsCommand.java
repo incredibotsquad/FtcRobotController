@@ -80,10 +80,21 @@ public class LaunchBallsCommand extends CommandBase {
     public static long STEADY_MS = 150;
     public static long MAX_STEADY_WAIT_MS = 1000;
 
-    /** Keep the gate open this long after the last artifact is gone so it clears the flywheel. */
-    public static long CLEAR_MS = 250;
+    /**
+     * Keep the gate open this long after the last artifact is gone so it clears the flywheel. 500 since
+     * 2026-11-20 (was 250): a slow last ball could stall above sensor 4, where no sensor sees it, and
+     * stay inside when the gate closed.
+     */
+    public static long CLEAR_MS = 500;
     /** Hard cap on how long the gate stays open, in case the artifact count misses an exit. */
     public static long MAX_FIRE_MS = 1500;
+
+    /**
+     * Debug: logs the flywheel RPM, count and sensor 4 every loop of each launch (tag LaunchTrace, a few
+     * lines at the end of the launch). It found the kick-reverse miscount (2026-11-20). Off: it formats
+     * a string every loop.
+     */
+    public static boolean LOG_RPM_TRACE = false;
 
     /**
      * Master switch: true = plain forward feed for any artifact count (no transfer reverse, no
@@ -166,6 +177,7 @@ public class LaunchBallsCommand extends CommandBase {
     private long gateOpenMs;
     private int lastCount;
     private double minRpm;
+    private final StringBuilder rpmTrace = new StringBuilder();
     private final StringBuilder shotLog = new StringBuilder();
 
     private State state;
@@ -292,6 +304,7 @@ public class LaunchBallsCommand extends CommandBase {
         gateOpenMs = now;
         lastCount = intake.getArtifactCount();
         shotLog.setLength(0);
+        rpmTrace.setLength(0);
         String speed = "";
         if (launcher != null) {
             minRpm = launcher.getCurrentFlywheelRPM();
@@ -343,6 +356,9 @@ public class LaunchBallsCommand extends CommandBase {
             // LAST-BALL KICK: now handled as a lone ball (singleBall = true) from the next loop.
         } else if (intake.getArtifactCount() == 0) {
             if (emptySinceMs < 0) emptySinceMs = now;
+            // Also sensor 4 clear: a ball there with the count at 0 didn't reach the flywheel
+            // (IntakeSubsystem raises the count back to 1 if it stays, LAUNCH_STUCK_BALL_MS).
+            if (intake.isSensor4Blocked()) emptySinceMs = now;
             if (now - emptySinceMs >= CLEAR_MS) {
                 endReason = EndReason.EMPTY;
                 enter(State.DONE);
@@ -475,6 +491,11 @@ public class LaunchBallsCommand extends CommandBase {
         if (launcher == null || state != State.FIRING) return;
         double rpm = launcher.getCurrentFlywheelRPM();
         minRpm = Math.min(minRpm, rpm);
+        if (LOG_RPM_TRACE) {
+            rpmTrace.append(String.format(Locale.US, "%s%d:%.0f/%.0f/%d%s", rpmTrace.length() > 0 ? " " : "", now - gateOpenMs,
+                    launcher.getLeftFlywheelRPM(), launcher.getRightFlywheelRPM(), intake.getArtifactCount(),
+                    intake.isSensor4Blocked() ? "X" : "-"));
+        }
         int count = intake.getArtifactCount();
         if (count < lastCount) {
             shotLog.append(String.format(Locale.US, "%s+%d ms: %.0f/%.0f", shotLog.length() > 0 ? ", " : "",
@@ -490,6 +511,14 @@ public class LaunchBallsCommand extends CommandBase {
             Log.i("LaunchShot", String.format(Locale.US, "done (%s): target %.0f, exits at [%s] L/R RPM, burst min %.0f RPM, %.2f V, transfer peak %.1f A",
                     endReason.name().toLowerCase(Locale.US), launcher.getTargetRPM(), shotLog, minRpm, launcher.getBatteryVoltage(),
                     intake.getTransferCurrentPeakA()));
+            if (LOG_RPM_TRACE && rpmTrace.length() > 0) {
+                // ms after gate open : left/right RPM / count / sensor 4 (X blocked), every loop.
+                Log.i("LaunchTrace", "start " + countAtStart + " artifact(s), target " + Math.round(launcher.getTargetRPM())
+                        + " | format: ms:L/R/count/sensor4");
+                for (int i = 0; i < rpmTrace.length(); i += 1500) {
+                    Log.i("LaunchTrace", rpmTrace.substring(i, Math.min(rpmTrace.length(), i + 1500)));
+                }
+            }
         }
         intake.clearLaunchTransferOverride();
         intake.clearLaunchIntakeOverride();
