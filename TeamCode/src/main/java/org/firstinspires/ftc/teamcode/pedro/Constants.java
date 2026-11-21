@@ -56,6 +56,13 @@ public class Constants {
         c.offsetUnits.set(DistanceUnit.INCH);
     });
 
+
+    // Active: the 2026-11-02 tune (commit 59e45f9), the last one the auto ran smoothly with. Every tune
+    // since 11-17 fitted a heading brake coefficient of 0.06-0.08 instead of 0.018. Foresight aims from
+    // pose + brake displacement, so heading P x that coefficient acts as a D gain on the turn rate:
+    // 8.5 x 0.062 or 7.6 x 0.068 = ~0.5, against 6.2 x 0.018 = 0.11 here, and strafe P was up 23-43%.
+    // That over-reacts to Pinpoint velocity noise and loop delay: shaking during paths and at path ends.
+    // The 2026-11-20 retune (pod offsets 3.194 / -5.431) is kept commented out below.
     public static ForesightConfig foresightConfig = new ForesightConfig(
         c -> {
             Controller primaryTranslationalForward = Controller.proportional(0.3795337318405364);

@@ -13,7 +13,7 @@ All pose values are red-frame `{x, y, headingDeg}` and are rotated 180° for blu
 |---|---|---|---|---|
 | `INTAKE_TIMEOUT_MS` | `DynamicAuto` | 2500 | **1200** | How long the robot waits at the GARDEN for more balls |
 | `FLOWER_WAIT_MS` | `DynamicAuto` | 2000 | **1200** | How long the robot waits at a FLOWER |
-| `ROCK_COUNT` | `DynamicAuto` | 2 | **1** | Rocks forward and back at the GARDEN |
+| `ROCK_COUNT` | `DynamicAuto` | 2 | **1**, back to **2** | Rocks back and forward at the GARDEN |
 | `MAX_FIRE_MS` | `LaunchBallsCommand` | 3000 | **1500** | Longest a launch can take when the count misses a ball leaving |
 
 Why these mattered:
@@ -72,8 +72,26 @@ The HIVE spans roughly x 47-97, y 52-92. Clearances below assume an 18 in square
 
 | Control point | Before | Now | Why |
 |---|---|---|---|
-| `RED_CONTROL_AROUND_HIVE` | {24, 72} | **{16, 88}** | The AROUND path (e.g. RIGHT spot 2 → LEFT spot 3) came within about 1.6 in of the HIVE's far corner. Now about 4 in of clearance. Used for every launch-to-launch move around the HIVE. |
+| `RED_CONTROL_AROUND_HIVE` | {24, 72} | **{-5, 88}** | The AROUND path (e.g. RIGHT spot 2 → LEFT spot 3) came within about 1.6 in of the HIVE's far corner. {16, 88} gave about 4 in of clearance; on 2026-11-20 RIGHT spot 2 → LEFT spot 2 still hit the HIVE at {11, 88}, so x went to the alliance wall and then 5 in past it, to -5 (a spline never reaches its control point, so the path stays on the field). Used for every launch-to-launch move around the HIVE. |
+| `RED_CONTROL_AROUND_HIVE_AUDIENCE` / `_FAR` (replace `RED_CONTROL_AROUND_HIVE`) | {-7, 88} (one point) | **{12, 50} and {12, 98}** | RIGHT spot 2 → LEFT spot 2 still hit the HIVE. Two control points (nearer-to-start first) keep the path at x ~17-22 the whole way alongside the HIVE, instead of bowing toward the wall. Robot center stays 21-28 in from the HIVE legs (x ~47, y ~52-92) for every RIGHT ↔ LEFT pair, and x ≥ 14 from the wall. The one-point path was ~28 in on paper too, so if it still hits, check odometry drift or how the robot swings during the 180° turn. |
+| `RED_CONTROL_AROUND_HIVE_AUDIENCE` / `_FAR` | {12, 50} and {12, 98} | **{17, 50} and {17, 98}** | 2026-11-20: both control points moved 5 in away from the alliance wall (x +5), which shifts the RIGHT spot 2 ↔ LEFT spot 2 path about the same amount toward the HIVE. Check HIVE clearance on the field. |
 | `RED_CONTROL_WALL_FLOWER` | {32.58, 51.36} | **{2.58, 51.36}** | Splining from LEFT spot 3 to the alliance-wall FLOWER cut about 8 in into the HIVE. Now about 2 in of clearance. A spline never reaches its control point, so the robot stays about 4-5 in off the wall. |
+
+### 7. No more pushing at a FLOWER or the GARDEN wall
+
+All three autos (`DynamicAuto`, `LeftWallAuto`, `RightWallLGLFP`):
+
+- **FLOWER:** if the count reaches 4 while the robot is still driving in, it leaves right away.
+  Before, it kept pushing toward the intake pose until the path ended, which looked like a wait.
+- **Stall = arrived:** the drive-in and each rocking leg also end once the robot has moved slower
+  than `STALL_SPEED_IN_PER_SEC` (2 in/s) for `STALL_MS` (300 ms). The GARDEN intake pose
+  (`RED_GARDEN_INTAKE`, y 7) is past where the robot can reach. Before, the drive-in pushed against
+  the wall for the whole `PATH_TIMEOUT_MS` (5 s) before intaking and rocking.
+- **Back-out no longer stops:** backing out of a FLOWER with the bar down now ends
+  `BACK_OUT_END_TOLERANCE_IN` (6 in) before the approach pose, so the next path starts while the
+  robot is still moving. Before, it slowed to a stop at the approach pose first, which looked like a
+  wait after getting 4.
+- At the GARDEN the log now says why it didn't rock (`no rocking: full / ROCK_COUNT is 0 / park window`).
 
 ## How the auto improved
 
